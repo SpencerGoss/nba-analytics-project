@@ -10,6 +10,8 @@ I will continue updating this file as the project evolves.
 - [1. Project Direction and Goals](#1-project-direction-and-goals)
 - [2. Initial Planning and Project Architecture](#2-initial-planning-and-project-architecture)
 - [3. Data Ingestion and Early Development](#3-data-ingestion-and-early-development)
+- [4. Data Cleaning and Standardization](#4-data-cleaning-and-standardization)
+- [5. Building the SQL Layer](#5-building-the-sql-layer)
 
 ---
 
@@ -106,7 +108,6 @@ Here’s what I pulled to start:
 - **Team information** – team IDs, names, and metadata  
 - **Team game logs** – one row per team per game  
 
-These datasets are used everywhere in NBA analytics, so getting them in place early made the most sense.
 
 ### 3.2 Writing the First Ingestion Scripts
 Once I knew what I needed, I wrote simple scripts to pull the data from the NBA API. I kept the code clean and straightforward so it’s easy to maintain as the project grows.
@@ -120,7 +121,6 @@ The scripts handled a few basic steps:
 - Creating a processed version with cleaner column names and consistent formatting  
 - Storing everything in the correct folders (`raw` and `processed`)  
 
-The goal at this stage was just to get the data flowing into the project in a clean, repeatable way.
 
 ### 3.3 Saving and Organizing the Data
 After pulling the data, I saved it into the folder structure I set up earlier. Keeping things organized from the start helps avoid confusion later on.
@@ -138,7 +138,57 @@ A few small things came up while writing the scripts:
 - I made decisions about how to structure the processed files  
 - I tested a few different API calls to make sure I was pulling the right data  
 
-All of this helped me get the foundation right before moving on to the next steps.
+## 4. Data Cleaning and Standardization
 
+### 4.1 Building a Consistent Cleaning Workflow
+After the raw data was ingested and organized, the next major step was creating a consistent cleaning process across all datasets. I wanted each table to follow the same conventions so they would fit together cleanly once I moved into SQL. This meant standardizing column names, enforcing consistent data types, and making sure each dataset had the keys needed for relational modeling.
+
+A few core rules guided the cleaning process:
+- Convert all column names to lowercase with underscores  
+- Ensure IDs (`player_id`, `team_id`, `game_id`) were integers  
+- Convert date fields to proper datetime objects  
+- Add a `season` column to every dataset  
+- Remove duplicates and unnecessary fields  
+
+
+### 4.2 Cleaning Each Core Dataset
+I applied the cleaning workflow to all four foundational datasets:
+
+- **Player master data** — standardized names, IDs, and metadata  
+- **Player season stats** — ensured consistent numeric types and season labeling  
+- **Team season stats** — aligned team identifiers and cleaned season-level metrics  
+- **Team game logs** — normalized game-level data and converted dates  
+
+Each dataset now has clean, analysis-ready fields and consistent naming conventions. This step was important because it ensures that SQL joins will behave predictably and that future feature engineering won’t require rework.
+
+### 4.3 Creating the Processed Data Layer
+After cleaning each DataFrame, I saved them into the `data/processed/` directory. This gives the project a clear separation between raw and transformed data and creates a stable layer that the SQL database can rely on.
+
+The processed layer now includes:
+- `players.csv`  
+- `player_stats.csv`  
+- `team_stats.csv`  
+- `team_game_logs.csv`  
+
+These files represent the first fully reproducible output of the pipeline.
+
+## 5. Building the SQL Layer
+
+### 5.1 Choosing SQLite for the Database
+I decided to use SQLite as the database engine for this project. It’s lightweight, easy to integrate with Python, and works inside VS Code (not to mention free). Since the goal is to build a portfolio-ready analytics system, SQLite provides a simple but realistic environment for relational modeling and feature engineering.
+
+The database lives in its own folder:
+
+
+This keeps the SQL layer separate from raw and processed data and mirrors how real analytics projects organize their storage layers.
+
+### 5.2 Writing the SQL Loading Script
+To load the cleaned data into SQLite, I wrote a small Python script that reads the processed CSVs and writes them into the database as tables. The script uses simple relative paths and can be run directly from the project root.
+
+The script loads the following tables:
+- `players`  
+- `player_stats`  
+- `team_stats`  
+- `team_game_logs`  
 
 
