@@ -1,5 +1,9 @@
 # NBA Analytics Project
 
+## A Note on Approach
+
+After getting the data loaded into SQL, I had a realization that continuing to build this project without leaning into AI tools would be leaving one of the most powerful resources on the table. The fundamentals I worked through early on, including data ingestion, cleaning, and modeling, were absolutely worth doing manually. Going through that process gave me a real understanding of what's happening under the hood, and that context matters. But going forward, it makes far more sense to use AI as a core part of the workflow. This project is now as much about learning to effectively collaborate with AI to do real analytical work as it is about the basketball data itself. The goal isn't to do things the hard way for its own sake. It's to build something genuinely useful and to develop the skills that actually matter.
+
 ## Overview
 This project is a full end‑to‑end NBA analytics system built to showcase my data engineering, analytics, and programming skills. It combines my interest in basketball with a structured, professional workflow that mirrors real analytics engineering practices. The project includes data ingestion, cleaning, database modeling, and the foundation for deeper analytical work.
 

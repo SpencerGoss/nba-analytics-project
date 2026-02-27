@@ -4,6 +4,7 @@ import pandas as pd
 import time
 import os
 
+
 # Headers used in nba_api GitHub examples
 HEADERS = {
     "Host": "stats.nba.com",
@@ -15,27 +16,50 @@ HEADERS = {
     "Origin": "https://www.nba.com"
 }
 
+MAX_RETRIES = 3
+RETRY_DELAY = 10
+
+
+def fetch_with_retry(fetch_fn, season):
+    for attempt in range(MAX_RETRIES):
+        try:
+            return fetch_fn()
+        except Exception as e:
+            if attempt < MAX_RETRIES - 1:
+                print(f"  Attempt {attempt + 1} failed for {season}: {e}. Retrying in {RETRY_DELAY}s...")
+                time.sleep(RETRY_DELAY)
+            else:
+                print(f"  All {MAX_RETRIES} retries failed for {season}. Skipping.")
+                return None
+
+
 # Download team game logs for each season
 def get_team_game_logs(start_year=2000, end_year=2024):
     os.makedirs("data/raw/team_game_logs", exist_ok=True)
 
     for year in range(start_year, end_year + 1):
         season = f"{year}-{str(year+1)[-2:]}"
+        print(f"Fetching {season}...")
         time.sleep(1)
 
-        data = leaguegamelog.LeagueGameLog(
-            season=season,
-            season_type_all_star="Regular Season",
-            headers=HEADERS,
-            timeout=60
-        ).get_data_frames()[0]
+        data = fetch_with_retry(
+            lambda s=season: leaguegamelog.LeagueGameLog(
+                season=s,
+                season_type_all_star="Regular Season",
+                headers=HEADERS,
+                timeout=60
+            ).get_data_frames()[0],
+            season
+        )
+
+        if data is None:
+            continue
 
         output_path = f"data/raw/team_game_logs/team_game_logs_{season.replace('-', '')}.csv"
         data.to_csv(output_path, index=False)
+        print(f"  Saved {season} ({len(data)} rows)")
+
 
 # Run script
 if __name__ == "__main__":
     get_team_game_logs()
-
-
-

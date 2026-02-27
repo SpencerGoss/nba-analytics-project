@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(python -c \":*)",
+      "Bash(python backfill.py)",
+      "Read(//c/Users/spenc/.claude/projects/c--Users-spenc-OneDrive-Desktop-GIT-nba-analytics-project/memory/**)",
+      "Bash(git worktree remove .claude/worktrees/quirky-shaw)",
+      "Bash(git worktree remove .claude/worktrees/recursing-mclaren)",
+      "Bash(git -C .claude/worktrees/quirky-shaw status)",
+      "Bash(git -C .claude/worktrees/recursing-mclaren status)",
+      "Bash(git worktree remove --force .claude/worktrees/quirky-shaw)",
+      "Bash(git worktree remove --force .claude/worktrees/recursing-mclaren)",
+      "Bash(git branch -d claude/quirky-shaw claude/recursing-mclaren)",
+      "Bash(git add .claude/settings.local.json .claude/worktrees/quirky-shaw .claude/worktrees/recursing-mclaren)",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "Bash(git reset --soft cb2fd35)",
+      "Bash(git reset HEAD -- data/ database/)",
+      "Bash(git add .gitignore README.md backfill.py update.py docs/ models/ reports/ scripts/ src/ notebooks/ .claude/settings.local.json)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\spenc\\.claude\\projects\\c--Users-spenc-OneDrive-Desktop-GIT-nba-analytics-project\\memory"
+    ]
+  }
+}

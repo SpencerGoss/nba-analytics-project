@@ -1,5 +1,5 @@
 # Import required libraries
-from nba_api.stats.endpoints import leaguedashplayerstats
+from nba_api.stats.endpoints import leaguedashteamstats
 import pandas as pd
 import time
 import os
@@ -33,9 +33,11 @@ def fetch_with_retry(fetch_fn, season):
                 return None
 
 
-# Function to pull player stats for every season in a range
-def get_player_stats_all_seasons(start_year=2000, end_year=2024):
-    os.makedirs("data/raw/player_stats", exist_ok=True)
+# Download advanced team stats for every season in a range
+# Uses the same LeagueDashTeamStats endpoint as base stats but with
+# measure_type_detailed_defense="Advanced" to get metrics like ORTG, DRTG, pace, PIE, etc.
+def get_team_stats_advanced(start_year=2000, end_year=2024):
+    os.makedirs("data/raw/team_stats_advanced", exist_ok=True)
 
     for year in range(start_year, end_year + 1):
         season = f"{year}-{str(year+1)[-2:]}"
@@ -43,8 +45,9 @@ def get_player_stats_all_seasons(start_year=2000, end_year=2024):
         time.sleep(1)
 
         data = fetch_with_retry(
-            lambda s=season: leaguedashplayerstats.LeagueDashPlayerStats(
+            lambda s=season: leaguedashteamstats.LeagueDashTeamStats(
                 season=s,
+                measure_type_detailed_defense="Advanced",
                 headers=HEADERS,
                 timeout=60
             ).get_data_frames()[0],
@@ -54,11 +57,11 @@ def get_player_stats_all_seasons(start_year=2000, end_year=2024):
         if data is None:
             continue
 
-        output_path = f"data/raw/player_stats/player_stats_{season.replace('-', '')}.csv"
+        output_path = f"data/raw/team_stats_advanced/team_stats_advanced_{season.replace('-', '')}.csv"
         data.to_csv(output_path, index=False)
         print(f"  Saved {season} ({len(data)} rows)")
 
 
-# Run the script
+# Run script
 if __name__ == "__main__":
-    get_player_stats_all_seasons()
+    get_team_stats_advanced()
