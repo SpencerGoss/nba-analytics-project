@@ -1,63 +1,45 @@
 """
 Player Performance Prediction Model
 =====================================
-Trains regression models to forecast individual player stats for the next game
-(points, rebounds, assists) using rolling pre-game features.
+Train per-target regression models to forecast player next-game stats
+(points, rebounds, assists) from pre-game features.
 
-Workflow:
-  1. Load player_game_features.csv (built by player_features.py)
-  2. Time-based train/test split
-  3. Train a GradientBoostingRegressor per stat target
-  4. Evaluate with MAE and RMSE
-  5. Save model artifacts to models/artifacts/
-
-Usage:
-    python src/models/player_performance_model.py
-
-    Or import:
-        from src.models.player_performance_model import train_player_models
-        models, metrics = train_player_models()
+Enhancements:
+  - Validation-season model selection per target.
+  - Candidate ensemble regressors (Ridge, GBM, Random Forest, Extra Trees).
+  - Better diagnostics and consistent artifact metadata.
 """
 
-import pandas as pd
-import numpy as np
 import os
 import pickle
 import warnings
-warnings.filterwarnings("ignore")
 
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.linear_model import Ridge
-from sklearn.pipeline import Pipeline
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import ExtraTreesRegressor, GradientBoostingRegressor, RandomForestRegressor
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+warnings.filterwarnings("ignore")
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-FEATURES_PATH  = "data/features/player_game_features.csv"
-ARTIFACTS_DIR  = "models/artifacts"
-
-# Stat targets to predict
+FEATURES_PATH = "data/features/player_game_features.csv"
+ARTIFACTS_DIR = "models/artifacts"
 TARGETS = ["pts", "reb", "ast"]
-
-# Most recent seasons held out for evaluation
 TEST_SEASONS = ["202324", "202425"]
-
-# Minimum games played in training set for a player to be included
 MIN_TRAIN_GAMES = 20
+VALIDATION_SEASON = "202223"
 
 
 # ── Feature selection ──────────────────────────────────────────────────────────
 
 def get_feature_cols(df: pd.DataFrame, target: str) -> list:
-    """
-    Return feature columns for predicting `target`.
-    Excludes the raw current-game stat (that's the label),
-    plus meta/identifier columns.
-    """
-    # Raw current-game stats — all of these would leak the result
+    """Return numeric predictors while excluding leakage columns."""
     raw_game_stats = [
         "pts", "reb", "ast", "stl", "blk", "tov", "pf",
         "min", "fgm", "fga", "fg_pct",
@@ -65,59 +47,88 @@ def get_feature_cols(df: pd.DataFrame, target: str) -> list:
         "ftm", "fta", "ft_pct",
         "plus_minus", "win", "wl",
     ]
-
     exclude = set(raw_game_stats) | {
         "season", "player_id", "player_name", "team_id",
         "team_abbreviation", "game_id", "game_date", "matchup",
     }
-
-    return [
+    cols = [
         c for c in df.columns
-        if c not in exclude
-        and df[c].dtype in [np.float64, np.int64, float, int]
+        if c not in exclude and df[c].dtype in [np.float64, np.int64, float, int]
     ]
 
+    # Prefer stable predictive groups first
+    priority = [
+        c for c in cols
+        if any(k in c for k in [
+            "roll", "std", "season_avg", "form_delta", "per_min",
+            "opp_", "team_", "role_opportunity", "rest_advantage",
+            "usg_pct", "ts_pct", "net_rating", "pie", "age",
+            "scoring_", "clutch_",
+        ])
+    ]
+    return sorted(set(priority if priority else cols))
 
-# ── Train one model ────────────────────────────────────────────────────────────
 
-def _train_one(
-    X_train, y_train, X_test, y_test,
-    target: str,
-) -> tuple:
-    """Train gradient boosting + ridge baseline for a single stat target."""
+# ── Helpers ────────────────────────────────────────────────────────────────────
 
-    # Baseline: Ridge regression
-    ridge = Pipeline([
-        ("imputer", SimpleImputer(strategy="mean")),
-        ("scaler",  StandardScaler()),
-        ("model",   Ridge(alpha=1.0)),
-    ])
-    ridge.fit(X_train, y_train)
-    ridge_pred  = ridge.predict(X_test)
-    ridge_mae   = mean_absolute_error(y_test, ridge_pred)
-    ridge_rmse  = root_mean_squared_error(y_test, ridge_pred)
+def _build_candidates() -> dict:
+    return {
+        "ridge": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("scaler", StandardScaler()),
+            ("model", Ridge(alpha=1.0)),
+        ]),
+        "gradient_boosting": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("model", GradientBoostingRegressor(
+                n_estimators=350,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.9,
+                random_state=42,
+                loss="squared_error",
+            )),
+        ]),
+        "random_forest": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("model", RandomForestRegressor(
+                n_estimators=700,
+                max_depth=12,
+                min_samples_leaf=6,
+                random_state=42,
+                n_jobs=-1,
+            )),
+        ]),
+        "extra_trees": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("model", ExtraTreesRegressor(
+                n_estimators=700,
+                max_depth=14,
+                min_samples_leaf=5,
+                random_state=42,
+                n_jobs=-1,
+            )),
+        ]),
+    }
 
-    # Main: Gradient Boosting
-    gb = Pipeline([
-        ("imputer", SimpleImputer(strategy="mean")),
-        ("model",   GradientBoostingRegressor(
-            n_estimators=200,
-            max_depth=4,
-            learning_rate=0.05,
-            subsample=0.8,
-            random_state=42,
-            loss="squared_error",
-        )),
-    ])
-    gb.fit(X_train, y_train)
-    gb_pred  = gb.predict(X_test)
-    gb_mae   = mean_absolute_error(y_test, gb_pred)
-    gb_rmse  = root_mean_squared_error(y_test, gb_pred)
 
-    print(f"\n  {target.upper():>4}  Ridge → MAE: {ridge_mae:.3f} | RMSE: {ridge_rmse:.3f}")
-    print(f"  {target.upper():>4}  GBM   → MAE: {gb_mae:.3f} | RMSE: {gb_rmse:.3f}")
+def _split_train_validation(train_df: pd.DataFrame) -> tuple:
+    subtrain = train_df[train_df["season"].astype(str) < VALIDATION_SEASON].copy()
+    valid = train_df[train_df["season"].astype(str) == VALIDATION_SEASON].copy()
+    if valid.empty or subtrain.empty:
+        cutoff = int(len(train_df) * 0.85)
+        subtrain = train_df.iloc[:cutoff].copy()
+        valid = train_df.iloc[cutoff:].copy()
+    return subtrain, valid
 
-    return gb, {"mae": gb_mae, "rmse": gb_rmse, "ridge_mae": ridge_mae, "n_test": len(y_test)}
+
+def _extract_importance(model_pipe: Pipeline, feat_cols: list) -> pd.Series:
+    model = model_pipe.named_steps["model"]
+    if hasattr(model, "feature_importances_"):
+        return pd.Series(model.feature_importances_, index=feat_cols).sort_values(ascending=False)
+    if hasattr(model, "coef_"):
+        return pd.Series(np.abs(model.coef_), index=feat_cols).sort_values(ascending=False)
+    return pd.Series(np.zeros(len(feat_cols)), index=feat_cols)
 
 
 # ── Main trainer ───────────────────────────────────────────────────────────────
@@ -126,16 +137,9 @@ def train_player_models(
     features_path: str = FEATURES_PATH,
     artifacts_dir: str = ARTIFACTS_DIR,
     test_seasons: list = TEST_SEASONS,
-    targets: list      = TARGETS,
+    targets: list = TARGETS,
 ) -> tuple:
-    """
-    Train one regression model per stat target (pts, reb, ast).
-
-    Returns:
-        (models_dict, metrics_dict)
-        models_dict: {stat: trained_pipeline}
-        metrics_dict: {stat: {mae, rmse, ...}}
-    """
+    """Train one selected regression pipeline per stat target."""
     print("=" * 60)
     print("PLAYER PERFORMANCE PREDICTION MODELS")
     print("=" * 60)
@@ -147,59 +151,85 @@ def train_player_models(
     print(f"  Total rows: {len(df):,} | Players: {df.player_id.nunique():,} | Seasons: {df.season.nunique()}")
 
     train_df = df[~df["season"].astype(str).isin(test_seasons)].copy()
-    test_df  = df[ df["season"].astype(str).isin(test_seasons)].copy()
+    test_df = df[df["season"].astype(str).isin(test_seasons)].copy()
     print(f"  Train: {len(train_df):,} | Test: {len(test_df):,}")
 
-    # Filter out players with too few training games
     train_counts = train_df.groupby("player_id")["game_id"].transform("count")
     train_df = train_df[train_counts >= MIN_TRAIN_GAMES]
     print(f"  Train after min-games filter ({MIN_TRAIN_GAMES}): {len(train_df):,}")
 
-    models  = {}
-    metrics = {}
+    models, metrics = {}, {}
+    os.makedirs(artifacts_dir, exist_ok=True)
 
     for target in targets:
-        print(f"\n{'─'*40}")
+        print(f"\n{'─' * 46}")
         print(f"Target: {target.upper()}")
 
         feat_cols = get_feature_cols(df, target)
 
-        # Drop rows where target is missing
-        t_train = train_df.dropna(subset=[target])
-        t_test  = test_df.dropna(subset=[target])
+        t_train = train_df.dropna(subset=[target]).copy()
+        t_test = test_df.dropna(subset=[target]).copy()
+        subtrain, valid = _split_train_validation(t_train)
 
-        X_train = t_train[feat_cols]
-        y_train = t_train[target]
-        X_test  = t_test[feat_cols]
-        y_test  = t_test[target]
+        X_sub, y_sub = subtrain[feat_cols], subtrain[target]
+        X_val, y_val = valid[feat_cols], valid[target]
+        X_train, y_train = t_train[feat_cols], t_train[target]
+        X_test, y_test = t_test[feat_cols], t_test[target]
 
-        model, m = _train_one(X_train, y_train, X_test, y_test, target)
-        models[target]  = model
-        metrics[target] = m
+        # Candidate selection on validation split
+        candidates = _build_candidates()
+        selection_rows = []
+        best_name = None
+        best_val_mae = np.inf
+        for name, pipe in candidates.items():
+            pipe.fit(X_sub, y_sub)
+            val_pred = pipe.predict(X_val)
+            val_mae = mean_absolute_error(y_val, val_pred)
+            val_rmse = root_mean_squared_error(y_val, val_pred)
+            selection_rows.append((name, val_mae, val_rmse))
+            print(f"  {name:>16} | val_MAE={val_mae:.3f} | val_RMSE={val_rmse:.3f}")
+            if val_mae < best_val_mae:
+                best_val_mae = val_mae
+                best_name = name
 
-        # Feature importances
-        imp = pd.Series(
-            model.named_steps["model"].feature_importances_,
-            index=feat_cols,
-        ).sort_values(ascending=False)
+        best_model = candidates[best_name]
+        best_model.fit(X_train, y_train)
+        test_pred = best_model.predict(X_test)
+        test_mae = mean_absolute_error(y_test, test_pred)
+        test_rmse = root_mean_squared_error(y_test, test_pred)
+
+        print(f"  Selected      | {best_name}")
+        print(f"  Test          | MAE={test_mae:.3f} | RMSE={test_rmse:.3f}")
+
+        models[target] = best_model
+        metrics[target] = {
+            "selected_model": best_name,
+            "validation_mae": float(best_val_mae),
+            "mae": float(test_mae),
+            "rmse": float(test_rmse),
+            "n_test": int(len(y_test)),
+            "n_features": int(len(feat_cols)),
+        }
+
+        imp = _extract_importance(best_model, feat_cols)
         print(f"\n  Top 10 features for {target}:")
         print(imp.head(10).to_string())
 
-        # Save model + feature list
-        os.makedirs(artifacts_dir, exist_ok=True)
         with open(os.path.join(artifacts_dir, f"player_{target}_model.pkl"), "wb") as f:
-            pickle.dump(model, f)
+            pickle.dump(best_model, f)
         with open(os.path.join(artifacts_dir, f"player_{target}_features.pkl"), "wb") as f:
             pickle.dump(feat_cols, f)
-        imp.reset_index().rename(
-            columns={"index": "feature", 0: "importance"}
-        ).to_csv(os.path.join(artifacts_dir, f"player_{target}_importances.csv"), index=False)
+        imp.reset_index().rename(columns={"index": "feature", 0: "importance"}).to_csv(
+            os.path.join(artifacts_dir, f"player_{target}_importances.csv"), index=False
+        )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
     for target, m in metrics.items():
-        print(f"  {target.upper():>4}: MAE = {m['mae']:.3f}  |  RMSE = {m['rmse']:.3f}  "
-              f"(baseline MAE = {m['ridge_mae']:.3f})")
+        print(
+            f"  {target.upper():>4}: model={m['selected_model']:<16} "
+            f"MAE={m['mae']:.3f} | RMSE={m['rmse']:.3f} | val_MAE={m['validation_mae']:.3f}"
+        )
 
     return models, metrics
 
@@ -208,17 +238,9 @@ def predict_player_next_game(
     player_name: str,
     features_path: str = FEATURES_PATH,
     artifacts_dir: str = ARTIFACTS_DIR,
-    targets: list      = TARGETS,
+    targets: list = TARGETS,
 ) -> dict:
-    """
-    Predict a player's next game stats using their most recent rolling features.
-
-    Args:
-        player_name: e.g. "LeBron James" (case-sensitive)
-
-    Returns:
-        dict with predicted pts, reb, ast
-    """
+    """Predict next-game PTS/REB/AST for a player from latest feature row."""
     df = pd.read_csv(features_path)
     df["game_date"] = pd.to_datetime(df["game_date"])
 
@@ -230,22 +252,19 @@ def predict_player_next_game(
     results = {"player": player_name, "last_game": str(latest["game_date"].date())}
 
     for target in targets:
-        feat_path  = os.path.join(artifacts_dir, f"player_{target}_features.pkl")
+        feat_path = os.path.join(artifacts_dir, f"player_{target}_features.pkl")
         model_path = os.path.join(artifacts_dir, f"player_{target}_model.pkl")
 
-        with open(feat_path,  "rb") as f:
+        with open(feat_path, "rb") as f:
             feat_cols = pickle.load(f)
         with open(model_path, "rb") as f:
             model = pickle.load(f)
 
         X = latest[feat_cols].to_frame().T.fillna(0)
-        pred = model.predict(X)[0]
-        results[f"pred_{target}"] = round(float(pred), 1)
+        results[f"pred_{target}"] = round(float(model.predict(X)[0]), 1)
 
     return results
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
-    models, metrics = train_player_models()
+    train_player_models()

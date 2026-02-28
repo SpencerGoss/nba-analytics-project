@@ -40,6 +40,10 @@ I’ve always been an avid NBA fan and have been fascinated by the advanced anal
 
 - **Model training entrypoint** → `src/models/train_all_models.py`  
   - Trains one workflow per core task (game outcome, player performance, playoff odds)
+  - Optional `--rebuild-features` refreshes team/player feature tables before training
+
+- **Prediction CLI** → `src/models/predict_cli.py`  
+  - Predict game outcome probabilities and player points/rebounds/assists from trained artifacts
 
 
 

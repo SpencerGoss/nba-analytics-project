@@ -1,6 +1,6 @@
 # Models: one workflow per task
 
-This folder is now organized around **one model workflow per product task**.
+This folder is organized around **one model workflow per product task**.
 
 ## Core task models
 
@@ -22,6 +22,13 @@ This folder is now organized around **one model workflow per product task**.
    - Inputs: standings + team logs
    - Output: `data/features/playoff_odds.csv`
 
+## Added feature engineering signals
+
+Player feature engineering now incorporates:
+- Team/opponent context from `team_game_features` (defensive form, SOS, rest, injuries)
+- Optional season priors from scoring and clutch tables when available
+- Form/efficiency features (e.g., `*_form_delta`, `*_per_min_roll10`, role opportunity index)
+
 ## Supporting analysis (not separate task models)
 
 - `backtesting.py` → walk-forward robustness checks
@@ -37,5 +44,17 @@ Run all core tasks in order:
 python src/models/train_all_models.py
 ```
 
-This script is intentionally explicit so it is easy to see what each task is
-training and in what order.
+Rebuild features before training:
+
+```bash
+python src/models/train_all_models.py --rebuild-features
+```
+
+## Prediction CLI
+
+After training models, make predictions with:
+
+```bash
+python src/models/predict_cli.py game --home BOS --away LAL
+python src/models/predict_cli.py player --name "LeBron James"
+```

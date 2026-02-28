@@ -259,9 +259,12 @@ def predict_game(
     features_path: str = MATCHUP_PATH,
     artifacts_dir: str = ARTIFACTS_DIR,
 ) -> dict:
-    """
-    Estimate win probability for a matchup using the most recent feature row
-    for this home/away pairing.
+    """Estimate win probability for a matchup.
+
+    Strategy:
+      1) Use most recent exact historical pairing if available.
+      2) Fallback: synthesize a matchup row using each team's most recent
+         home/away context and differential columns.
     """
     model_path = os.path.join(artifacts_dir, "game_outcome_model.pkl")
     feat_path = os.path.join(artifacts_dir, "game_outcome_features.pkl")
@@ -274,12 +277,30 @@ def predict_game(
     df = pd.read_csv(features_path)
     df["game_date"] = pd.to_datetime(df["game_date"])
 
-    matchup_rows = df[(df["home_team"] == home_team_abbr) & (df["away_team"] == away_team_abbr)]
-    if matchup_rows.empty:
-        return {"error": f"No matchup feature row found for {home_team_abbr} vs {away_team_abbr}."}
+    exact = df[(df["home_team"] == home_team_abbr) & (df["away_team"] == away_team_abbr)]
+    if not exact.empty:
+        row = exact.sort_values("game_date").iloc[-1].copy()
+    else:
+        home_rows = df[df["home_team"] == home_team_abbr].sort_values("game_date")
+        away_rows = df[df["away_team"] == away_team_abbr].sort_values("game_date")
+        if home_rows.empty or away_rows.empty:
+            return {"error": f"Not enough history to build features for {home_team_abbr} vs {away_team_abbr}."}
 
-    row = matchup_rows.sort_values("game_date").iloc[-1]
-    row_df = row.to_frame().T[feat_cols].fillna(0)
+        row = home_rows.iloc[-1].copy()
+        away_source = away_rows.iloc[-1]
+
+        for c in df.columns:
+            if c.startswith("away_"):
+                row[c] = away_source.get(c, row.get(c, np.nan))
+
+        for c in feat_cols:
+            if c.startswith("diff_"):
+                base = c.replace("diff_", "")
+                h_col, a_col = f"home_{base}", f"away_{base}"
+                if h_col in row.index and a_col in row.index:
+                    row[c] = row[h_col] - row[a_col]
+
+    row_df = row.to_frame().T.reindex(columns=feat_cols).fillna(0)
     prob = model.predict_proba(row_df)[0]
     return {
         "home_team": home_team_abbr,
