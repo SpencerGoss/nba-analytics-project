@@ -2,7 +2,7 @@
 NBA Analytics Historical Backfill Script
 
 Fetches historical NBA data ranges that are not covered by the daily updater,
-then rebuilds processed CSVs and reloads the SQLite database.
+then rebuilds processed CSVs.
 
 Run once (or rarely):
     python backfill.py
@@ -22,7 +22,6 @@ from src.data.get_team_game_logs_playoffs import get_team_game_logs_playoffs
 from src.data.get_team_stats import get_team_stats_all_seasons
 from src.data.get_team_stats_advanced import get_team_stats_advanced
 from src.data.get_team_stats_playoffs import get_team_stats_playoffs
-from src.processing.load_to_sql import load_all_tables
 from src.processing.preprocessing import run_preprocessing
 
 
@@ -78,9 +77,6 @@ def main() -> None:
 
     print("\n=== Step 4: Rebuilding processed CSVs ===")
     run_preprocessing()
-
-    print("\n=== Step 5: Reloading SQLite database ===")
-    load_all_tables()
 
     elapsed = datetime.now() - start_time
     total_seconds = int(elapsed.total_seconds())

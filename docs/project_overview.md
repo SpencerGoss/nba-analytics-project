@@ -11,7 +11,7 @@ I will continue updating this file as the project evolves.
 - [2. Initial Planning and Project Architecture](#2-initial-planning-and-project-architecture)
 - [3. Data Ingestion and Early Development](#3-data-ingestion-and-early-development)
 - [4. Data Cleaning and Standardization](#4-data-cleaning-and-standardization)
-- [5. Building the SQL Layer](#5-building-the-sql-layer)
+- [5. Processed Data Layer](#5-processed-data-layer)
 - [6. Feature Engineering](#6-feature-engineering)
 - [7. Predictive Models](#7-predictive-models)
 - [8. Model Evaluation Suite](#8-model-evaluation-suite)
@@ -66,7 +66,6 @@ nba-analytics-project/
 │   ├── data/         # scripts that pull in or prepare data
 │   └── utils/        # small helper functions used across the project
 │
-├── database/         # SQL files, schema plans, and anything related to the database
 │
 ├── models/           # analytical models or experiments I build
 │
@@ -175,24 +174,17 @@ The processed layer now includes:
 
 These files represent the first fully reproducible output of the pipeline.
 
-## 5. Building the SQL Layer
+## 5. Processed Data Layer
 
-### 5.1 Choosing SQLite for the Database
-I decided to use SQLite as the database engine for this project. It’s lightweight, easy to integrate with Python, and works inside VS Code (not to mention free). Since the goal is to build a portfolio-ready analytics system, SQLite provides a simple but realistic environment for relational modeling and feature engineering.
+After cleaning, each dataset is saved as a versioned CSV in `data/processed/`.
+This keeps the pipeline simple and reproducible: raw pulls in, cleaned tables out,
+and feature generation/model training run directly from those processed files.
 
-The database lives in its own folder:
-
-
-This keeps the SQL layer separate from raw and processed data and mirrors how real analytics projects organize their storage layers.
-
-### 5.2 Writing the SQL Loading Script
-To load the cleaned data into SQLite, I wrote a small Python script that reads the processed CSVs and writes them into the database as tables. The script uses simple relative paths and can be run directly from the project root.
-
-The script loads the following tables:
-- `players`
-- `player_stats`
-- `team_stats`
-- `team_game_logs`
+Core processed outputs include:
+- `players.csv`
+- `player_stats.csv`
+- `team_stats.csv`
+- `team_game_logs.csv`
 
 ---
 
@@ -200,9 +192,9 @@ The script loads the following tables:
 
 ### 6.1 Goals and Design Principles
 
-With a clean SQL layer in place, the next major phase was feature engineering — transforming raw game-log data into predictive signals for machine learning models. The guiding principle throughout this phase was **no data leakage**: every feature must be computed using only information that would have been available *before* the game being predicted. This is enforced by applying a `shift(1)` before any rolling computation, so the current game's result is never included in its own feature calculation.
+With a clean processed data layer in place, the next major phase was feature engineering — transforming raw game-log data into predictive signals for machine learning models. The guiding principle throughout this phase was **no data leakage**: every feature must be computed using only information that would have been available *before* the game being predicted. This is enforced by applying a `shift(1)` before any rolling computation, so the current game's result is never included in its own feature calculation.
 
-I created a dedicated `src/features/` directory to separate feature engineering logic from raw data ingestion and SQL loading. Features are saved to a new `data/features/` folder so they can be reused across multiple models without re-running the full pipeline.
+I created a dedicated `src/features/` directory to separate feature engineering logic from raw data ingestion and preprocessing. Features are saved to a new `data/features/` folder so they can be reused across multiple models without re-running the full pipeline.
 
 ### 6.2 Team Game Features (`src/features/team_game_features.py`)
 
@@ -342,3 +334,5 @@ For individual game prediction explanations, the `explain_prediction(home_abbr, 
 Because the SHAP library is an optional dependency (`pip install shap`), the module includes a graceful fallback to permutation importance from scikit-learn, which produces comparable directional charts without the extra install.
 
 All charts and feature direction tables are saved to `reports/explainability/`.
+
+

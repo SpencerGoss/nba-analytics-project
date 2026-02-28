@@ -1,8 +1,7 @@
 """
 NBA Analytics Update Script
 
-Refreshes the current NBA season from NBA API endpoints, rebuilds processed CSVs,
-and reloads the SQLite database.
+Refreshes the current NBA season from NBA API endpoints and rebuilds processed CSVs.
 
 Run daily (or on demand):
     python update.py
@@ -22,7 +21,6 @@ from src.data.get_standings import get_standings
 from src.data.get_team_stats import get_team_stats_all_seasons
 from src.data.get_team_stats_advanced import get_team_stats_advanced
 from src.data.get_teams import get_teams
-from src.processing.load_to_sql import load_all_tables
 from src.processing.preprocessing import run_preprocessing
 
 
@@ -108,9 +106,6 @@ def main() -> None:
 
     print("\n=== Step 2: Rebuilding processed CSVs ===")
     run_preprocessing()
-
-    print("\n=== Step 3: Reloading database ===")
-    load_all_tables()
 
     elapsed = datetime.now() - start_time
     total_seconds = int(elapsed.total_seconds())
