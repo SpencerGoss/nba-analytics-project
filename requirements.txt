@@ -1,0 +1,25 @@
+# NBA Analytics Project — Python Dependencies
+# Install everything with: pip install -r requirements.txt
+
+# NBA data
+nba_api>=1.4.0
+
+# Data manipulation
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Machine learning
+scikit-learn>=1.3.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Model explainability (optional but recommended)
+# If not installed, the explainability module falls back to scikit-learn permutation importance
+shap>=0.44.0
+
+# HTTP requests (used internally by nba_api)
+requests>=2.28.0
+
+# Environment variable management (loads API keys from .env file)
+python-dotenv>=1.0.0

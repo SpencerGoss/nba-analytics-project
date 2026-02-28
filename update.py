@@ -7,7 +7,9 @@ Run daily (or on demand):
     python update.py
 """
 
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Callable
 
 from src.data.get_game_log import get_team_game_logs
@@ -22,6 +24,18 @@ from src.data.get_team_stats import get_team_stats_all_seasons
 from src.data.get_team_stats_advanced import get_team_stats_advanced
 from src.data.get_teams import get_teams
 from src.processing.preprocessing import run_preprocessing
+from src.data.get_odds import refresh_odds_data
+
+
+ERROR_LOG_PATH = Path("logs/pipeline_errors.log")
+
+
+def log_pipeline_error(script_name: str, error: Exception) -> None:
+    """Append pipeline errors to logs/pipeline_errors.log."""
+    ERROR_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with ERROR_LOG_PATH.open("a", encoding="utf-8") as log_file:
+        log_file.write(f"[{timestamp}] {script_name} failed: {error}\n")
 
 
 def get_current_season_year(reference: datetime | None = None) -> int:
@@ -94,25 +108,34 @@ def fetch_current_season_data(current_year: int, now: datetime) -> None:
 
 
 def main() -> None:
-    start_time = datetime.now()
-    now = datetime.now()
-    current_year = get_current_season_year(now)
-    current_season = f"{current_year}-{str(current_year + 1)[-2:]}"
+    try:
+        start_time = datetime.now()
+        now = datetime.now()
+        current_year = get_current_season_year(now)
+        current_season = f"{current_year}-{str(current_year + 1)[-2:]}"
 
-    print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] Starting NBA data update...")
-    print(f"Current NBA season: {current_season}")
+        print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] Starting NBA data update...")
+        print(f"Current NBA season: {current_season}")
 
-    fetch_current_season_data(current_year, now)
+        fetch_current_season_data(current_year, now)
 
-    print("\n=== Step 2: Rebuilding processed CSVs ===")
-    run_preprocessing()
+        print("\n=== Step 2: Rebuilding processed CSVs ===")
+        run_preprocessing()
 
-    elapsed = datetime.now() - start_time
-    total_seconds = int(elapsed.total_seconds())
-    print(
-        f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-        f"Update complete in {total_seconds // 60}m {total_seconds % 60}s"
-    )
+        print("\n=== Step 3: Refreshing sportsbook odds ===")
+        if not refresh_odds_data():
+            print("Odds refresh skipped/failed; continuing update pipeline.")
+
+        elapsed = datetime.now() - start_time
+        total_seconds = int(elapsed.total_seconds())
+        print(
+            f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"Update complete in {total_seconds // 60}m {total_seconds % 60}s"
+        )
+    except Exception as error:
+        log_pipeline_error("update.py", error)
+        print(f"Update failed: {error}. See logs/pipeline_errors.log for details.")
+        raise SystemExit(1) from error
 
 
 if __name__ == "__main__":
