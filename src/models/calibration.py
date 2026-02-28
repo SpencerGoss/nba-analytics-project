@@ -166,7 +166,7 @@ def _plot_calibration_curve(
     ax = axes[0]
     ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfect calibration", alpha=0.6)
     ax.plot(mean_pred_u, frac_pos_u, "o-", color="#e74c3c", linewidth=2,
-            markersize=7, label=f"GBM (Brier={brier_uncal:.4f}, ECE={ece_uncal:.4f})")
+            markersize=7, label=f"Base GBM (Brier={brier_uncal:.4f}, ECE={ece_uncal:.4f})")
     ax.plot(mean_pred_c, frac_pos_c, "s-", color="#2ecc71", linewidth=2,
             markersize=7, label=f"GBM + Isotonic (Brier={brier_cal:.4f}, ECE={ece_cal:.4f})")
 
@@ -343,33 +343,39 @@ def run_calibration_analysis(
     y_test = test[TARGET].values
 
     # ── Raw model predictions ─────────────────────────────────────────────────
-    y_prob = model.predict_proba(X_test)[:, 1]
+    # The v2 model artifact is a CalibratedClassifierCV wrapper around the base
+    # GBM Pipeline.  We extract the inner pipeline for "pre-calibration" numbers
+    # so the chart can show the improvement from isotonic calibration.
+    # The v1 model is a plain Pipeline — handled the same way for compatibility.
+    if isinstance(model, CalibratedClassifierCV):
+        raw_model = model.estimator   # inner Pipeline (has its own SimpleImputer)
+        print("\n  (v2 model detected — comparing base GBM vs isotonic-calibrated output)")
+    else:
+        raw_model = model             # v1 plain Pipeline
+
+    y_prob = raw_model.predict_proba(X_test)[:, 1]
 
     brier_uncal = brier_score_loss(y_test, y_prob)
     ece_uncal   = _expected_calibration_error(y_test, y_prob)
     bin_stats   = _bin_calibration_stats(y_test, y_prob)
 
-    print(f"\n── Raw Model ─────────────────────────────────────────────")
+    print(f"\n── Base Model (pre-calibration) ──────────────────────────")
     print(f"  Brier score : {brier_uncal:.5f}  (lower is better; 0.25 = coin flip)")
     print(f"  ECE         : {ece_uncal:.5f}  (lower is better; 0 = perfect)")
 
-    # ── Calibrated version (Platt scaling / isotonic) ─────────────────────────
-    # Fit calibration wrapper on the training data
-    train = df[~df["season"].isin(test_seasons)].copy()
-    train = train.dropna(subset=[TARGET])
-    X_train = train[feat_cols]
-    y_train = train[TARGET].values
-
-    print("\nFitting isotonic calibration on training data...")
-    cal_model = CalibratedClassifierCV(model, method="isotonic", cv="prefit")
-    from sklearn.impute import SimpleImputer
-    imp = SimpleImputer(strategy="mean")
-    X_train_imp = imp.fit_transform(X_train)
-    X_test_imp  = imp.transform(X_test)
-
-    # CalibratedClassifierCV needs array-like, not DataFrame
-    cal_model.fit(X_train_imp, y_train)
-    y_prob_cal = cal_model.predict_proba(X_test_imp)[:, 1]
+    # ── Calibrated predictions ────────────────────────────────────────────────
+    # v2: the loaded artifact is already the calibrated model — use it directly.
+    # v1: fit a fresh isotonic calibrator on the training data.
+    if isinstance(model, CalibratedClassifierCV):
+        print("\nUsing pre-fitted isotonic calibration from trained model artifact...")
+        y_prob_cal = model.predict_proba(X_test)[:, 1]
+    else:
+        print("\nFitting isotonic calibration on training data (v1 model)...")
+        train   = df[~df["season"].isin(test_seasons)].copy()
+        train   = train.dropna(subset=[TARGET])
+        cal_model = CalibratedClassifierCV(model, method="isotonic", cv="prefit")
+        cal_model.fit(train[feat_cols], train[TARGET].values)
+        y_prob_cal = cal_model.predict_proba(X_test)[:, 1]
 
     brier_cal = brier_score_loss(y_test, y_prob_cal)
     ece_cal   = _expected_calibration_error(y_test, y_prob_cal)

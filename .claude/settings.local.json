@@ -17,7 +17,8 @@
       "Bash(git push origin main)",
       "Bash(git reset --soft cb2fd35)",
       "Bash(git reset HEAD -- data/ database/)",
-      "Bash(git add .gitignore README.md backfill.py update.py docs/ models/ reports/ scripts/ src/ notebooks/ .claude/settings.local.json)"
+      "Bash(git add .gitignore README.md backfill.py update.py docs/ models/ reports/ scripts/ src/ notebooks/ .claude/settings.local.json)",
+      "Bash(git reset HEAD -- src/data/__pycache__ src/features/__pycache__ src/models/__pycache__ src/processing/__pycache__)"
     ],
     "additionalDirectories": [
       "c:\\Users\\spenc\\.claude\\projects\\c--Users-spenc-OneDrive-Desktop-GIT-nba-analytics-project\\memory"
