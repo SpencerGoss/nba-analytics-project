@@ -38,6 +38,9 @@ I’ve always been an avid NBA fan and have been fascinated by the advanced anal
 - **Documentation** → `docs/`  
   - Full project description and progress log (`project_overview.md`)
 
+- **Model training entrypoint** → `src/models/train_all_models.py`  
+  - Trains one workflow per core task (game outcome, player performance, playoff odds)
+
 
 
 
