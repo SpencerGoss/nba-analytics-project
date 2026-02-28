@@ -202,7 +202,13 @@ def explain_game_outcome_model(
 
     if SHAP_AVAILABLE:
         print("\nComputing SHAP values (this may take a minute)...")
-        clf = model.named_steps["clf"]
+        # v2 model artifact is CalibratedClassifierCV wrapping a Pipeline;
+        # SHAP needs the raw tree estimator, not the calibration wrapper.
+        from sklearn.calibration import CalibratedClassifierCV as _CalCV
+        if isinstance(model, _CalCV):
+            clf = model.estimator.named_steps["clf"]   # inner GBM
+        else:
+            clf = model.named_steps["clf"]             # v1 plain Pipeline
         explainer   = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X_sample)
 
@@ -455,7 +461,12 @@ def explain_prediction(
     X_background = imp.transform(background)
     X_row        = imp.transform(row_df)
 
-    clf       = model.named_steps["clf"]
+    # v2 model artifact is CalibratedClassifierCV — extract inner GBM for SHAP
+    from sklearn.calibration import CalibratedClassifierCV as _CalCV
+    if isinstance(model, _CalCV):
+        clf = model.estimator.named_steps["clf"]
+    else:
+        clf = model.named_steps["clf"]
     explainer = shap.TreeExplainer(clf, data=X_background)
     sv        = explainer.shap_values(X_row)
 
