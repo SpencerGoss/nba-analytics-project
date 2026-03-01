@@ -311,7 +311,7 @@ def build_player_game_features(
 
     final = pd.read_csv(output_path, nrows=5)
     total_rows = sum(1 for _ in open(output_path, "r", encoding="utf-8")) - 1
-    print(f"\nSaved {total_rows:,} rows × {len(final.columns)} cols → {output_path}")
+    print(f"\nSaved {total_rows:,} rows x {len(final.columns)} cols -> {output_path}")
     return final
 
 

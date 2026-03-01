@@ -194,12 +194,16 @@ def train_player_models(
 
         best_model = candidates[best_name]
         best_model.fit(X_train, y_train)
-        test_pred = best_model.predict(X_test)
-        test_mae = mean_absolute_error(y_test, test_pred)
-        test_rmse = root_mean_squared_error(y_test, test_pred)
 
         print(f"  Selected      | {best_name}")
-        print(f"  Test          | MAE={test_mae:.3f} | RMSE={test_rmse:.3f}")
+        if len(X_test) > 0:
+            test_pred = best_model.predict(X_test)
+            test_mae = mean_absolute_error(y_test, test_pred)
+            test_rmse = root_mean_squared_error(y_test, test_pred)
+            print(f"  Test          | MAE={test_mae:.3f} | RMSE={test_rmse:.3f}")
+        else:
+            test_mae, test_rmse = float("nan"), float("nan")
+            print(f"  Test          | No test data (test seasons not in features file)")
 
         models[target] = best_model
         metrics[target] = {
