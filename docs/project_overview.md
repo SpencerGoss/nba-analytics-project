@@ -15,6 +15,7 @@ I will continue updating this file as the project evolves.
 - [6. Feature Engineering](#6-feature-engineering)
 - [7. Predictive Models](#7-predictive-models)
 - [8. Model Evaluation Suite](#8-model-evaluation-suite)
+- [9. Cycle 1 Improvements — Pipeline Fixes, Model Upgrades, and Calibration](#9-cycle-1-improvements--pipeline-fixes-model-upgrades-and-calibration)
 
 ---
 
@@ -335,4 +336,66 @@ Because the SHAP library is an optional dependency (`pip install shap`), the mod
 
 All charts and feature direction tables are saved to `reports/explainability/`.
 
+---
+
+## 9. Cycle 1 Improvements — Pipeline Fixes, Model Upgrades, and Calibration
+
+This section covers the first round of targeted improvements made after the initial build was reviewed. The changes fall into three buckets: keeping the daily pipeline running reliably, giving the prediction model better information to work with, and making the model's probability outputs more trustworthy. Each change was reviewed and tested by a separate debugging pass before being documented here.
+
+### 9.1 Fixing the Daily Update Pipeline (`src/data/get_odds.py`)
+
+Before this fix, the entire daily update pipeline was broken. Every time `update.py` tried to run, it crashed immediately because it expected a file called `get_odds.py` that didn't exist yet. Nothing else in the pipeline — game logs, stats, features — could update because the script never got past that missing piece.
+
+The fix was to create `src/data/get_odds.py` as a middleman between the update script and the odds-fetching script. It runs the odds fetcher in a safe, isolated way. If the API key isn't set up or the internet is down, it simply reports "couldn't get odds today" and lets the rest of the pipeline keep going. Think of it like a mail carrier who knocks on the door — if nobody answers, they move on to the next house instead of stopping the whole route.
+
+This was the most critical fix in the batch because it restored the daily pipeline to working order.
+
+### 9.2 Better Error Logging for the Backfill Script (`backfill.py`)
+
+The backfill script is the one you run once to pull years of historical NBA data. Before this change, if something went wrong halfway through — say the NBA's servers stopped responding — the script would crash with a confusing error message and leave no record of what happened.
+
+Now it catches any failure, writes a timestamped entry to a log file (`logs/pipeline_errors.log`), prints a clear message about what went wrong, and exits with an error code that Windows Task Scheduler or any automation tool can detect. The actual backfill logic was reorganized into its own section to keep things clean — same behavior, just wrapped in a safety net. The log directory is created automatically if it doesn't already exist.
+
+### 9.3 The Model Now Uses Injury Information (`src/models/game_outcome_model.py`)
+
+This is probably the most impactful change for prediction quality. The project already had code that builds "injury proxy" features — estimates of how much a team is hurt by missing players (Section 6.5 above). But those features were being calculated and then completely ignored by the prediction model. It's like hiring a scout, getting their report, and then leaving it unopened on your desk.
+
+This change opens the envelope. The game outcome model now includes eight injury-related columns when making predictions — four for the home team and four for the away team:
+
+- **Missing minutes** — how many expected minutes are gone from the rotation due to absent players
+- **Missing usage rate** — how central those absent players are to the team's offense
+- **Rotation availability** — what fraction of the normal rotation is actually available (1.0 = full strength)
+- **Star player out** — a simple yes/no flag for whether a high-usage player is missing
+
+Player availability is one of the strongest real-world signals for who wins a game, so this could meaningfully improve the model's accuracy. The column names were verified against the actual data files to make sure everything lines up correctly. If the injury data hasn't been built yet for a particular game, the model handles that gracefully — it just fills in neutral values and keeps going.
+
+**Important:** The model needs to be retrained (`python src/models/game_outcome_model.py`) for these features to actually take effect. Until then, the saved model file still uses the old feature list without injury data.
+
+### 9.4 Saving the Calibrated Model (`src/models/calibration.py`)
+
+Section 8.3 above describes the calibration analysis — the process of checking whether the model's probability outputs are trustworthy. When the model says "68% chance the home team wins," calibration makes sure that actually means home teams win about 68% of those games.
+
+The calibration code already existed, but it had a gap: it would measure calibration and even compute an improved (calibrated) version of the model, but it never saved that improved version anywhere. So even after running the analysis, the prediction scripts were still using the raw, uncalibrated probabilities.
+
+This change fixes that for older model versions (called "v1" internally). After calibration is computed, the calibrated model is now saved to `models/artifacts/game_outcome_model_calibrated.pkl`. For newer model versions (v2), calibration is already baked into the training process, so no extra save is needed.
+
+**Caveat — attempted but not yet complete:** The Debugger flagged a minor concern with this change. In the v1 path, the calibration step uses the same data the model was already trained on. Since the model has already "seen" that data, its predictions on it are slightly overconfident, which means the calibration adjustment might not be as strong as it should be when applied to truly new games. This isn't a critical problem — the calibrated probabilities are still better than the raw ones — but for maximum trustworthiness, a future cycle should switch to using a separate held-out calibration set.
+
+Additionally, no downstream scripts (`fetch_odds.py`, `predict_cli.py`) currently load the calibrated model file. It's being saved but not yet used anywhere. A future cycle needs to wire it in so the calibrated probabilities actually make it into predictions and sportsbook comparisons.
+
+### 9.5 Modern Era Training Filter (`src/models/game_outcome_model.py`)
+
+NBA basketball in 2025 looks very different from NBA basketball in 2001. The 3-point revolution, pace changes, rule changes — a model trained on 25 years of data might be learning patterns from an era that no longer applies. This change adds a simple on/off switch to the game outcome model: flip `MODERN_ERA_ONLY` to `True`, and it will only train on games from the 2014-15 season onward (roughly the start of the 3-point era, labeled "Era 6" in the era labels system from Section 6.4).
+
+The switch is off by default, so nothing changes unless you deliberately turn it on. It's an experiment to see if training on "less but more relevant" data beats training on "more but noisier" data. The way to test it: turn the switch on, retrain, run the backtest, and compare recent-season accuracy to the default. Be aware that switching to modern-era-only cuts the training data roughly in half, so the model gets more relevant examples but fewer of them.
+
+### 9.6 Items Reviewed but Not Changed
+
+A few items from the security and model advisory reviews were investigated but didn't require code changes:
+
+- **Large data files in git** — already properly excluded by `.gitignore`. No action needed.
+- **Error handling in `update.py`** — already had the same kind of safety net that was added to `backfill.py`. No change needed.
+- **Odds integration beyond `get_odds.py`** — the odds-fetching script (`scripts/fetch_odds.py`) and its integration into the update pipeline were already fully built at the code level. The remaining work is operational: adding the API key to the environment and running the player data pipeline to bring the player features current so player prop comparisons work.
+- **Extending the player backtest to current seasons** — the backtest code already uses all available seasons dynamically. The reason it stops at 2015-16 is that the player game features file only contains data through that season. The fix is to run the full data pipeline (which takes several hours), not a code change.
+- **Re-running the evaluation suite** — this is a script execution step (`python src/models/run_evaluation.py`), not a code change. It needs to be run to regenerate SHAP reports and calibration outputs against the current models, and it's required before the calibrated model artifact from Section 9.4 will exist.
 

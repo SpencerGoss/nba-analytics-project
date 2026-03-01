@@ -365,10 +365,13 @@ def run_calibration_analysis(
 
     # ── Calibrated predictions ────────────────────────────────────────────────
     # v2: the loaded artifact is already the calibrated model — use it directly.
-    # v1: fit a fresh isotonic calibrator on the training data.
+    # v1: fit a fresh isotonic calibrator on the training data and save it so
+    #     future scripts (fetch_odds.py, predict_cli.py) can load calibrated probs
+    #     without re-fitting.
     if isinstance(model, CalibratedClassifierCV):
         print("\nUsing pre-fitted isotonic calibration from trained model artifact...")
         y_prob_cal = model.predict_proba(X_test)[:, 1]
+        cal_model  = model   # already saved; no extra write needed
     else:
         print("\nFitting isotonic calibration on training data (v1 model)...")
         train   = df[~df["season"].isin(test_seasons)].copy()
@@ -376,6 +379,14 @@ def run_calibration_analysis(
         cal_model = CalibratedClassifierCV(model, method="isotonic", cv="prefit")
         cal_model.fit(train[feat_cols], train[TARGET].values)
         y_prob_cal = cal_model.predict_proba(X_test)[:, 1]
+
+        # Save the calibrated wrapper alongside the raw model so downstream
+        # scripts can load calibrated probabilities without re-fitting.
+        os.makedirs(artifacts_dir, exist_ok=True)
+        cal_path = os.path.join(artifacts_dir, "game_outcome_model_calibrated.pkl")
+        with open(cal_path, "wb") as _f:
+            pickle.dump(cal_model, _f)
+        print(f"\nCalibrated model saved → {cal_path}")
 
     brier_cal = brier_score_loss(y_test, y_prob_cal)
     ece_cal   = _expected_calibration_error(y_test, y_prob_cal)

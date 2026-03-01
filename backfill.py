@@ -9,6 +9,7 @@ Run once (or rarely):
 """
 
 from datetime import datetime
+from pathlib import Path
 from typing import Callable
 
 from src.data.get_game_log import get_team_game_logs
@@ -25,6 +26,17 @@ from src.data.get_team_stats_playoffs import get_team_stats_playoffs
 from src.processing.preprocessing import run_preprocessing
 
 
+ERROR_LOG_PATH = Path("logs/pipeline_errors.log")
+
+
+def _log_pipeline_error(script_name: str, error: Exception) -> None:
+    """Append pipeline errors to logs/pipeline_errors.log."""
+    ERROR_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with ERROR_LOG_PATH.open("a", encoding="utf-8") as log_file:
+        log_file.write(f"[{timestamp}] {script_name} failed: {error}\n")
+
+
 def run_tasks(
     step_title: str,
     note: str,
@@ -39,6 +51,15 @@ def run_tasks(
 
 
 def main() -> None:
+    try:
+        _run_backfill()
+    except Exception as error:
+        _log_pipeline_error("backfill.py", error)
+        print(f"Backfill failed: {error}. See logs/pipeline_errors.log for details.")
+        raise SystemExit(1) from error
+
+
+def _run_backfill() -> None:
     start_time = datetime.now()
     print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] Starting NBA historical backfill...")
 

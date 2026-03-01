@@ -37,11 +37,23 @@ TEST_SEASONS = ["202324", "202425"]
 TRAIN_START_SEASON = "200001"
 MIN_TRAIN_SEASONS_FOR_TUNING = 6
 
+# When True, restrict training data to the modern 3-Point Revolution era
+# (2014-15 onward). Cuts historical noise at the cost of less training data.
+# Toggle to True and retrain to compare accuracy against the default (full history).
+# See docs/model_advisor_notes.md Proposal 5 for rationale.
+MODERN_ERA_ONLY = False
+MODERN_ERA_START = "201415"
+
 
 # ── Feature selection ──────────────────────────────────────────────────────────
 
 def get_feature_cols(df: pd.DataFrame) -> list:
-    """Prefer compact matchup differential features with critical context."""
+    """Prefer compact matchup differential features with critical context.
+
+    Injury proxy features (home/away prefixed, not diff) are included
+    explicitly so that player availability signals reach the model even when
+    a diff_ version is absent or sparse.
+    """
     exclude = {TARGET, "game_id", "season", "game_date", "home_team", "away_team"}
     numeric_cols = [
         c for c in df.columns
@@ -49,13 +61,22 @@ def get_feature_cols(df: pd.DataFrame) -> list:
     ]
 
     diff_cols = [c for c in numeric_cols if c.startswith("diff_")]
-    context_cols = [
-        c for c in numeric_cols
-        if c in {
-            "home_days_rest", "away_days_rest",
-            "home_is_back_to_back", "away_is_back_to_back",
-        }
-    ]
+
+    # Rest and schedule context
+    schedule_cols = {
+        "home_days_rest", "away_days_rest",
+        "home_is_back_to_back", "away_is_back_to_back",
+    }
+    # Injury proxy context — home/away form (not covered by diff_ alone because
+    # star_player_out is a binary flag where the absolute value matters, not just
+    # the differential).
+    injury_cols = {
+        "home_missing_minutes",      "away_missing_minutes",
+        "home_missing_usg_pct",      "away_missing_usg_pct",
+        "home_rotation_availability","away_rotation_availability",
+        "home_star_player_out",      "away_star_player_out",
+    }
+    context_cols = [c for c in numeric_cols if c in schedule_cols | injury_cols]
 
     if diff_cols:
         return sorted(set(diff_cols + context_cols))
@@ -107,8 +128,15 @@ def train_game_outcome_model(
     matchup_path: str = MATCHUP_PATH,
     artifacts_dir: str = ARTIFACTS_DIR,
     test_seasons: list = TEST_SEASONS,
+    modern_era_only: bool = MODERN_ERA_ONLY,
 ) -> tuple:
-    """Train a game outcome model and return (pipeline, metrics)."""
+    """Train a game outcome model and return (pipeline, metrics).
+
+    Args:
+        modern_era_only: If True, restrict training to MODERN_ERA_START (2014-15+)
+            to focus on the 3-Point Revolution era. Toggle via the MODERN_ERA_ONLY
+            constant or pass directly. See model_advisor_notes.md Proposal 5.
+    """
     print("=" * 60)
     print("GAME OUTCOME PREDICTION MODEL")
     print("=" * 60)
@@ -124,8 +152,10 @@ def train_game_outcome_model(
     if len(df) < n_before:
         print(f"  Dropped {n_before - len(df):,} rows with missing target")
 
-    df = df[df["season"].astype(str) >= TRAIN_START_SEASON].copy()
-    print(f"  Modern era ({TRAIN_START_SEASON}+): {len(df):,} games")
+    start_season = MODERN_ERA_START if modern_era_only else TRAIN_START_SEASON
+    df = df[df["season"].astype(str) >= start_season].copy()
+    label = f"modern era only ({MODERN_ERA_START}+)" if modern_era_only else f"from {TRAIN_START_SEASON}"
+    print(f"  Training data {label}: {len(df):,} games")
 
     train = df[~df["season"].astype(str).isin(test_seasons)].copy()
     test = df[df["season"].astype(str).isin(test_seasons)].copy()
