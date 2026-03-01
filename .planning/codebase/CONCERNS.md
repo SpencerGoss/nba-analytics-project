@@ -1,0 +1,246 @@
+# Codebase Concerns
+
+**Analysis Date:** 2026-03-01
+
+## Tech Debt
+
+**Duplicated Error Handling and Logging:**
+- Issue: The same retry logic and error logging pattern is duplicated across all data-fetching scripts
+- Files: `src/data/get_player_stats.py`, `src/data/get_team_stats.py`, `src/data/get_standings.py`, `src/data/get_shot_chart.py`, and 10+ others
+- Pattern: Each file defines `HEADERS`, `MAX_RETRIES`, `RETRY_DELAY`, `fetch_with_retry()` independently
+- Impact: Code maintenance burden; changes to retry strategy require updates to 15+ files
+- Fix approach: Extract `fetch_with_retry()` and retry config into a shared `src/data/api_client.py` module that all data scripts import from
+
+**Shot Chart API Bottleneck:**
+- Issue: `src/data/get_shot_chart.py` makes one API call per player per season (~11,000 calls, 3-4 hours runtime)
+- Files: `src/data/get_shot_chart.py` lines 38-40
+- Impact: Feature is documented as "missing" in memory and production hasn't built this dataset
+- Current state: Unscheduled because execution time is prohibitive; cannot run daily with `update.py`
+- Fix approach: Either (a) batch shot chart ingestion into a separate weekly/monthly task with its own scheduler, or (b) implement an incremental fetch that only pulls new seasons/players since last run
+
+**Preprocessing Always Rebuilds All CSVs:**
+- Issue: `src/processing/preprocessing.py` line 58-331 rebuilds ALL processed CSVs from scratch every time
+- Files: `src/processing/preprocessing.py`
+- Impact: `update.py` calls `run_preprocessing()` daily even when only 1-2 seasons' raw data changed; this reprocesses 25+ seasons of existing data
+- Fix approach: Make preprocessing incremental — only rebuild CSVs for seasons where raw files are newer than processed output; fall back to full rebuild only if schema changes detected
+
+**Inconsistent Data Type Coercion:**
+- Issue: Type conversions happen at preprocessing time without validation
+- Files: `src/processing/preprocessing.py` lines 70-93, 100-156, etc.
+- Example: `df["player_id"].astype(int)` will silently fail if any `NaN` values exist; `astype(float)` then `astype(int)` masks the issue
+- Impact: Silent data corruption; bad rows dropped without logging
+- Fix approach: Use `pd.to_numeric(errors='coerce')` with explicit logging of rows with null values; raise error if unexpected nulls are found
+
+## Known Bugs
+
+**Stale SHAP Explainability Reports:**
+- Symptoms: SHAP importance files reference features (`fantasy_pts`, raw `dreb`, raw `oreb`) that no longer exist in current production models
+- Files: `reports/explainability/feature_direction_*.csv` (stale); `src/models/run_evaluation.py` (needs re-run)
+- Trigger: Model was retrained to remove leaky features, but `run_evaluation.py` was never re-executed
+- Workaround: Ignore SHAP files; rely on importances CSV files instead
+- Fix: Run `python src/models/run_evaluation.py` to regenerate all explainability reports against current trained models
+
+**Calibration Artifacts Saved But Never Loaded:**
+- Symptoms: `models/artifacts/game_outcome_model_calibrated.pkl` exists but no production code ever loads it
+- Files: `src/models/calibration.py` line 377-380 saves calibrated model; `scripts/fetch_odds.py` and `src/models/predict_cli.py` never import it
+- Impact: Calibration work is wasted; `fetch_odds.py` outputs uncalibrated probabilities to sportsbook comparison file
+- Fix: Either wire calibrated model into `fetch_odds.py` to use for comparison, or remove the save logic and document why calibration is compute-only
+
+**Missing Injury Features in Game Outcome Model:**
+- Symptoms: Model importances file does not list `home_missing_minutes`, `away_missing_minutes`, `home_star_player_out`, etc.
+- Files: `src/models/game_outcome_model.py` lines 73-78 explicitly include injury columns in feature selection, but they don't appear in final importances
+- Trigger: Features either missing from input CSV or silently all-null and imputed to mean value, making them invisible to model
+- Impact: Player availability (strongest predictor of game outcome) has zero effect on predictions
+- Fix: (a) Debug `src/features/injury_proxy.py` and `src/features/team_game_features.py` to verify injury features actually reach `data/features/game_matchup_features.csv`, (b) if present but all-null, investigate why, (c) retrain model; (d) verify importances file includes them
+
+**Player Backtest Stops in 2015-16:**
+- Symptoms: `reports/backtest_player_pts.csv` only covers through 2015-16 test season; missing 10 years of modern NBA data
+- Files: `src/models/backtesting.py` (loop boundary); `src/models/player_performance_model.py`
+- Impact: No visibility into model accuracy on post-2015 data (3-point era, load management, modern pace)
+- Fix: Update `backtesting.py` loop to run player backtests through all available seasons matching game outcome backtest range (through 2025-26)
+
+**Minor V1 Model Calibration Data Leakage:**
+- Symptoms: `src/models/calibration.py` lines 377-380 fit isotonic regression on the same data the model trained on
+- Files: `src/models/calibration.py` line 377
+- Impact: Calibrator learns from slightly overconfident predictions; may under-correct when applied to truly unseen data
+- Workaround: V2 models use proper cross-validated calibration during training, so issue only affects V1 models
+- Fix: For V1 path, use a held-out calibration set (3rd split separate from train and test) or cross-validated calibration approach
+
+## Security Considerations
+
+**Environment Variables Not Validated at Startup:**
+- Risk: Missing `ODDS_API_KEY` is only caught when `refresh_odds_data()` tries to call `scripts/fetch_odds.py`
+- Files: `src/data/get_odds.py`, `.env` (note: never read, but configuration issue)
+- Current mitigation: `refresh_odds_data()` catches subprocess failures and returns False; `update.py` continues pipeline
+- Recommendations: (a) Add startup validation in `update.py` that warns about missing critical API keys before fetching begins, (b) document which env vars are required vs. optional, (c) consider loading `.env` with explicit validation
+
+**API Headers Hardcoded Across Scripts:**
+- Risk: User-Agent string is identical across all data-fetching scripts; could be flagged as bot traffic if NBA tightens rate limiting
+- Files: `src/data/get_player_stats.py`, `src/data/get_team_stats.py`, `src/data/get_standings.py`, `src/data/get_shot_chart.py`, and others (lines 9-17 in each)
+- Current mitigation: nba_api handles rate limiting internally
+- Recommendations: Either (a) vary User-Agent with script/session ID for anonymity, or (b) document that this is a known fingerprint if NBA begins filtering by User-Agent
+
+**Error Logs May Contain Sensitive Data:**
+- Risk: `logs/pipeline_errors.log` captures full exception text which could include API responses with rate-limit info or private data
+- Files: `src/data/get_odds.py` line 63, `update.py` line 36, `backfill.py` line 37
+- Current state: Log file is created at runtime; `.gitignore` should exclude it
+- Recommendations: (a) Verify `logs/` is in `.gitignore`, (b) sanitize error messages before writing (exclude stack traces that contain full URLs/payloads)
+
+## Performance Bottlenecks
+
+**Shot Chart API Ingestion (3-4 hours):**
+- Problem: ~11,000 API calls at 0.8s throttle with 3 retries = prohibitive daily cost
+- Files: `src/data/get_shot_chart.py` lines 38-90
+- Cause: One call per player per season; nba_api `ShotChartDetail` endpoint cannot batch
+- Improvement path: (a) Implement incremental fetch (skip players already in processed CSV), (b) reduce time window to last 5 seasons (covering current stars only), (c) fetch shot charts on-demand during model evaluation rather than daily
+
+**Preprocessing Reprocesses Entire History Daily:**
+- Problem: `update.py` → `run_preprocessing()` rebuilds 25+ seasons' CSVs every day even when only current season changed
+- Files: `src/processing/preprocessing.py` lines 58-331
+- Cause: No incremental merge logic; concatenates all raw files and writes full processed output
+- Improvement path: Implement seasonal chunking — detect which raw folders have new/modified files, reprocess only those seasons, append to existing processed CSVs; full rebuild only on schema migration
+
+**Duplicate Column Cleaning Across All Tables:**
+- Problem: `clean_columns()` called 25+ times per preprocessing run; does string operations on 100,000+ rows
+- Files: `src/processing/preprocessing.py` lines 21-31
+- Impact: Negligible for current scale (~25MB processed data) but will bottleneck if schema expands or raw ingestion speeds increase
+- Improvement path: Cache cleaned column names per prefix; vectorize string operations if adding >50 more raw data sources
+
+**Game Outcome Model Backtest Accuracy Degrades Post-2014:**
+- Problem: Model achieves 67-69% accuracy on 2005-2015 data but only 64-66% on 2016-2026 data
+- Files: `src/models/game_outcome_model.py`, `reports/backtest_game_outcome.csv`
+- Cause: Modern 3-point era introduces higher variance (more outlier games); model trained on mixed eras
+- Improvement path: (a) Filter training to modern era only (2014+) per Proposal 5 in `docs/model_advisor_notes.md`, (b) add pace and 3-point efficiency rolling averages, (c) verify injury features are active
+
+## Fragile Areas
+
+**Data Fetcher Scripts Are Tightly Coupled to nba_api Endpoint Structure:**
+- Files: `src/data/get_player_stats.py` lines 46-50, `src/data/get_team_stats.py` lines 45-51, etc. (all use hardcoded endpoint args)
+- Why fragile: If nba_api changes endpoint signatures or returns different column names, all 15+ scripts fail simultaneously
+- Safe modification: (a) Create a wrapper for each endpoint that translates between our schema and nba_api's response, (b) add CSV validation in preprocessing to catch schema mismatches early and log which endpoint drifted
+- Test coverage: Gaps — no unit tests for data fetchers; only integration tests implicitly via successful CSV generation
+
+**Preprocessing Column Rename Mapping Is Hardcoded:**
+- Files: `src/processing/preprocessing.py` lines 70-76, 174-181 (rename dicts)
+- Why fragile: If NBA endpoint returns a new column, preprocessing silently includes it in mixed case (not cleaned); if they rename an existing column, preprocessing uses old name and job fails
+- Safe modification: (a) Add schema validation at start of preprocessing — compute expected columns from config, compare to actual input, (b) generate the rename dict from a configuration file rather than hardcoding
+- Test coverage: Gaps — no schema validation tests; only tested via end-to-end runs
+
+**Error Recovery Relies on Silent Continuation:**
+- Files: `src/data/get_player_stats.py` line 54-55 (continue on None); `update.py` line 126-127 (odds refresh optional)
+- Why fragile: `fetch_with_retry()` returns `None` on all failures; calling code has no way to distinguish "API timeout" from "invalid season" from "malformed response"
+- Safe modification: (a) Return structured result object `{success: bool, data: pd.DataFrame | None, error: str}` instead of just `None or DataFrame`, (b) log error type when continuing, (c) fail loudly if critical endpoint returns None
+- Test coverage: Gaps — no unit tests for retry logic or error paths; only catch-all exception handler in `update.py`
+
+**Feature Engineering Pipeline Has Silent Data Joins:**
+- Files: `src/features/injury_proxy.py` (377 lines), `src/features/team_game_features.py` (673 lines)
+- Why fragile: Multiple inner joins on (`game_id`, `team_id`, `season`) can silently drop rows if join keys mismatch; no row count assertions after joins
+- Safe modification: (a) Add assertions after every join: `assert len(before_join) == len(after_join) or len(after_join) == 0` with descriptive error, (b) log join statistics (how many rows matched), (c) add unit tests with synthetic data
+- Test coverage: Gaps — no tests for feature engineering; difficult to debug missing features in downstream model
+
+**Custom NumPy GBM Implementation Has No Variance Estimates:**
+- Files: `src/models/numpy_gbm.py` (699 lines)
+- Why fragile: Hand-rolled gradient boosting can accumulate numerical errors or diverge; no validation that predictions remain in [0,1] for classification
+- Safe modification: (a) Add assertions that predicted probabilities stay in valid range, (b) compare performance against `sklearn.ensemble.GradientBoostingClassifier` periodically, (c) document expected RMSE on synthetic regression tasks to catch silent drift
+- Test coverage: Gaps — no unit tests for GBM implementation; only integration tests via backtesting
+
+## Scaling Limits
+
+**API Rate Limiting and Throttling:**
+- Current capacity: ~10-15 API calls per daily update run (~2-5 minutes); shot chart fetch takes 3-4 hours
+- Limit: nba_api throttles at 1 request per ~1-2 seconds per session
+- Scaling path: (a) Implement request batching/pipelining where nba_api supports it (most endpoints don't), (b) cache raw CSV files for 24h to avoid re-fetches if job runs twice, (c) separate shot chart into monthly task with its own scheduler
+
+**Database Growth (SQLite):**
+- Current capacity: `database/nba.db` contains 18 tables, 60+ years of data; fits in single file
+- Limit: SQLite file locking becomes problematic if >10GB; row counts in `player_game_logs` (~1.5M rows) and `team_game_logs` (~50k rows) are manageable
+- Scaling path: (a) Add query indexing on foreign keys and date ranges if query performance degrades, (b) partition historical (1946-2000) from modern (2001-2026) data if storage grows beyond 1GB, (c) migrate to PostgreSQL if concurrent query load exceeds 2-3 simultaneous connections
+
+**CSV Processing in Memory:**
+- Current capacity: `preprocessing.py` concatenates all 25 seasons of player/team stats into single DataFrames; each ~100MB
+- Limit: Reading 25 seasons + 3 retries × 25 seasons for different stat types = ~600MB peak memory; acceptable on modern machines but risks OOM on resource-constrained environments
+- Scaling path: (a) Process one season at a time and append to output CSV incrementally, (b) use `dask.dataframe` for out-of-core processing if adding future data sources
+
+**Feature Engineering Job Runtime:**
+- Current capacity: `src/features/team_game_features.py` (673 lines) takes ~5-10 minutes to compute rolling features over 80 years of data
+- Limit: If feature set expands 10x or data window extends to play-by-play granularity, could exceed 1-hour threshold
+- Scaling path: (a) Vectorize rolling window operations (use `rolling()` instead of loops), (b) cache intermediate results (e.g., 10-game rolling averages), (c) parallelize by season or team
+
+## Dependencies at Risk
+
+**nba_api Package Maintenance Status:**
+- Risk: `nba_api` is a community-maintained wrapper around NBA.com JSON endpoints; if NBA changes APIs or blocks unofficial clients, package breaks
+- Impact: All 15+ data-fetching scripts fail simultaneously; no data pipeline update until fix is available
+- Migration plan: (a) Document fallback endpoint URLs in case nba_api breaks, (b) fork nba_api and maintain internally if breaking changes occur frequently, (c) investigate official NBA Stats API alternatives (e.g., SportsRadar)
+
+**scikit-learn Version Compatibility:**
+- Risk: Model pickle files (`.pkl`) are version-specific; upgrading scikit-learn could break model loading
+- Files: `models/artifacts/*.pkl`
+- Current state: `requirements.txt` specifies `>=1.3.0` (loose constraint)
+- Migration plan: (a) Pin scikit-learn to specific minor version (e.g., `==1.3.2`) in `requirements.txt`, (b) add pickle format validation at load time (check sklearn version), (c) implement model re-serialization on version change
+
+**SHAP Dependency Optional But Model Explainability Depends On It:**
+- Risk: `shap>=0.44.0` is listed as optional in `requirements.txt` but `src/models/model_explainability.py` imports it unconditionally
+- Impact: `run_evaluation.py` fails if shap not installed; no graceful fallback
+- Migration plan: Either (a) make shap required in `requirements.txt`, (b) add try-except in model_explainability.py to fall back to sklearn's permutation importance, (c) document that explainability reports require shap installation
+
+## Missing Critical Features
+
+**Shot Chart Data Unbuilt:**
+- Problem: `shot_chart` table is planned and code exists (`src/data/get_shot_chart.py`) but dataset not generated
+- Blocks: Shot chart visualizations, heat map analysis, shot clustering features
+- Current status: In docs as TODO; not run as part of daily pipeline due to 3-4 hour runtime
+- Documentation: `src/processing/preprocessing.py` line 329 acknowledges it's optional and skipped
+
+**Calibration Outputs Not Integrated:**
+- Problem: `src/models/calibration.py` computes calibration curves but calibrated models never loaded in production
+- Blocks: Reliable sportsbook probability comparison; model outputs are uncalibrated
+- Current status: Artifacts computed and saved; pipeline script exists but disconnected
+- Documentation: `docs/debugger_notes.md` flags this as "saved but not yet loaded"
+
+**Player Model Prediction Confidence Intervals:**
+- Problem: Player points/rebounds/assists projections are point estimates with no uncertainty
+- Blocks: Cannot distinguish high-confidence from low-confidence projections; flagging logic treats all disagreements equally
+- Current status: Not implemented; listed as Proposal 8 in `docs/model_advisor_notes.md`
+- Documentation: Feature described in model advisor notes; no ticket created
+
+**Minutes Projection for Player Model:**
+- Problem: Player models predict points/rebounds/assists but not minutes; minutes allocation is volatile and affects accuracy
+- Blocks: Cannot adjust for load management; may systematically overestimate players coming off injury
+- Current status: Not implemented; listed as Proposal 9 in `docs/model_advisor_notes.md`
+- Documentation: Feature described in notes; no implementation started
+
+## Test Coverage Gaps
+
+**No Unit Tests for Data Fetchers:**
+- Untested area: All fetch_with_retry logic, API endpoint calls, CSV writing
+- Files: All `src/data/get_*.py` files
+- Risk: Silent API changes, rate-limit behavior changes, or nba_api version incompatibilities discovered only in production runs
+- Priority: High — data ingestion is the foundation; downstream failures cascade to all analyses
+
+**No Unit Tests for Preprocessing:**
+- Untested area: Column cleaning, type coercion, duplicate removal, multi-file concatenation
+- Files: `src/processing/preprocessing.py`
+- Risk: Silent data corruption (e.g., rows with NaN values in ID columns silently dropped); schema mismatches not caught
+- Priority: High — preprocessing is the bottleneck between raw and processed; bugs propagate through entire pipeline
+
+**No Unit Tests for Feature Engineering:**
+- Untested area: Rolling window calculations, join operations, null imputation
+- Files: `src/features/injury_proxy.py`, `src/features/team_game_features.py`, `src/features/player_features.py`
+- Risk: Silent data loss during joins; rolling calculations with edge-case dates; null values imputed without logging
+- Priority: High — model accuracy depends entirely on feature correctness; bugs invisible in black-box model performance
+
+**No Unit Tests for Custom NumPy GBM:**
+- Untested area: Gradient computations, tree building, probability predictions
+- Files: `src/models/numpy_gbm.py` (699 lines of custom implementation)
+- Risk: Numerical stability issues, silent divergence, probability bounds violations
+- Priority: Medium — only used if sklearn alternative unavailable; less critical path
+
+**Integration Tests Only; No End-to-End Validation:**
+- Current approach: Rely on successful CSV/model file generation as implicit proof of correctness
+- Gap: No schema validation, no output sample verification, no comparison against expected ranges
+- Improvement: Add `test_data_integrity.py` that runs after each pipeline stage and checks invariants (e.g., game_id uniqueness, date ranges, season counts)
+
+---
+
+*Concerns audit: 2026-03-01*
