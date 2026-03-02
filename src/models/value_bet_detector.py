@@ -380,18 +380,31 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
         else:
             print(f"  Loaded {len(ats_df):,} games")
 
-        # Only use rows with moneyline data (required for no-vig prob)
-        ml_mask = ats_df["home_moneyline"].notna() & ats_df["away_moneyline"].notna()
-        ats_df = ats_df[ml_mask].copy()
-        print(f"  Games with moneyline data: {len(ats_df):,}")
+        # Determine market implied probability source:
+        # game_ats_features.csv has home_implied_prob (already no-vig, from ats_features.py)
+        # If raw moneylines are available, compute no-vig from them instead
+        if "home_implied_prob" in ats_df.columns:
+            # No-vig probs already computed during ATS feature build
+            ml_mask = ats_df["home_implied_prob"].notna()
+            ats_df = ats_df[ml_mask].copy()
+            print(f"  Games with implied prob data: {len(ats_df):,}")
+            market_implied_source = "home_implied_prob"
+        elif "home_moneyline" in ats_df.columns and "away_moneyline" in ats_df.columns:
+            # Fallback: compute no-vig from raw moneylines
+            ml_mask = ats_df["home_moneyline"].notna() & ats_df["away_moneyline"].notna()
+            ats_df = ats_df[ml_mask].copy()
+            print(f"  Games with moneyline data: {len(ats_df):,}")
+            market_implied_source = None  # will compute below
+        else:
+            print("  WARNING: No moneyline or implied probability columns found.")
+            return []
 
         if ats_df.empty:
-            print("  WARNING: No games with moneyline data found.")
+            print("  WARNING: No games with odds data found.")
             return []
 
         # -- Compute model win probabilities -------------------------------------
         print("\nComputing model win probabilities...")
-        valid_features = [c for c in feature_cols if c in ats_df.columns]
         missing_features = [c for c in feature_cols if c not in ats_df.columns]
         if missing_features:
             print(f"  NOTE: {len(missing_features)} features missing from data (will be imputed as 0)")
@@ -401,13 +414,19 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
         ats_df = ats_df.copy()
         ats_df["model_win_prob"] = probs
 
-        # -- Compute no-vig market implied probabilities -------------------------
-        print("Computing no-vig market implied probabilities...")
-        vig_results = [
-            no_vig_prob(row["home_moneyline"], row["away_moneyline"])
-            for _, row in ats_df.iterrows()
-        ]
-        ats_df["market_implied_prob"] = [r[0] for r in vig_results]
+        # -- Set market implied probabilities ------------------------------------
+        if market_implied_source == "home_implied_prob":
+            # Already no-vig from ats_features.py -- use directly
+            ats_df["market_implied_prob"] = ats_df["home_implied_prob"]
+            print("Using pre-computed no-vig implied probabilities from game_ats_features.csv")
+        else:
+            # Compute no-vig from raw moneylines
+            print("Computing no-vig market implied probabilities from raw moneylines...")
+            vig_results = [
+                no_vig_prob(row["home_moneyline"], row["away_moneyline"])
+                for _, row in ats_df.iterrows()
+            ]
+            ats_df["market_implied_prob"] = [r[0] for r in vig_results]
 
         games_df = ats_df[
             ["model_win_prob", "market_implied_prob"]
