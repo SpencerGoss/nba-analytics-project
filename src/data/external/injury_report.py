@@ -27,6 +27,13 @@ import requests
 # Allow running as a script from project root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
+# -- Code path boundary (FR-4.4) -----------------------------------------------
+# This module is INFERENCE PATH ONLY.
+# NEVER import src.features.injury_proxy.build_injury_proxy_features here.
+# NEVER use historical game log data for injury features in this module.
+# The training path is src/features/injury_proxy.py.
+_CODE_PATH = "INFERENCE"
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 OUTPUT_DIR = "data/raw/external/injury_reports/"

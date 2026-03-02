@@ -7,24 +7,24 @@ Since the NBA API does not expose a historical injury timeline, we infer
 player availability using a proxy approach: a rotation player is anyone
 who has averaged 15+ minutes over their last 5 games. If such a player
 has no entry in the game log for a given game, they almost certainly
-did not play — whether due to injury, rest, or coach's decision.
+did not play -- whether due to injury, rest, or coach's decision.
 
 This gives the model four meaningful signals for each team entering a game:
 
-  missing_minutes        — Total expected minutes from absent rotation players.
+  missing_minutes        -- Total expected minutes from absent rotation players.
                            A value of 35 means ~35 min of expected production
                            is unavailable, roughly equivalent to losing a starter.
 
-  missing_usg_pct        — Combined usage rate of absent players. Usage rate
+  missing_usg_pct        -- Combined usage rate of absent players. Usage rate
                            measures what % of team possessions a player uses;
                            a missing player at 0.28 usg_pct is a much bigger
                            deal than one at 0.12.
 
-  rotation_availability  — Expected minutes available / total expected minutes.
+  rotation_availability  -- Expected minutes available / total expected minutes.
                            1.0 = full strength. 0.7 = team is missing 30% of
                            their normal rotation's playing time.
 
-  star_player_out        — Binary flag. 1 if any absent player has a season
+  star_player_out        -- Binary flag. 1 if any absent player has a season
                            usage rate >= 25% (the threshold commonly used to
                            define a team's primary ball-handler / star).
 
@@ -35,17 +35,26 @@ home_/away_ prefixed columns and a diff_missing_minutes differential.
 Leakage note:
   All rolling stats use shift(1) so only prior games inform the
   "expected minutes" baseline. The fact that a player is absent in the
-  current game's log is pre-game-observable information — NBA teams
+  current game's log is pre-game-observable information -- NBA teams
   publish official injury reports ~1 hour before tip-off. For real-time
   predictions, pair this module with get_todays_injury_report() below.
+
+Code path boundary (FR-4.4):
+  This module is the TRAINING PATH for injury features. It builds
+  historical injury proxy from game logs. It must NEVER import or call
+  src.data.external.injury_report (the INFERENCE PATH).
+
+  The inference path lives in src/data/external/injury_report.py and
+  fetches live NBA pre-game reports. These two modules must never share
+  inputs or call each other. Violations break the training/inference
+  separation that prevents data leakage.
 
 Usage:
     from src.features.injury_proxy import build_injury_proxy_features
     df = build_injury_proxy_features()
 
-    # Or for a live game prediction:
-    from src.features.injury_proxy import get_todays_injury_report
-    scratched = get_todays_injury_report()
+    # For live game predictions use the canonical INFERENCE PATH module:
+    #   src.data.external.injury_report.get_todays_nba_injury_report()
 
     python src/features/injury_proxy.py
 """
@@ -59,6 +68,12 @@ warnings.filterwarnings("ignore")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+# -- Code path boundary (FR-4.4) -----------------------------------------------
+# This module is TRAINING PATH ONLY.
+# NEVER import src.data.external.injury_report here.
+# NEVER call get_todays_nba_injury_report() from build_injury_proxy_features().
+# The inference path is src/data/external/injury_report.py.
+_CODE_PATH = "TRAINING"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -344,6 +359,10 @@ def get_todays_injury_report() -> pd.DataFrame:
     Fetch today's official NBA injury report and return a DataFrame of
     players who are OUT or QUESTIONABLE for tonight's games.
 
+    NOTE: Prefer src.data.external.injury_report.get_todays_nba_injury_report()
+    which includes PDF fallback and snapshot saving. This function is retained
+    for backward compatibility only.
+
     This is the real-time complement to the historical proxy above.
     For live predictions, use this to identify which rotation players
     will be missing and apply the same missing_minutes logic.
@@ -398,6 +417,10 @@ def apply_live_injuries(
     Given a set of player IDs that won't play tonight, recalculates
     missing_minutes and rotation_availability for the affected team
     and patches the matchup row before feeding it to the model.
+
+    Code path: INFERENCE. This function adjusts features for live prediction.
+    It is NOT called during training -- training uses build_injury_proxy_features()
+    which derives availability from historical game logs only.
 
     Args:
         matchup_row:         A single row from game_matchup_features
