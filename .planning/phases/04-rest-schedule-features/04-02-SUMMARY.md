@@ -49,7 +49,7 @@ completed: 2026-03-02
 
 # Phase 4 Plan 02: Season Month + Model Retrain Summary
 
-**season_month (1-12) added as game-level context feature to matchup dataset; schedule_cols updated with all Phase 4 travel features; game outcome model retrained with 68 features including 10 Phase 4 schedule features achieving 66.8% test accuracy**
+season_month (1-12) added as game-level context feature to matchup dataset; schedule_cols updated with all Phase 4 travel features; game outcome model retrained with 68 features including 10 Phase 4 schedule features achieving 66.8% test accuracy
 
 ## Performance
 
@@ -94,7 +94,7 @@ Each task committed atomically:
 ## Decisions Made
 
 - season_month placed directly on matchup DataFrame (not per-team): avoids unnecessary home_/away_ duplication for a game-level feature
-- schedule_cols updated with explicit home_/away_ travel variants; diff_ variants auto-included via startswith filter (no duplication needed)
+- schedule_cols updated with explicit home_/away_ travel variants; diff_ variants auto-included via startswith filter (no duplication needed).
 - random_forest selected over gradient_boosting by narrow margin (0.6560 vs 0.6544 mean val acc across 4 expanding splits)
 - Calibrated model needs regeneration: game_outcome_model_calibrated.pkl (Mar 1 21:30) predates retrained model (Mar 2 03:48). Run `python src/models/calibration.py` before using calibrated inference.
 
@@ -114,6 +114,7 @@ None - no external service configuration required.
 ## Phase 4 Completion Status
 
 All Phase 4 requirements satisfied:
+
 - FR-3.1: days_rest and is_back_to_back -- implemented and verified (04-01)
 - FR-3.2: travel_miles (haversine, 0-2704 mi) -- implemented and in model (04-01)
 - FR-3.3: cross_country_travel (binary timezone flag) -- implemented and in model (04-01)
@@ -126,6 +127,15 @@ All Phase 4 requirements satisfied:
 - Phase 5 (ATS Model) can proceed with 68-feature game outcome model as baseline
 - Calibrated model should be regenerated before production inference use
 - All Phase 4 features are available in game_matchup_features.csv for ATS feature development
+
+## Self-Check: PASSED
+
+- FOUND: src/features/team_game_features.py
+- FOUND: src/models/game_outcome_model.py
+- FOUND: data/features/game_matchup_features.csv
+- FOUND: models/artifacts/game_outcome_metadata.json
+- FOUND: .planning/phases/04-rest-schedule-features/04-02-SUMMARY.md
+- FOUND: commit 5d0c603 (feat: add season_month feature and update schedule_cols)
 
 ---
 *Phase: 04-rest-schedule-features*
