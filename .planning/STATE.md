@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-02T01:06:00Z"
+last_updated: "2026-03-02T01:12:00Z"
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -22,17 +22,17 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 1 of 5 (Foundation & Outputs)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-03-02 — Completed 01-03 (prediction store and JSON export wired into predict_game)
+Phase: 1 of 5 (Foundation & Outputs) — COMPLETE
+Plan: 4 of 4 in current phase (all complete)
+Status: In progress (Phase 2 not yet started)
+Last activity: 2026-03-02 — Completed 01-04 (pipeline reference document docs/PIPELINE.md)
 
-Progress: [███░░░░░░░] 15%
+Progress: [████░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 2 min
 - Total execution time: 0 hours
 
@@ -40,10 +40,10 @@ Progress: [███░░░░░░░] 15%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-outputs | 3 | 5 min | 2 min |
+| 01-foundation-outputs | 4 | 8 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (90s), 01-02 (2 min), 01-03 (1 min)
+- Last 5 plans: 01-01 (90s), 01-02 (2 min), 01-03 (1 min), 01-04 (3 min)
 - Trend: Consistent
 
 *Updated after each plan completion*
@@ -51,6 +51,7 @@ Progress: [███░░░░░░░] 15%
 | Phase 01-foundation-outputs P01 | 90s | 2 tasks | 3 files |
 | Phase 01-foundation-outputs P02 | 2 min | 2 tasks | 4 files |
 | Phase 01-foundation-outputs P03 | 1 min | 2 tasks | 5 files |
+| Phase 01-foundation-outputs P04 | 3 min | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [Phase 01-foundation-outputs]: merge_asof with MAX_STALE_DAYS=25 chosen for absent rotation detection — handles trades and long-term injuries without O(n^2) loop
 - [Phase 01-03]: Non-fatal store write: store failure issues UserWarning but never prevents inference result from being returned
 - [Phase 01-03]: game_date field included in result dict so consumers can inspect date stored alongside probabilities
+- [01-04]: PIPELINE.md explicitly calls out what update.py does NOT run — prevents future sessions from assuming daily refresh covers all stages
+- [01-04]: Stage 5 calibration outputs two destinations: models/artifacts/ (inference artifact) and reports/calibration/ (diagnostic reports)
 
 ### Pending Todos
 
@@ -84,5 +87,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 01-03-PLAN.md (prediction store and JSON export wired into predict_game)
+Stopped at: Completed 01-04-PLAN.md (pipeline reference document — Phase 1 complete)
 Resume file: None

@@ -12,7 +12,7 @@ Starting from a working but imperfect NBA prediction pipeline, this milestone cl
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Outputs** - Fix broken features, wire calibrated model, and start accumulating prediction history
+- [x] **Phase 1: Foundation & Outputs** - Fix broken features, wire calibrated model, and start accumulating prediction history
 - [ ] **Phase 2: Modern Era Features** - Add pace-normalized efficiency metrics and restrict training to the modern NBA
 - [ ] **Phase 3: External Data Layer** - Build scrapers for Basketball Reference and live injury reports
 - [ ] **Phase 4: Rest & Schedule Features** - Add travel distance, back-to-back fatigue, and season-context features
@@ -33,10 +33,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 
 Plans:
-- [ ] 01-01: Fix injury proxy join and null-guard feature assembly
+- [x] 01-01: Fix injury proxy join and null-guard feature assembly
 - [x] 01-02: Wire calibrated model into predict_cli inference path
-- [ ] 01-03: Build prediction store and JSON export layer
-- [ ] 01-04: Document and clean up pipeline stage boundaries
+- [x] 01-03: Build prediction store and JSON export layer
+- [x] 01-04: Document and clean up pipeline stage boundaries
 
 ### Phase 2: Modern Era Features
 **Goal**: The game outcome model is trained exclusively on modern NBA data (2014+) and uses pace-normalized efficiency metrics that exist in the database but were never wired into the feature pipeline
@@ -115,7 +115,7 @@ Phases execute in dependency order: 1 → 2 → 3 → 4 → 5 (Phases 2 and 3 ca
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Outputs | 2/4 | In Progress|  |
+| 1. Foundation & Outputs | 4/4 | Complete | 2026-03-02 |
 | 2. Modern Era Features | 0/3 | Not started | - |
 | 3. External Data Layer | 0/4 | Not started | - |
 | 4. Rest & Schedule Features | 0/3 | Not started | - |
