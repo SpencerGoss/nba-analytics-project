@@ -85,6 +85,38 @@ def get_feature_cols(df: pd.DataFrame) -> list:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+def _load_game_outcome_model(artifacts_dir: str = ARTIFACTS_DIR) -> tuple:
+    """Load the game outcome model, preferring the calibrated artifact.
+
+    Returns (model, artifact_filename).
+    Issues a UserWarning if falling back to the uncalibrated model — calibrated
+    model produces probabilities; uncalibrated model produces raw scores.
+    FR-1.2: Ensures inference path always uses calibrated probabilities.
+    """
+    cal_path = os.path.join(artifacts_dir, "game_outcome_model_calibrated.pkl")
+    raw_path = os.path.join(artifacts_dir, "game_outcome_model.pkl")
+
+    if os.path.exists(cal_path):
+        with open(cal_path, "rb") as f:
+            return pickle.load(f), "game_outcome_model_calibrated.pkl"
+
+    warnings.warn(
+        "Calibrated model artifact not found at "
+        f"'{cal_path}'. Using uncalibrated model — probabilities may not be "
+        "reliable. Run: python src/models/calibration.py to generate the "
+        "calibrated artifact.",
+        UserWarning,
+        stacklevel=3,
+    )
+    if not os.path.exists(raw_path):
+        raise FileNotFoundError(
+            f"No model artifact found in '{artifacts_dir}'. "
+            "Run: python src/models/train_all_models.py"
+        )
+    with open(raw_path, "rb") as f:
+        return pickle.load(f), "game_outcome_model.pkl"
+
+
 def _best_threshold(y_true: pd.Series, proba: np.ndarray) -> tuple:
     """Find probability threshold that maximizes accuracy."""
     best_t, best_acc = 0.50, -1.0
@@ -296,11 +328,8 @@ def predict_game(
       2) Fallback: synthesize a matchup row using each team's most recent
          home/away context and differential columns.
     """
-    model_path = os.path.join(artifacts_dir, "game_outcome_model.pkl")
+    model, model_artifact_name = _load_game_outcome_model(artifacts_dir)
     feat_path = os.path.join(artifacts_dir, "game_outcome_features.pkl")
-
-    with open(model_path, "rb") as f:
-        model = pickle.load(f)
     with open(feat_path, "rb") as f:
         feat_cols = pickle.load(f)
 
@@ -337,6 +366,8 @@ def predict_game(
         "away_team": away_team_abbr,
         "home_win_prob": round(float(prob[1]), 4),
         "away_win_prob": round(float(prob[0]), 4),
+        "model_artifact": model_artifact_name,
+        "feature_count": len(feat_cols),
     }
 
 
