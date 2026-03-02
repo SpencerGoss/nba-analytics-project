@@ -53,6 +53,12 @@ ROLL_STATS = [
     "opp_pts",        # points allowed — key defensive signal
 ]
 
+ADV_ROLL_STATS = [
+    "off_rtg_game", "def_rtg_game", "net_rtg_game", "pace_game",
+    "efg_game", "ts_game", "tov_poss_game", "tov_pct_game",
+    "oreb_pct_game", "ft_rate_game",
+]
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -360,15 +366,47 @@ def build_team_game_features(
             include_groups=False,
         ).values
 
-    # ── Style mismatch: join opponent's three_rate + dreb ────────────────────
-    # Use self-join keyed on (opponent_abbr, game_id) to get the opposing
-    # team's fg3a rate and dreb in the same game (raw, pre-rolling).
+    # ── Style mismatch + advanced metrics: join opponent's box score ─────────
+    # Use a single expanded self-join keyed on (opponent_abbr, game_id) to get
+    # the opposing team's full box score columns for both style mismatch features
+    # and pace-normalized advanced metric computation.
     print("Computing style mismatch features...")
-    opp_style = df[["team_abbreviation", "game_id", "three_rate_raw", "dreb"]].copy()
-    opp_style.columns = [
-        "opponent_abbr", "game_id", "opp_three_rate_game", "opp_dreb_game"
+    opp_box = df[[
+        "team_abbreviation", "game_id",
+        "pts", "fga", "fg3m", "fgm", "oreb", "tov", "fta", "dreb",
+        "three_rate_raw",
+    ]].copy()
+    opp_box.columns = [
+        "opponent_abbr", "game_id",
+        "opp_pts_raw", "opp_fga", "opp_fg3m", "opp_fgm",
+        "opp_oreb", "opp_tov", "opp_fta", "opp_dreb",
+        "opp_three_rate_game",
     ]
-    df = df.merge(opp_style, on=["opponent_abbr", "game_id"], how="left")
+    df = df.merge(opp_box, on=["opponent_abbr", "game_id"], how="left")
+
+    assert df["opp_fga"].notna().sum() > 0, (
+        "Opponent box score join matched zero rows -- check opponent_abbr/game_id alignment"
+    )
+
+    # ── Possession estimates (Oliver formula) ────────────────────────────────
+    df["poss_est"]     = df["fga"] - df["oreb"] + df["tov"] + 0.44 * df["fta"]
+    df["opp_poss_est"] = df["opp_fga"] - df["opp_oreb"] + df["opp_tov"] + 0.44 * df["opp_fta"]
+    df["avg_poss"]     = (df["poss_est"] + df["opp_poss_est"]) / 2
+
+    # ── Per-game advanced metrics (raw, not yet rolled) ───────────────────────
+    # IMPORTANT: These are computed here after the opponent join; do NOT add to
+    # ROLL_STATS (which runs before the join). They are rolled separately via
+    # ADV_ROLL_STATS loop further below.
+    df["off_rtg_game"]  = df["pts"] / df["avg_poss"].replace(0, np.nan) * 100
+    df["def_rtg_game"]  = df["opp_pts_raw"] / df["avg_poss"].replace(0, np.nan) * 100
+    df["net_rtg_game"]  = df["off_rtg_game"] - df["def_rtg_game"]
+    df["pace_game"]     = df["avg_poss"]
+    df["efg_game"]      = (df["fgm"] + 0.5 * df["fg3m"]) / df["fga"].replace(0, np.nan)
+    df["ts_game"]       = df["pts"] / (2 * (df["fga"] + 0.44 * df["fta"])).replace(0, np.nan)
+    df["tov_poss_game"] = df["tov"] / df["poss_est"].replace(0, np.nan)
+    df["tov_pct_game"]  = df["tov"] / (df["fga"] + 0.44 * df["fta"] + df["tov"]).replace(0, np.nan)
+    df["oreb_pct_game"] = df["oreb"] / (df["oreb"] + df["opp_dreb"]).replace(0, np.nan)
+    df["ft_rate_game"]  = df["fta"] / df["fga"].replace(0, np.nan)
 
     style_group = df.groupby("team_id", group_keys=False)
 
@@ -386,13 +424,30 @@ def build_team_game_features(
 
     # Rolling opponent defensive rebound rate (opponent's dreb per game, last 20)
     df["opp_dreb_roll20"] = style_group.apply(
-        lambda g: g["opp_dreb_game"].shift(1).rolling(20, min_periods=1).mean(),
+        lambda g: g["opp_dreb"].shift(1).rolling(20, min_periods=1).mean(),
         include_groups=False,
     ).values
 
     # Composite style features
     df["three_style_mismatch"] = df["three_rate"] - df["opponent_three_allowed_rate"]
     df["rebounding_edge"]      = df["oreb_roll20"] - df["opp_dreb_roll20"]
+
+    # ── Advanced metric rolling features ──────────────────────────────────────
+    print("Computing advanced metric rolling features...")
+    adv_group = df.groupby("team_id", group_keys=False)
+    for window in roll_windows:
+        for stat in ADV_ROLL_STATS:
+            col_name = f"{stat}_roll{window}"
+            df[col_name] = adv_group.apply(
+                lambda g, s=stat: _rolling_mean_shift(g, s, window),
+                include_groups=False,
+            ).values
+
+    # Sanity check: print null rates for new rolling features
+    for stat in ADV_ROLL_STATS:
+        col = f"{stat}_roll20"
+        nn = df[col].notna().mean()
+        print(f"  {col}: {nn:.1%} non-null")
 
     # ── Trend features (rolling linear regression slope) ──────────────────────
     print("Computing trend & volatility features...")
