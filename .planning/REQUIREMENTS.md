@@ -149,7 +149,7 @@ The milestone is complete when:
 | FR-2.2 | Phase 2: Modern Era Features | Complete (02-01) |
 | FR-2.3 | Phase 2: Modern Era Features | Complete (02-01) |
 | FR-2.4 | Phase 2: Modern Era Features | Complete |
-| FR-2.5 | Phase 2: Modern Era Features | Pending |
+| FR-2.5 | Phase 2: Modern Era Features | Complete |
 | FR-4.1 | Phase 3: External Data Layer | Pending |
 | FR-4.2 | Phase 3: External Data Layer | Pending |
 | FR-4.3 | Phase 3: External Data Layer | Pending |

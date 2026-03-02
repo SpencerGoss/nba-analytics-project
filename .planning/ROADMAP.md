@@ -13,7 +13,7 @@ Starting from a working but imperfect NBA prediction pipeline, this milestone cl
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Outputs** - Fix broken features, wire calibrated model, and start accumulating prediction history
-- [ ] **Phase 2: Modern Era Features** - Add pace-normalized efficiency metrics and restrict training to the modern NBA
+- [x] **Phase 2: Modern Era Features** - Add pace-normalized efficiency metrics and restrict training to the modern NBA (completed 2026-03-02)
 - [ ] **Phase 3: External Data Layer** - Build scrapers for Basketball Reference and live injury reports
 - [ ] **Phase 4: Rest & Schedule Features** - Add travel distance, back-to-back fatigue, and season-context features
 - [ ] **Phase 5: ATS Model** - Build the ATS classifier, value-bet detector, and full backtest harness
@@ -116,7 +116,7 @@ Phases execute in dependency order: 1 → 2 → 3 → 4 → 5 (Phases 2 and 3 ca
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Outputs | 4/4 | Complete | 2026-03-02 |
-| 2. Modern Era Features | 2/3 | In Progress|  |
+| 2. Modern Era Features | 3/3 | Complete   | 2026-03-02 |
 | 3. External Data Layer | 0/4 | Not started | - |
 | 4. Rest & Schedule Features | 0/3 | Not started | - |
 | 5. ATS Model | 0/4 | Not started | - |

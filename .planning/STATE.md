@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-02T03:52:40Z"
+last_updated: "2026-03-02T05:24:05Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,29 +23,29 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 2 of 5 (Modern Era Features) — IN PROGRESS
-Plan: 2 of 4 in current phase (02-01 and 02-02 complete)
-Status: Phase 2 in progress — 02-02 Four Factors composite + advanced metric diffs complete, 02-03 next
-Last activity: 2026-03-02 — 02-02 Four Factors composite + 13 advanced metric diffs added to matchup dataset
+Plan: 3 of 4 in current phase (02-01, 02-02, 02-03 complete)
+Status: Phase 2 in progress — 02-03 modern era filtering + excluded seasons complete, 02-04 next
+Last activity: 2026-03-02 — 02-03 MODERN_ERA_ONLY=True, EXCLUDED_SEASONS=[201920,202021], model retrained on 201314+
 
-Progress: [█████▓░░░░] 28%
+Progress: [██████░░░░] 32%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 2 min
-- Total execution time: 0 hours
+- Total plans completed: 7
+- Average duration: 18 min
+- Total execution time: 2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-outputs | 4 | 8 min | 2 min |
-| 02-modern-era-features | 2 | 24 min | 12 min |
+| 02-modern-era-features | 3 | 112 min | 37 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (2 min), 01-03 (1 min), 01-04 (3 min), 02-01 (14 min), 02-02 (10 min)
-- Trend: Feature engineering plans average ~12 min; foundation plans averaged ~2 min
+- Last 5 plans: 01-04 (3 min), 02-01 (14 min), 02-02 (10 min), 02-03 (88 min)
+- Trend: 02-03 dominated by 3 training runs (model selection with gradient boosting on full history = slow)
 
 *Updated after each plan completion*
 
@@ -57,6 +57,7 @@ Progress: [█████▓░░░░] 28%
 | Phase 01-foundation-outputs P04 | 3 min | 2 tasks | 1 file |
 | Phase 02-modern-era-features P01 | 14 min | 2 tasks | 1 file |
 | Phase 02-modern-era-features P02 | 10 min | 2 tasks | 1 file |
+| Phase 02-modern-era-features P03 | 88 min | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - [02-01]: opp_dreb_game renamed to opp_dreb in expanded join — column name standardized, downstream reference updated
 - [Phase 02-modern-era-features]: diff_ prefix on Four Factors composite: naming diff_four_factors_composite ensures automatic pickup by get_feature_cols() startswith('diff_') filter — no model code changes needed
 - [Phase 02-modern-era-features]: Selective roll windows for rate stats: roll20-only for eFG%/TS%/pace/tov_poss (noisy at shorter windows); ORtg/DRtg/net_rtg get 5/10/20 windows as primary efficiency signals
+- [02-03]: MODERN_ERA_START changed 201415->201314 per plan spec (include 2013-14 season as modern era start)
+- [02-03]: Research finding: full history GB model (0.6729) marginally outperforms modern era RF model (0.6684) on same test holdout — model selection variance with 4 vs 19 splits is likely cause; modern era model still operational as final artifact
+- [02-03]: Calibration artifact needs regeneration: game_outcome_model_calibrated.pkl predates modern era retraining; run calibration.py before using calibrated inference
 
 ### Pending Todos
 
@@ -100,5 +104,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 02-02 -- Four Factors composite + advanced metric diffs in matchup dataset; next is 02-03
+Stopped at: Completed 02-03 -- MODERN_ERA_ONLY=True, EXCLUDED_SEASONS=[201920,202021], model retrained on 201314+; next is 02-04
 Resume file: None
