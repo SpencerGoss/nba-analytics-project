@@ -3,6 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-02T08:50:54.587Z"
+progress:
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 13
+  completed_plans: 13
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-02T07:09:53.293Z"
 progress:
   total_phases: 3
@@ -35,12 +48,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 4 of 5 (Schedule + Travel Features) — IN PROGRESS
-Plan: 04-01 complete; next: 04-02 (season_month feature + model retrain with new schedule cols)
-Status: 04-01 complete — travel features (travel_miles, cross_country_travel, diff_is_back_to_back) wired into matchup dataset
-Last activity: 2026-03-02 — 04-01 ARENA_COORDS/haversine travel features + diff_stats wiring
+Phase: 4 of 5 (Schedule + Travel Features) — COMPLETE
+Plan: 04-02 complete; Phase 4 fully done; next: Phase 5 ATS Model
+Status: 04-02 complete -- season_month added to matchup dataset; schedule_cols updated; model retrained with 68 features (10 Phase 4); 66.8% test accuracy
+Last activity: 2026-03-02 -- 04-02 season_month + schedule_cols + model retrain complete
 
-Progress: [████████████] 65%
+Progress: [██████████████] 75%
 
 ## Performance Metrics
 
@@ -76,6 +89,7 @@ Progress: [████████████] 65%
 | Phase 03-external-data-layer P04 | 189 | 2 tasks | 3 files |
 | Phase 03-external-data-layer P02 | 3 | 2 tasks | 2 files |
 | Phase 04-rest-schedule-features P01 | 21 min | 2 tasks | 2 files |
+| Phase 04-rest-schedule-features P02 | 17 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -118,6 +132,9 @@ Recent decisions affecting current work:
 - [04-01]: Static ARENA_COORDS and ARENA_TIMEZONE dicts at module level: 30 NBA arenas are fixed, instant lookup, no API key
 - [04-01]: diff_is_back_to_back added to diff_stats: captures fatigue asymmetry (home B2B vs rested away) as direct signal
 - [04-01]: travel_miles=0 for season opener (fillna(0)): correct neutral value for no-prior-game case
+- [Phase 04-rest-schedule-features]: season_month added to build_matchup_dataset() AFTER merge: game-level feature avoids home_/away_ duplication
+- [Phase 04-rest-schedule-features]: schedule_cols updated with home_travel_miles, away_travel_miles, home_cross_country_travel, away_cross_country_travel, season_month; diff_ variants auto-picked up by startswith filter
+- [Phase 04-rest-schedule-features]: Calibrated model (game_outcome_model_calibrated.pkl) predates retrained model: run calibration.py before production inference use
 
 ### Pending Todos
 
@@ -130,10 +147,11 @@ None yet.
 - The Odds API historical depth: unknown free-tier range — audit before ATS backfill design (Phase 5)
 - Basketball Reference HTML selectors: PARTIALLY RESOLVED (03-01) — HTML comment pattern confirmed from 3 PyPI packages; officials table ID='officials' MEDIUM confidence (naming convention); Cloudflare blocks in this environment; recommend live verification from cloud VM before building 03-02 referee features
 - geopy 2.4.x API shape: RESOLVED (04-01) -- geopy listed in requirements.txt; haversine used for performance; no API shape issues
-- game_outcome_model.py schedule_cols: needs update with home_travel_miles, away_travel_miles, home_cross_country_travel, away_cross_country_travel (Phase 4 follow-up)
+- game_outcome_model.py schedule_cols: RESOLVED (04-02) -- updated with home_travel_miles, away_travel_miles, home_cross_country_travel, away_cross_country_travel, season_month
+- Calibrated model needs regeneration: game_outcome_model_calibrated.pkl predates 04-02 retrained model; run calibration.py before production inference
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 04-01 -- ARENA_COORDS/ARENA_TIMEZONE/haversine travel features + diff_stats wiring; travel_miles and cross_country_travel in matchup CSV; FR-3.1 verified
+Stopped at: Completed 04-02 -- season_month feature + schedule_cols update + model retrain with 10 Phase 4 features; 66.8% test accuracy; Phase 4 complete
 Resume file: None
