@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [ ] 01-01: Fix injury proxy join and null-guard feature assembly
-- [ ] 01-02: Wire calibrated model into predict_cli inference path
+- [x] 01-02: Wire calibrated model into predict_cli inference path
 - [ ] 01-03: Build prediction store and JSON export layer
 - [ ] 01-04: Document and clean up pipeline stage boundaries
 
@@ -115,7 +115,7 @@ Phases execute in dependency order: 1 → 2 → 3 → 4 → 5 (Phases 2 and 3 ca
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Outputs | 0/4 | Not started | - |
+| 1. Foundation & Outputs | 1/4 | In progress | - |
 | 2. Modern Era Features | 0/3 | Not started | - |
 | 3. External Data Layer | 0/4 | Not started | - |
 | 4. Rest & Schedule Features | 0/3 | Not started | - |

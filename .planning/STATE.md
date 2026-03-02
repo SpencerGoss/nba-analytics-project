@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 1 of 5 (Foundation & Outputs)
-Plan: 0 of 4 in current phase
-Status: Ready to plan
-Last activity: 2026-03-01 — Roadmap created, phase structure finalized
+Plan: 2 of 4 in current phase
+Status: In progress
+Last activity: 2026-03-02 — Completed 01-02 (calibrated inference path + model metadata JSON)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
+- Total plans completed: 1
+- Average duration: 2 min
 - Total execution time: 0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-foundation-outputs | 1 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: none yet
+- Last 5 plans: 01-02 (2 min)
 - Trend: -
 
 *Updated after each plan completion*
@@ -46,6 +46,8 @@ Recent decisions affecting current work:
 - [Pre-phase]: ATS model uses separate feature table from win-probability model — spread as input is ATS-only; conflating them destroys value-bet signal
 - [Pre-phase]: Vegas lines are model inputs for ATS model, not just comparison targets — market consensus is the strongest public predictor
 - [Pre-phase]: Start prediction store in Phase 1, not at web milestone — every day without it is lost calibration history
+- [01-02]: UserWarning (not hard error) for missing calibrated model — inference still works with uncalibrated, operator sees loud warning to run calibration
+- [01-02]: Metadata JSON uses only Python builtins — numpy types never written to JSON to avoid TypeError at runtime
 
 ### Pending Todos
 
@@ -60,6 +62,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Roadmap written. All 5 phases defined. Ready to plan Phase 1.
+Last session: 2026-03-02
+Stopped at: Completed 01-02-PLAN.md (calibrated inference path + model metadata JSON)
 Resume file: None
