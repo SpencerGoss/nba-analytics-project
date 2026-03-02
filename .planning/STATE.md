@@ -3,6 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-02T20:22:59.174Z"
+progress:
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 17
+  completed_plans: 17
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-02T19:52:41.309Z"
 progress:
   total_phases: 5
@@ -87,12 +100,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 5 of 5 (ATS Model) — IN PROGRESS
-Plan: 05-03 complete; next: 05-04 ATS backtest
-Status: 05-03 complete -- Value-bet detector built; calibrated model regenerated (predates Phase 4, now current); historical scan verified (1,894 games, JSON-serializable results)
-Last activity: 2026-03-02 -- 05-03 value-bet detector complete
+Phase: 5 of 5 (ATS Model) — COMPLETE
+Plan: 05-04 complete; all plans in phase 5 done
+Status: 05-04 complete -- ATS backtest harness built; 18,233-game backtest executed; holdout OOS 51.2% hit rate; reports/ats_backtest.csv + reports/ats_backtest_summary.txt generated
+Last activity: 2026-03-02 -- 05-04 ATS backtest complete
 
-Progress: [##################] 86%
+Progress: [####################] 100%
 
 ## Performance Metrics
 
@@ -133,6 +146,7 @@ Progress: [##################] 86%
 | Phase 05-ats-model P02 | 35 | 2 tasks | 1 file |
 | Phase 05-ats-model P02 | 35 | 2 tasks | 1 files |
 | Phase 05-ats-model P03 | 41 | 2 tasks | 3 files |
+| Phase 05-ats-model P04 | 22 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -186,6 +200,8 @@ Recent decisions affecting current work:
 - [Phase 05-ats-model]: game_ats_features.csv already stores no-vig home_implied_prob; historical mode uses this directly as market_implied_prob
 - [Phase 05-ats-model]: check_remaining_quota() returns -1 non-fatal when ODDS_API_KEY absent; QuotaError raised only when key set but credits below minimum
 - [Phase 05-ats-model]: calibration.py Unicode chars (U+2500 x982) crash Windows cp1252 -- replaced with ASCII dashes
+- [Phase 05-ats-model]: bet_correct (pred==actual) passed to compute_roi_flat_110 -- ROI measures correctness of bets, not whether home team covered
+- [Phase 05-ats-model]: CLV documented as 0.0 data limitation: Kaggle dataset has only opening spread, no closing line column available
 
 ### Pending Todos
 
@@ -204,5 +220,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 05-03 -- Value-bet detector built; calibrated model regenerated; 1,894-game historical scan verified; ready for 05-04 ATS backtest
+Stopped at: Completed 05-04 -- ATS backtest harness built; 18,233-game backtest executed (16 seasons); holdout OOS 51.2% hit rate; reports/ats_backtest.csv + reports/ats_backtest_summary.txt generated; Phase 5 complete
 Resume file: None

@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Modern Era Features** - Add pace-normalized efficiency metrics and restrict training to the modern NBA (completed 2026-03-02)
 - [x] **Phase 3: External Data Layer** - Build scrapers for Basketball Reference and live injury reports (completed 2026-03-02)
 - [x] **Phase 4: Rest & Schedule Features** - Add travel distance, back-to-back fatigue, and season-context features (completed 2026-03-02)
-- [ ] **Phase 5: ATS Model** - Build the ATS classifier, value-bet detector, and full backtest harness
+- [x] **Phase 5: ATS Model** - Build the ATS classifier, value-bet detector, and full backtest harness (completed 2026-03-02)
 
 ## Phase Details
 
@@ -118,4 +118,4 @@ Phases execute in dependency order: 1 → 2 → 3 → 4 → 5 (Phases 2 and 3 ca
 | 2. Modern Era Features | 3/3 | Complete   | 2026-03-02 |
 | 3. External Data Layer | 4/4 | Complete   | 2026-03-02 |
 | 4. Rest & Schedule Features | 2/2 | Complete   | 2026-03-02 |
-| 5. ATS Model | 3/4 | In Progress|  |
+| 5. ATS Model | 4/4 | Complete   | 2026-03-02 |
