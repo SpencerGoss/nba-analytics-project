@@ -83,12 +83,11 @@ Plans:
   3. A `cross_country_travel` binary flag (timezone change indicator) is present as a feature column
   4. A `season_month` integer feature (1-12) is present for every game, capturing season-segment context (opening, mid-season, playoff race)
   5. All four rest/schedule features are computed from existing game log data without any new API calls — no rate limit exposure
-**Plans**: 3 plans
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Build days-rest and back-to-back features from game logs
-- [ ] 04-02: Build travel distance and timezone-change features using geopy
-- [ ] 04-03: Add season-segment context and integrate all schedule features into training pipeline
+- [ ] 04-01: Build travel/timezone/rest features and wire into matchup dataset
+- [ ] 04-02: Add season-month context, update model schedule_cols, retrain
 
 ### Phase 5: ATS Model
 **Goal**: A separate ATS classifier predicts whether a team covers the spread, value bets are identified when model probability diverges from market-implied odds, and results are backtested against closing lines over 500+ games
