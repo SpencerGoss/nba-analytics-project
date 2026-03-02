@@ -12,9 +12,11 @@ Key behavior:
   5. Save model artifacts + feature importances
 """
 
+import json
 import os
 import pickle
 import warnings
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -299,6 +301,36 @@ def train_game_outcome_model(
 
     importances.reset_index().rename(columns={"index": "feature", 0: "importance"}).to_csv(imp_path, index=False)
     print(f"\nModel saved → {model_path}")
+
+    # ── Metadata JSON (FR-6.5, NFR-3) ─────────────────────────────────────────
+    # Build feature importance dict (top 20) if model supports it
+    top_importances = {}
+    try:
+        clf_step = best_pipe.named_steps.get("clf") or best_pipe.named_steps.get("model")
+        if clf_step is not None and hasattr(clf_step, "feature_importances_"):
+            imp_series = pd.Series(clf_step.feature_importances_, index=feat_cols)
+            top_importances = {k: round(float(v), 6) for k, v in imp_series.nlargest(20).items()}
+        elif clf_step is not None and hasattr(clf_step, "coef_"):
+            imp_series = pd.Series(np.abs(clf_step.coef_[0]), index=feat_cols)
+            top_importances = {k: round(float(v), 6) for k, v in imp_series.nlargest(20).items()}
+    except Exception:
+        pass  # metadata is best-effort; do not crash training if importance extraction fails
+
+    metadata = {
+        "trained_at": datetime.now().isoformat(),
+        "model_name": best_name,
+        "train_start_season": start_season,
+        "feature_list": list(feat_cols),
+        "feature_count": int(len(feat_cols)),
+        "test_accuracy": float(test_acc),
+        "test_auc": float(test_auc),
+        "decision_threshold": float(best_threshold),
+        "top_importances": top_importances,
+    }
+    meta_path = os.path.join(artifacts_dir, "game_outcome_metadata.json")
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"  Metadata saved → {meta_path}")
 
     metrics = {
         "selected_model": best_name,
