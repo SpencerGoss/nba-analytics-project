@@ -47,6 +47,39 @@ MODERN_ERA_ONLY = False
 MODERN_ERA_START = "201415"
 
 
+# ── Null-rate guard ────────────────────────────────────────────────────────────
+
+def validate_feature_null_rates(
+    df: pd.DataFrame,
+    feat_cols: list,
+    threshold: float = 0.95,
+) -> None:
+    """Raise ValueError if any feature column has null rate >= threshold.
+
+    Also logs columns with partial nulls (>0% but <threshold) for visibility.
+    Called at the top of train_game_outcome_model() before any model fitting.
+    NFR-1: Prevents silent all-null feature columns from entering the model.
+    A column at >= 95% null rate indicates a broken upstream join or missing
+    data source — the SimpleImputer would fill it with mean(0.0) and the model
+    would silently train on meaningless features.
+    """
+    null_rates = df[feat_cols].isnull().mean()
+    bad = null_rates[null_rates >= threshold]
+    if not bad.empty:
+        lines = [f"  {col}: {rate:.1%}" for col, rate in bad.items()]
+        raise ValueError(
+            f"Feature columns exceed {threshold:.0%} null threshold "
+            f"(broken upstream join or missing data source):\n"
+            + "\n".join(lines)
+            + "\nFix the upstream feature pipeline before training."
+        )
+    partial = null_rates[(null_rates > 0) & (null_rates < threshold)]
+    if not partial.empty:
+        print("  [null audit] Columns with partial nulls (will be imputed):")
+        for col, rate in partial.items():
+            print(f"    {col}: {rate:.1%}")
+
+
 # ── Feature selection ──────────────────────────────────────────────────────────
 
 def get_feature_cols(df: pd.DataFrame) -> list:
@@ -197,6 +230,10 @@ def train_game_outcome_model(
     print(f"  Test seasons: {test_seasons}")
 
     feat_cols = get_feature_cols(df)
+
+    print("\nValidating feature null rates...")
+    validate_feature_null_rates(df, feat_cols)
+
     X_train = train[feat_cols]
     y_train = train[TARGET]
     X_test = test[feat_cols]
