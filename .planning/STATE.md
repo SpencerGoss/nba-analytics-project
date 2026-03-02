@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T09:44:04.885Z"
+last_updated: "2026-03-02T19:03:37.776Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 17
+  completed_plans: 14
 ---
 
 ---
@@ -57,16 +57,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Identify games where the model's win probability meaningfully disagrees with Vegas lines — producing profitable against-the-spread picks over a full NBA season
-**Current focus:** Phase 3 — External Data Layer
+**Current focus:** Phase 5 — ATS Model
 
 ## Current Position
 
-Phase: 4 of 5 (Schedule + Travel Features) — COMPLETE
-Plan: 04-02 complete; Phase 4 fully done; next: Phase 5 ATS Model
-Status: 04-02 complete -- season_month added to matchup dataset; schedule_cols updated; model retrained with 68 features (10 Phase 4); 66.8% test accuracy
-Last activity: 2026-03-02 -- 04-02 season_month + schedule_cols + model retrain complete
+Phase: 5 of 5 (ATS Model) — IN PROGRESS
+Plan: 05-01 complete; next: 05-02 ATS classifier training
+Status: 05-01 complete -- Kaggle betting data downloaded; 18,496-row game_ats_features.csv built with spread, no-vig implied probs, covers_spread; data separation guard verified
+Last activity: 2026-03-02 -- 05-01 ATS feature table complete
 
-Progress: [██████████████] 75%
+Progress: [████████████████] 80%
 
 ## Performance Metrics
 
@@ -103,6 +103,7 @@ Progress: [██████████████] 75%
 | Phase 03-external-data-layer P02 | 3 | 2 tasks | 2 files |
 | Phase 04-rest-schedule-features P01 | 21 min | 2 tasks | 2 files |
 | Phase 04-rest-schedule-features P02 | 17 | 2 tasks | 2 files |
+| Phase 05-ats-model P01 | 18 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,9 @@ Recent decisions affecting current work:
 - [Phase 04-rest-schedule-features]: season_month added to build_matchup_dataset() AFTER merge: game-level feature avoids home_/away_ duplication
 - [Phase 04-rest-schedule-features]: schedule_cols updated with home_travel_miles, away_travel_miles, home_cross_country_travel, away_cross_country_travel, season_month; diff_ variants auto-picked up by startswith filter
 - [Phase 04-rest-schedule-features]: Calibrated model (game_outcome_model_calibrated.pkl) predates retrained model: run calibration.py before production inference use
+- [Phase 05-ats-model]: Kaggle team name format discovery: dataset uses lowercase short codes (gs, sa, no, utah, wsh) not full names -- KAGGLE_TEAM_TO_ABB built from inspecting actual data
+- [Phase 05-ats-model]: Season normalization: Kaggle stores season as end-year int (2008=2007-08) converted to project format (200708)
+- [Phase 05-ats-model]: Data separation guard at build time: assert checks matchup features have no spread/odds columns before join
 
 ### Pending Todos
 
@@ -157,7 +161,7 @@ None yet.
 
 - Injury proxy logic bug RESOLVED (01-01): absent rotation detection now works via merge_asof; 137K absent instances found
 - sklearn cv='prefit' removal RESOLVED: _CalibratedWrapper replaces deprecated API
-- The Odds API historical depth: unknown free-tier range — audit before ATS backfill design (Phase 5)
+- The Odds API historical depth: RESOLVED (05-01) -- Kaggle dataset used for historical; 23,118 games 2007-2025 downloaded without auth; The Odds API free tier reserved for current-season only
 - Basketball Reference HTML selectors: PARTIALLY RESOLVED (03-01) — HTML comment pattern confirmed from 3 PyPI packages; officials table ID='officials' MEDIUM confidence (naming convention); Cloudflare blocks in this environment; recommend live verification from cloud VM before building 03-02 referee features
 - geopy 2.4.x API shape: RESOLVED (04-01) -- geopy listed in requirements.txt; haversine used for performance; no API shape issues
 - game_outcome_model.py schedule_cols: RESOLVED (04-02) -- updated with home_travel_miles, away_travel_miles, home_cross_country_travel, away_cross_country_travel, season_month
@@ -166,5 +170,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 04-02 -- season_month feature + schedule_cols update + model retrain with 10 Phase 4 features; 66.8% test accuracy; Phase 4 complete
+Stopped at: Completed 05-01 -- ATS feature table built; Kaggle betting data joined with matchup features; 18,496 rows in game_ats_features.csv with spread, no-vig implied probs, covers_spread
 Resume file: None

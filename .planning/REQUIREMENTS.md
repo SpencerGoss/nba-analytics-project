@@ -159,10 +159,10 @@ The milestone is complete when:
 | FR-3.2 | Phase 4: Rest & Schedule Features | Complete |
 | FR-3.3 | Phase 4: Rest & Schedule Features | Complete |
 | FR-3.4 | Phase 4: Rest & Schedule Features | Complete |
-| FR-5.1 | Phase 5: ATS Model | Pending |
+| FR-5.1 | Phase 5: ATS Model | Complete |
 | FR-5.2 | Phase 5: ATS Model | Pending |
 | FR-5.3 | Phase 5: ATS Model | Pending |
-| FR-5.4 | Phase 5: ATS Model | Pending |
+| FR-5.4 | Phase 5: ATS Model | Complete |
 | FR-5.5 | Phase 5: ATS Model | Pending |
 
 ---
