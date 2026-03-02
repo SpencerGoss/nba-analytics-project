@@ -2,26 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-02T06:45:38.431Z"
-progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 11
-  completed_plans: 8
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-02T05:24:05Z"
+last_updated: "2026-03-02T06:56:05Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -36,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 3 of 5 (External Data Layer) — IN PROGRESS
-Plan: 3 of 4 in current phase (03-03 complete; 03-01, 03-02, 03-04 parallel/pending)
-Status: Phase 3 in progress — 03-03 injury report fetcher (FR-4.3, FR-4.4) complete
-Last activity: 2026-03-02 — 03-03 get_todays_nba_injury_report() with nba_api primary + PDF fallback
+Plan: 03-01 complete; 03-02, 03-03, 03-04 pending
+Status: Phase 3 in progress — 03-01 bref_scraper.py (FR-4.1, NFR-2, NFR-4) complete
+Last activity: 2026-03-02 — 03-01 get_referee_crew_assignments() with HTML comment unwrapping, 3s crawl delay
 
 Progress: [████████░░] 40%
 
@@ -71,6 +58,7 @@ Progress: [████████░░] 40%
 | Phase 02-modern-era-features P01 | 14 min | 2 tasks | 1 file |
 | Phase 02-modern-era-features P02 | 10 min | 2 tasks | 1 file |
 | Phase 02-modern-era-features P03 | 88 min | 2 tasks | 1 file |
+| Phase 03-external-data-layer P01 | 13 min | 2 tasks | 3 files |
 | Phase 03-external-data-layer P03 | 127 | 1 tasks | 2 files |
 
 ## Accumulated Context
@@ -102,6 +90,9 @@ Recent decisions affecting current work:
 - [02-03]: MODERN_ERA_START changed 201415->201314 per plan spec (include 2013-14 season as modern era start)
 - [02-03]: Research finding: full history GB model (0.6729) marginally outperforms modern era RF model (0.6684) on same test holdout — model selection variance with 4 vs 19 splits is likely cause; modern era model still operational as final artifact
 - [02-03]: Calibration artifact needs regeneration: game_outcome_model_calibrated.pkl predates modern era retraining; run calibration.py before using calibrated inference
+- [03-01]: HTML comment unwrapping pattern for Basketball Reference confirmed from 3 independent PyPI packages (basketball_reference_web_scraper, sportsreference, basketball_reference_scraper) — all use equivalent strip/iterate techniques
+- [03-01]: Officials table ID='officials' follows BR naming convention (div_officials -> officials); 3-tier fallback: direct DOM, Comment iteration, full strip-and-reparse
+- [03-01]: pdfplumber added to requirements.txt in 03-01 to avoid second touch in 03-03
 - [Phase 03-external-data-layer]: nba_api LeagueInjuryReport as primary source (no URL guessing), PDF fallback for resilience; FR-4.4 date guard prevents misuse for historical training data
 
 ### Pending Todos
@@ -113,11 +104,11 @@ None yet.
 - Injury proxy logic bug RESOLVED (01-01): absent rotation detection now works via merge_asof; 137K absent instances found
 - sklearn cv='prefit' removal RESOLVED: _CalibratedWrapper replaces deprecated API
 - The Odds API historical depth: unknown free-tier range — audit before ATS backfill design (Phase 5)
-- Basketball Reference HTML selectors: need spike test of 10 games before committing to referee feature (Phase 3)
+- Basketball Reference HTML selectors: PARTIALLY RESOLVED (03-01) — HTML comment pattern confirmed from 3 PyPI packages; officials table ID='officials' MEDIUM confidence (naming convention); Cloudflare blocks in this environment; recommend live verification from cloud VM before building 03-02 referee features
 - geopy 2.4.x API shape: verify with quick test before building schedule_features.py (Phase 4)
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 03-03 -- injury report fetcher (get_todays_nba_injury_report, FR-4.3, FR-4.4); next: 03-01 (bref spike test), 03-02 (referee features), 03-04 (code path separation)
+Stopped at: Completed 03-01 -- bref_scraper.py (get_referee_crew_assignments, FR-4.1, NFR-2, NFR-4); next: 03-02 (referee features), 03-03 (injury report), 03-04 (code path separation)
 Resume file: None

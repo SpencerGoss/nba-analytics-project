@@ -68,7 +68,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: Spike and build Basketball Reference referee scraper
+- [x] 03-01: Spike and build Basketball Reference referee scraper
 - [ ] 03-02: Build referee foul-rate feature from scraped crew data
 - [ ] 03-03: Build NBA pre-game injury report fetcher
 - [ ] 03-04: Enforce training/inference injury code path separation
