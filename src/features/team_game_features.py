@@ -285,7 +285,7 @@ def build_team_game_features(
             df["fg3a"] / df["fga"].replace(0, np.nan)
         ).fillna(0)
     else:
-        print("  Warning: fg3a or fga not in data — three_rate features will be NaN")
+        print("  Warning: fg3a or fga not in data - three_rate features will be NaN")
         df["three_rate_raw"] = np.nan
 
     # ── Days rest (days since last game for this team) ────────────────────────
@@ -487,7 +487,7 @@ def build_team_game_features(
             print(f"  Warning: could not compute close_playoff_race ({e}). Defaulting to 0.")
             df["close_playoff_race"] = 0
     else:
-        print(f"  Warning: {standings_path} not found — close_playoff_race defaulted to 0")
+        print(f"  Warning: {standings_path} not found - close_playoff_race defaulted to 0")
         df["close_playoff_race"] = 0
 
     # ── Drop raw game stats (they'd leak the result) ──────────────────────────
@@ -563,7 +563,7 @@ def build_team_game_features(
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     output.to_csv(output_path, index=False)
-    print(f"Saved {len(output):,} rows × {len(output.columns)} cols → {output_path}")
+    print(f"Saved {len(output):,} rows x {len(output.columns)} cols -> {output_path}")
     return output
 
 
@@ -680,7 +680,7 @@ def build_matchup_dataset(
     matchup = matchup.dropna(subset=["home_win"])
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     matchup.to_csv(output_path, index=False)
-    print(f"Saved {len(matchup):,} matchup rows × {len(matchup.columns)} cols → {output_path}")
+    print(f"Saved {len(matchup):,} matchup rows x {len(matchup.columns)} cols -> {output_path}")
     return matchup
 
 

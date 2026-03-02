@@ -318,7 +318,7 @@ def build_injury_proxy_features(
     result["team_id"] = result["team_id"].astype(int)
 
     # ── Summary stats ─────────────────────────────────────────────────────────
-    print(f"\n── Summary ──────────────────────────────────────────────")
+    print(f"\n-- Summary -------------------------------------------------")
     print(f"  Total team-game rows    : {len(result):,}")
     print(f"  Games with missing mins : "
           f"{(result['missing_minutes'] > 0).sum():,}  "
@@ -332,7 +332,7 @@ def build_injury_proxy_features(
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     result.to_csv(output_path, index=False)
-    print(f"\nSaved {len(result):,} rows → {output_path}")
+    print(f"\nSaved {len(result):,} rows -> {output_path}")
 
     return result
 
@@ -370,7 +370,7 @@ def get_todays_injury_report() -> pd.DataFrame:
         ).get_data_frames()[0]
 
         if report.empty:
-            print("  NBA injury report returned empty — may be off-season or no games today.")
+            print("  NBA injury report returned empty - may be off-season or no games today.")
             return pd.DataFrame()
 
         # Normalize column names

@@ -56,6 +56,7 @@ import matplotlib.ticker as mtick
 warnings.filterwarnings("ignore")
 
 from sklearn.calibration import calibration_curve, CalibratedClassifierCV
+from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import brier_score_loss
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -70,6 +71,26 @@ OUTPUT_DIR     = "reports/calibration"
 TEST_SEASONS   = ["202324", "202425"]
 TARGET         = "home_win"
 N_BINS         = 10            # number of calibration bins
+
+
+# ── Calibrated model wrapper ──────────────────────────────────────────────────
+
+class _CalibratedWrapper:
+    """Wraps a base model + IsotonicRegression into a single object with
+    predict_proba(). Lightweight replacement for CalibratedClassifierCV
+    with cv='prefit' (removed in sklearn 1.6)."""
+
+    def __init__(self, base_model, isotonic: IsotonicRegression):
+        self.base_model = base_model
+        self.isotonic = isotonic
+
+    def predict_proba(self, X):
+        raw = self.base_model.predict_proba(X)[:, 1]
+        cal = self.isotonic.predict(raw)
+        return np.column_stack([1 - cal, cal])
+
+    def predict(self, X):
+        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -347,9 +368,9 @@ def run_calibration_analysis(
     # GBM Pipeline.  We extract the inner pipeline for "pre-calibration" numbers
     # so the chart can show the improvement from isotonic calibration.
     # The v1 model is a plain Pipeline — handled the same way for compatibility.
-    if isinstance(model, CalibratedClassifierCV):
-        raw_model = model.estimator   # inner Pipeline (has its own SimpleImputer)
-        print("\n  (v2 model detected — comparing base GBM vs isotonic-calibrated output)")
+    if isinstance(model, (CalibratedClassifierCV, _CalibratedWrapper)):
+        raw_model = model.base_model if isinstance(model, _CalibratedWrapper) else model.estimator
+        print("\n  (v2 model detected - comparing base GBM vs isotonic-calibrated output)")
     else:
         raw_model = model             # v1 plain Pipeline
 
@@ -368,7 +389,7 @@ def run_calibration_analysis(
     # v1: fit a fresh isotonic calibrator on the training data and save it so
     #     future scripts (fetch_odds.py, predict_cli.py) can load calibrated probs
     #     without re-fitting.
-    if isinstance(model, CalibratedClassifierCV):
+    if isinstance(model, (CalibratedClassifierCV, _CalibratedWrapper)):
         print("\nUsing pre-fitted isotonic calibration from trained model artifact...")
         y_prob_cal = model.predict_proba(X_test)[:, 1]
         cal_model  = model   # already saved; no extra write needed
@@ -376,9 +397,15 @@ def run_calibration_analysis(
         print("\nFitting isotonic calibration on training data (v1 model)...")
         train   = df[~df["season"].isin(test_seasons)].copy()
         train   = train.dropna(subset=[TARGET])
-        cal_model = CalibratedClassifierCV(model, method="isotonic", cv="prefit")
-        cal_model.fit(train[feat_cols], train[TARGET].values)
-        y_prob_cal = cal_model.predict_proba(X_test)[:, 1]
+        # Get base model probability predictions on training data
+        train_probs = model.predict_proba(train[feat_cols])[:, 1]
+        # Fit isotonic regression: maps raw probabilities -> calibrated
+        iso = IsotonicRegression(out_of_bounds="clip")
+        iso.fit(train_probs, train[TARGET].values)
+        # Calibrate test predictions
+        y_prob_cal = iso.predict(y_prob)
+        # Build a lightweight wrapper that has predict_proba()
+        cal_model = _CalibratedWrapper(model, iso)
 
         # Save the calibrated wrapper alongside the raw model so downstream
         # scripts can load calibrated probabilities without re-fitting.
@@ -386,7 +413,7 @@ def run_calibration_analysis(
         cal_path = os.path.join(artifacts_dir, "game_outcome_model_calibrated.pkl")
         with open(cal_path, "wb") as _f:
             pickle.dump(cal_model, _f)
-        print(f"\nCalibrated model saved → {cal_path}")
+        print(f"\nCalibrated model saved -> {cal_path}")
 
     brier_cal = brier_score_loss(y_test, y_prob_cal)
     ece_cal   = _expected_calibration_error(y_test, y_prob_cal)
