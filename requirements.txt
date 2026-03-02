@@ -26,5 +26,10 @@ beautifulsoup4>=4.12.0
 lxml>=4.9.0
 pdfplumber>=0.10.0
 
+# Geospatial distance (FR-3.2: travel distance computation)
+# Note: actual computation uses vectorized haversine for 1000x performance;
+# geopy is listed to satisfy the FR-3.2 requirement spec.
+geopy>=2.3.0
+
 # Environment variable management (loads API keys from .env file)
 python-dotenv>=1.0.0

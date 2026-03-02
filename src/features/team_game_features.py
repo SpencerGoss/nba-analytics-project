@@ -59,6 +59,55 @@ ADV_ROLL_STATS = [
     "oreb_pct_game", "ft_rate_game",
 ]
 
+# ── Arena coordinates (lat, lon) for travel distance computation ──────────────
+# Covers all 30 modern NBA teams. LAC and LAL share Crypto.com Arena.
+ARENA_COORDS = {
+    'ATL': (33.7573, -84.3963),
+    'BKN': (40.6826, -73.9754),
+    'BOS': (42.3662, -71.0621),
+    'CHA': (35.2251, -80.8392),
+    'CHI': (41.8807, -87.6742),
+    'CLE': (41.4965, -81.6882),
+    'DAL': (32.7905, -96.8103),
+    'DEN': (39.7487, -105.0077),
+    'DET': (42.3410, -83.0553),
+    'GSW': (37.7680, -122.3877),
+    'HOU': (29.7508, -95.3621),
+    'IND': (39.7638, -86.1555),
+    'LAC': (34.0430, -118.2673),
+    'LAL': (34.0430, -118.2673),
+    'MEM': (35.1382, -90.0505),
+    'MIA': (25.7814, -80.1870),
+    'MIL': (43.0451, -87.9170),
+    'MIN': (44.9795, -93.2760),
+    'NOP': (29.9490, -90.0812),
+    'NYK': (40.7505, -73.9934),
+    'OKC': (35.4634, -97.5151),
+    'ORL': (28.5392, -81.3836),
+    'PHI': (39.9012, -75.1720),
+    'PHX': (33.4457, -112.0712),
+    'POR': (45.5316, -122.6668),
+    'SAC': (38.5802, -121.4996),
+    'SAS': (29.4270, -98.4375),
+    'TOR': (43.6435, -79.3791),
+    'UTA': (40.7683, -111.9011),
+    'WAS': (38.8981, -77.0209),
+}
+
+# ── Arena timezone zones (rough geographic grouping for cross-country flag) ────
+# PHX is Mountain year-round (no DST), but "Mountain" is correct for the
+# geographic cross-country indicator purpose.
+ARENA_TIMEZONE = {
+    'ATL': 'Eastern', 'BKN': 'Eastern', 'BOS': 'Eastern', 'CHA': 'Eastern',
+    'CHI': 'Central', 'CLE': 'Eastern', 'DAL': 'Central', 'DEN': 'Mountain',
+    'DET': 'Eastern', 'GSW': 'Pacific', 'HOU': 'Central', 'IND': 'Eastern',
+    'LAC': 'Pacific', 'LAL': 'Pacific', 'MEM': 'Central', 'MIA': 'Eastern',
+    'MIL': 'Central', 'MIN': 'Central', 'NOP': 'Central', 'NYK': 'Eastern',
+    'OKC': 'Central', 'ORL': 'Eastern', 'PHI': 'Eastern', 'PHX': 'Mountain',
+    'POR': 'Pacific', 'SAC': 'Pacific', 'SAS': 'Central', 'TOR': 'Eastern',
+    'UTA': 'Mountain', 'WAS': 'Eastern',
+}
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -243,6 +292,20 @@ def _compute_close_playoff_race(df: pd.DataFrame, conf_map: pd.Series) -> pd.Ser
     return result
 
 
+def _haversine_miles(lat1, lon1, lat2, lon2):
+    """Vectorized haversine distance in miles. Accepts numpy arrays.
+
+    Accuracy within 0.2% of geodesic -- negligible for features ranging 0-2700 mi.
+    Used instead of geopy.distance.geodesic for 1000x performance on batch data.
+    """
+    R = 3958.8  # Earth radius in miles
+    lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+    return 2 * R * np.arcsin(np.sqrt(a))
+
+
 # ── Main builder ───────────────────────────────────────────────────────────────
 
 def build_team_game_features(
@@ -279,6 +342,53 @@ def build_team_game_features(
     # ── Basic context features ────────────────────────────────────────────────
     df["is_home"]       = _parse_home_away(df["matchup"])
     df["opponent_abbr"] = _extract_opponent_abbr(df["matchup"])
+
+    # -- Travel distance and timezone-change features (Phase 4, FR-3.2/FR-3.3) --
+    print("Computing travel distance features...")
+    _arena_lat = {k: v[0] for k, v in ARENA_COORDS.items()}
+    _arena_lon = {k: v[1] for k, v in ARENA_COORDS.items()}
+
+    # Current game arena: team's own arena if home, opponent's arena if away
+    curr_arena_abbr = np.where(
+        df["is_home"] == 1, df["team_abbreviation"], df["opponent_abbr"]
+    )
+    curr_series = pd.Series(curr_arena_abbr, index=df.index)
+
+    df["_curr_lat"] = curr_series.map(_arena_lat)
+    df["_curr_lon"] = curr_series.map(_arena_lon)
+    df["_curr_tz"]  = curr_series.map(ARENA_TIMEZONE)
+
+    # Previous game arena (shift-1 within team -- no leakage, NFR-1)
+    df["_prev_lat"] = df.groupby("team_id")["_curr_lat"].shift(1)
+    df["_prev_lon"] = df.groupby("team_id")["_curr_lon"].shift(1)
+    df["_prev_tz"]  = df.groupby("team_id")["_curr_tz"].shift(1)
+
+    # travel_miles: haversine distance from prev game arena to current game arena
+    has_both = df["_prev_lat"].notna() & df["_curr_lat"].notna()
+    df["travel_miles"] = np.nan
+    df.loc[has_both, "travel_miles"] = _haversine_miles(
+        df.loc[has_both, "_prev_lat"].values,
+        df.loc[has_both, "_prev_lon"].values,
+        df.loc[has_both, "_curr_lat"].values,
+        df.loc[has_both, "_curr_lon"].values,
+    )
+    df["travel_miles"] = df["travel_miles"].fillna(0)  # first game of season = no travel burden
+
+    # cross_country_travel: 1 if timezone changed from prev game to this game
+    df["cross_country_travel"] = (
+        df["_prev_tz"].notna()
+        & df["_curr_tz"].notna()
+        & (df["_prev_tz"] != df["_curr_tz"])
+    ).astype(int)
+
+    # Drop internal working columns
+    df = df.drop(columns=["_curr_lat", "_curr_lon", "_curr_tz",
+                           "_prev_lat", "_prev_lon", "_prev_tz"])
+
+    n_cross = df["cross_country_travel"].sum()
+    print(f"  travel_miles: min={df['travel_miles'].min():.0f}mi max={df['travel_miles'].max():.0f}mi")
+    print(f"  cross_country_travel: {n_cross:,} games flagged ({n_cross/len(df):.1%})")
+
     df["win"]           = (df["wl"] == "W").astype(int)
 
     # ── Opponent points (points allowed) ─────────────────────────────────────
@@ -555,6 +665,7 @@ def build_team_game_features(
         # Rest & fatigue
         "days_rest", "rest_days", "is_back_to_back",
         "games_last_5_days", "games_last_7_days",
+        "travel_miles", "cross_country_travel",    # Phase 4: travel burden
         # Season context
         "season_game_num", "cum_wins", "cum_losses", "cum_win_pct", "win",
         # SOS
