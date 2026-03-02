@@ -118,14 +118,45 @@ Each stage depends on all preceding stages completing successfully.
 
 ## External Data Scrapers (FR-7.2)
 
-External data modules follow the `src/data/get_*.py` module pattern:
+External data modules live in `src/data/external/` and follow the `src/data/get_*.py` callable pattern:
+
+| Module | Function | Data Source | Output | Runtime |
+|--------|----------|-------------|--------|---------|
+| `bref_scraper.py` | `get_referee_crew_assignments(start_date, end_date)` | Basketball Reference box scores | `data/raw/external/referee_crew/` | ~3 sec/game (rate limited) |
+| `injury_report.py` | `get_todays_nba_injury_report()` | NBA API + PDF fallback | `data/raw/external/injury_reports/` | <5 sec |
+
+### Basketball Reference Referee Scraper
+
+- **Entry point:** `from src.data.external.bref_scraper import get_referee_crew_assignments`
+- **Usage:** `get_referee_crew_assignments("2025-01-01", "2025-03-31")` -- on-demand only
+- **Rate limit:** 3-second delay between requests (robots.txt + NFR-2). Maximum 20 requests/minute.
+- **NOT in daily pipeline:** The scraper takes ~3 sec/game. A full season (~1,230 games) takes ~1 hour. Run manually for historical backfill.
+- **Output:** CSV files in `data/raw/external/referee_crew/` with columns: game_date, game_id_bref, home_team, away_team, referee_1, referee_2, referee_3
+
+### NBA Injury Report Fetcher
+
+- **Entry point:** `from src.data.external.injury_report import get_todays_nba_injury_report`
+- **Usage:** `get_todays_nba_injury_report()` -- fetches current day's report
+- **Primary source:** `nba_api` `LeagueInjuryReport` endpoint (no URL guessing needed)
+- **Fallback:** PDF from `ak-static.cms.nba.com` if API is unavailable
+- **Code path:** INFERENCE ONLY -- never use for training. Training uses `build_injury_proxy_features()` from `src/features/injury_proxy.py`
+- **Output:** CSV snapshots in `data/raw/external/injury_reports/` for archival
+
+### Training vs Inference Injury Paths (FR-4.4)
+
+| Path | Module | Data Source | When Used |
+|------|--------|-------------|-----------|
+| Training | `src/features/injury_proxy.py` -> `build_injury_proxy_features()` | Historical game logs (merge_asof proxy) | Feature build (Stage 3) |
+| Inference | `src/data/external/injury_report.py` -> `get_todays_nba_injury_report()` | Live NBA injury report (API + PDF) | Prediction (Stage 6) |
+
+These two paths MUST NOT share inputs or call each other. See FR-4.4.
+
+**NBA API modules (src/data/get_*.py):**
 
 - **Callable as module:** `from src.data.get_player_stats import get_player_stats_all_seasons`
 - **Function signature:** `get_*(start_year, end_year)` or `get_*()` for dimension tables
 - **Output:** CSVs to `data/raw/{table_name}/` (raw), then `data/processed/` after Stage 2
 - **Rate limiting:** `fetch_with_retry()` with 3 retries, appropriate delays per source
-
-Current external modules: see `src/data/` directory. Future scrapers (Basketball Reference referee data, NBA injury reports) will follow the same module pattern.
 
 ## Common Operations
 
@@ -168,7 +199,14 @@ python src/models/predict_cli.py game --home BOS --away LAL --date 2026-03-15
 python src/models/predict_cli.py player --name "LeBron James"
 ```
 
+### Backfill referee data (one-time, on-demand)
+
+```bash
+python -c "from src.data.external.bref_scraper import get_referee_crew_assignments; get_referee_crew_assignments('2013-10-01', '2025-06-30')"
+# ~3,700 games at 3 sec each = ~3 hours. Run overnight.
+```
+
 ---
 
-*Pipeline reference: Phase 1 — Foundation & Outputs (2026-03-01)*
-*Requirements covered: FR-7.1, FR-7.2, FR-7.3, FR-7.4, NFR-2*
+*Pipeline reference: Phase 3 -- External Data Layer (2026-03-02)*
+*Requirements covered: FR-4.4, FR-7.1, FR-7.2, FR-7.3, FR-7.4, NFR-2*
