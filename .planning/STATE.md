@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T05:34:25.334Z"
+last_updated: "2026-03-02T06:45:38.431Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 11
+  completed_plans: 8
 ---
 
 ---
@@ -31,16 +31,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Identify games where the model's win probability meaningfully disagrees with Vegas lines — producing profitable against-the-spread picks over a full NBA season
-**Current focus:** Phase 2 — Modern Era Features
+**Current focus:** Phase 3 — External Data Layer
 
 ## Current Position
 
-Phase: 2 of 5 (Modern Era Features) — IN PROGRESS
-Plan: 3 of 4 in current phase (02-01, 02-02, 02-03 complete)
-Status: Phase 2 in progress — 02-03 modern era filtering + excluded seasons complete, 02-04 next
-Last activity: 2026-03-02 — 02-03 MODERN_ERA_ONLY=True, EXCLUDED_SEASONS=[201920,202021], model retrained on 201314+
+Phase: 3 of 5 (External Data Layer) — IN PROGRESS
+Plan: 3 of 4 in current phase (03-03 complete; 03-01, 03-02, 03-04 parallel/pending)
+Status: Phase 3 in progress — 03-03 injury report fetcher (FR-4.3, FR-4.4) complete
+Last activity: 2026-03-02 — 03-03 get_todays_nba_injury_report() with nba_api primary + PDF fallback
 
-Progress: [██████░░░░] 32%
+Progress: [████████░░] 40%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [██████░░░░] 32%
 | Phase 02-modern-era-features P01 | 14 min | 2 tasks | 1 file |
 | Phase 02-modern-era-features P02 | 10 min | 2 tasks | 1 file |
 | Phase 02-modern-era-features P03 | 88 min | 2 tasks | 1 file |
+| Phase 03-external-data-layer P03 | 127 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,7 @@ Recent decisions affecting current work:
 - [02-03]: MODERN_ERA_START changed 201415->201314 per plan spec (include 2013-14 season as modern era start)
 - [02-03]: Research finding: full history GB model (0.6729) marginally outperforms modern era RF model (0.6684) on same test holdout — model selection variance with 4 vs 19 splits is likely cause; modern era model still operational as final artifact
 - [02-03]: Calibration artifact needs regeneration: game_outcome_model_calibrated.pkl predates modern era retraining; run calibration.py before using calibrated inference
+- [Phase 03-external-data-layer]: nba_api LeagueInjuryReport as primary source (no URL guessing), PDF fallback for resilience; FR-4.4 date guard prevents misuse for historical training data
 
 ### Pending Todos
 
@@ -117,5 +119,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 02-03 -- MODERN_ERA_ONLY=True, EXCLUDED_SEASONS=[201920,202021], model retrained on 201314+; next is 02-04
+Stopped at: Completed 03-03 -- injury report fetcher (get_todays_nba_injury_report, FR-4.3, FR-4.4); next: 03-01 (bref spike test), 03-02 (referee features), 03-04 (code path separation)
 Resume file: None
