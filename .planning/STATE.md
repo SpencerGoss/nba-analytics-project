@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-02T01:01:37.928Z"
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 4
+  completed_plans: 2
+---
+
 # Project State
 
 ## Project Reference
@@ -34,6 +47,7 @@ Progress: [██░░░░░░░░] 10%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-foundation-outputs P01 | 90 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -48,6 +62,8 @@ Recent decisions affecting current work:
 - [Pre-phase]: Start prediction store in Phase 1, not at web milestone — every day without it is lost calibration history
 - [01-02]: UserWarning (not hard error) for missing calibrated model — inference still works with uncalibrated, operator sees loud warning to run calibration
 - [01-02]: Metadata JSON uses only Python builtins — numpy types never written to JSON to avoid TypeError at runtime
+- [Phase 01-foundation-outputs]: Injury proxy root cause was logic bug (anti-join on same df), not type mismatch — requires merge_asof strategy across team-game schedule
+- [Phase 01-foundation-outputs]: merge_asof with MAX_STALE_DAYS=25 chosen for absent rotation detection — handles trades and long-term injuries without O(n^2) loop
 
 ### Pending Todos
 
@@ -55,13 +71,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- Injury proxy join key mismatch: exact cause unknown — trace `injury_proxy.py` before writing new injury code (Phase 1)
+- Injury proxy logic bug RESOLVED (01-01): absent rotation detection now works via merge_asof; 137K absent instances found
 - The Odds API historical depth: unknown free-tier range — audit before ATS backfill design (Phase 5)
 - Basketball Reference HTML selectors: need spike test of 10 games before committing to referee feature (Phase 3)
 - geopy 2.4.x API shape: verify with quick test before building schedule_features.py (Phase 4)
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Completed 01-02-PLAN.md (calibrated inference path + model metadata JSON)
+Last session: 2026-03-01
+Stopped at: Completed 01-01-PLAN.md (injury proxy logic fix and null-rate guard)
 Resume file: None

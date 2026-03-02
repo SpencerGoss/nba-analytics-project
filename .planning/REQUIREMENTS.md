@@ -130,9 +130,9 @@ The milestone is complete when:
 
 | Requirement | Phase | Status |
 | ----------- | ----- | ------ |
-| FR-1.1 | Phase 1: Foundation & Outputs | Pending |
+| FR-1.1 | Phase 1: Foundation & Outputs | Complete |
 | FR-1.2 | Phase 1: Foundation & Outputs | Complete (01-02) |
-| FR-1.3 | Phase 1: Foundation & Outputs | Pending |
+| FR-1.3 | Phase 1: Foundation & Outputs | Complete |
 | FR-6.1 | Phase 1: Foundation & Outputs | Pending |
 | FR-6.2 | Phase 1: Foundation & Outputs | Pending |
 | FR-6.3 | Phase 1: Foundation & Outputs | Pending |
@@ -142,7 +142,7 @@ The milestone is complete when:
 | FR-7.2 | Phase 1: Foundation & Outputs | Pending |
 | FR-7.3 | Phase 1: Foundation & Outputs | Pending |
 | FR-7.4 | Phase 1: Foundation & Outputs | Pending |
-| NFR-1 | Phase 1: Foundation & Outputs (primary) | Pending |
+| NFR-1 | Phase 1: Foundation & Outputs (primary) | Complete |
 | NFR-2 | Phase 1: Foundation & Outputs (primary) | Pending |
 | NFR-3 | Phase 1: Foundation & Outputs (primary) | Complete (01-02) |
 | FR-2.1 | Phase 2: Modern Era Features | Pending |
