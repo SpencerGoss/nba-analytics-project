@@ -25,6 +25,11 @@ def parse_args():
     g = sp.add_parser("game", help="Predict game outcome probability")
     g.add_argument("--home", required=True, help="Home team abbreviation (e.g., BOS)")
     g.add_argument("--away", required=True, help="Away team abbreviation (e.g., LAL)")
+    g.add_argument(
+        "--date",
+        default=None,
+        help="Game date as YYYY-MM-DD (default: today). Stored in prediction history.",
+    )
 
     pl = sp.add_parser("player", help="Predict player PTS/REB/AST")
     pl.add_argument("--name", required=True, help="Exact player name")
@@ -35,7 +40,7 @@ def parse_args():
 def main() -> None:
     args = parse_args()
     if args.command == "game":
-        out = predict_game(args.home, args.away)
+        out = predict_game(args.home, args.away, game_date=args.date)
     else:
         out = predict_player_next_game(args.name)
 

@@ -389,6 +389,7 @@ def predict_game(
     away_team_abbr: str,
     features_path: str = MATCHUP_PATH,
     artifacts_dir: str = ARTIFACTS_DIR,
+    game_date: str | None = None,   # "YYYY-MM-DD"; defaults to today if None
 ) -> dict:
     """Estimate win probability for a matchup.
 
@@ -430,14 +431,32 @@ def predict_game(
 
     row_df = row.to_frame().T.reindex(columns=feat_cols).fillna(0)
     prob = model.predict_proba(row_df)[0]
-    return {
+
+    # ── Prediction store + JSON export (FR-6.1, FR-6.3, FR-6.4) ──────────────
+    result = {
         "home_team": home_team_abbr,
         "away_team": away_team_abbr,
         "home_win_prob": round(float(prob[1]), 4),
         "away_win_prob": round(float(prob[0]), 4),
         "model_artifact": model_artifact_name,
         "feature_count": len(feat_cols),
+        "game_date": game_date,
     }
+
+    try:
+        from src.outputs.prediction_store import write_game_prediction
+        from src.outputs.json_export import export_daily_snapshot
+        write_game_prediction(result)
+        export_daily_snapshot(game_date)
+    except Exception as e:
+        import warnings
+        warnings.warn(
+            f"Could not write prediction to store: {e}. "
+            "Prediction result still returned normally.",
+            stacklevel=2,
+        )
+
+    return result
 
 
 if __name__ == "__main__":
