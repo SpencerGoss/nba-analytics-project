@@ -569,6 +569,9 @@ def build_team_game_features(
         "three_style_mismatch", "rebounding_edge",
         # Motivation
         "revenge_game", "blowout_loss_last_game", "close_playoff_race",
+        # Referee features (NaN when no scrape data -- do NOT fillna(0))
+        "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
+        "ref_crew_pace_impact_roll10",
     ]
     # Filter to only include columns that exist in df
     context_cols = [c for c in context_cols if c in df.columns]
@@ -614,6 +617,62 @@ def build_team_game_features(
         print(f"  Injury features joined: {injury_df.columns.tolist()}")
     except Exception as e:
         print(f"  Warning: could not build injury proxy features ({e}). Skipping.")
+
+    # ── Join referee features ─────────────────────────────────────────────────
+    # Referee features are per-game (same crew officiates both home and away).
+    # ref_df has one row per game keyed on (game_date, home_team abbreviation).
+    # We join to both home and away team rows by matching on game_date + home team.
+    # Referee features stay NaN when no scrape data exists (do NOT fillna(0) --
+    # zero would inject false signal for pre-scrape seasons; Pitfall 6, RESEARCH.md).
+    try:
+        from src.features.referee_features import build_referee_features
+        print("Building referee features...")
+        ref_df = build_referee_features()
+
+        if not ref_df.empty:
+            # Normalize game_date to string for join
+            output["game_date_str"] = pd.to_datetime(output["game_date"]).dt.strftime("%Y-%m-%d")
+            ref_df["game_date"] = ref_df["game_date"].astype(str)
+
+            # ref_df has one row per game with home_team as the join key.
+            # team_game_features has two rows per game (home + away).
+            # We extract the home team from each game in output to join on.
+            # is_home == 1 -> team_abbreviation == home_team in ref_df
+            # is_home == 0 -> opponent_abbr == home_team in ref_df
+            # Merge home team rows: join on (game_date, team_abbreviation == home_team)
+            ref_cols = [
+                "game_date", "home_team",
+                "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
+                "ref_crew_pace_impact_roll10",
+            ]
+            ref_home_merge = ref_df[ref_cols].rename(columns={"home_team": "join_team"})
+
+            # For each team-game row we need to identify which team is home.
+            # Instead of two separate merges, we create a "home_abbr" column on output
+            # that gives the home team abbreviation for both home and away rows:
+            #   is_home==1: team's own abbreviation
+            #   is_home==0: the opponent's abbreviation
+            output["home_abbr_for_join"] = np.where(
+                output["is_home"] == 1,
+                output["team_abbreviation"],
+                output["opponent_abbr"],
+            )
+
+            output = output.merge(
+                ref_home_merge.rename(columns={"join_team": "home_abbr_for_join"}),
+                on=["game_date_str", "home_abbr_for_join"],
+                how="left",
+                suffixes=("", "_ref"),
+            )
+            # Drop the temporary join key columns
+            output = output.drop(columns=["home_abbr_for_join", "game_date_str"])
+
+            n_matched = output["ref_crew_fta_rate_roll10"].notna().sum()
+            print(f"  Referee feature join: {n_matched:,} rows matched out of {len(output):,}")
+        else:
+            print("  Referee features: no scrape data yet (empty DataFrame). Columns will be absent.")
+    except Exception as e:
+        print(f"  Warning: could not build referee features ({e}). Skipping.")
 
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -696,6 +755,9 @@ def build_matchup_dataset(
         "three_style_mismatch", "rebounding_edge",
         # Motivation
         "revenge_game", "blowout_loss_last_game", "close_playoff_race",
+        # Referee features (NaN when no scrape data -- do NOT fillna(0))
+        "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
+        "ref_crew_pace_impact_roll10",
     ] + injury_cols
 
     # Keep only context_cols that actually exist in df
@@ -758,6 +820,9 @@ def build_matchup_dataset(
         "pace_game_roll20",
         "efg_game_roll20", "ts_game_roll20",
         "tov_poss_game_roll20",
+        # Referee foul rate (same crew for both teams, but diff captures any asymmetry
+        # from imperfect joins; home/away raw values are more meaningful signal)
+        "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
     ]
 
     for stat in diff_stats:
