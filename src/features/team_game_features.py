@@ -622,6 +622,33 @@ def build_team_game_features(
     return output
 
 
+# ── Four Factors composite (Dean Oliver, "Basketball on Paper" 2004) ──────────
+
+FOUR_FACTORS_WEIGHTS = {
+    "efg_game_roll20":      +0.40,
+    "tov_pct_game_roll20":  -0.25,   # negative: more turnovers = disadvantage
+    "oreb_pct_game_roll20": +0.20,
+    "ft_rate_game_roll20":  +0.15,
+}
+
+
+def _four_factors_composite(matchup: pd.DataFrame, weights: dict) -> pd.Series:
+    """Compute weighted Four Factors differential (home advantage - away advantage).
+
+    Uses Dean Oliver's canonical weights. The result is a single composite
+    that captures the home team's efficiency advantage across all four dimensions.
+    Positive = home team more efficient overall.
+    """
+    composite = pd.Series(0.0, index=matchup.index)
+    for feat, weight in weights.items():
+        h_col = f"home_{feat}"
+        a_col = f"away_{feat}"
+        if h_col in matchup.columns and a_col in matchup.columns:
+            diff = matchup[h_col] - matchup[a_col]
+            composite += weight * diff.fillna(0)
+    return composite
+
+
 def build_matchup_dataset(
     features_path: str = OUTPUT_PATH,
     output_path:   str = "data/features/game_matchup_features.csv",
@@ -724,6 +751,13 @@ def build_matchup_dataset(
         "revenge_game", "blowout_loss_last_game", "close_playoff_race",
         # Injury differentials — positive = home team more depleted
         "missing_minutes", "missing_usg_pct", "rotation_availability",
+        # Advanced efficiency differentials (Phase 2)
+        "off_rtg_game_roll5", "off_rtg_game_roll10", "off_rtg_game_roll20",
+        "def_rtg_game_roll5", "def_rtg_game_roll10", "def_rtg_game_roll20",
+        "net_rtg_game_roll5", "net_rtg_game_roll10", "net_rtg_game_roll20",
+        "pace_game_roll20",
+        "efg_game_roll20", "ts_game_roll20",
+        "tov_poss_game_roll20",
     ]
 
     for stat in diff_stats:
@@ -731,6 +765,12 @@ def build_matchup_dataset(
         a_col = f"away_{stat}"
         if h_col in matchup.columns and a_col in matchup.columns:
             matchup[f"diff_{stat}"] = matchup[h_col] - matchup[a_col]
+
+    # Four Factors differential composite (FR-2.4)
+    matchup["diff_four_factors_composite"] = _four_factors_composite(
+        matchup, FOUR_FACTORS_WEIGHTS
+    )
+    print(f"  Four Factors composite: {matchup['diff_four_factors_composite'].notna().sum():,} non-null values")
 
     matchup = matchup.dropna(subset=["home_win"])
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
