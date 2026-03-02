@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-02T06:56:05Z"
+last_updated: "2026-03-02T07:10:00Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 3 of 5 (External Data Layer) — IN PROGRESS
-Plan: 03-01 complete; 03-02, 03-03, 03-04 pending
-Status: Phase 3 in progress — 03-01 bref_scraper.py (FR-4.1, NFR-2, NFR-4) complete
-Last activity: 2026-03-02 — 03-01 get_referee_crew_assignments() with HTML comment unwrapping, 3s crawl delay
+Phase: 3 of 5 (External Data Layer) — COMPLETE
+Plan: 03-01, 03-02, 03-03, 03-04 all complete; Phase 3 done
+Status: Phase 3 complete — all 4 plans executed; next: Phase 4 (Schedule + Travel Features)
+Last activity: 2026-03-02 — 03-04 code path separation guards + PIPELINE.md external scraper docs
 
-Progress: [████████░░] 40%
+Progress: [██████████] 60%
 
 ## Performance Metrics
 
@@ -60,6 +60,8 @@ Progress: [████████░░] 40%
 | Phase 02-modern-era-features P03 | 88 min | 2 tasks | 1 file |
 | Phase 03-external-data-layer P01 | 13 min | 2 tasks | 3 files |
 | Phase 03-external-data-layer P03 | 127 | 1 tasks | 2 files |
+| Phase 03-external-data-layer P04 | 189 | 2 tasks | 3 files |
+| Phase 03-external-data-layer P02 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -94,6 +96,10 @@ Recent decisions affecting current work:
 - [03-01]: Officials table ID='officials' follows BR naming convention (div_officials -> officials); 3-tier fallback: direct DOM, Comment iteration, full strip-and-reparse
 - [03-01]: pdfplumber added to requirements.txt in 03-01 to avoid second touch in 03-03
 - [Phase 03-external-data-layer]: nba_api LeagueInjuryReport as primary source (no URL guessing), PDF fallback for resilience; FR-4.4 date guard prevents misuse for historical training data
+- [Phase 03-external-data-layer]: _CODE_PATH string constant chosen over assertion-based guard: makes boundary visible at module load without runtime cost
+- [Phase 03-external-data-layer]: get_todays_injury_report() in injury_proxy.py retained with deprecation note -- removal would be breaking change for any callers
+- [Phase 03-external-data-layer]: Join on game_date + home team abbreviation (not game_id): bref game ID format incompatible with NBA API; home team 3-char abbr is reliable cross-source key
+- [Phase 03-external-data-layer]: 03-02: NaN (not 0) for referee features pre-scrape: Pitfall 6 compliance -- zero injects false signal; SimpleImputer handles NaN via mean imputation
 
 ### Pending Todos
 
@@ -110,5 +116,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 03-01 -- bref_scraper.py (get_referee_crew_assignments, FR-4.1, NFR-2, NFR-4); next: 03-02 (referee features), 03-03 (injury report), 03-04 (code path separation)
+Stopped at: Completed 03-04 -- code path separation (FR-4.4 guards, _CODE_PATH constants) + PIPELINE.md external scraper docs; Phase 3 complete; next: Phase 4 (Schedule + Travel Features)
 Resume file: None
