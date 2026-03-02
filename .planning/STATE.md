@@ -3,6 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-02T19:33:03.004Z"
+progress:
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 17
+  completed_plans: 15
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-02T19:03:37.776Z"
 progress:
   total_phases: 5
@@ -62,9 +75,9 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 5 of 5 (ATS Model) — IN PROGRESS
-Plan: 05-01 complete; next: 05-02 ATS classifier training
-Status: 05-01 complete -- Kaggle betting data downloaded; 18,496-row game_ats_features.csv built with spread, no-vig implied probs, covers_spread; data separation guard verified
-Last activity: 2026-03-02 -- 05-01 ATS feature table complete
+Plan: 05-02 complete; next: 05-03 (if exists) or phase complete
+Status: 05-02 complete -- ATS classifier trained (logistic regression, 51.2% test acc on 2455 games); ats_model.pkl + predict_ats() available; 11 expanding-window splits
+Last activity: 2026-03-02 -- 05-02 ATS classifier training complete
 
 Progress: [████████████████] 80%
 
@@ -104,6 +117,8 @@ Progress: [████████████████] 80%
 | Phase 04-rest-schedule-features P01 | 21 min | 2 tasks | 2 files |
 | Phase 04-rest-schedule-features P02 | 17 | 2 tasks | 2 files |
 | Phase 05-ats-model P01 | 18 | 2 tasks | 3 files |
+| Phase 05-ats-model P02 | 35 | 2 tasks | 1 file |
+| Phase 05-ats-model P02 | 35 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -152,6 +167,8 @@ Recent decisions affecting current work:
 - [Phase 05-ats-model]: Kaggle team name format discovery: dataset uses lowercase short codes (gs, sa, no, utah, wsh) not full names -- KAGGLE_TEAM_TO_ABB built from inspecting actual data
 - [Phase 05-ats-model]: Season normalization: Kaggle stores season as end-year int (2008=2007-08) converted to project format (200708)
 - [Phase 05-ats-model]: Data separation guard at build time: assert checks matchup features have no spread/odds columns before join
+- [Phase 05-ats-model]: Logistic regression selected for ATS: mean val acc 0.5287 vs GB 0.5228; 51.2% test accuracy on 2455 holdout games
+- [Phase 05-ats-model]: 51.2% ATS test accuracy: below vig breakeven (52.4%) but establishes baseline; combined with win-prob disagreement in Phase 6 for value-bet detection
 
 ### Pending Todos
 
