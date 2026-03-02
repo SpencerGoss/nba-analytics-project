@@ -117,5 +117,5 @@ Phases execute in dependency order: 1 → 2 → 3 → 4 → 5 (Phases 2 and 3 ca
 | 1. Foundation & Outputs | 4/4 | Complete | 2026-03-02 |
 | 2. Modern Era Features | 3/3 | Complete   | 2026-03-02 |
 | 3. External Data Layer | 4/4 | Complete   | 2026-03-02 |
-| 4. Rest & Schedule Features | 0/3 | Not started | - |
+| 4. Rest & Schedule Features | 1/2 | In Progress|  |
 | 5. ATS Model | 0/4 | Not started | - |

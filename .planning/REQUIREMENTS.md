@@ -155,9 +155,9 @@ The milestone is complete when:
 | FR-4.3 | Phase 3: External Data Layer | Complete |
 | FR-4.4 | Phase 3: External Data Layer | Complete |
 | NFR-4 | Phase 3: External Data Layer (primary) | Complete |
-| FR-3.1 | Phase 4: Rest & Schedule Features | Pending |
-| FR-3.2 | Phase 4: Rest & Schedule Features | Pending |
-| FR-3.3 | Phase 4: Rest & Schedule Features | Pending |
+| FR-3.1 | Phase 4: Rest & Schedule Features | Complete |
+| FR-3.2 | Phase 4: Rest & Schedule Features | Complete |
+| FR-3.3 | Phase 4: Rest & Schedule Features | Complete |
 | FR-3.4 | Phase 4: Rest & Schedule Features | Pending |
 | FR-5.1 | Phase 5: ATS Model | Pending |
 | FR-5.2 | Phase 5: ATS Model | Pending |

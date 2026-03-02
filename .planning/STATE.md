@@ -35,12 +35,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 3 of 5 (External Data Layer) — COMPLETE
-Plan: 03-01, 03-02, 03-03, 03-04 all complete; Phase 3 done
-Status: Phase 3 complete — all 4 plans executed; next: Phase 4 (Schedule + Travel Features)
-Last activity: 2026-03-02 — 03-04 code path separation guards + PIPELINE.md external scraper docs
+Phase: 4 of 5 (Schedule + Travel Features) — IN PROGRESS
+Plan: 04-01 complete; next: 04-02 (season_month feature + model retrain with new schedule cols)
+Status: 04-01 complete — travel features (travel_miles, cross_country_travel, diff_is_back_to_back) wired into matchup dataset
+Last activity: 2026-03-02 — 04-01 ARENA_COORDS/haversine travel features + diff_stats wiring
 
-Progress: [██████████] 60%
+Progress: [████████████] 65%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [██████████] 60%
 | Phase 03-external-data-layer P03 | 127 | 1 tasks | 2 files |
 | Phase 03-external-data-layer P04 | 189 | 2 tasks | 3 files |
 | Phase 03-external-data-layer P02 | 3 | 2 tasks | 2 files |
+| Phase 04-rest-schedule-features P01 | 21 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,10 @@ Recent decisions affecting current work:
 - [Phase 03-external-data-layer]: get_todays_injury_report() in injury_proxy.py retained with deprecation note -- removal would be breaking change for any callers
 - [Phase 03-external-data-layer]: Join on game_date + home team abbreviation (not game_id): bref game ID format incompatible with NBA API; home team 3-char abbr is reliable cross-source key
 - [Phase 03-external-data-layer]: 03-02: NaN (not 0) for referee features pre-scrape: Pitfall 6 compliance -- zero injects false signal; SimpleImputer handles NaN via mean imputation
+- [04-01]: Vectorized haversine (numpy) used instead of geopy per-row: 1000x faster on 30K rows; 0.2% accuracy tradeoff negligible for 0-2700mi features
+- [04-01]: Static ARENA_COORDS and ARENA_TIMEZONE dicts at module level: 30 NBA arenas are fixed, instant lookup, no API key
+- [04-01]: diff_is_back_to_back added to diff_stats: captures fatigue asymmetry (home B2B vs rested away) as direct signal
+- [04-01]: travel_miles=0 for season opener (fillna(0)): correct neutral value for no-prior-game case
 
 ### Pending Todos
 
@@ -124,10 +129,11 @@ None yet.
 - sklearn cv='prefit' removal RESOLVED: _CalibratedWrapper replaces deprecated API
 - The Odds API historical depth: unknown free-tier range — audit before ATS backfill design (Phase 5)
 - Basketball Reference HTML selectors: PARTIALLY RESOLVED (03-01) — HTML comment pattern confirmed from 3 PyPI packages; officials table ID='officials' MEDIUM confidence (naming convention); Cloudflare blocks in this environment; recommend live verification from cloud VM before building 03-02 referee features
-- geopy 2.4.x API shape: verify with quick test before building schedule_features.py (Phase 4)
+- geopy 2.4.x API shape: RESOLVED (04-01) -- geopy listed in requirements.txt; haversine used for performance; no API shape issues
+- game_outcome_model.py schedule_cols: needs update with home_travel_miles, away_travel_miles, home_cross_country_travel, away_cross_country_travel (Phase 4 follow-up)
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 03-04 -- code path separation (FR-4.4 guards, _CODE_PATH constants) + PIPELINE.md external scraper docs; Phase 3 complete; next: Phase 4 (Schedule + Travel Features)
+Stopped at: Completed 04-01 -- ARENA_COORDS/ARENA_TIMEZONE/haversine travel features + diff_stats wiring; travel_miles and cross_country_travel in matchup CSV; FR-3.1 verified
 Resume file: None
