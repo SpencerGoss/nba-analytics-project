@@ -1,0 +1,439 @@
+"""
+ATS (Against The Spread) Prediction Model
+==========================================
+Train and evaluate a classifier that predicts whether the home team covers
+the point spread.
+
+Key behavior:
+  1. Time-based split by season (no leakage)
+  2. Candidate model selection with expanding-window validation splits
+  3. Decision-threshold tuning to maximize validation accuracy
+  4. Retrain selected model on full train set, evaluate on holdout test seasons
+  5. Save model artifacts alongside win-probability model
+
+Mirrors the architecture of game_outcome_model.py.
+"""
+
+import json
+import os
+import pickle
+import warnings
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+warnings.filterwarnings("ignore")
+
+
+# -- Config -------------------------------------------------------------------
+
+ATS_FEATURES_PATH = "data/features/game_ats_features.csv"
+ARTIFACTS_DIR = "models/artifacts"
+TARGET = "covers_spread"
+TEST_SEASONS = ["202324", "202425"]
+EXCLUDED_SEASONS = ["201920", "202021"]
+# Kaggle data starts ~2007-08; MIN_TRAIN_SEASONS=4 gives first validation split
+# at season 5 (roughly 2011-12), leaving enough expanding windows.
+MIN_TRAIN_SEASONS = 4
+
+
+# -- Feature selection --------------------------------------------------------
+
+def get_ats_feature_cols(df: pd.DataFrame) -> list:
+    """Return ATS feature columns: matchup differentials + schedule + injury + ATS signals.
+
+    Starts with the same feature set as game_outcome_model.get_feature_cols():
+      - diff_* columns (all matchup differentials)
+      - schedule context (rest, travel, season_month)
+      - injury proxy (home/away missing minutes, star player out, etc.)
+
+    Then ADDS ATS-specific pre-game market signals:
+      - spread: opening point spread (home team perspective)
+      - home_implied_prob: no-vig home win probability implied by moneyline
+      - away_implied_prob: no-vig away win probability implied by moneyline
+
+    These are pre-game inputs, not outcomes -- no data leakage.
+    """
+    exclude = {
+        TARGET, "game_id", "season", "game_date",
+        "home_team", "away_team", "home_win",
+    }
+    numeric_cols = [
+        c for c in df.columns
+        if c not in exclude and df[c].dtype in [np.float64, np.int64, float, int]
+    ]
+
+    diff_cols = [c for c in numeric_cols if c.startswith("diff_")]
+
+    schedule_cols = {
+        "home_days_rest", "away_days_rest",
+        "home_is_back_to_back", "away_is_back_to_back",
+        "home_travel_miles", "away_travel_miles",
+        "home_cross_country_travel", "away_cross_country_travel",
+        "season_month",
+    }
+    injury_cols = {
+        "home_missing_minutes",       "away_missing_minutes",
+        "home_missing_usg_pct",       "away_missing_usg_pct",
+        "home_rotation_availability", "away_rotation_availability",
+        "home_star_player_out",       "away_star_player_out",
+    }
+    # ATS-specific market signals -- pre-game only (no leakage)
+    ats_cols = {"spread", "home_implied_prob", "away_implied_prob"}
+
+    context_cols = [
+        c for c in numeric_cols
+        if c in schedule_cols | injury_cols | ats_cols
+    ]
+
+    if diff_cols:
+        return sorted(set(diff_cols + context_cols))
+    return sorted(numeric_cols)
+
+
+# -- Season splits ------------------------------------------------------------
+
+def _ats_season_splits(train_df: pd.DataFrame, min_train: int = MIN_TRAIN_SEASONS) -> list:
+    """Create expanding season splits for ATS model validation.
+
+    Mirrors _season_splits() from game_outcome_model.py exactly:
+      train up to season i-1, validate on season i.
+
+    Uses MIN_TRAIN_SEASONS (default 4) as first split point.
+    """
+    seasons = sorted(train_df["season"].astype(str).unique())
+    splits = []
+    for i in range(max(1, min_train - 1), len(seasons)):
+        train_seasons = seasons[:i]
+        valid_season = seasons[i]
+        tr = train_df[train_df["season"].astype(str).isin(train_seasons)].copy()
+        va = train_df[train_df["season"].astype(str) == valid_season].copy()
+        if not tr.empty and not va.empty:
+            splits.append((tr, va, valid_season))
+
+    # fallback when dataset has very few seasons
+    if not splits:
+        cutoff = int(len(train_df) * 0.85)
+        tr = train_df.iloc[:cutoff].copy()
+        va = train_df.iloc[cutoff:].copy()
+        if not tr.empty and not va.empty:
+            splits.append((tr, va, "date_fallback"))
+    return splits
+
+
+# -- Helpers ------------------------------------------------------------------
+
+def _best_threshold(y_true: pd.Series, proba: np.ndarray) -> tuple:
+    """Find probability threshold that maximizes accuracy."""
+    best_t, best_acc = 0.50, -1.0
+    for t in np.arange(0.35, 0.66, 0.01):
+        pred = (proba >= t).astype(int)
+        acc = accuracy_score(y_true, pred)
+        if acc > best_acc:
+            best_acc = acc
+            best_t = float(round(t, 2))
+    return best_t, best_acc
+
+
+def _validate_null_rates(df: pd.DataFrame, feat_cols: list, threshold: float = 0.95) -> None:
+    """Raise ValueError if any feature exceeds null threshold.
+
+    NFR-1: Prevents silent all-null feature columns entering the model.
+    """
+    null_rates = df[feat_cols].isnull().mean()
+    bad = null_rates[null_rates >= threshold]
+    if not bad.empty:
+        lines = [f"  {col}: {rate:.1%}" for col, rate in bad.items()]
+        raise ValueError(
+            f"Feature columns exceed {threshold:.0%} null threshold "
+            "(broken upstream join or missing data source):\n"
+            + "\n".join(lines)
+            + "\nFix the upstream feature pipeline before training."
+        )
+    partial = null_rates[(null_rates > 0) & (null_rates < threshold)]
+    if not partial.empty:
+        print("  [null audit] Columns with partial nulls (will be imputed):")
+        for col, rate in partial.items():
+            print(f"    {col}: {rate:.1%}")
+
+
+# -- Train / evaluate ---------------------------------------------------------
+
+def train_ats_model(
+    ats_path: str = ATS_FEATURES_PATH,
+    artifacts_dir: str = ARTIFACTS_DIR,
+    test_seasons: list = TEST_SEASONS,
+    excluded_seasons: list = EXCLUDED_SEASONS,
+) -> tuple:
+    """Train ATS classifier and return (pipeline, metrics).
+
+    Steps:
+      1. Load game_ats_features.csv
+      2. Drop push rows (NaN covers_spread)
+      3. Filter excluded seasons
+      4. Split into train / test by season
+      5. Expanding-window validation to select best model
+      6. Tune decision threshold
+      7. Retrain winner on full train set, evaluate on test holdout
+      8. Save artifacts: ats_model.pkl, ats_model_features.pkl, ats_model_metadata.json
+    """
+    print("=" * 60)
+    print("ATS PREDICTION MODEL")
+    print("=" * 60)
+
+    print("\nLoading ATS features...")
+    df = pd.read_csv(ats_path)
+    df["game_date"] = pd.to_datetime(df["game_date"])
+    df = df.sort_values("game_date").reset_index(drop=True)
+    print(f"  Total games: {len(df):,} | Seasons: {df.season.nunique()}")
+
+    # Drop push rows (NaN covers_spread = no winner vs spread)
+    n_before = len(df)
+    df = df.dropna(subset=[TARGET])
+    n_dropped = n_before - len(df)
+    if n_dropped > 0:
+        print(f"  Dropped {n_dropped:,} push rows (NaN covers_spread)")
+
+    # Exclude anomalous seasons
+    if excluded_seasons:
+        before = len(df)
+        df = df[~df["season"].astype(str).isin(excluded_seasons)].copy()
+        n_excluded = before - len(df)
+        print(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
+
+    # Train / test split
+    train = df[~df["season"].astype(str).isin(test_seasons)].copy()
+    test = df[df["season"].astype(str).isin(test_seasons)].copy()
+    print(f"  Train: {len(train):,} games | Test: {len(test):,} games")
+    print(f"  Test seasons: {test_seasons}")
+
+    feat_cols = get_ats_feature_cols(df)
+    print(f"\n  Features: {len(feat_cols)} columns")
+    ats_specific = [c for c in feat_cols if c in ("spread", "home_implied_prob", "away_implied_prob")]
+    print(f"  ATS-specific signals: {ats_specific}")
+
+    print("\nValidating feature null rates...")
+    _validate_null_rates(df, feat_cols)
+
+    X_train = train[feat_cols]
+    y_train = train[TARGET]
+    X_test = test[feat_cols]
+    y_test = test[TARGET]
+
+    candidates = {
+        "logistic": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=1000, random_state=42)),
+        ]),
+        "gradient_boosting": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("clf", GradientBoostingClassifier(
+                n_estimators=200,
+                max_depth=4,
+                learning_rate=0.1,
+                random_state=42,
+            )),
+        ]),
+        "random_forest": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("clf", RandomForestClassifier(
+                n_estimators=200,
+                max_depth=10,
+                random_state=42,
+                n_jobs=-1,
+            )),
+        ]),
+    }
+
+    splits = _ats_season_splits(train)
+    print(f"\n--- Model selection across {len(splits)} validation split(s) ---")
+
+    model_scores = {}
+    for name, pipe in candidates.items():
+        split_accs, split_aucs, split_thresholds = [], [], []
+
+        for tr, va, split_name in splits:
+            X_sub = tr[feat_cols]
+            y_sub = tr[TARGET]
+            X_val = va[feat_cols]
+            y_val = va[TARGET]
+
+            pipe.fit(X_sub, y_sub)
+            val_proba = pipe.predict_proba(X_val)[:, 1]
+            val_auc = roc_auc_score(y_val, val_proba)
+            best_t, val_acc = _best_threshold(y_val, val_proba)
+
+            split_accs.append(val_acc)
+            split_aucs.append(val_auc)
+            split_thresholds.append(best_t)
+            print(
+                f"  {name:>17} | split={split_name} | "
+                f"acc={val_acc:.4f} | auc={val_auc:.4f} | th={best_t:.2f}"
+            )
+
+        model_scores[name] = {
+            "mean_val_acc": float(np.mean(split_accs)),
+            "mean_val_auc": float(np.mean(split_aucs)),
+            "threshold": float(round(np.mean(split_thresholds), 2)),
+        }
+
+    best_name = max(model_scores, key=lambda k: model_scores[k]["mean_val_acc"])
+    best_threshold = model_scores[best_name]["threshold"]
+    print(
+        f"\nSelected model: {best_name} "
+        f"(mean val acc={model_scores[best_name]['mean_val_acc']:.4f}, "
+        f"mean val auc={model_scores[best_name]['mean_val_auc']:.4f}, "
+        f"threshold={best_threshold:.2f})"
+    )
+
+    # Retrain winner on full training set
+    best_pipe = candidates[best_name]
+    best_pipe.fit(X_train, y_train)
+    test_proba = best_pipe.predict_proba(X_test)[:, 1]
+    test_pred = (test_proba >= best_threshold).astype(int)
+
+    test_acc = accuracy_score(y_test, test_pred)
+    test_auc = roc_auc_score(y_test, test_proba)
+
+    print(f"\n  Test Accuracy : {test_acc:.4f}")
+    print(f"  Test ROC-AUC  : {test_auc:.4f}")
+
+    print("\nClassification Report:")
+    print(classification_report(y_test, test_pred, target_names=["Away Covers", "Home Covers"]))
+
+    # Feature importances
+    clf = best_pipe.named_steps["clf"]
+    if hasattr(clf, "feature_importances_"):
+        importances = pd.Series(clf.feature_importances_, index=feat_cols).sort_values(ascending=False)
+    else:
+        importances = pd.Series(np.abs(clf.coef_[0]), index=feat_cols).sort_values(ascending=False)
+
+    print("\nTop 15 Most Important Features:")
+    print(importances.head(15).to_string())
+
+    # -- Save artifacts -------------------------------------------------------
+    os.makedirs(artifacts_dir, exist_ok=True)
+    model_path = os.path.join(artifacts_dir, "ats_model.pkl")
+    feat_path = os.path.join(artifacts_dir, "ats_model_features.pkl")
+    meta_path = os.path.join(artifacts_dir, "ats_model_metadata.json")
+
+    with open(model_path, "wb") as f:
+        pickle.dump(best_pipe, f)
+    with open(feat_path, "wb") as f:
+        pickle.dump(feat_cols, f)
+
+    print(f"\nModel saved -> {model_path}")
+
+    # Metadata JSON (only Python builtins -- no numpy types)
+    top_importances = {}
+    try:
+        if hasattr(clf, "feature_importances_"):
+            imp_series = pd.Series(clf.feature_importances_, index=feat_cols)
+            top_importances = {k: round(float(v), 6) for k, v in imp_series.nlargest(20).items()}
+        elif hasattr(clf, "coef_"):
+            imp_series = pd.Series(np.abs(clf.coef_[0]), index=feat_cols)
+            top_importances = {k: round(float(v), 6) for k, v in imp_series.nlargest(20).items()}
+    except Exception:
+        pass  # best-effort; do not crash training
+
+    metadata = {
+        "model_type": best_name,
+        "n_features": int(len(feat_cols)),
+        "feature_names": list(feat_cols[:20]),
+        "test_accuracy": float(test_acc),
+        "test_auc": float(test_auc),
+        "threshold": float(best_threshold),
+        "training_date": datetime.now().isoformat(),
+        "n_train_rows": int(len(train)),
+        "n_test_rows": int(len(test)),
+        "test_seasons": list(test_seasons),
+        "excluded_seasons": list(excluded_seasons),
+        "validation_mean_accuracy": float(model_scores[best_name]["mean_val_acc"]),
+        "validation_mean_auc": float(model_scores[best_name]["mean_val_auc"]),
+        "n_validation_splits": int(len(splits)),
+        "top_importances": top_importances,
+    }
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"  Metadata saved -> {meta_path}")
+
+    metrics = {
+        "model_type": best_name,
+        "test_accuracy": float(test_acc),
+        "test_auc": float(test_auc),
+        "threshold": float(best_threshold),
+        "n_train_rows": int(len(train)),
+        "n_test_rows": int(len(test)),
+        "n_features": int(len(feat_cols)),
+        "validation_mean_accuracy": float(model_scores[best_name]["mean_val_acc"]),
+        "validation_mean_auc": float(model_scores[best_name]["mean_val_auc"]),
+    }
+    return best_pipe, metrics
+
+
+# -- Prediction ---------------------------------------------------------------
+
+def predict_ats(game_features_df: pd.DataFrame, artifacts_dir: str = ARTIFACTS_DIR) -> pd.DataFrame:
+    """Predict whether the home team covers the spread for each game row.
+
+    Args:
+        game_features_df: DataFrame with game features (spread, implied_prob, diff_ columns, etc.)
+            Missing columns are set to NaN and handled by the SimpleImputer in the pipeline.
+        artifacts_dir: Directory containing ats_model.pkl and ats_model_features.pkl.
+
+    Returns:
+        DataFrame with two columns:
+          covers_spread_prob  -- probability that home team covers (float 0..1)
+          covers_spread_pred  -- binary prediction (1=home covers, 0=home doesn't cover)
+    """
+    model_path = os.path.join(artifacts_dir, "ats_model.pkl")
+    feat_path = os.path.join(artifacts_dir, "ats_model_features.pkl")
+
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(
+            f"ATS model artifact not found at '{model_path}'. "
+            "Run: python src/models/ats_model.py"
+        )
+
+    with open(model_path, "rb") as f:
+        model = pickle.load(f)
+    with open(feat_path, "rb") as f:
+        feat_cols = pickle.load(f)
+
+    # Align input columns -- missing features become NaN (handled by imputer)
+    X = game_features_df.reindex(columns=feat_cols)
+
+    proba = model.predict_proba(X)[:, 1]
+
+    # Load threshold from metadata
+    meta_path = os.path.join(artifacts_dir, "ats_model_metadata.json")
+    threshold = 0.50
+    if os.path.exists(meta_path):
+        with open(meta_path) as f:
+            meta = json.load(f)
+        threshold = meta.get("threshold", 0.50)
+
+    pred = (proba >= threshold).astype(int)
+
+    result = pd.DataFrame({
+        "covers_spread_prob": proba,
+        "covers_spread_pred": pred,
+    }, index=game_features_df.index)
+    return result
+
+
+if __name__ == "__main__":
+    pipe, metrics = train_ats_model()
+    print(f"\nFinal ATS model accuracy: {metrics['test_accuracy']:.1%}")
+    print(f"Final ATS model ROC-AUC:  {metrics['test_auc']:.4f}")
+    print(f"Model type: {metrics['model_type']}")
+    print(f"Features: {metrics['n_features']}")
+    print(f"Train rows: {metrics['n_train_rows']:,} | Test rows: {metrics['n_test_rows']:,}")
