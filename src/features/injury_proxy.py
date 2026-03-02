@@ -142,33 +142,102 @@ def build_injury_proxy_features(
     )
 
     # A player is "in the rotation" for a given game if:
-    #   - They averaged MIN_ROTATION_MINUTES+ over their last 5 games
+    #   - They averaged MIN_ROTATION_MINUTES+ over their last 5 games (shift-1)
     #   - They appeared in at least MIN_ROTATION_GAMES of those 5 games
+    # NOTE: in_rotation is based on prior-games rolling stats (shift-1), so it is
+    # the pre-game expectation — it does NOT use the current game's minutes.
     df["in_rotation"] = (
         (df["min_roll5"] >= MIN_ROTATION_MINUTES) &
         (df["games_in_roll5"] >= MIN_ROTATION_GAMES)
     )
 
-    rotation = df[df["in_rotation"]].copy()
-    print(f"  Rotation player-game entries: {len(rotation):,}")
+    # ── Identify absent rotation players (vectorized) ─────────────────────────
+    # Design: for each player-team, use pd.merge_asof to project their last
+    # known rotation status onto ALL team-game dates (sorted merge on game_date).
+    # A player was "expected" to play game G if their most recent appearance
+    # before G shows in_rotation=True and was within MAX_STALE_DAYS days.
+    # Then anti-join against actual appearances to find who was absent.
+    print("Identifying absent rotation players per team-game...")
 
-    # ── Build actual-played lookup ────────────────────────────────────────────
-    # This is who DID play — our reference set for "absent = not in this table"
+    MAX_STALE_DAYS = ROLL_WINDOW * 5   # ~25 days; beyond this, don't flag player
+
+    # All (team_id, game_id, game_date) pairs that actually occurred.
+    team_games = (
+        df[["team_id", "game_id", "game_date"]]
+        .drop_duplicates()
+        .copy()
+    )
+
+    # Player status timeline per player per team, sorted for merge_asof
+    player_status = (
+        df[["player_id", "team_id", "game_date", "in_rotation", "min_roll5", "usg_pct"]]
+        .copy()
+        .sort_values(["player_id", "team_id", "game_date"])
+    )
+
+    # Actual played: all (game_id, team_id, player_id) entries in the logs
+    # (game logs only include rows where the player actually played)
     actual_played = (
         df[["game_id", "team_id", "player_id"]]
+        .drop_duplicates()
         .assign(played=True)
     )
 
-    # ── Anti-join: rotation members who did NOT play ──────────────────────────
-    print("Identifying absent rotation players per team-game...")
+    # Vectorized expected-rotation builder using merge_asof per (team, player)
+    expected_parts = []
+    for team_id_val, tg_grp in team_games.groupby("team_id"):
+        ps_team = player_status[player_status["team_id"] == team_id_val]
+        if ps_team.empty:
+            continue
+        tg_sorted = tg_grp.sort_values("game_date")[["team_id", "game_id", "game_date"]]
 
-    merged = rotation[["game_id", "team_id", "player_id", "min_roll5", "usg_pct"]].merge(
+        for player_id_val, player_grp in ps_team.groupby("player_id"):
+            ps_sorted = (
+                player_grp
+                .sort_values("game_date")
+                .rename(columns={"game_date": "last_date"})
+                [["last_date", "in_rotation", "min_roll5", "usg_pct"]]
+            )
+            # merge_asof: for each team-game date, find the player's last prior appearance
+            merged = pd.merge_asof(
+                tg_sorted,
+                ps_sorted,
+                left_on="game_date",
+                right_on="last_date",
+                direction="backward",
+            )
+            # Keep rows where the player had a prior appearance showing in_rotation=True
+            # and that appearance was strictly before the game (days_since > 0)
+            # and not stale (days_since <= MAX_STALE_DAYS)
+            merged = merged[merged["last_date"].notna()].copy()
+            merged["days_since"] = (merged["game_date"] - merged["last_date"]).dt.days
+            merged = merged[
+                (merged["in_rotation"])
+                & (merged["days_since"] > 0)
+                & (merged["days_since"] <= MAX_STALE_DAYS)
+            ]
+            if merged.empty:
+                continue
+            merged["player_id"] = player_id_val
+            expected_parts.append(
+                merged[["game_id", "team_id", "player_id", "min_roll5", "usg_pct"]]
+            )
+
+    expected_df = (
+        pd.concat(expected_parts, ignore_index=True)
+        if expected_parts
+        else pd.DataFrame(columns=["game_id", "team_id", "player_id", "min_roll5", "usg_pct"])
+    )
+    print(f"  Expected rotation appearances: {len(expected_df):,}")
+
+    # Anti-join: expected players who did NOT appear in the actual game log
+    merged_check = expected_df.merge(
         actual_played,
         on=["game_id", "team_id", "player_id"],
         how="left",
     )
-    merged["played"] = merged["played"].fillna(False)
-    absent = merged[~merged["played"]].copy()
+    # played=NaN → player was expected but did not appear in the game log
+    absent = merged_check[merged_check["played"].isna()].copy()
 
     print(f"  Absent rotation instances: {len(absent):,}")
     if len(absent) > 0:
@@ -200,8 +269,20 @@ def build_injury_proxy_features(
     absent_agg["star_player_out"] = absent_agg["star_player_out"].fillna(0).astype(int)
 
     # ── Compute total expected minutes per team-game ──────────────────────────
+    # total_expected_minutes = absent rotation minutes + played rotation minutes.
+    # expected_df only contains absent players; we also need rotation players
+    # who DID play (their min_roll5 from the game log, in_rotation=True).
+    played_rotation = df[df["in_rotation"]][
+        ["game_id", "team_id", "min_roll5"]
+    ].copy()
+
+    combined_for_total = pd.concat([
+        expected_df[["game_id", "team_id", "min_roll5"]],
+        played_rotation[["game_id", "team_id", "min_roll5"]],
+    ], ignore_index=True)
+
     expected_agg = (
-        rotation
+        combined_for_total
         .groupby(["game_id", "team_id"])["min_roll5"]
         .sum()
         .reset_index()
@@ -228,6 +309,13 @@ def build_injury_proxy_features(
 
     # Drop the intermediate column
     result = result.drop(columns=["total_expected_minutes"])
+
+    # ── Normalize join keys before returning ──────────────────────────────────
+    # Cast game_id to str.strip() and team_id to int so that downstream merges
+    # in team_game_features.py use consistent types regardless of how the source
+    # CSVs were written. This prevents silent left-join key mismatches.
+    result["game_id"] = result["game_id"].astype(str).str.strip()
+    result["team_id"] = result["team_id"].astype(int)
 
     # ── Summary stats ─────────────────────────────────────────────────────────
     print(f"\n── Summary ──────────────────────────────────────────────")

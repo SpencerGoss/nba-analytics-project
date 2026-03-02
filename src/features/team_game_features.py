@@ -531,7 +531,26 @@ def build_team_game_features(
         from src.features.injury_proxy import build_injury_proxy_features
         print("Building injury proxy features...")
         injury_df = build_injury_proxy_features()
+
+        # Normalize join keys on BOTH sides before merging to prevent silent
+        # type-mismatch failures (e.g. int vs str game_id across CSV sources).
+        output["game_id"]    = output["game_id"].astype(str).str.strip()
+        output["team_id"]    = output["team_id"].astype(int)
+        injury_df["game_id"] = injury_df["game_id"].astype(str).str.strip()
+        injury_df["team_id"] = injury_df["team_id"].astype(int)
+
         output = output.merge(injury_df, on=["team_id", "game_id"], how="left")
+
+        # Assert the join actually matched rows — zero matches means a key format
+        # mismatch slipped through normalization (NFR-1 guard).
+        n_matched = output["missing_minutes"].notna().sum()
+        print(f"  Injury join: {n_matched:,} rows matched out of {len(output):,}")
+        if not injury_df.empty:
+            assert n_matched > 0, (
+                "Injury proxy join matched zero rows — game_id or team_id type mismatch. "
+                "Check that player_game_logs and team_game_logs game_id formats are compatible."
+            )
+
         output["missing_minutes"]       = output["missing_minutes"].fillna(0)
         output["missing_usg_pct"]       = output["missing_usg_pct"].fillna(0)
         output["rotation_availability"] = output["rotation_availability"].fillna(1.0)
