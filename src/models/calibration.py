@@ -1,7 +1,7 @@
 """
 Model Calibration Analysis
 ============================
-Evaluates whether predicted win probabilities are trustworthy — i.e.,
+Evaluates whether predicted win probabilities are trustworthy - i.e.,
 when the model says "70% chance the home team wins," does that actually
 happen about 70% of the time?
 
@@ -13,7 +13,7 @@ accuracy whose probabilities are all over the place.
 Three calibration diagnostics are computed:
 
 1. Reliability diagram (calibration curve)
-   - Bins predictions into deciles (0–10%, 10–20%, ..., 90–100%)
+   - Bins predictions into deciles (0-10%, 10-20%, ..., 90-100%)
    - Compares the mean predicted probability in each bin to the actual
      win rate in that bin
    - A perfectly calibrated model lies on the diagonal
@@ -22,19 +22,19 @@ Three calibration diagnostics are computed:
    - The mean squared error between predicted probabilities and actual
      outcomes (0 = perfect, 0.25 = completely uninformative)
    - Lower is better; the theoretical floor for NBA game prediction is
-     around 0.22–0.24 because the sport has genuine randomness
+     around 0.22-0.24 because the sport has genuine randomness
 
 3. Expected Calibration Error (ECE)
    - The weighted average gap between predicted probabilities and actual
      win rates across all bins
-   - More interpretable than the raw curve — a single number summarizing
+   - More interpretable than the raw curve - a single number summarizing
      how miscalibrated the model is
 
 Outputs (saved to reports/calibration/):
-    calibration_curve.png          — reliability diagram
-    calibration_metrics.csv        — Brier score, ECE, per-bin stats
-    calibration_by_era.csv         — calibration metrics per historical era
-    calibration_by_season.csv      — per-season Brier score trend
+    calibration_curve.png          - reliability diagram
+    calibration_metrics.csv        - Brier score, ECE, per-bin stats
+    calibration_by_era.csv         - calibration metrics per historical era
+    calibration_by_season.csv      - per-season Brier score trend
 
 Usage:
     python src/models/calibration.py
@@ -63,7 +63,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# -- Config ---------------------------------------------------------------------
 
 MATCHUP_PATH   = "data/features/game_matchup_features.csv"
 ARTIFACTS_DIR  = "models/artifacts"
@@ -73,7 +73,7 @@ TARGET         = "home_win"
 N_BINS         = 10            # number of calibration bins
 
 
-# ── Calibrated model wrapper ──────────────────────────────────────────────────
+# -- Calibrated model wrapper --------------------------------------------------
 
 class _CalibratedWrapper:
     """Wraps a base model + IsotonicRegression into a single object with
@@ -93,7 +93,7 @@ class _CalibratedWrapper:
         return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# -- Helpers --------------------------------------------------------------------
 
 def _load_model(artifacts_dir: str = ARTIFACTS_DIR):
     path = os.path.join(artifacts_dir, "game_outcome_model.pkl")
@@ -162,7 +162,7 @@ def _bin_calibration_stats(
     return pd.DataFrame(rows)
 
 
-# ── Calibration curve plot ─────────────────────────────────────────────────────
+# -- Calibration curve plot -----------------------------------------------------
 
 def _plot_calibration_curve(
     y_true: np.ndarray,
@@ -183,7 +183,7 @@ def _plot_calibration_curve(
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
-    # ── Reliability diagram ────────────────────────────────────────────────────
+    # -- Reliability diagram ----------------------------------------------------
     ax = axes[0]
     ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfect calibration", alpha=0.6)
     ax.plot(mean_pred_u, frac_pos_u, "o-", color="#e74c3c", linewidth=2,
@@ -203,7 +203,7 @@ def _plot_calibration_curve(
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
     ax.grid(True, alpha=0.3)
 
-    # ── Prediction distribution histogram ─────────────────────────────────────
+    # -- Prediction distribution histogram -------------------------------------
     ax2 = axes[1]
     ax2.hist(y_prob_uncal[y_true == 1], bins=20, alpha=0.6, color="#2ecc71",
              label="Home Win", density=True)
@@ -217,17 +217,17 @@ def _plot_calibration_curve(
     ax2.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
     ax2.grid(True, alpha=0.3)
 
-    fig.suptitle("Game Outcome Model — Calibration Analysis", fontsize=14, fontweight="bold", y=1.01)
+    fig.suptitle("Game Outcome Model -- Calibration Analysis", fontsize=14, fontweight="bold", y=1.01)
     plt.tight_layout()
 
     os.makedirs(output_dir, exist_ok=True)
     out = os.path.join(output_dir, "calibration_curve.png")
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Calibration curve saved → {out}")
+    print(f"  Calibration curve saved -> {out}")
 
 
-# ── Per-season Brier score trend ───────────────────────────────────────────────
+# -- Per-season Brier score trend -----------------------------------------------
 
 def _compute_season_brier(
     model,
@@ -238,7 +238,7 @@ def _compute_season_brier(
 ) -> pd.DataFrame:
     """
     Walk forward and compute the Brier score for each test season.
-    Lightweight version — uses only 50 estimators for speed.
+    Lightweight version -- uses only 50 estimators for speed.
     """
     print("\nComputing per-season Brier score (walk-forward)...")
     rows = []
@@ -292,7 +292,7 @@ def _plot_brier_trend(df: pd.DataFrame, output_dir: str) -> None:
     # Era shading
     era_colors = ["#eaf4fb", "#fef9e7", "#eafaf1", "#fdf2f8", "#f0f3fd", "#fef5e7"]
     era_breaks = [
-        ("194647", "195354", "Pre–Shot Clock", era_colors[0]),
+        ("194647", "195354", "Pre-Shot Clock", era_colors[0]),
         ("195455", "197879", "Shot Clock Era", era_colors[1]),
         ("197980", "199394", "3-Point Intro",  era_colors[2]),
         ("199495", "200304", "Physical / Iso", era_colors[3]),
@@ -310,8 +310,8 @@ def _plot_brier_trend(df: pd.DataFrame, output_dir: str) -> None:
 
     ax.set_xlabel("Season", fontsize=11)
     ax.set_ylabel("Brier Score", fontsize=11)
-    ax.set_title("Brier Score by Season — Game Outcome Model\n"
-                 "(lower = better calibration; NBA floor ≈ 0.22–0.24)",
+    ax.set_title("Brier Score by Season -- Game Outcome Model\n"
+                 "(lower = better calibration; NBA floor ~ 0.22-0.24)",
                  fontsize=12, fontweight="bold")
 
     # Thin out x-axis labels so they don't overlap
@@ -326,10 +326,10 @@ def _plot_brier_trend(df: pd.DataFrame, output_dir: str) -> None:
     out = os.path.join(output_dir, "brier_score_by_season.png")
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Brier trend chart saved → {out}")
+    print(f"  Brier trend chart saved -> {out}")
 
 
-# ── Main analysis ──────────────────────────────────────────────────────────────
+# -- Main analysis --------------------------------------------------------------
 
 def run_calibration_analysis(
     matchup_path:  str  = MATCHUP_PATH,
@@ -344,10 +344,10 @@ def run_calibration_analysis(
         dict with keys: brier_score, ece, bin_stats, season_brier
     """
     print("=" * 60)
-    print("CALIBRATION ANALYSIS — Game Outcome Model")
+    print("CALIBRATION ANALYSIS -- Game Outcome Model")
     print("=" * 60)
 
-    # ── Load ──────────────────────────────────────────────────────────────────
+    # -- Load ------------------------------------------------------------------
     model     = _load_model(artifacts_dir)
     feat_cols = _load_features(artifacts_dir)
 
@@ -363,11 +363,11 @@ def run_calibration_analysis(
     X_test = test[feat_cols]
     y_test = test[TARGET].values
 
-    # ── Raw model predictions ─────────────────────────────────────────────────
+    # -- Raw model predictions -------------------------------------------------
     # The v2 model artifact is a CalibratedClassifierCV wrapper around the base
     # GBM Pipeline.  We extract the inner pipeline for "pre-calibration" numbers
     # so the chart can show the improvement from isotonic calibration.
-    # The v1 model is a plain Pipeline — handled the same way for compatibility.
+    # The v1 model is a plain Pipeline -- handled the same way for compatibility.
     if isinstance(model, (CalibratedClassifierCV, _CalibratedWrapper)):
         raw_model = model.base_model if isinstance(model, _CalibratedWrapper) else model.estimator
         print("\n  (v2 model detected - comparing base GBM vs isotonic-calibrated output)")
@@ -380,12 +380,12 @@ def run_calibration_analysis(
     ece_uncal   = _expected_calibration_error(y_test, y_prob)
     bin_stats   = _bin_calibration_stats(y_test, y_prob)
 
-    print(f"\n── Base Model (pre-calibration) ──────────────────────────")
+    print(f"\n-- Base Model (pre-calibration) --------------------------")
     print(f"  Brier score : {brier_uncal:.5f}  (lower is better; 0.25 = coin flip)")
     print(f"  ECE         : {ece_uncal:.5f}  (lower is better; 0 = perfect)")
 
-    # ── Calibrated predictions ────────────────────────────────────────────────
-    # v2: the loaded artifact is already the calibrated model — use it directly.
+    # -- Calibrated predictions ------------------------------------------------
+    # v2: the loaded artifact is already the calibrated model -- use it directly.
     # v1: fit a fresh isotonic calibrator on the training data and save it so
     #     future scripts (fetch_odds.py, predict_cli.py) can load calibrated probs
     #     without re-fitting.
@@ -418,24 +418,24 @@ def run_calibration_analysis(
     brier_cal = brier_score_loss(y_test, y_prob_cal)
     ece_cal   = _expected_calibration_error(y_test, y_prob_cal)
 
-    print(f"\n── Isotonic Calibrated Model ─────────────────────────────")
+    print(f"\n-- Isotonic Calibrated Model -----------------------------")
     print(f"  Brier score : {brier_cal:.5f}")
     print(f"  ECE         : {ece_cal:.5f}")
     print(f"\n  Brier improvement : {brier_uncal - brier_cal:+.5f}")
     print(f"  ECE   improvement : {ece_uncal - ece_cal:+.5f}")
 
-    # ── Per-bin stats ─────────────────────────────────────────────────────────
-    print("\n── Calibration by Bin ────────────────────────────────────")
+    # -- Per-bin stats ---------------------------------------------------------
+    print("\n-- Calibration by Bin ------------------------------------")
     print(f"{'Bin':<12} {'N Games':>9} {'Pred %':>8} {'Actual %':>9} {'Gap':>8}")
-    print("─" * 52)
+    print("-" * 52)
     for _, row in bin_stats.iterrows():
         gap_str = f"{row['gap']:+.4f}"
-        flag    = " ⚠" if abs(row["gap"]) > 0.05 else ""
-        print(f"  {row['bin_low']:.0%}–{row['bin_high']:.0%}   "
+        flag    = " [!]" if abs(row["gap"]) > 0.05 else ""
+        print(f"  {row['bin_low']:.0%}-{row['bin_high']:.0%}   "
               f"{int(row['n_games']):>9,}   {row['mean_pred']:>7.1%}   "
               f"{row['actual_rate']:>7.1%}   {gap_str}{flag}")
 
-    # ── Plot ──────────────────────────────────────────────────────────────────
+    # -- Plot ------------------------------------------------------------------
     _plot_calibration_curve(
         y_test, y_prob, y_prob_cal,
         brier_uncal, brier_cal,
@@ -443,13 +443,13 @@ def run_calibration_analysis(
         output_dir,
     )
 
-    # ── Per-season Brier trend ─────────────────────────────────────────────────
+    # -- Per-season Brier trend -------------------------------------------------
     all_seasons = sorted(df["season"].unique().tolist())
     season_brier = _compute_season_brier(model, df, feat_cols, all_seasons)
     _plot_brier_trend(season_brier, output_dir)
 
-    # ── Era-level breakdown ────────────────────────────────────────────────────
-    print("\n── Calibration by Era ────────────────────────────────────")
+    # -- Era-level breakdown ----------------------------------------------------
+    print("\n-- Calibration by Era ------------------------------------")
     try:
         from src.features.era_labels import get_era
         test = test.copy()
@@ -465,7 +465,7 @@ def run_calibration_analysis(
             })
         era_df = pd.DataFrame(era_groups)
         print(f"  {'Era':<30} {'N Games':>9} {'Brier':>9} {'ECE':>8}")
-        print("  " + "─" * 60)
+        print("  " + "-" * 60)
         for _, r in era_df.iterrows():
             print(f"  {r['era_name']:<30} {r['n_games']:>9,} {r['brier']:>9.5f} {r['ece']:>8.5f}")
         os.makedirs(output_dir, exist_ok=True)
@@ -473,7 +473,7 @@ def run_calibration_analysis(
     except Exception as e:
         print(f"  Could not compute era breakdown: {e}")
 
-    # ── Save outputs ──────────────────────────────────────────────────────────
+    # -- Save outputs ----------------------------------------------------------
     os.makedirs(output_dir, exist_ok=True)
 
     metrics_df = pd.DataFrame([{
@@ -484,15 +484,15 @@ def run_calibration_analysis(
     ])
     metrics_path = os.path.join(output_dir, "calibration_metrics.csv")
     metrics_df.to_csv(metrics_path, index=False)
-    print(f"\nMetrics saved → {metrics_path}")
+    print(f"\nMetrics saved -> {metrics_path}")
 
     bin_path = os.path.join(output_dir, "calibration_bins.csv")
     bin_stats.to_csv(bin_path, index=False)
-    print(f"Bin stats saved → {bin_path}")
+    print(f"Bin stats saved -> {bin_path}")
 
     season_path = os.path.join(output_dir, "calibration_by_season.csv")
     season_brier.to_csv(season_path, index=False)
-    print(f"Season Brier saved → {season_path}")
+    print(f"Season Brier saved -> {season_path}")
 
     return {
         "brier_score":     brier_uncal,
@@ -504,7 +504,7 @@ def run_calibration_analysis(
     }
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# -- Entry point ----------------------------------------------------------------
 
 if __name__ == "__main__":
     metrics = run_calibration_analysis()
