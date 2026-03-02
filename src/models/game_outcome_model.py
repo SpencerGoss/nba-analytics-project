@@ -100,10 +100,13 @@ def get_feature_cols(df: pd.DataFrame) -> list:
 
     diff_cols = [c for c in numeric_cols if c.startswith("diff_")]
 
-    # Rest and schedule context
+    # Rest and schedule context (Phase 4: travel + season-segment features added)
     schedule_cols = {
         "home_days_rest", "away_days_rest",
         "home_is_back_to_back", "away_is_back_to_back",
+        "home_travel_miles", "away_travel_miles",
+        "home_cross_country_travel", "away_cross_country_travel",
+        "season_month",
     }
     # Injury proxy context — home/away form (not covered by diff_ alone because
     # star_player_out is a binary flag where the absolute value matters, not just

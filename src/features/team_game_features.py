@@ -899,6 +899,11 @@ def build_matchup_dataset(
         .merge(away_feat, on="game_id", how="inner")
     )
 
+    # -- Season-segment context (Phase 4, FR-3.4) --
+    matchup["season_month"] = pd.to_datetime(matchup["game_date"]).dt.month
+    print(f"  season_month: {matchup['season_month'].nunique()} unique months, "
+          f"range {int(matchup['season_month'].min())}-{int(matchup['season_month'].max())}")
+
     # ── Differential features ─────────────────────────────────────────────────
     # Explicit home-minus-away gaps for the most predictive stats.
     print("Computing matchup differential features...")
