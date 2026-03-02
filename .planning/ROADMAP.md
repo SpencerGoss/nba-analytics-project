@@ -51,7 +51,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Wire advanced stats table into team feature pipeline (ORtg, DRtg, pace, eFG%, TS%)
+- [x] 02-01: Wire advanced stats table into team feature pipeline (ORtg, DRtg, pace, eFG%, TS%)
 - [ ] 02-02: Add Four Factors differential and pace-normalized turnover rate
 - [ ] 02-03: Restrict training era to 2014+ and validate accuracy improvement
 
@@ -116,7 +116,7 @@ Phases execute in dependency order: 1 → 2 → 3 → 4 → 5 (Phases 2 and 3 ca
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Outputs | 4/4 | Complete | 2026-03-02 |
-| 2. Modern Era Features | 0/3 | Not started | - |
+| 2. Modern Era Features | 1/3 | In progress | - |
 | 3. External Data Layer | 0/4 | Not started | - |
 | 4. Rest & Schedule Features | 0/3 | Not started | - |
 | 5. ATS Model | 0/4 | Not started | - |

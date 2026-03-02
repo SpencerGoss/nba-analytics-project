@@ -145,9 +145,9 @@ The milestone is complete when:
 | NFR-1 | Phase 1: Foundation & Outputs (primary) | Complete |
 | NFR-2 | Phase 1: Foundation & Outputs (primary) | Complete (01-04) |
 | NFR-3 | Phase 1: Foundation & Outputs (primary) | Complete (01-02) |
-| FR-2.1 | Phase 2: Modern Era Features | Pending |
-| FR-2.2 | Phase 2: Modern Era Features | Pending |
-| FR-2.3 | Phase 2: Modern Era Features | Pending |
+| FR-2.1 | Phase 2: Modern Era Features | Complete (02-01) |
+| FR-2.2 | Phase 2: Modern Era Features | Complete (02-01) |
+| FR-2.3 | Phase 2: Modern Era Features | Complete (02-01) |
 | FR-2.4 | Phase 2: Modern Era Features | Pending |
 | FR-2.5 | Phase 2: Modern Era Features | Pending |
 | FR-4.1 | Phase 3: External Data Layer | Pending |
