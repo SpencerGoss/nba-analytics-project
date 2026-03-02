@@ -3,6 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-02T19:52:41.309Z"
+progress:
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 17
+  completed_plans: 16
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-02T19:33:03.004Z"
 progress:
   total_phases: 5
@@ -75,11 +88,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 5 of 5 (ATS Model) — IN PROGRESS
-Plan: 05-02 complete; next: 05-03 (if exists) or phase complete
-Status: 05-02 complete -- ATS classifier trained (logistic regression, 51.2% test acc on 2455 games); ats_model.pkl + predict_ats() available; 11 expanding-window splits
-Last activity: 2026-03-02 -- 05-02 ATS classifier training complete
+Plan: 05-03 complete; next: 05-04 ATS backtest
+Status: 05-03 complete -- Value-bet detector built; calibrated model regenerated (predates Phase 4, now current); historical scan verified (1,894 games, JSON-serializable results)
+Last activity: 2026-03-02 -- 05-03 value-bet detector complete
 
-Progress: [████████████████] 80%
+Progress: [##################] 86%
 
 ## Performance Metrics
 
@@ -119,6 +132,7 @@ Progress: [████████████████] 80%
 | Phase 05-ats-model P01 | 18 | 2 tasks | 3 files |
 | Phase 05-ats-model P02 | 35 | 2 tasks | 1 file |
 | Phase 05-ats-model P02 | 35 | 2 tasks | 1 files |
+| Phase 05-ats-model P03 | 41 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -169,6 +183,9 @@ Recent decisions affecting current work:
 - [Phase 05-ats-model]: Data separation guard at build time: assert checks matchup features have no spread/odds columns before join
 - [Phase 05-ats-model]: Logistic regression selected for ATS: mean val acc 0.5287 vs GB 0.5228; 51.2% test accuracy on 2455 holdout games
 - [Phase 05-ats-model]: 51.2% ATS test accuracy: below vig breakeven (52.4%) but establishes baseline; combined with win-prob disagreement in Phase 6 for value-bet detection
+- [Phase 05-ats-model]: game_ats_features.csv already stores no-vig home_implied_prob; historical mode uses this directly as market_implied_prob
+- [Phase 05-ats-model]: check_remaining_quota() returns -1 non-fatal when ODDS_API_KEY absent; QuotaError raised only when key set but credits below minimum
+- [Phase 05-ats-model]: calibration.py Unicode chars (U+2500 x982) crash Windows cp1252 -- replaced with ASCII dashes
 
 ### Pending Todos
 
@@ -182,10 +199,10 @@ None yet.
 - Basketball Reference HTML selectors: PARTIALLY RESOLVED (03-01) — HTML comment pattern confirmed from 3 PyPI packages; officials table ID='officials' MEDIUM confidence (naming convention); Cloudflare blocks in this environment; recommend live verification from cloud VM before building 03-02 referee features
 - geopy 2.4.x API shape: RESOLVED (04-01) -- geopy listed in requirements.txt; haversine used for performance; no API shape issues
 - game_outcome_model.py schedule_cols: RESOLVED (04-02) -- updated with home_travel_miles, away_travel_miles, home_cross_country_travel, away_cross_country_travel, season_month
-- Calibrated model needs regeneration: game_outcome_model_calibrated.pkl predates 04-02 retrained model; run calibration.py before production inference
+- Calibrated model needs regeneration: RESOLVED (05-03) -- game_outcome_model_calibrated.pkl regenerated Mar 2 14:34; now reflects Phase 4 retrained base model
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 05-01 -- ATS feature table built; Kaggle betting data joined with matchup features; 18,496 rows in game_ats_features.csv with spread, no-vig implied probs, covers_spread
+Stopped at: Completed 05-03 -- Value-bet detector built; calibrated model regenerated; 1,894-game historical scan verified; ready for 05-04 ATS backtest
 Resume file: None
