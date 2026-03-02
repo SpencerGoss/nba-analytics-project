@@ -854,6 +854,7 @@ def build_matchup_dataset(
     context_cols = [
         "days_rest", "rest_days", "is_back_to_back",
         "games_last_5_days", "games_last_7_days",
+        "travel_miles", "cross_country_travel",    # Phase 4: travel burden
         "season_game_num", "cum_wins", "cum_losses", "cum_win_pct",
         "sos_roll10", "sos_roll20",
         # Trend & volatility
@@ -914,6 +915,9 @@ def build_matchup_dataset(
         "cum_win_pct", "sos_roll10", "sos_roll20",
         # Rest & fatigue
         "days_rest", "games_last_5_days", "games_last_7_days",
+        "is_back_to_back",                         # Phase 4: fatigue asymmetry signal
+        "travel_miles",                            # Phase 4: travel burden
+        "cross_country_travel",                    # Phase 4: timezone disruption
         # Trend & volatility
         "net_rating_trend_5", "net_rating_std_10",
         # Home/away splits
