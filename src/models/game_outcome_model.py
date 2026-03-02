@@ -40,11 +40,14 @@ TRAIN_START_SEASON = "200001"
 MIN_TRAIN_SEASONS_FOR_TUNING = 6
 
 # When True, restrict training data to the modern 3-Point Revolution era
-# (2014-15 onward). Cuts historical noise at the cost of less training data.
-# Toggle to True and retrain to compare accuracy against the default (full history).
+# (2013-14 onward). Cuts historical noise at the cost of less training data.
 # See docs/model_advisor_notes.md Proposal 5 for rationale.
-MODERN_ERA_ONLY = False
-MODERN_ERA_START = "201415"
+# CHANGED: default to modern era (was False)
+MODERN_ERA_ONLY = True
+# CHANGED: include 2013-14 per SC1 (was "201415")
+MODERN_ERA_START = "201314"
+# NEW: exclude anomalous seasons (bubble + shortened COVID)
+EXCLUDED_SEASONS = ["201920", "202021"]
 
 
 # ── Null-rate guard ────────────────────────────────────────────────────────────
@@ -196,13 +199,17 @@ def train_game_outcome_model(
     artifacts_dir: str = ARTIFACTS_DIR,
     test_seasons: list = TEST_SEASONS,
     modern_era_only: bool = MODERN_ERA_ONLY,
+    excluded_seasons: list = EXCLUDED_SEASONS,
 ) -> tuple:
     """Train a game outcome model and return (pipeline, metrics).
 
     Args:
-        modern_era_only: If True, restrict training to MODERN_ERA_START (2014-15+)
+        modern_era_only: If True, restrict training to MODERN_ERA_START (2013-14+)
             to focus on the 3-Point Revolution era. Toggle via the MODERN_ERA_ONLY
             constant or pass directly. See model_advisor_notes.md Proposal 5.
+        excluded_seasons: List of season codes to exclude from training data when
+            modern_era_only is True. Defaults to EXCLUDED_SEASONS (bubble 2019-20
+            and shortened 2020-21 seasons). Pass [] to include all modern seasons.
     """
     print("=" * 60)
     print("GAME OUTCOME PREDICTION MODEL")
@@ -223,6 +230,12 @@ def train_game_outcome_model(
     df = df[df["season"].astype(str) >= start_season].copy()
     label = f"modern era only ({MODERN_ERA_START}+)" if modern_era_only else f"from {TRAIN_START_SEASON}"
     print(f"  Training data {label}: {len(df):,} games")
+
+    if modern_era_only and excluded_seasons:
+        before = len(df)
+        df = df[~df["season"].astype(str).isin(excluded_seasons)].copy()
+        n_excluded = before - len(df)
+        print(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
 
     train = df[~df["season"].astype(str).isin(test_seasons)].copy()
     test = df[df["season"].astype(str).isin(test_seasons)].copy()
@@ -357,6 +370,8 @@ def train_game_outcome_model(
         "trained_at": datetime.now().isoformat(),
         "model_name": best_name,
         "train_start_season": start_season,
+        "modern_era_only": bool(modern_era_only),
+        "excluded_seasons": list(excluded_seasons) if modern_era_only else [],
         "feature_list": list(feat_cols),
         "feature_count": int(len(feat_cols)),
         "test_accuracy": float(test_acc),
