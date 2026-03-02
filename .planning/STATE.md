@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-02T03:39:30Z"
+last_updated: "2026-03-02T03:52:40Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 2 of 5 (Modern Era Features) — IN PROGRESS
-Plan: 1 of 4 in current phase (02-01 complete)
-Status: Phase 2 started — 02-01 advanced metrics complete, 02-02 Four Factors composite next
-Last activity: 2026-03-02 — 02-01 pace-normalized advanced metrics wired into feature pipeline
+Plan: 2 of 4 in current phase (02-01 and 02-02 complete)
+Status: Phase 2 in progress — 02-02 Four Factors composite + advanced metric diffs complete, 02-03 next
+Last activity: 2026-03-02 — 02-02 Four Factors composite + 13 advanced metric diffs added to matchup dataset
 
-Progress: [████▓░░░░░] 22%
+Progress: [█████▓░░░░] 28%
 
 ## Performance Metrics
 
@@ -41,19 +41,22 @@ Progress: [████▓░░░░░] 22%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-outputs | 4 | 8 min | 2 min |
-| 02-modern-era-features | 1 | 14 min | 14 min |
+| 02-modern-era-features | 2 | 24 min | 12 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (90s), 01-02 (2 min), 01-03 (1 min), 01-04 (3 min), 02-01 (14 min)
-- Trend: Longer for complex feature engineering plans
+- Last 5 plans: 01-02 (2 min), 01-03 (1 min), 01-04 (3 min), 02-01 (14 min), 02-02 (10 min)
+- Trend: Feature engineering plans average ~12 min; foundation plans averaged ~2 min
 
 *Updated after each plan completion*
 
+| Plan | Duration | Tasks | Files |
+| ---- | -------- | ----- | ----- |
 | Phase 01-foundation-outputs P01 | 90s | 2 tasks | 3 files |
 | Phase 01-foundation-outputs P02 | 2 min | 2 tasks | 4 files |
 | Phase 01-foundation-outputs P03 | 1 min | 2 tasks | 5 files |
 | Phase 01-foundation-outputs P04 | 3 min | 2 tasks | 1 file |
 | Phase 02-modern-era-features P01 | 14 min | 2 tasks | 1 file |
+| Phase 02-modern-era-features P02 | 10 min | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -79,6 +82,8 @@ Recent decisions affecting current work:
 - [02-01]: ADV_ROLL_STATS defined at module level separate from ROLL_STATS — advanced metrics require opponent self-join unavailable at initial ROLL_STATS computation time
 - [02-01]: Single opp_box merge replaces narrow opp_style join — prevents duplicate column naming conflicts from a second self-join
 - [02-01]: opp_dreb_game renamed to opp_dreb in expanded join — column name standardized, downstream reference updated
+- [Phase 02-modern-era-features]: diff_ prefix on Four Factors composite: naming diff_four_factors_composite ensures automatic pickup by get_feature_cols() startswith('diff_') filter — no model code changes needed
+- [Phase 02-modern-era-features]: Selective roll windows for rate stats: roll20-only for eFG%/TS%/pace/tov_poss (noisy at shorter windows); ORtg/DRtg/net_rtg get 5/10/20 windows as primary efficiency signals
 
 ### Pending Todos
 
@@ -95,5 +100,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 02-01 — advanced metrics rolling features in team_game_features.csv; next is 02-02 Four Factors composite
+Stopped at: Completed 02-02 -- Four Factors composite + advanced metric diffs in matchup dataset; next is 02-03
 Resume file: None
