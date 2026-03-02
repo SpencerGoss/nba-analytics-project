@@ -66,7 +66,8 @@ def compute_roi_flat_110(covers: pd.Series) -> dict:
     Each losing bet costs $110.
 
     Args:
-        covers: Boolean/int Series where 1=home covers, 0=away covers.
+        covers: Boolean/int Series where 1=bet was correct (prediction matched
+                actual outcome), 0=bet was wrong.
                 NaN values are treated as pushes and excluded.
 
     Returns:
@@ -346,14 +347,18 @@ def run_ats_backtest(
     )
 
     print(f"  Predictions generated for {len(df):,} games")
-    correct = (df["covers_spread"] == df["covers_spread_pred"]).sum()
+    # bet_correct: 1 if prediction matched actual outcome, 0 otherwise
+    # This is what we pass to compute_roi_flat_110 -- we bet on every game
+    # and "win" the bet when our prediction is correct.
+    df["bet_correct"] = (df["covers_spread"] == df["covers_spread_pred"]).astype(int)
+    correct = int(df["bet_correct"].sum())
     overall_hit_rate = float(correct / len(df))
     print(f"  Overall hit rate (all games): {overall_hit_rate:.4f} ({overall_hit_rate:.1%})")
 
     # -- Baseline backtest (all games) ----------------------------------------
     print("\n--- Baseline Backtest (all non-push games) ---")
     n_backtest = len(df)
-    baseline_roi = compute_roi_flat_110(df["covers_spread"])  # raises if < 500
+    baseline_roi = compute_roi_flat_110(df["bet_correct"])  # raises if < 500
     baseline_by_season = _compute_season_breakdown(df)
     avg_clv_baseline = float(df["clv"].mean())
     avg_edge_baseline = float(df["edge"].dropna().mean())
@@ -382,7 +387,7 @@ def run_ats_backtest(
     value_bet_by_season = None
 
     if n_value_bets >= MIN_BACKTEST_GAMES:
-        vb_roi = compute_roi_flat_110(value_df["covers_spread"])
+        vb_roi = compute_roi_flat_110(value_df["bet_correct"])
         avg_clv_vb = float(value_df["clv"].mean())
         avg_edge_vb = float(value_df["edge"].dropna().mean())
         value_bet_by_season = _compute_season_breakdown(value_df)
@@ -403,7 +408,7 @@ def run_ats_backtest(
               f"game minimum. Value-bet backtest skipped for primary report.")
         print(f"  Reporting limited metrics (no ROI guard applied to subset).")
         if n_value_bets > 0:
-            vb_correct = (value_df["covers_spread"] == value_df["covers_spread_pred"]).sum()
+            vb_correct = int(value_df["bet_correct"].sum())
             vb_hit_rate = float(vb_correct / n_value_bets)
             avg_edge_vb = float(value_df["edge"].dropna().mean())
             print(f"  Hit rate (unreported, small sample): {vb_hit_rate:.4f}")
@@ -423,12 +428,12 @@ def run_ats_backtest(
     print(f"\n--- Holdout Seasons Only ({test_seasons}) ---")
     holdout_df = df[df["season"].astype(str).isin(test_seasons)].copy()
     if len(holdout_df) > 0:
-        h_correct = (holdout_df["covers_spread"] == holdout_df["covers_spread_pred"]).sum()
+        h_correct = int(holdout_df["bet_correct"].sum())
         h_hit_rate = float(h_correct / len(holdout_df))
         print(f"  Holdout games: {len(holdout_df):,}")
         print(f"  Holdout hit rate: {h_hit_rate:.4f} ({h_hit_rate:.1%})")
         if len(holdout_df) >= MIN_BACKTEST_GAMES:
-            holdout_roi = compute_roi_flat_110(holdout_df["covers_spread"])
+            holdout_roi = compute_roi_flat_110(holdout_df["bet_correct"])
             print(f"  Holdout ROI: {holdout_roi['roi']:.4f} ({holdout_roi['roi']:.1%})")
         else:
             holdout_roi = {"roi": float("nan"), "hit_rate": h_hit_rate, "n_bets": len(holdout_df)}

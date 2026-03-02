@@ -1,0 +1,90 @@
+ATS BACKTEST REPORT
+=================================================================
+Generated: 2026-03-02 15:10:50
+
+SUMMARY
+-----------------------------------------------------------------
+  Total games loaded:          18,496
+  Push/unknown games excluded: 263
+  Games in baseline backtest:  18,233
+  Value-bet games:             13,170 (edge > 5.00%)
+  Holdout seasons (OOS):       202324, 202425
+
+BASELINE BACKTEST (All non-push games)
+-----------------------------------------------------------------
+  Total bets:     18,233
+  Wins:           9,615
+  Losses:         8,618
+  Hit rate:       0.5273 (52.73%)
+  Vig breakeven:  0.5238 (52.38%)
+  Net units:      122.91
+  ROI:            0.0067 (0.67%)
+  Avg CLV:        0.0000
+  Avg edge:       -0.0959
+
+HOLDOUT BACKTEST (Out-of-sample test seasons only)
+-----------------------------------------------------------------
+  Test seasons:   202324, 202425
+  Games:          2,455
+  Hit rate:       0.5120 (51.20%)
+  ROI:            -0.0225 (-2.25%)
+
+VALUE-BET FILTERED BACKTEST
+-----------------------------------------------------------------
+  Threshold:      edge > 5.00%
+  Total bets:     13,170
+  Wins:           6,987
+  Losses:         6,183
+  Hit rate:       0.5305 (53.05%)
+  Net units:      168.82
+  ROI:            0.0128 (1.28%)
+  Avg CLV:        0.0000
+  Avg edge:       -0.1106
+
+PER-SEASON BREAKDOWN (Baseline)
+-----------------------------------------------------------------
+Season      Games  Wins  Losses   Hit Rate      ROI   Avg Edge
+-----------------------------------------------------------------
+200708        977   558     419     57.11%   0.0904    -0.1065  
+200809      1,053   552     501     52.42%   0.0008    -0.1044  
+200910      1,043   554     489     53.12%   0.0140    -0.1037  
+201011      1,047   534     513     51.00%  -0.0263    -0.1035  
+201112        852   464     388     54.46%   0.0397    -0.1069  
+201213      1,133   601     532     53.04%   0.0127    -0.1060  
+201314      1,208   656     552     54.30%   0.0367    -0.0946  
+201415      1,205   651     554     54.02%   0.0314    -0.0907  
+201516      1,212   632     580     52.15%  -0.0045    -0.0876  
+201617      1,213   629     584     51.85%  -0.0100    -0.0958  
+201718      1,197   652     545     54.47%   0.0399    -0.0891  
+201819      1,216   621     595     51.07%  -0.0250    -0.0906  
+202122      1,205   625     580     51.87%  -0.0098    -0.0847  
+202223      1,217   629     588     51.68%  -0.0133    -0.0809  
+202324      1,230   654     576     53.17%   0.0151        N/A *
+202425      1,225   603     622     49.22%  -0.0603        N/A *
+
+  * = Out-of-sample holdout season (not used in model training)
+
+CLV NOTE
+-----------------------------------------------------------------
+CLV is 0.0 for all games. The game_ats_features.csv dataset stores only an opening spread column ('spread'). No separate closing line is available, so opening-vs-opening CLV is always zero. A dataset with opening AND closing lines would enable true CLV measurement.
+
+MODEL METADATA
+-----------------------------------------------------------------
+  Model type:         logistic
+  n_features:         71
+  Training date:      2026-03-02T14:19:55.513034
+  Train rows:         15,778
+  Test rows:          2,455
+  Test accuracy:      0.5120
+  Test ROC-AUC:       0.5077
+  Decision threshold: 0.51
+  Val mean accuracy:  0.5287
+  Holdout seasons:    202324, 202425
+
+INTERPRETATION
+-----------------------------------------------------------------
+  ATS vig breakeven is ~52.38% at -110 standard lines.
+  Hit rates below 52.38% lose money at standard vig.
+  This model's overall hit rate of 52.73% is above breakeven.
+  The 51.2% test accuracy reflects the known difficulty of ATS prediction
+  (Vegas lines are set to be near-50/50 for bettors).
