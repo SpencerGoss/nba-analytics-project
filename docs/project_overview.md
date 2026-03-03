@@ -1,401 +1,241 @@
-# NBA Analytics Project — Progress Log
+# NBA Analytics Project — Project Overview
 
-This document tracks the development of my NBA analytics project.  
-It outlines each step taken, the reasoning behind key decisions, and the technical details behind the work.  
-I will continue updating this file as the project evolves.
+This document describes the current state of the NBA analytics project as of v1.0 (March 2026).
 
 ---
 
 ## Table of Contents
-- [1. Project Direction and Goals](#1-project-direction-and-goals)
-- [2. Initial Planning and Project Architecture](#2-initial-planning-and-project-architecture)
-- [3. Data Ingestion and Early Development](#3-data-ingestion-and-early-development)
-- [4. Data Cleaning and Standardization](#4-data-cleaning-and-standardization)
-- [5. Processed Data Layer](#5-processed-data-layer)
-- [6. Feature Engineering](#6-feature-engineering)
-- [7. Predictive Models](#7-predictive-models)
-- [8. Model Evaluation Suite](#8-model-evaluation-suite)
-- [9. Cycle 1 Improvements — Pipeline Fixes, Model Upgrades, and Calibration](#9-cycle-1-improvements--pipeline-fixes-model-upgrades-and-calibration)
+- [1. Project Goals](#1-project-goals)
+- [2. Architecture](#2-architecture)
+- [3. Data Pipeline](#3-data-pipeline)
+- [4. Feature Engineering](#4-feature-engineering)
+- [5. Predictive Models](#5-predictive-models)
+- [6. Evaluation Suite](#6-evaluation-suite)
+- [7. ATS Betting Model](#7-ats-betting-model)
+- [8. External Data Sources](#8-external-data-sources)
+- [9. Known Limitations and Tech Debt](#9-known-limitations-and-tech-debt)
 
 ---
 
-## 1. Project Direction and Goals
+## 1. Project Goals
 
-### 1.1 Determining the Project Direction
-When I started planning this project, I wanted to build something that represented both my interests and my abilities. I needed a project that would keep me engaged long‑term, but also one that would let me demonstrate real analytics engineering skills. NBA data felt like the perfect fit. It’s something I care about, and it offers a rich, structured dataset that naturally supports the kind of work I want to showcase. Choosing this direction gives me room to explore data ingestion, modeling, analysis, and storytelling in a way that feels meaningful and technically challenging.
+This project is a full end-to-end NBA analytics system. It combines data engineering, feature engineering, and machine learning to predict game outcomes, player performance, and against-the-spread (ATS) betting value.
 
-### 1.2 Project Goals
-The goals of this project are intentionally broad so the work can evolve naturally as I learn, explore new ideas, and expand the scope over time.
+**Core Goals:**
+- Build a reproducible data pipeline from the NBA API through to trained model predictions
+- Predict game outcomes with >66% accuracy on modern-era holdout seasons
+- Identify ATS value bets that show positive ROI over a large backtest
+- Store prediction history in a queryable, web-ready format
+- Document all pipeline stages so each is self-contained and independently runnable
 
-#### Core Goals
-- Build a project that allows me to showcase my current analytics and data engineering skills.
-- Create opportunities to learn new tools, techniques, and workflows as the project grows.
-- Develop a deeper understanding of how real-world data pipelines and analytics systems are designed.
-
-#### Technical Goals
-- Construct a structured database that organizes multi-season NBA data in a clean, scalable way.
-- Practice working with APIs, Python, SQL, and other technologies that support modern analytics work.
-- Build models, dashboards, or analytical tools that help translate raw data into meaningful insights.
-
-#### Analytical Goals
-- Explore NBA data to uncover trends, patterns, and interesting stories.
-- Create visualizations and summaries that communicate insights clearly and effectively.
-- Leave room for more advanced analysis—such as shot charts, player comparisons, or predictive modeling—whenever I’m ready to expand.
-
-#### Personal and Professional Growth Goals
-- Use this project as a way to continue my education and expand on the skills I’ve already built.
-- Build something that reflects both my interests and my long-term career goals.
-- Maintain documentation that shows how the project develops over time and how my skills progress.
+**v1.0 Milestone Results (31/31 requirements satisfied):**
+- Game outcome model: 66.8% test accuracy on 2023-24 / 2024-25 holdout
+- ATS backtest: 18,233 games, +1.28% ROI on value-bet filtered subset
+- Prediction store: WAL-mode SQLite + daily JSON snapshots
+- Pipeline: 6 documented stages, all runnable independently
 
 ---
 
-## 2. Initial Planning and Project Architecture
+## 2. Architecture
 
-### 2.1 Establishing the Project Structure
-I started by setting up a simple, organized project structure that would make it easy to keep everything separated as the project grows. I didn’t want things to get messy once I started pulling in multiple datasets, so I created folders for raw data, processed data, source code, notebooks, and documentation. I also added dedicated spaces for database and modeling work since those will become major parts of the project later on.
-
-**Example structure:**
-
-```text
+```
 nba-analytics-project/
-│
 ├── data/
-│   ├── raw/          # data pulled directly from the API, untouched
-│   └── processed/    # cleaned or organized data ready for analysis
-│
+│   ├── raw/              # One CSV per season per table (from NBA API)
+│   ├── processed/        # Cleaned, combined CSVs (all seasons per table)
+│   ├── features/         # Model-ready feature tables
+│   ├── odds/             # Sportsbook data (The Odds API + Kaggle historical)
+│   └── outputs/          # Daily JSON prediction snapshots
+├── database/
+│   └── predictions_history.db   # WAL-mode SQLite prediction store
+├── models/
+│   └── artifacts/        # Trained model files + metadata JSON
+├── reports/
+│   ├── calibration/      # Calibration curves, Brier scores, by-era/season
+│   └── explainability/   # SHAP values, feature importance charts
 ├── src/
-│   ├── data/         # scripts that pull in or prepare data
-│   └── utils/        # small helper functions used across the project
-│
-│
-├── models/           # analytical models or experiments I build
-│
-├── notebooks/        # Jupyter notebooks for exploring data and testing ideas
-│
-└── docs/             # project documentation, notes, and progress updates
+│   ├── data/             # API ingestion scripts (get_*.py)
+│   │   └── external/     # Basketball Reference scraper, injury report fetcher
+│   ├── features/         # Feature engineering modules
+│   ├── models/           # ML models, evaluation, prediction CLI
+│   ├── outputs/          # Prediction store and JSON export
+│   └── processing/       # Preprocessing pipeline
+├── scripts/
+│   ├── fetch_odds.py     # The Odds API caller
+│   └── run_update.bat    # Windows Task Scheduler batch file
+├── docs/
+│   ├── PIPELINE.md       # Authoritative pipeline reference (6 stages)
+│   └── project_overview.md   # This file
+├── update.py             # Daily data refresh orchestrator (Stages 1+2)
+├── backfill.py           # One-time historical backfill
+└── requirements.txt
 ```
 
-- This structure gives me room to grow without having to reorganize everything later. As I add more datasets, build out the database, or start experimenting with models and dashboards, each part of the project already has a clear place to live.
+**Data Flow:**
+```
+NBA API → data/raw/ → preprocessing.py → data/processed/ → feature modules → data/features/ → models → predictions
+```
 
+**Database:**
+- The project uses CSV-based data flow for the main pipeline
+- `predictions_history.db` stores all prediction outputs (WAL mode for concurrent access)
 
-### 2.2 Planning the Data Pipeline
-I outlined the core datasets I wanted to ingest and how they would eventually connect inside a relational database. This included identifying:
-- player-level data  
-- team-level data  
-- game-level data  
-- potential future datasets (e.g., shot charts, play-by-play)
+**18 data tables** spanning:
+- Player stats (regular + advanced + clutch + scoring + playoffs): 1996-97+
+- Player game logs: 1946-47+
+- Team stats (regular + advanced + playoffs): 1996-97+
+- Team game logs: 1946-47+
+- Hustle stats: 2015-16+
+- Standings: 1979-80+
+- Player/team dimension tables: all-time
 
-I also planned the order of ingestion, starting with foundational tables such as player master data and season-level statistics.
-
-### 2.3 Choosing Tools and Technologies
-I selected tools that would allow me to build a realistic analytics engineering workflow:
-- **Python** for data ingestion and transformation  
-- **nba_api** for accessing NBA Stats data  
-- **SQL** for database modeling and analysis  
-- **Markdown** for documentation  
-- **VS Code** as the primary development environment  
-
-This planning phase ensured that the project had a strong foundation before any data was collected.
+Season code format: 6-digit integer (e.g., `202425` for 2024-25).
 
 ---
 
-## 3. Data Ingestion and Early Development
+## 3. Data Pipeline
 
-### 3.1 Figuring Out What Data to Pull First
-I started by choosing a few core datasets that would give me a solid foundation for the rest of the project. I focused on the basics first so everything else I build later has something reliable to connect to.
+The pipeline has two operating modes:
+- **Daily refresh** (`python update.py`): fetches current-season data, rebuilds processed CSVs. Runs Stages 1+2 only. Scheduled daily at 7:00 AM via Windows Task Scheduler.
+- **Full rebuild** (manual): all 6 stages in order, required for model retraining.
 
-Here’s what I pulled to start:
+| Stage | Command | Runtime |
+|-------|---------|---------|
+| 1. Fetch | `python update.py` | 10-15 min |
+| 2. Preprocess | (called by update.py) | 1-2 min |
+| 3. Feature Build | `python src/features/team_game_features.py` | 5-10 min |
+| 4. Train | `python src/models/train_all_models.py` | 5-10 min |
+| 5. Calibrate | `python src/models/calibration.py` | 1-2 min |
+| 6. Predict | `python src/models/predict_cli.py game --home BOS --away LAL` | <1 min |
 
-- **Player master data** – basic player information  
-- **Player season stats** – one row per player per season  
-- **Team information** – team IDs, names, and metadata  
-- **Team game logs** – one row per team per game  
-
-
-### 3.2 Writing the First Ingestion Scripts
-Once I knew what I needed, I wrote simple scripts to pull the data from the NBA API. I kept the code clean and straightforward so it’s easy to maintain as the project grows.
-
-The scripts handled a few basic steps:
-
-- Connecting to the NBA API using the `nba_api` package  
-- Requesting the data from the correct endpoints  
-- Converting the API response into a pandas DataFrame  
-- Saving the raw data exactly as it came in  
-- Creating a processed version with cleaner column names and consistent formatting  
-- Storing everything in the correct folders (`raw` and `processed`)  
-
-
-### 3.3 Saving and Organizing the Data
-After pulling the data, I saved it into the folder structure I set up earlier. Keeping things organized from the start helps avoid confusion later on.
-
-- **Raw data** → saved untouched in `data/raw/`  
-- **Processed data** → cleaned and saved in `data/processed/`  
-
-This separation makes it easy to track what I’ve done and gives me a clean starting point if I ever need to reprocess something.
-
-### 3.4 Early Challenges and Things I Had to Figure Out
-A few small things came up while writing the scripts:
-
-- Some endpoints returned slightly different fields than expected  
-- I had to adjust column names to keep everything consistent  
-- I made decisions about how to structure the processed files  
-- I tested a few different API calls to make sure I was pulling the right data  
-
-## 4. Data Cleaning and Standardization
-
-### 4.1 Building a Consistent Cleaning Workflow
-After the raw data was ingested and organized, the next major step was creating a consistent cleaning process across all datasets. I wanted each table to follow the same conventions so they would fit together cleanly once I moved into SQL. This meant standardizing column names, enforcing consistent data types, and making sure each dataset had the keys needed for relational modeling.
-
-A few core rules guided the cleaning process:
-- Convert all column names to lowercase with underscores  
-- Ensure IDs (`player_id`, `team_id`, `game_id`) were integers  
-- Convert date fields to proper datetime objects  
-- Add a `season` column to every dataset  
-- Remove duplicates and unnecessary fields  
-
-
-### 4.2 Cleaning Each Core Dataset
-I applied the cleaning workflow to all four foundational datasets:
-
-- **Player master data** — standardized names, IDs, and metadata  
-- **Player season stats** — ensured consistent numeric types and season labeling  
-- **Team season stats** — aligned team identifiers and cleaned season-level metrics  
-- **Team game logs** — normalized game-level data and converted dates  
-
-Each dataset now has clean, analysis-ready fields and consistent naming conventions. This step was important because it ensures that SQL joins will behave predictably and that future feature engineering won’t require rework.
-
-### 4.3 Creating the Processed Data Layer
-After cleaning each DataFrame, I saved them into the `data/processed/` directory. This gives the project a clear separation between raw and transformed data and creates a stable layer that the SQL database can rely on.
-
-The processed layer now includes:
-- `players.csv`  
-- `player_stats.csv`  
-- `team_stats.csv`  
-- `team_game_logs.csv`  
-
-These files represent the first fully reproducible output of the pipeline.
-
-## 5. Processed Data Layer
-
-After cleaning, each dataset is saved as a versioned CSV in `data/processed/`.
-This keeps the pipeline simple and reproducible: raw pulls in, cleaned tables out,
-and feature generation/model training run directly from those processed files.
-
-Core processed outputs include:
-- `players.csv`
-- `player_stats.csv`
-- `team_stats.csv`
-- `team_game_logs.csv`
+See [PIPELINE.md](PIPELINE.md) for full stage details, dependency graph, and common operations.
 
 ---
 
-## 6. Feature Engineering
+## 4. Feature Engineering
 
-### 6.1 Goals and Design Principles
+All features enforce **no data leakage** via `shift(1)` before any rolling computation.
 
-With a clean processed data layer in place, the next major phase was feature engineering — transforming raw game-log data into predictive signals for machine learning models. The guiding principle throughout this phase was **no data leakage**: every feature must be computed using only information that would have been available *before* the game being predicted. This is enforced by applying a `shift(1)` before any rolling computation, so the current game's result is never included in its own feature calculation.
+### Team Game Features (`src/features/team_game_features.py`)
+- Rolling means (5/10/20 games) for pts, fg_pct, fg3_pct, ft_pct, reb, ast, stl, blk, tov, pf, plus_minus
+- Rolling win percentage (5/10/20 games)
+- Opponent points allowed (defensive signal)
+- Strength of schedule (rolling opponent win%)
+- Context: is_home, days_rest, is_back_to_back, season_game_num, cum_win_pct
+- Injury proxy features: missing_minutes, missing_usg_pct, rotation_availability, star_player_out
 
-I created a dedicated `src/features/` directory to separate feature engineering logic from raw data ingestion and preprocessing. Features are saved to a new `data/features/` folder so they can be reused across multiple models without re-running the full pipeline.
+### Game Matchup Features (`data/features/game_matchup_features.csv`)
+- Home/away prefixed team features merged into single-row-per-game format
+- Differential columns (home minus away) for key stats
 
-### 6.2 Team Game Features (`src/features/team_game_features.py`)
+### Player Features (`src/features/player_features.py`)
+- Rolling means and standard deviations (5/10/20 games) for all box score stats
+- Season-to-date expanding averages
+- Advanced stats (usage rate, true shooting %, net rating, PIE)
+- Opponent defensive context
+- Player bio context (age, height, weight from 2020-21+)
 
-The core feature engineering module for team-level prediction ingests `team_game_logs.csv` and produces two output tables:
+### Era Labels (`src/features/era_labels.py`)
+Maps seasons to 6 historical NBA eras anchored to rule changes (1946-present). Applied automatically to all feature tables.
 
-**`data/features/team_game_features.csv`** — one row per team per game, with:
-- `is_home` — extracted from the matchup string (`vs.` = home, `@` = away)
-- `days_rest` — days since the team's last game (capped at 14; first game of season gets 7)
-- `is_back_to_back` — flag for games played on consecutive days
-- `season_game_num` — how many games into the season this game falls
-- `cum_win_pct` — the team's season win percentage entering this game
-- `opp_pts_roll5/10/20` — rolling average of points allowed (defensive signal derived from `pts - plus_minus`)
-- `sos_roll10/20` — strength of schedule: rolling average of opponent win% entering each prior game
-- Rolling means over the last 5, 10, and 20 games for: `pts`, `fg_pct`, `fg3_pct`, `ft_pct`, `reb`, `ast`, `stl`, `blk`, `tov`, `pf`, `plus_minus`
-- Rolling win percentage over the last 5, 10, and 20 games
-- Injury proxy features (see 6.5 below): `missing_minutes`, `missing_usg_pct`, `rotation_availability`, `star_player_out`
+### Injury Proxy (`src/features/injury_proxy.py`)
+Detects absent rotation players from game log gaps. Computes missing minutes, missing usage, rotation availability, and star-player-out flags. Separate training path (historical proxy) and inference path (live NBA injury report).
 
-**`data/features/game_matchup_features.csv`** — one row per game (both teams merged into a single row), with home_ and away_ prefixes on all features, plus `diff_` columns for explicit home-minus-away differentials across key stats. This is the direct input for the game outcome prediction model.
+### ATS Features (`src/features/ats_features.py`)
+Builds ATS-specific feature table including Vegas spread, for the spread-covering model.
 
-### 6.3 Player Game Features (`src/features/player_features.py`)
-
-Player-level feature engineering runs against `player_game_logs.csv` and produces `data/features/player_game_features.csv`. For each player-game it computes:
-- The same context features as the team module (home/away, rest days, back-to-back)
-- Rolling means and standard deviations over 5, 10, and 20 games for all major box score stats
-- Season-to-date averages using an expanding window (also shift-1 to prevent leakage)
-- Season-level advanced stats joined from `player_stats_advanced.csv` (usage rate, true shooting %, net rating, PIE)
-- Opponent defensive context: the opposing team's rolling points allowed and net rating, joined from `team_game_features.csv` — tells the model how strong a defense the player is facing
-- Player bio context: age, height, and weight from `player_bio_stats.csv` (available from 2020-21 onward)
-
-Volatility features (rolling standard deviation for pts, min, ast, reb) were added to help the model distinguish consistent performers from high-variance players.
-
-### 6.5 Injury Proxy Features (`src/features/injury_proxy.py`)
-
-One of the most impactful real-world signals for game prediction is whether a team's key players are healthy. The NBA API does not expose historical injury data, so a proxy approach was built from the player game logs. The logic: if a player who was in the regular rotation (averaging 15+ minutes over their last 5 games) has no entry in the game log for a given game, they almost certainly did not play — whether due to injury, rest, or a coach's decision.
-
-For each team-game, the module computes four features:
-
-`missing_minutes` measures the total expected minutes from rotation players who are absent. A value of 35 is roughly equivalent to losing a starter for the entire game. `missing_usg_pct` captures the combined usage rate of those absent players, which reflects how central they are to the team's offense — a missing player at 28% usage is a far bigger deal than one at 12%. `rotation_availability` is the fraction of normal rotation minutes that are actually available, ranging from 0 (fully depleted) to 1.0 (full strength). `star_player_out` is a binary flag for games where any absent player had a season usage rate of 25% or higher, which is the common threshold for a team's primary ball-handler.
-
-All rolling baselines use shift(1), so the "expected" minutes are computed entirely from prior games with no leakage. The module also includes `get_todays_injury_report()`, which fetches the NBA's official pre-game injury report for live predictions, and `apply_live_injuries()`, which patches a matchup feature row with confirmed scratches before feeding it to the model.
-
-The injury features flow into `game_matchup_features.csv` as `home_missing_minutes`, `away_missing_minutes`, and a `diff_missing_minutes` differential — giving the model a direct signal of the health gap between the two teams entering a game.
-
-### 6.4 Era Labels (`src/features/era_labels.py`)
-
-Because the project spans 80 seasons of NBA data, treating all seasons as a single homogeneous dataset would obscure fundamental differences in how the game was played. Rule changes — the shot clock, the 3-point line, hand-check rules — didn't just shift individual stats; they changed the structural relationships between them. A model trained across all eras without any era signal could learn misleading patterns from comparing, say, 1960s pace statistics against 2020s pace statistics as if they were equivalent.
-
-To address this, a standalone era labeling utility was built in `src/features/era_labels.py`. It maps any `season` value to one of six historically grounded eras, each anchored to a concrete rule change or stylistic inflection point:
-
-| Era | Name | Seasons | Rule Anchor |
-|-----|------|---------|-------------|
-| 1 | Foundational | 1946–47 → 1953–54 | Pre-shot clock |
-| 2 | Shot Clock Era | 1954–55 → 1978–79 | 24-second shot clock introduced |
-| 3 | 3-Point Introduction | 1979–80 → 1993–94 | 3-point line adopted |
-| 4 | Physical / Isolation | 1994–95 → 2003–04 | Hand-checking permitted |
-| 5 | Open Court | 2004–05 → 2014–15 | No hand-check / defensive 3-second rules |
-| 6 | 3-Point Revolution | 2015–16 → present | Analytics era, record 3PA |
-
-The module exposes two public functions. `label_eras(df)` takes any DataFrame with a `season` column and inserts four new columns — `era_num`, `era_name`, `era_start`, `era_end` — directly after it. The `era_num` integer is particularly useful for models as it allows era to be treated as an ordinal feature or used to filter training data to a specific period. `get_era(season)` provides a single-season lookup for quick inspection.
-
-Era labels are automatically applied in both `team_game_features.py` and `player_features.py`, so every downstream feature table and model input already carries era context without any extra steps.
+### Referee Features (`src/features/referee_features.py`)
+Wired but awaiting data — Basketball Reference scraper is complete but Cloudflare-blocked in Windows environment. Features degrade gracefully to NaN.
 
 ---
 
-## 7. Predictive Models
+## 5. Predictive Models
 
-### 7.1 Model Architecture Overview
+### Game Outcome (`src/models/game_outcome_model.py`)
+- Binary classification: home win vs loss
+- GradientBoosting / RandomForest / Logistic (best selected automatically)
+- Modern-era filter option (2014-15+ only)
+- **v1.0 result:** 66.8% accuracy on 2023-24/2024-25 holdout
 
-Three predictive models were built, each serving a different analytical question. All models use scikit-learn pipelines with an imputer step so they handle missing values gracefully for early-season games with limited rolling history. All are trained on a time-based train/test split (most recent two seasons held out) to simulate real-world deployment.
+### Player Performance (`src/models/player_performance_model.py`)
+- Multi-target regression: pts, reb, ast
+- Separate GBM per stat target, Ridge baseline comparison
+- Filtered to players with 20+ training games
 
-### 7.2 Game Outcome Prediction (`src/models/game_outcome_model.py`)
+### Playoff Odds (`src/models/playoff_odds_model.py`)
+- Monte Carlo simulation (10,000 iterations)
+- Bradley-Terry strength model with home-court advantage
+- Simulates regular season remainder + playoff bracket
 
-**Question:** Given two teams' recent form, who wins?
-
-This is a binary classification problem (home win = 1, home loss = 0). The model uses `game_matchup_features.csv` as its input and trains two classifiers for comparison:
-- **Logistic Regression** — fast baseline with good interpretability
-- **Gradient Boosting Classifier** — 200 estimators, depth-4 trees, learning rate 0.05
-
-The gradient boosting model consistently outperforms the logistic regression baseline. Feature importances reveal that the most predictive signals are rolling win percentage, rolling net rating (via plus_minus), home court advantage, and cumulative season win percentage. The model can also be invoked at prediction time via `predict_game(home_abbr, away_abbr)` to get win probabilities for any matchup.
-
-### 7.3 Player Performance Prediction (`src/models/player_performance_model.py`)
-
-**Question:** How many points / rebounds / assists will a player record in their next game?
-
-This is a multi-target regression problem. A separate Gradient Boosting Regressor is trained per stat target (pts, reb, ast), again compared to a Ridge regression baseline. Models are filtered to players with at least 20 games in the training set to avoid overfitting on small samples. Evaluation metrics are MAE (mean absolute error) and RMSE.
-
-The `predict_player_next_game(player_name)` helper uses each player's most recent rolling feature snapshot to generate next-game projections.
-
-### 7.4 Playoff Odds Simulation (`src/models/playoff_odds_model.py`)
-
-**Question:** What are each team's odds of making the playoffs, winning their conference, or winning the title?
-
-This model uses a Monte Carlo approach — simulating the remainder of the season 10,000 times. For each remaining game, win probabilities are estimated using a Bradley-Terry strength model derived from each team's current win percentage, with a home-court advantage factor built in. After simulating the regular season, a simplified 8-team playoff bracket is run per conference to estimate conference title and championship probabilities.
-
-The model can be run at any point in the season. Results are saved to `data/features/playoff_odds.csv`.
+### Custom GBM (`src/models/numpy_gbm.py`)
+- Pure-numpy gradient boosting implementation (699 lines)
+- Used as internal dependency to avoid serialization compatibility issues
 
 ---
 
-## 8. Model Evaluation Suite
+## 6. Evaluation Suite
 
-### 8.1 The Case for Rigorous Evaluation
+### Walk-Forward Backtesting (`src/models/backtesting.py`)
+Rolling one-season-at-a-time backtest. Trains on all prior seasons, tests on next. Tracks accuracy, ROC-AUC, Brier score per season. Breaks results down by era.
 
-With three predictive models built, the natural next step was to evaluate them honestly. A single train/test split only tells part of the story — it shows how the model performs on two specific seasons, but it doesn't reveal whether performance is consistent over time, whether the predicted probabilities are trustworthy, or which features are actually doing the work. Three dedicated evaluation tools were built to answer these questions, all outputting to a `reports/` directory and runnable individually or together via `src/models/run_evaluation.py`.
+### Calibration Analysis (`src/models/calibration.py`)
+Reliability diagram, Brier score, Expected Calibration Error (ECE). Fits isotonic regression calibration wrapper. Saves calibrated model to `models/artifacts/`.
 
-### 8.2 Walk-Forward Backtesting (`src/models/backtesting.py`)
+### SHAP Explainability (`src/models/model_explainability.py`)
+Global SHAP summary plots, directional bar charts, per-prediction waterfall charts. Falls back to permutation importance if SHAP not installed.
 
-The walk-forward backtest is the most rigorous evaluation tool in the suite. Rather than splitting the data once, it rolls forward one season at a time: train on all seasons up to season N, test on season N+1, then advance the window and repeat. This simulates exactly how the models would have performed in real deployment — the model never sees future data, and it retrains after each season just as it would in production.
-
-For the game outcome model, the backtest records accuracy, ROC-AUC, and Brier score for every season after a minimum training window of five seasons. This produces a full performance curve across the history of the data, making it easy to spot whether accuracy is trending upward, downward, or is stable. It also breaks results down by historical era using the era labels built in the feature engineering phase, which reveals whether the model handles different eras of basketball differently.
-
-For the player performance models, the same rolling approach is applied to each stat target (pts, reb, ast), tracking MAE and RMSE per season alongside a naive baseline (predicting the training mean for every game). The gap between model MAE and baseline MAE is a clean measure of how much value the rolling features actually add.
-
-All results are saved to `reports/backtest_game_outcome.csv`, `reports/backtest_player_{stat}.csv`, and a human-readable `reports/backtest_summary.txt`.
-
-### 8.3 Calibration Analysis (`src/models/calibration.py`)
-
-Calibration answers a question that accuracy alone cannot: when the game outcome model predicts a 70% win probability, does the home team actually win about 70% of those games? A well-calibrated model is one whose probability outputs can be trusted directly — not just for ranking predictions, but for decision-making.
-
-Three calibration diagnostics are computed:
-
-The **reliability diagram** (also called a calibration curve) bins predictions into deciles and plots the mean predicted probability in each bin against the actual win rate. A perfectly calibrated model lies on the diagonal; curves above it indicate the model is underconfident, and curves below indicate overconfidence.
-
-The **Brier score** is the mean squared error between predicted probabilities and actual outcomes. It ranges from 0 (perfect) to 0.25 (completely uninformative coin flip). Because NBA games have genuine randomness, the theoretical floor for this sport is roughly 0.22–0.24 even for an optimal model.
-
-The **Expected Calibration Error (ECE)** is a single number summarizing average miscalibration across all bins — the weighted mean absolute gap between predicted probability and actual win rate.
-
-Beyond the raw model, the analysis also fits an isotonic regression calibration wrapper to quantify how much calibration can be improved by post-processing. Per-season Brier score trends are plotted to show whether calibration is stable over time or degrading in recent seasons. All outputs are saved to `reports/calibration/`.
-
-### 8.4 SHAP Explainability (`src/models/model_explainability.py`)
-
-Raw gradient boosting feature importances only tell you which features were used most often across all tree splits. They don't tell you the direction of each feature's effect or how it contributed to any specific prediction. SHAP (SHapley Additive exPlanations) fills both of those gaps.
-
-For each model, SHAP values are computed on a sample of the test set. The global summary (beeswarm) plot shows both the importance and direction of every feature: a feature cluster shifted to the right means high values of that feature push the prediction upward; shifted left means the opposite. A diverging bar chart of mean SHAP values makes the directional story even clearer — for example, showing that high rolling win percentage strongly increases predicted home win probability while high turnover rate decreases it.
-
-For individual game prediction explanations, the `explain_prediction(home_abbr, away_abbr)` function produces a waterfall chart showing exactly which features are pushing the model's probability estimate up or down for that specific matchup. This is the kind of output that makes a prediction feel explainable rather than like a black box.
-
-Because the SHAP library is an optional dependency (`pip install shap`), the module includes a graceful fallback to permutation importance from scikit-learn, which produces comparable directional charts without the extra install.
-
-All charts and feature direction tables are saved to `reports/explainability/`.
+### Value Bet Detection (`src/models/value_bet_detector.py`)
+Identifies games where model probability diverges from implied market probability. Configurable edge threshold.
 
 ---
 
-## 9. Cycle 1 Improvements — Pipeline Fixes, Model Upgrades, and Calibration
+## 7. ATS Betting Model
 
-This section covers the first round of targeted improvements made after the initial build was reviewed. The changes fall into three buckets: keeping the daily pipeline running reliably, giving the prediction model better information to work with, and making the model's probability outputs more trustworthy. Each change was reviewed and tested by a separate debugging pass before being documented here.
+### ATS Classifier (`src/models/ats_model.py`)
+- Logistic regression predicting whether a team covers the spread
+- Walk-forward validation with 11 expanding splits
+- **v1.0 result:** 51.2% OOS accuracy (below 52.4% vig breakeven — baseline model, improvement opportunities exist)
 
-### 9.1 Fixing the Daily Update Pipeline (`src/data/get_odds.py`)
+### ATS Backtest (`src/models/ats_backtest.py`)
+- 18,233-game historical backtest (2009-2025)
+- Metrics: hit rate, ROI, CLV, Kelly fraction, max drawdown
+- Baseline ROI: +0.67%, value-bet filtered: +1.28%
+- Historical odds from Kaggle dataset (`src/data/get_historical_odds.py`)
 
-Before this fix, the entire daily update pipeline was broken. Every time `update.py` tried to run, it crashed immediately because it expected a file called `get_odds.py` that didn't exist yet. Nothing else in the pipeline — game logs, stats, features — could update because the script never got past that missing piece.
+### Odds Integration
+- Live odds: The Odds API (`scripts/fetch_odds.py`), refreshed by `update.py`
+- Historical odds: Kaggle NBA historical spreads dataset
+- API key stored in `.env` (never committed to git)
 
-The fix was to create `src/data/get_odds.py` as a middleman between the update script and the odds-fetching script. It runs the odds fetcher in a safe, isolated way. If the API key isn't set up or the internet is down, it simply reports "couldn't get odds today" and lets the rest of the pipeline keep going. Think of it like a mail carrier who knocks on the door — if nobody answers, they move on to the next house instead of stopping the whole route.
+---
 
-This was the most critical fix in the batch because it restored the daily pipeline to working order.
+## 8. External Data Sources
 
-### 9.2 Better Error Logging for the Backfill Script (`backfill.py`)
+### Basketball Reference Referee Scraper (`src/data/external/bref_scraper.py`)
+- Scrapes referee crew assignments from box scores
+- Rate limited: 3 sec/request (respects robots.txt)
+- Not in daily pipeline — run manually for historical backfill
+- Currently blocked by Cloudflare in Windows dev environment
 
-The backfill script is the one you run once to pull years of historical NBA data. Before this change, if something went wrong halfway through — say the NBA's servers stopped responding — the script would crash with a confusing error message and leave no record of what happened.
+### NBA Injury Report Fetcher (`src/data/external/injury_report.py`)
+- Fetches current day's official NBA injury report
+- Primary: `nba_api` LeagueInjuryReport endpoint; fallback: PDF from nba.com
+- Used at inference time only (training uses historical proxy)
 
-Now it catches any failure, writes a timestamped entry to a log file (`logs/pipeline_errors.log`), prints a clear message about what went wrong, and exits with an error code that Windows Task Scheduler or any automation tool can detect. The actual backfill logic was reorganized into its own section to keep things clean — same behavior, just wrapped in a safety net. The log directory is created automatically if it doesn't already exist.
+---
 
-### 9.3 The Model Now Uses Injury Information (`src/models/game_outcome_model.py`)
+## 9. Known Limitations and Tech Debt
 
-This is probably the most impactful change for prediction quality. The project already had code that builds "injury proxy" features — estimates of how much a team is hurt by missing players (Section 6.5 above). But those features were being calculated and then completely ignored by the prediction model. It's like hiring a scout, getting their report, and then leaving it unopened on your desk.
+### Integration Gaps
+1. ~~`train_all_models.py` does not call `train_ats_model()` or `run_calibration_analysis()`~~ — `train_all_models.py` now includes ATS training and calibration (resolved)
+2. ~~`predict_cli.py` has no `ats` or `value-bet` subcommand~~ — `predict_cli.py` now supports `ats` and `value-bet` subcommands (resolved)
+3. No referee data scraped yet — features are all NaN in current model
 
-This change opens the envelope. The game outcome model now includes eight injury-related columns when making predictions — four for the home team and four for the away team:
+### Model Limitations
+- ATS model at 51.2% is below the 52.4% vig breakeven threshold
+- CLV computation returns 0.0 in backtest (Kaggle data may use opening rather than closing lines)
+- SHAP reports in `reports/explainability/` are stale (built from older model version) — regenerate with `python src/models/run_evaluation.py`
 
-- **Missing minutes** — how many expected minutes are gone from the rotation due to absent players
-- **Missing usage rate** — how central those absent players are to the team's offense
-- **Rotation availability** — what fraction of the normal rotation is actually available (1.0 = full strength)
-- **Star player out** — a simple yes/no flag for whether a high-usage player is missing
-
-Player availability is one of the strongest real-world signals for who wins a game, so this could meaningfully improve the model's accuracy. The column names were verified against the actual data files to make sure everything lines up correctly. If the injury data hasn't been built yet for a particular game, the model handles that gracefully — it just fills in neutral values and keeps going.
-
-**Important:** The model needs to be retrained (`python src/models/game_outcome_model.py`) for these features to actually take effect. Until then, the saved model file still uses the old feature list without injury data.
-
-### 9.4 Saving the Calibrated Model (`src/models/calibration.py`)
-
-Section 8.3 above describes the calibration analysis — the process of checking whether the model's probability outputs are trustworthy. When the model says "68% chance the home team wins," calibration makes sure that actually means home teams win about 68% of those games.
-
-The calibration code already existed, but it had a gap: it would measure calibration and even compute an improved (calibrated) version of the model, but it never saved that improved version anywhere. So even after running the analysis, the prediction scripts were still using the raw, uncalibrated probabilities.
-
-This change fixes that for older model versions (called "v1" internally). After calibration is computed, the calibrated model is now saved to `models/artifacts/game_outcome_model_calibrated.pkl`. For newer model versions (v2), calibration is already baked into the training process, so no extra save is needed.
-
-**Caveat — attempted but not yet complete:** The Debugger flagged a minor concern with this change. In the v1 path, the calibration step uses the same data the model was already trained on. Since the model has already "seen" that data, its predictions on it are slightly overconfident, which means the calibration adjustment might not be as strong as it should be when applied to truly new games. This isn't a critical problem — the calibrated probabilities are still better than the raw ones — but for maximum trustworthiness, a future cycle should switch to using a separate held-out calibration set.
-
-Additionally, no downstream scripts (`fetch_odds.py`, `predict_cli.py`) currently load the calibrated model file. It's being saved but not yet used anywhere. A future cycle needs to wire it in so the calibrated probabilities actually make it into predictions and sportsbook comparisons.
-
-### 9.5 Modern Era Training Filter (`src/models/game_outcome_model.py`)
-
-NBA basketball in 2025 looks very different from NBA basketball in 2001. The 3-point revolution, pace changes, rule changes — a model trained on 25 years of data might be learning patterns from an era that no longer applies. This change adds a simple on/off switch to the game outcome model: flip `MODERN_ERA_ONLY` to `True`, and it will only train on games from the 2014-15 season onward (roughly the start of the 3-point era, labeled "Era 6" in the era labels system from Section 6.4).
-
-The switch is off by default, so nothing changes unless you deliberately turn it on. It's an experiment to see if training on "less but more relevant" data beats training on "more but noisier" data. The way to test it: turn the switch on, retrain, run the backtest, and compare recent-season accuracy to the default. Be aware that switching to modern-era-only cuts the training data roughly in half, so the model gets more relevant examples but fewer of them.
-
-### 9.6 Items Reviewed but Not Changed
-
-A few items from the security and model advisory reviews were investigated but didn't require code changes:
-
-- **Large data files in git** — already properly excluded by `.gitignore`. No action needed.
-- **Error handling in `update.py`** — already had the same kind of safety net that was added to `backfill.py`. No change needed.
-- **Odds integration beyond `get_odds.py`** — the odds-fetching script (`scripts/fetch_odds.py`) and its integration into the update pipeline were already fully built at the code level. The remaining work is operational: adding the API key to the environment and running the player data pipeline to bring the player features current so player prop comparisons work.
-- **Extending the player backtest to current seasons** — the backtest code already uses all available seasons dynamically. The reason it stops at 2015-16 is that the player game features file only contains data through that season. The fix is to run the full data pipeline (which takes several hours), not a code change.
-- **Re-running the evaluation suite** — this is a script execution step (`python src/models/run_evaluation.py`), not a code change. It needs to be run to regenerate SHAP reports and calibration outputs against the current models, and it's required before the calibrated model artifact from Section 9.4 will exist.
-
+### Pipeline Gaps
+- ~~Full retrain flow requires 4 manual commands~~ — Full retrain: `python src/models/train_all_models.py --rebuild-features` (resolved — single command covers features, training, calibration, and ATS)
+- Modern-era filter shows 66.84% vs full-history 67.54% — accepted as noise
