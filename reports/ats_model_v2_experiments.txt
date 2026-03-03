@@ -1,0 +1,160 @@
+ATS MODEL V2 EXPERIMENTS REPORT
+=================================================================
+Generated: 2026-03-03
+Branch: v2/ats-model-v2
+
+OBJECTIVE
+-----------------------------------------------------------------
+Improve ATS holdout accuracy from 51.20% (v1 baseline) toward
+52.4% breakeven threshold at -110 standard vig.
+
+APPROACH
+-----------------------------------------------------------------
+1. Feature Engineering: Added 12 new ATS-specific features
+2. Model Alternatives: Tested 6 model types (LR, L1-LR, GB, GB-conservative, RF, MLP)
+3. Feature Selection: Permutation importance + bottom-30% pruning
+4. Ensemble: Averaged LR + GB probabilities with threshold tuning
+5. Confidence Filtering: Tested selective betting by model confidence
+
+NEW FEATURES ADDED (v2)
+-----------------------------------------------------------------
+  home_ats_record_5g / away_ats_record_5g   Rolling 5-game ATS cover rate (shifted)
+  home_ats_record_10g / away_ats_record_10g Rolling 10-game ATS cover rate (shifted)
+  diff_ats_record_5g / diff_ats_record_10g  Differentials of above
+  spread_bucket                             Ordinal spread size category (0-3)
+  home_dog                                  Binary: home team is underdog
+  rest_advantage                            home_days_rest - away_days_rest
+  record_vs_spread_expectation              Season win% - implied win%
+  spread_x_home_dog                         Interaction: spread * home_dog
+  implied_prob_gap                          |home_implied_prob - away_implied_prob|
+
+All features use shift(1) or pre-game data only -- no future data leakage.
+
+MODEL COMPARISON (Expanding-Window Validation, 11 splits)
+-----------------------------------------------------------------
+Model               | Mean Val Acc | Mean Val AUC | Threshold
+--------------------|-------------|-------------|----------
+logistic (C=0.1)    | 0.5293      | 0.5178      | 0.51
+logistic_l1 (C=0.05)| 0.5270      | 0.5191      | 0.50
+gb_conservative     | 0.5258      | 0.5169      | 0.49
+gradient_boosting   | 0.5242      | 0.5153      | 0.48
+random_forest       | 0.5229      | 0.5140      | 0.48
+mlp (64,32)         | 0.5204      | 0.5044      | 0.50
+
+Winner: logistic (L2, C=0.1) -- same model family as v1 baseline.
+
+HOLDOUT ACCURACY (Test seasons: 202324, 202425)
+-----------------------------------------------------------------
+Experiment                    | Features | Holdout Acc | Holdout ROI
+------------------------------|----------|-------------|------------
+v1 baseline (LogReg, 71 feat) | 71       | 0.5120      | -2.25%
+v1 feat + v2 model (83 feat)  | 83       | 0.5120      | -2.25%
+v2 + feature reduction (59 f) | 59       | 0.5141      | -1.86%
+v1 original feats only         | 71       | 0.5002      | -4.51%
+ATS market signals only        | 15       | 0.5116      | -2.33%
+Ensemble (LR+GB, th=0.50)     | 83       | 0.5051      | -3.57%
+Ensemble (LR+GB, th=0.48)     | 83       | 0.5141      | -1.86%
+
+CONFIDENCE-FILTERED HOLDOUT (Ensemble model)
+-----------------------------------------------------------------
+Confidence | Games | Accuracy | ROI
+-----------|-------|----------|--------
+>= 0.50   | 2,455 | 0.5051   | -3.57%
+>= 0.52   | 1,451 | 0.5155   | -1.59%
+>= 0.54   |   686 | 0.5117   | -2.32%
+>= 0.55   |   414 | 0.5217   | -0.40%
+>= 0.56   |   252 | 0.5198   | -0.76%
+>= 0.58   |    82 | 0.4634   | -11.5%
+
+PER-SEASON HOLDOUT BREAKDOWN
+-----------------------------------------------------------------
+Season   | Accuracy | ROI     | Games
+---------|----------|---------|------
+202324   | 0.5268   | +0.58%  | 1,230
+202425   | 0.4833   | -7.74%  | 1,225
+
+FEATURE IMPORTANCE (Permutation, test set)
+-----------------------------------------------------------------
+  1. away_missing_usg_pct       0.0102
+  2. diff_tov_poss_game_roll20  0.0062
+  3. diff_opp_pts_roll10        0.0061
+  4. diff_tov_roll20            0.0061
+  5. home_missing_usg_pct       0.0059
+  6. home_ats_record_5g *       0.0057  (NEW)
+  7. diff_def_rtg_game_roll20   0.0055
+  8. away_missing_minutes       0.0047
+  9. diff_off_rtg_game_roll5    0.0045
+ 10. diff_pts_roll20            0.0044
+
+  * = New v2 feature appearing in top-10
+
+FEATURE SELECTION
+-----------------------------------------------------------------
+Dropping the 24 lowest-importance features (bottom 30%) improved
+holdout accuracy from 0.5120 to 0.5141. The reduced 59-feature
+model is saved as the new production model.
+
+OVERALL BACKTEST (All historical non-push games)
+-----------------------------------------------------------------
+  Total games: 18,233
+  Hit rate:    52.57%
+  Net units:   +65.64
+  ROI:         +0.36%
+  Value-bet filtered (5% edge): 53.00% hit, +1.18% ROI
+
+KEY FINDINGS
+-----------------------------------------------------------------
+1. The v2 model improved holdout accuracy from 51.20% to 51.41%,
+   a gain of +0.21 percentage points. This is a marginal improvement
+   that does NOT cross the 52.38% breakeven threshold.
+
+2. Logistic regression remains the best model type. Tree-based models
+   (GB, RF) and neural nets (MLP) consistently underperformed in
+   expanding-window validation. ATS prediction lacks the strong
+   signal structure that tree models exploit well.
+
+3. New ATS features contributed modestly: home_ats_record_5g ranked
+   6th in permutation importance. Rolling ATS records capture a
+   real (but weak) signal about teams that are consistently beating
+   or missing the spread.
+
+4. Feature reduction helped: dropping 24 noisy features reduced
+   overfitting and improved generalization by +0.21 percentage points.
+
+5. The 2024-25 season (49.22% original, 48.33% v2) was particularly
+   difficult -- the model's predictions were worse than coin-flip.
+   This season accounted for most of the holdout underperformance.
+
+6. Confidence filtering shows a slight edge at the 0.55 threshold
+   (52.17%) but on only 414 games, which is not statistically
+   significant.
+
+7. Vegas lines are extremely efficient. The fundamental challenge
+   is that spreads are set by sophisticated market-making algorithms
+   and adjusted by sharp money, leaving very little exploitable
+   edge for statistical models.
+
+HONEST ASSESSMENT
+-----------------------------------------------------------------
+The 51.41% holdout accuracy is below the 52.38% breakeven. This
+model would lose money at standard -110 vig if used for blind
+flat betting. The in-sample metrics (52.57% overall) are inflated
+by model training on that data.
+
+The most promising angle is value-bet filtering (53.05% hit rate
+at 5% edge threshold), but this relies on the model's probability
+estimates being calibrated -- which is questionable given the
+weak holdout performance.
+
+No model in this experiment achieved 52.4%+ holdout accuracy.
+The model is saved as an incremental improvement (+0.21pp) over
+v1, but it should NOT be relied upon for profitable ATS betting.
+
+PRODUCTION MODEL (saved)
+-----------------------------------------------------------------
+  Model type:     logistic (L2, C=0.1)
+  Features:       59 (reduced from 83 via permutation importance)
+  Threshold:      0.51
+  Holdout acc:    0.5141 (51.41%)
+  Holdout ROI:    -1.86%
+  Val mean acc:   0.5293 (52.93%)

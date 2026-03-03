@@ -23,6 +23,7 @@ Or run as main:
     python src/features/ats_features.py
 """
 
+import numpy as np
 import pandas as pd
 from pathlib import Path
 
@@ -35,6 +36,105 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # Seasons excluded from training data (COVID bubble / shortened seasons)
 # Mirrors EXCLUDED_SEASONS in src/models/game_outcome_model.py
 EXCLUDED_SEASONS = [201920, 202021]
+
+
+# ── ATS-specific feature engineering ───────────────────────────────────────────
+
+def _rolling_ats_record(df: pd.DataFrame, team_col: str, window: int) -> pd.Series:
+    """Compute rolling ATS cover rate for a team over last `window` games.
+
+    Uses shift(1) to prevent leakage -- only uses prior game results.
+    Returns a Series aligned with df's index.
+    """
+    result = pd.Series(np.nan, index=df.index, dtype=float)
+
+    for team, grp in df.groupby(team_col):
+        grp_sorted = grp.sort_values("game_date")
+        # shift(1) ensures we only look at PREVIOUS games
+        covers = grp_sorted["covers_spread"].shift(1)
+        rolling_mean = covers.rolling(window=window, min_periods=max(1, window // 2)).mean()
+        result.loc[grp_sorted.index] = rolling_mean.values
+
+    return result
+
+
+def _add_ats_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add ATS-specific engineered features to the merged DataFrame.
+
+    All features use shift(1) or equivalent to prevent future data leakage.
+
+    New features:
+      - home_ats_record_5g / away_ats_record_5g: Rolling ATS cover rate (5 games)
+      - home_ats_record_10g / away_ats_record_10g: Rolling ATS cover rate (10 games)
+      - diff_ats_record_5g / diff_ats_record_10g: Differentials of above
+      - spread_bucket: Categorical spread size (encoded as ordinal)
+      - home_dog: Binary flag when home team is underdog (implied_prob < 0.5)
+      - rest_advantage: home_days_rest minus away_days_rest
+      - record_vs_spread_expectation: season win% minus implied win% from spread
+      - spread_x_home_dog: Interaction of spread magnitude with home dog status
+      - implied_prob_gap: How lopsided the market sees this game
+    """
+    out = df.copy()
+    out = out.sort_values("game_date").reset_index(drop=True)
+
+    # -- Rolling ATS records (per-team, shifted to avoid leakage) ---------------
+    print("  Computing rolling ATS records...")
+    for window in [5, 10]:
+        home_col = f"home_ats_record_{window}g"
+        away_col = f"away_ats_record_{window}g"
+        diff_col = f"diff_ats_record_{window}g"
+
+        home_records = _rolling_ats_record(out, "home_team", window)
+        away_records = _rolling_ats_record(out, "away_team", window)
+
+        out[home_col] = home_records
+        out[away_col] = away_records
+        out[diff_col] = out[home_col] - out[away_col]
+
+    # -- Spread bucket (ordinal encoding of spread magnitude) -------------------
+    spread = out["spread"].fillna(0)
+    conditions = [
+        spread <= 3.0,
+        (spread > 3.0) & (spread <= 7.0),
+        (spread > 7.0) & (spread <= 10.0),
+        spread > 10.0,
+    ]
+    choices = [0, 1, 2, 3]  # small, medium, large, blowout
+    out["spread_bucket"] = np.select(conditions, choices, default=1)
+
+    # -- Home dog flag (binary) ------------------------------------------------
+    out["home_dog"] = (out["home_implied_prob"] < 0.5).astype(float)
+    out.loc[out["home_implied_prob"].isna(), "home_dog"] = np.nan
+
+    # -- Rest advantage --------------------------------------------------------
+    out["rest_advantage"] = out["home_days_rest"] - out["away_days_rest"]
+
+    # -- Record vs spread expectation ------------------------------------------
+    if "home_cum_win_pct" in out.columns:
+        out["record_vs_spread_expectation"] = (
+            out["home_cum_win_pct"] - out["home_implied_prob"]
+        )
+    else:
+        out["record_vs_spread_expectation"] = np.nan
+
+    # -- Spread x Home Dog interaction -----------------------------------------
+    out["spread_x_home_dog"] = out["spread"] * out["home_dog"]
+
+    # -- Implied probability gap -----------------------------------------------
+    out["implied_prob_gap"] = (
+        out["home_implied_prob"] - out["away_implied_prob"]
+    ).abs()
+
+    new_cols = [
+        "home_ats_record_5g", "away_ats_record_5g", "diff_ats_record_5g",
+        "home_ats_record_10g", "away_ats_record_10g", "diff_ats_record_10g",
+        "spread_bucket", "home_dog", "rest_advantage",
+        "record_vs_spread_expectation", "spread_x_home_dog", "implied_prob_gap",
+    ]
+    n_new = sum(1 for c in new_cols if c in out.columns)
+    print(f"  Added {n_new} ATS-specific engineered features")
+
+    return out
 
 
 # ── Build function ─────────────────────────────────────────────────────────────
@@ -138,6 +238,10 @@ def build_ats_features(
     excluded_count = pre_exclusion - merged.shape[0]
     if excluded_count > 0:
         print(f"  Excluded {excluded_count} rows from seasons {EXCLUDED_SEASONS}")
+
+    # ── Engineer ATS-specific features ────────────────────────────────────────
+    print("Engineering ATS-specific features...")
+    merged = _add_ats_engineered_features(merged)
 
     # ── Summary ───────────────────────────────────────────────────────────────
     total_rows = merged.shape[0]
