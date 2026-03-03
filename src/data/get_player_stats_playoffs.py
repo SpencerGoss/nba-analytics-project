@@ -4,32 +4,7 @@ import pandas as pd
 import time
 import os
 
-
-HEADERS = {
-    "Host": "stats.nba.com",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.nba.com/",
-    "Connection": "keep-alive",
-    "Origin": "https://www.nba.com"
-}
-
-MAX_RETRIES = 3
-RETRY_DELAY = 10
-
-
-def fetch_with_retry(fetch_fn, season):
-    for attempt in range(MAX_RETRIES):
-        try:
-            return fetch_fn()
-        except Exception as e:
-            if attempt < MAX_RETRIES - 1:
-                print(f"  Attempt {attempt + 1} failed for {season}: {e}. Retrying in {RETRY_DELAY}s...")
-                time.sleep(RETRY_DELAY)
-            else:
-                print(f"  All {MAX_RETRIES} retries failed for {season}. Skipping.")
-                return None
+from src.data.api_client import fetch_with_retry, HEADERS
 
 
 def get_player_stats_playoffs(start_year=2000, end_year=2024):
@@ -42,7 +17,7 @@ def get_player_stats_playoffs(start_year=2000, end_year=2024):
         time.sleep(1)
 
         # Base stats
-        base = fetch_with_retry(
+        base_result = fetch_with_retry(
             lambda s=season: leaguedashplayerstats.LeagueDashPlayerStats(
                 season=s,
                 season_type_all_star="Playoffs",
@@ -52,16 +27,16 @@ def get_player_stats_playoffs(start_year=2000, end_year=2024):
             season
         )
 
-        if base is not None and len(base) > 0:
-            base.to_csv(f"data/raw/player_stats_playoffs/player_stats_playoffs_{season.replace('-', '')}.csv", index=False)
-            print(f"  Saved base {season} ({len(base)} rows)")
+        if base_result["success"] and len(base_result["data"]) > 0:
+            base_result["data"].to_csv(f"data/raw/player_stats_playoffs/player_stats_playoffs_{season.replace('-', '')}.csv", index=False)
+            print(f"  Saved base {season} ({len(base_result['data'])} rows)")
         else:
             print(f"  No base playoff data for {season}. Skipping.")
 
         time.sleep(1)
 
         # Advanced stats
-        advanced = fetch_with_retry(
+        adv_result = fetch_with_retry(
             lambda s=season: leaguedashplayerstats.LeagueDashPlayerStats(
                 season=s,
                 season_type_all_star="Playoffs",
@@ -72,9 +47,9 @@ def get_player_stats_playoffs(start_year=2000, end_year=2024):
             season
         )
 
-        if advanced is not None and len(advanced) > 0:
-            advanced.to_csv(f"data/raw/player_stats_advanced_playoffs/player_stats_advanced_playoffs_{season.replace('-', '')}.csv", index=False)
-            print(f"  Saved advanced {season} ({len(advanced)} rows)")
+        if adv_result["success"] and len(adv_result["data"]) > 0:
+            adv_result["data"].to_csv(f"data/raw/player_stats_advanced_playoffs/player_stats_advanced_playoffs_{season.replace('-', '')}.csv", index=False)
+            print(f"  Saved advanced {season} ({len(adv_result['data'])} rows)")
         else:
             print(f"  No advanced playoff data for {season}. Skipping.")
 

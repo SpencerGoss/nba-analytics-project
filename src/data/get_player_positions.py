@@ -34,19 +34,8 @@ import pandas as pd
 import time
 import os
 
+from src.data.api_client import fetch_with_retry, HEADERS
 
-HEADERS = {
-    "Host":             "stats.nba.com",
-    "User-Agent":       "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Accept":           "application/json, text/plain, */*",
-    "Accept-Language":  "en-US,en;q=0.9",
-    "Referer":          "https://www.nba.com/",
-    "Connection":       "keep-alive",
-    "Origin":           "https://www.nba.com",
-}
-
-MAX_RETRIES   = 3
-RETRY_DELAY   = 10
 REQUEST_DELAY = 1          # seconds between season calls (be polite to the API)
 OUTPUT_PATH   = "data/processed/player_positions.csv"
 
@@ -90,21 +79,6 @@ def _to_bucket(pos_str: str) -> str:
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
-
-def fetch_with_retry(fetch_fn, label: str):
-    """Retry wrapper — identical pattern to all other get_*.py scripts."""
-    for attempt in range(MAX_RETRIES):
-        try:
-            return fetch_fn()
-        except Exception as e:
-            if attempt < MAX_RETRIES - 1:
-                print(f"  Attempt {attempt + 1} failed for {label}: {e}. "
-                      f"Retrying in {RETRY_DELAY}s...")
-                time.sleep(RETRY_DELAY)
-            else:
-                print(f"  All {MAX_RETRIES} retries exhausted for {label}. Skipping.")
-                return None
-
 
 def _parse_response(raw: pd.DataFrame) -> pd.DataFrame | None:
     """
@@ -196,7 +170,7 @@ def get_player_positions(
         season = f"{year}-{str(year + 1)[-2:]}"
         time.sleep(REQUEST_DELAY)
 
-        raw = fetch_with_retry(
+        result = fetch_with_retry(
             lambda s=season: playerindex.PlayerIndex(
                 league_id="00",
                 season=s,
@@ -206,11 +180,11 @@ def get_player_positions(
             season,
         )
 
-        if raw is None:
+        if not result["success"]:
             print(f"  Skipping {season} (all retries failed).")
             continue
 
-        parsed = _parse_response(raw)
+        parsed = _parse_response(result["data"])
         if parsed is None or len(parsed) == 0:
             print(f"  {season}: no usable rows, skipping.")
             continue
