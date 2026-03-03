@@ -19,6 +19,8 @@ if _PROJECT_ROOT not in sys.path:
 from src.models.game_outcome_model import train_game_outcome_model
 from src.models.player_performance_model import train_player_models
 from src.models.playoff_odds_model import simulate_playoff_odds
+from src.models.calibration import run_calibration_analysis
+from src.models.ats_model import train_ats_model
 
 
 def parse_args():
@@ -53,23 +55,35 @@ def main() -> None:
     print("  1) Game outcomes")
     print("  2) Player performance")
     print("  3) Playoff odds")
+    print("  4) Calibration analysis")
+    print("  5) ATS spread model")
 
     maybe_rebuild_features(args.rebuild_features)
 
     print("\n" + "-" * 72)
-    print("TASK 1/3 — GAME OUTCOME")
+    print("TASK 1/5 — GAME OUTCOME")
     print("-" * 72)
     _, game_metrics = train_game_outcome_model()
 
     print("\n" + "-" * 72)
-    print("TASK 2/3 — PLAYER PERFORMANCE")
+    print("TASK 2/5 — PLAYER PERFORMANCE")
     print("-" * 72)
     _, player_metrics = train_player_models()
 
     print("\n" + "-" * 72)
-    print("TASK 3/3 — PLAYOFF ODDS")
+    print("TASK 3/5 — PLAYOFF ODDS")
     print("-" * 72)
     playoff_df = simulate_playoff_odds()
+
+    print("\n" + "-" * 72)
+    print("TASK 4/5 -- CALIBRATION")
+    print("-" * 72)
+    cal_metrics = run_calibration_analysis()
+
+    print("\n" + "-" * 72)
+    print("TASK 5/5 -- ATS SPREAD MODEL")
+    print("-" * 72)
+    _, ats_metrics = train_ats_model()
 
     elapsed = datetime.now() - start
     print("\n" + "=" * 72)
@@ -85,6 +99,14 @@ def main() -> None:
                        for k, v in player_metrics.items()])
     )
     print(f"Playoff odds → teams simulated={len(playoff_df):,}")
+    print(
+        f"Calibration -> Brier={cal_metrics.get('brier_calibrated', 0):.5f} | "
+        f"ECE={cal_metrics.get('ece_calibrated', 0):.5f}"
+    )
+    print(
+        f"ATS model -> model={ats_metrics.get('model_type', 'n/a')} | "
+        f"test_acc={ats_metrics.get('test_accuracy', 0):.4f}"
+    )
     print(f"Elapsed: {elapsed.seconds // 60}m {elapsed.seconds % 60}s")
     print("=" * 72)
 
