@@ -119,8 +119,8 @@ def main() -> None:
 
         fetch_current_season_data(current_year, now)
 
-        print("\n=== Step 2: Rebuilding processed CSVs ===")
-        run_preprocessing()
+        print("\n=== Step 2: Updating processed CSVs (incremental) ===")
+        run_preprocessing(full_rebuild=False)
 
         print("\n=== Step 3: Refreshing sportsbook odds ===")
         if not refresh_odds_data():

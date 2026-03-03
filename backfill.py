@@ -96,8 +96,8 @@ def _run_backfill() -> None:
         standings_tasks,
     )
 
-    print("\n=== Step 4: Rebuilding processed CSVs ===")
-    run_preprocessing()
+    print("\n=== Step 4: Rebuilding processed CSVs (full rebuild) ===")
+    run_preprocessing(full_rebuild=True)
 
     elapsed = datetime.now() - start_time
     total_seconds = int(elapsed.total_seconds())
