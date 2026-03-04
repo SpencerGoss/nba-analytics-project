@@ -8,38 +8,56 @@ An NBA game prediction system that predicts game outcomes and identifies value b
 
 Identify games where the model's win probability meaningfully disagrees with Vegas lines — producing profitable against-the-spread picks over a full NBA season.
 
+## Current Milestone: v2.0 — Data Expansion & Model Intelligence
+
+**Goal:** Push game outcome accuracy to 68%+ and ATS above vig breakeven (52.4%+) by adding real lineup/injury data, new free data sources, and ensemble model improvements.
+
+**Target features:**
+- Kaggle historical injury dataset (replace proxy with actual player absence records)
+- pbpstats lineup tracking (who is actually on the floor — the strongest prediction signal)
+- BallDontLie API (structured injury + stats backup)
+- Calibrated model wired into all production inference paths
+- Retrained game outcome + ATS models with new feature set
+- ATS ensemble above vig breakeven
+
 ## Requirements
 
 ### Validated
 
-- ✓ NBA Stats API data pipeline (20+ endpoints, daily refresh via `update.py`) — existing
-- ✓ Raw → processed CSV preprocessing with column normalization — existing
-- ✓ Team game feature engineering (rolling windows, strength of schedule, matchup differentials) — existing
-- ✓ Player feature engineering (rolling stats, season priors, opponent context) — existing
-- ✓ Game outcome classifier (GradientBoosting/RandomForest, ~65% accuracy) — existing
-- ✓ Player performance regressors (pts/reb/ast per target) — existing
-- ✓ Playoff odds Monte Carlo simulation — existing
-- ✓ Walk-forward backtesting with expanding validation splits — existing
-- ✓ Sportsbook odds integration via The Odds API — existing
-- ✓ CLI prediction interface (`predict_cli.py`) — existing
-- ✓ Historical backfill pipeline (`backfill.py`) — existing
-- ✓ Scheduled daily updates via Windows Task Scheduler — existing
+- ✓ NBA Stats API data pipeline (20+ endpoints, daily refresh via `update.py`) — v1.0
+- ✓ Raw → processed CSV preprocessing with column normalization — v1.0
+- ✓ Team game feature engineering (rolling windows, strength of schedule, matchup differentials) — v1.0
+- ✓ Player feature engineering (rolling stats, season priors, opponent context) — v1.0
+- ✓ Game outcome classifier (66.8% accuracy on 2023-25 holdout) — v1.0
+- ✓ Player performance regressors (pts/reb/ast per target) — v1.0
+- ✓ Playoff odds Monte Carlo simulation — v1.0
+- ✓ Walk-forward backtesting with expanding validation splits — v1.0
+- ✓ Sportsbook odds integration via The Odds API — v1.0
+- ✓ ATS model with value-bet detection (51.2% raw, +1.28% ROI on filtered) — v1.0
+- ✓ Prediction store (WAL SQLite + JSON snapshots) — v1.0
+- ✓ Static web dashboard (Chart.js) — v1.0
+- ✓ Shared API client (retry logic centralized) — v1.0 gap closure
+- ✓ Incremental preprocessing (mtime-based) — v1.0 gap closure
+- ✓ Data integrity validation framework — v1.0 gap closure
 
-### Active
+### Active (v2.0)
 
-- [ ] Fix injury proxy features (missing_minutes, star_player_out currently broken/all-null)
-- [ ] Add pace and 3-point era features (rolling pace, 3PT rate, possessions)
-- [ ] Add rest and schedule features (back-to-backs, travel distance, days between games)
-- [ ] Integrate official NBA injury reports (questionable/probable/out status)
-- [ ] Scrape external data sources (Basketball Reference advanced stats, referee assignments, lineup data)
-- [ ] Add ATS (against-the-spread) model as new prediction target
-- [ ] Integrate sportsbook odds/lines as model features (not just comparison)
-- [ ] Value bet identification system (flag games where model disagrees with Vegas)
-- [ ] Focus training on modern era (2014+) to match current NBA style
-- [ ] Store prediction results for historical accuracy tracking (web-ready)
-- [ ] Serialize model outputs as JSON (not just pickle) for future web consumption
-- [ ] Organize pipeline stages so each is clean and self-contained
-- [ ] Document pipeline stage order and dependencies clearly
+- [ ] Integrate Kaggle NBA injury dataset as actual absence features (replace injury proxy)
+- [ ] Add pbpstats lineup tracking data (on-court lineup strength features)
+- [ ] Add BallDontLie API as data source (structured injuries + stats)
+- [ ] Wire calibrated model into fetch_odds.py (uncalibrated model used there now)
+- [ ] Retrain game outcome model with new injury + lineup features (target: 68%+)
+- [ ] Push ATS model above 52.4% vig breakeven (currently 51.4% holdout)
+- [ ] Add lineup net rating differentials as matchup features
+- [ ] Ensemble/stack game outcome + ATS models for value-bet detection
+
+### Out of Scope
+
+- Web application — future v3.0 milestone
+- Real-time in-game predictions — pregame only
+- Player prop betting model — defer until ATS model is profitable
+- Shot chart ingestion — 3-4 hour runtime, not worth it yet
+- Mobile app — future milestone
 
 ### Out of Scope
 
@@ -54,17 +72,17 @@ Identify games where the model's win probability meaningfully disagrees with Veg
 
 **Existing codebase:** Brownfield project with working pipeline. See `.planning/codebase/` for full analysis.
 
-**Current model performance:**
-- Game outcome: ~65-66% accuracy overall, drops to 64% on post-2014 data
-- Backtest shows accuracy degradation in modern 3-point era
-- Injury features are defined in code but silently absent/null — player availability has zero effect on current predictions
+**Current model performance (v1.0 final):**
+- Game outcome: 66.8% accuracy on 2023-24/2024-25 holdout
+- ATS: 51.2% raw (51.41% in v2 experiments), +1.28% ROI on value-bet filtered — below 52.4% vig breakeven
+- Injury features flow correctly through pipeline (ranked 11-21 in SHAP) but use proxy estimates not real absence data
+- Lineup data not used at all — strongest predictor of actual game outcomes
 
-**Known issues (from CONCERNS.md):**
-- Injury proxy features broken (all-null, never reach the model)
-- Calibrated model saved but never loaded in production
-- Player backtest stops at 2015-16 (missing 10 years of data)
-- Preprocessing rebuilds all CSVs daily (inefficient but functional)
-- No unit tests across the pipeline
+**Known gaps carried to v2.0:**
+- Calibrated model not wired into fetch_odds.py (uses uncalibrated probabilities)
+- ATS 1.27pp below vig breakeven
+- Injury features use rolling-average proxy, not actual player availability records
+- No lineup/rotation data (pbpstats can provide this)
 
 **Key signal sources not yet tapped:**
 - Official NBA injury reports (strongest predictor of game outcomes)
@@ -96,4 +114,4 @@ The next major milestone after model improvement will be a web platform (data ex
 | Free data sources only | No paid data subscriptions; Basketball Reference scraping, NBA injury reports, and The Odds API free tier | — Pending |
 
 ---
-*Last updated: 2026-03-01 after initialization*
+*Last updated: 2026-03-04 after v2.0 milestone start*
