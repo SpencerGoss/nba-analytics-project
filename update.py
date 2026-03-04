@@ -25,6 +25,7 @@ from src.data.get_team_stats_advanced import get_team_stats_advanced
 from src.data.get_teams import get_teams
 from src.processing.preprocessing import run_preprocessing
 from src.data.get_odds import refresh_odds_data
+from src.data.get_injury_data import get_injury_report
 
 
 ERROR_LOG_PATH = Path("logs/pipeline_errors.log")
@@ -125,6 +126,16 @@ def main() -> None:
         print("\n=== Step 3: Refreshing sportsbook odds ===")
         if not refresh_odds_data():
             print("Odds refresh skipped/failed; continuing update pipeline.")
+
+        print("\n=== Step 4: Fetching today's injury report ===")
+        try:
+            injury_df = get_injury_report(season_year=current_year)
+            if injury_df.empty:
+                print("Injury report returned empty (may be off-season or no games today).")
+            else:
+                print(f"Injury report saved: {len(injury_df)} entries.")
+        except Exception as injury_err:
+            print(f"Injury report fetch failed (non-fatal): {injury_err}")
 
         elapsed = datetime.now() - start_time
         total_seconds = int(elapsed.total_seconds())
