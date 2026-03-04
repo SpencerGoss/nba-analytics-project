@@ -8,6 +8,13 @@ data/odds/
 models/artifacts/
 *.pkl
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
+database/
+
+# Large artifacts
+nba_data.zip
 
 # Python
 __pycache__/
@@ -27,5 +34,12 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Generated dashboard data (rebuilt by scripts/export_dashboard_data.py)
+dashboard/data/*.json
+
+# Generated prediction snapshots (rebuilt by pipeline)
+data/outputs/
+
 # External repos
 freqtrade/
