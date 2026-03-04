@@ -36,6 +36,7 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.features.era_labels import label_eras
+from src.features.lineup_features import build_lineup_features
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -904,6 +905,87 @@ def build_matchup_dataset(
     print(f"  season_month: {matchup['season_month'].nunique()} unique months, "
           f"range {int(matchup['season_month'].min())}-{int(matchup['season_month'].max())}")
 
+    # ── Lineup efficiency features (Phase 8, FEAT-02) ─────────────────────────
+    # Lineup data exists for 2023-24 and 2024-25 only. Left join so earlier
+    # seasons simply receive 0.0 (neutral / unknown) values.
+    print("Joining lineup efficiency features...")
+    lineup_cols = [
+        "top1_lineup_net_rtg", "top3_lineup_net_rtg", "avg_lineup_net_rtg",
+        "lineup_net_rtg_std", "best_off_rating", "best_def_rating", "n_lineups",
+    ]
+    try:
+        lineup_feat = build_lineup_features()
+
+        if not lineup_feat.empty:
+            # Normalize key types for safe join
+            lineup_feat["season"]  = lineup_feat["season"].astype(int)
+            lineup_feat["team_id"] = lineup_feat["team_id"].astype(int)
+            matchup["season"]      = matchup["season"].astype(int)
+
+            # Extract home team_id from meta for join
+            home_ids = home[["game_id", "team_id"]].copy()
+            home_ids.columns = ["game_id", "home_team_id_for_join"]
+            away_ids = away[["game_id", "team_id"]].copy()
+            away_ids.columns = ["game_id", "away_team_id_for_join"]
+            matchup = matchup.merge(home_ids, on="game_id", how="left")
+            matchup = matchup.merge(away_ids, on="game_id", how="left")
+
+            # Join home lineup features
+            home_lineup = lineup_feat[["season", "team_id"] + lineup_cols].copy()
+            home_lineup.columns = (
+                ["season", "home_team_id_for_join"]
+                + [f"home_{c}" for c in lineup_cols]
+            )
+            matchup = matchup.merge(
+                home_lineup, on=["season", "home_team_id_for_join"], how="left"
+            )
+
+            # Join away lineup features
+            away_lineup = lineup_feat[["season", "team_id"] + lineup_cols].copy()
+            away_lineup.columns = (
+                ["season", "away_team_id_for_join"]
+                + [f"away_{c}" for c in lineup_cols]
+            )
+            matchup = matchup.merge(
+                away_lineup, on=["season", "away_team_id_for_join"], how="left"
+            )
+
+            # Drop the temporary join key columns
+            matchup = matchup.drop(
+                columns=["home_team_id_for_join", "away_team_id_for_join"]
+            )
+
+            # Fill NaN lineup columns with 0.0 for seasons without lineup data
+            for side in ["home", "away"]:
+                for col in lineup_cols:
+                    full = f"{side}_{col}"
+                    if full in matchup.columns:
+                        matchup[full] = matchup[full].fillna(0.0)
+
+            # Non-null rate for lineup features (diagnostic)
+            recent_mask = matchup["season"].isin(
+                lineup_feat["season"].unique()
+            )
+            n_recent = recent_mask.sum()
+            if n_recent > 0:
+                nn_rate = matchup.loc[recent_mask, "home_avg_lineup_net_rtg"].notna().mean()
+                print(
+                    f"  Lineup features: {len(lineup_cols)*2} new columns added. "
+                    f"Non-null rate for recent seasons: {nn_rate:.1%} "
+                    f"({n_recent:,} rows)"
+                )
+        else:
+            print("  Lineup features: empty DataFrame — skipping join.")
+            for side in ["home", "away"]:
+                for col in lineup_cols:
+                    matchup[f"{side}_{col}"] = 0.0
+
+    except Exception as e:
+        print(f"  Warning: could not build lineup features ({e}). Defaulting to 0.0.")
+        for side in ["home", "away"]:
+            for col in lineup_cols:
+                matchup[f"{side}_{col}"] = 0.0
+
     # ── Differential features ─────────────────────────────────────────────────
     # Explicit home-minus-away gaps for the most predictive stats.
     print("Computing matchup differential features...")
@@ -943,6 +1025,9 @@ def build_matchup_dataset(
         # Referee foul rate (same crew for both teams, but diff captures any asymmetry
         # from imperfect joins; home/away raw values are more meaningful signal)
         "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
+        # Lineup efficiency differentials (Phase 8, FEAT-02)
+        "top1_lineup_net_rtg", "top3_lineup_net_rtg", "avg_lineup_net_rtg",
+        "best_off_rating", "best_def_rating",
     ]
 
     for stat in diff_stats:
