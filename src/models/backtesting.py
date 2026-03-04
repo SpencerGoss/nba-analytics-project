@@ -1,7 +1,7 @@
 """
 Walk-Forward Backtesting Framework
 =====================================
-Evaluates prediction models by rolling forward one season at a time —
+Evaluates prediction models by rolling forward one season at a time --
 training on all history up to season N, testing on season N+1.
 
 This is the gold standard for time-series model evaluation because it
@@ -13,7 +13,7 @@ Why this matters over a single train/test split:
   - A single split only gives you accuracy on 2 seasons.
   - Walk-forward gives you per-season accuracy curves, letting you spot
     if performance is degrading over time, improving, or unstable.
-  - It surfaces era effects — e.g., did accuracy drop when the 3-point
+  - It surfaces era effects -- e.g., did accuracy drop when the 3-point
     revolution changed team styles?
 
 Usage:
@@ -26,11 +26,11 @@ Usage:
         )
 
 Output:
-    reports/backtest_game_outcome.csv   — per-season metrics
-    reports/backtest_player_pts.csv     — per-season MAE for pts
-    reports/backtest_player_reb.csv     — per-season MAE for reb
-    reports/backtest_player_ast.csv     — per-season MAE for ast
-    reports/backtest_summary.txt        — human-readable summary
+    reports/backtest_game_outcome.csv   -- per-season metrics
+    reports/backtest_player_pts.csv     -- per-season MAE for pts
+    reports/backtest_player_reb.csv     -- per-season MAE for reb
+    reports/backtest_player_ast.csv     -- per-season MAE for ast
+    reports/backtest_summary.txt        -- human-readable summary
 """
 
 import os
@@ -39,7 +39,7 @@ import pandas as pd
 import numpy as np
 warnings.filterwarnings("ignore")
 
-from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -50,7 +50,7 @@ from sklearn.metrics import (
     brier_score_loss,
 )
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# -- Config ---------------------------------------------------------------------
 
 MATCHUP_PATH     = "data/features/game_matchup_features.csv"
 PLAYER_PATH      = "data/features/player_game_features.csv"
@@ -64,7 +64,7 @@ MIN_TRAIN_SEASONS = 5
 # Full historical player game logs only exist from ~2000 onward.
 PLAYER_BACKTEST_START = "200001"
 
-# Restrict game outcome backtest to modern era — pre-2000 seasons have different
+# Restrict game outcome backtest to modern era -- pre-2000 seasons have different
 # statistical distributions that add noise for predicting modern games.
 GAME_BACKTEST_START = "200001"
 
@@ -75,7 +75,7 @@ TARGET_CLASS  = "home_win"
 PLAYER_TARGETS = ["pts", "reb", "ast"]
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# -- Helpers --------------------------------------------------------------------
 
 def _sorted_seasons(df: pd.DataFrame, col: str = "season") -> list:
     return sorted(df[col].astype(str).unique())
@@ -123,20 +123,21 @@ def _build_gb_classifier() -> Pipeline:
 
 
 def _build_gb_regressor() -> Pipeline:
+    # ExtraTrees with n_jobs=-1 is orders of magnitude faster than single-
+    # threaded GBM while producing comparable walk-forward MAE.
     return Pipeline([
         ("imputer", SimpleImputer(strategy="mean")),
-        ("model",   GradientBoostingRegressor(
+        ("model",   ExtraTreesRegressor(
             n_estimators=100,
-            max_depth=4,
-            learning_rate=0.05,
-            subsample=0.8,
+            max_depth=12,
+            min_samples_leaf=5,
             random_state=42,
-            loss="squared_error",
+            n_jobs=-1,
         )),
     ])
 
 
-# ── Game outcome walk-forward ──────────────────────────────────────────────────
+# -- Game outcome walk-forward --------------------------------------------------
 
 def run_game_outcome_backtest(
     matchup_path: str = MATCHUP_PATH,
@@ -154,7 +155,7 @@ def run_game_outcome_backtest(
     Returns a DataFrame indexed by test season.
     """
     print("=" * 65)
-    print("WALK-FORWARD BACKTEST — Game Outcome Model")
+    print("WALK-FORWARD BACKTEST -- Game Outcome Model")
     print("=" * 65)
 
     df = pd.read_csv(matchup_path)
@@ -168,14 +169,14 @@ def run_game_outcome_backtest(
     feat_cols   = _get_feature_cols_game(df)
     results     = []
 
-    print(f"\nTotal seasons available : {len(seasons)}  ({seasons[0]} → {seasons[-1]})")
+    print(f"\nTotal seasons available : {len(seasons)}  ({seasons[0]} -> {seasons[-1]})")
     print(f"Minimum training window : {min_train} seasons")
     print(f"Test seasons            : {len(seasons) - min_train}")
     print(f"Features                : {len(feat_cols)}")
     print()
     print(f"{'Season':<10} {'Train Games':>12} {'Test Games':>11} "
           f"{'Accuracy':>10} {'ROC-AUC':>9} {'Brier':>8}")
-    print("─" * 65)
+    print("-" * 65)
 
     for i in range(min_train, len(seasons)):
         train_seasons = seasons[:i]
@@ -218,20 +219,20 @@ def run_game_outcome_backtest(
 
     results_df = pd.DataFrame(results)
 
-    # ── Summary stats ──────────────────────────────────────────────────────────
-    print("\n── Summary ─────────────────────────────────────────────────────")
+    # -- Summary stats ----------------------------------------------------------
+    print("\n-- Summary -----------------------------------------------------")
     print(f"  Mean accuracy  : {results_df['accuracy'].mean():.3%}  "
-          f"(σ = {results_df['accuracy'].std():.4f})")
+          f"(std = {results_df['accuracy'].std():.4f})")
     print(f"  Mean ROC-AUC   : {results_df['roc_auc'].mean():.4f}  "
-          f"(σ = {results_df['roc_auc'].std():.4f})")
+          f"(std = {results_df['roc_auc'].std():.4f})")
     print(f"  Mean Brier     : {results_df['brier_score'].mean():.4f}  "
-          f"(σ = {results_df['brier_score'].std():.4f})")
+          f"(std = {results_df['brier_score'].std():.4f})")
     print(f"  Best season    : {results_df.loc[results_df['accuracy'].idxmax(), 'test_season']}  "
           f"({results_df['accuracy'].max():.3%})")
     print(f"  Worst season   : {results_df.loc[results_df['accuracy'].idxmin(), 'test_season']}  "
           f"({results_df['accuracy'].min():.3%})")
 
-    # ── Era-level breakdown ────────────────────────────────────────────────────
+    # -- Era-level breakdown ----------------------------------------------------
     try:
         from src.features.era_labels import label_eras
         results_df["era_num"] = None
@@ -242,28 +243,28 @@ def run_game_outcome_backtest(
             results_df.at[idx, "era_num"]  = era["era_num"]
             results_df.at[idx, "era_name"] = era["era_name"]
 
-        print("\n── Accuracy by Era ─────────────────────────────────────────────")
+        print("\n-- Accuracy by Era ---------------------------------------------")
         era_summary = (
             results_df.groupby(["era_num", "era_name"])["accuracy"]
             .agg(["mean", "std", "count"])
             .rename(columns={"mean": "avg_acc", "std": "std_acc", "count": "n_seasons"})
         )
         for (era_num, era_name), row in era_summary.iterrows():
-            print(f"  Era {era_num} — {era_name:<25}: "
-                  f"{row['avg_acc']:.3%}  (σ={row['std_acc']:.4f}, n={int(row['n_seasons'])})")
+            print(f"  Era {era_num} -- {era_name:<25}: "
+                  f"{row['avg_acc']:.3%}  (std={row['std_acc']:.4f}, n={int(row['n_seasons'])})")
     except Exception:
         pass
 
-    # ── Save ──────────────────────────────────────────────────────────────────
+    # -- Save ------------------------------------------------------------------
     os.makedirs(reports_dir, exist_ok=True)
     out_path = os.path.join(reports_dir, "backtest_game_outcome.csv")
     results_df.to_csv(out_path, index=False)
-    print(f"\nResults saved → {out_path}")
+    print(f"\nResults saved -> {out_path}")
 
     return results_df
 
 
-# ── Player model walk-forward ──────────────────────────────────────────────────
+# -- Player model walk-forward --------------------------------------------------
 
 def run_player_model_backtest(
     player_path:  str  = PLAYER_PATH,
@@ -284,7 +285,7 @@ def run_player_model_backtest(
         dict of {target: results_DataFrame}
     """
     print("\n" + "=" * 65)
-    print("WALK-FORWARD BACKTEST — Player Performance Models")
+    print("WALK-FORWARD BACKTEST -- Player Performance Models")
     print("=" * 65)
 
     df = pd.read_csv(player_path)
@@ -296,17 +297,17 @@ def run_player_model_backtest(
     # Only backtest from start_season forward
     backtest_seasons = [s for s in all_seasons if s >= start_season]
 
-    print(f"\nBacktest seasons: {backtest_seasons[0]} → {backtest_seasons[-1]}  "
+    print(f"\nBacktest seasons: {backtest_seasons[0]} -> {backtest_seasons[-1]}  "
           f"({len(backtest_seasons)} seasons)")
 
     all_results = {}
 
     for target in targets:
-        print(f"\n{'─'*65}")
+        print(f"\n{'-'*65}")
         print(f"Target: {target.upper()}")
         print(f"{'Season':<10} {'Train Rows':>12} {'Test Rows':>10} "
               f"{'MAE':>8} {'RMSE':>8} {'Baseline MAE':>14}")
-        print("─" * 65)
+        print("-" * 65)
 
         feat_cols = _get_feature_cols_player(df, target)
         results   = []
@@ -361,20 +362,20 @@ def run_player_model_backtest(
 
         if len(results_df) > 0:
             print(f"\n  Mean MAE       : {results_df['mae'].mean():.3f}  "
-                  f"(σ = {results_df['mae'].std():.4f})")
+                  f"(std = {results_df['mae'].std():.4f})")
             print(f"  Mean RMSE      : {results_df['rmse'].mean():.3f}")
             print(f"  Avg vs baseline: +{results_df['mae_vs_baseline'].mean():.3f} MAE improvement")
 
-        # ── Save ──────────────────────────────────────────────────────────────
+        # -- Save --------------------------------------------------------------
         os.makedirs(reports_dir, exist_ok=True)
         out_path = os.path.join(reports_dir, f"backtest_player_{target}.csv")
         results_df.to_csv(out_path, index=False)
-        print(f"  Saved → {out_path}")
+        print(f"  Saved -> {out_path}")
 
     return all_results
 
 
-# ── Summary report ─────────────────────────────────────────────────────────────
+# -- Summary report -------------------------------------------------------------
 
 def write_summary_report(
     game_results:   pd.DataFrame,
@@ -386,16 +387,16 @@ def write_summary_report(
     path = os.path.join(reports_dir, "backtest_summary.txt")
 
     lines = [
-        "NBA ANALYTICS PROJECT — BACKTESTING SUMMARY",
+        "NBA ANALYTICS PROJECT -- BACKTESTING SUMMARY",
         "=" * 60,
         "",
         "GAME OUTCOME MODEL (Walk-Forward by Season)",
-        "─" * 60,
+        "-" * 60,
         f"  Seasons evaluated   : {len(game_results)}",
         f"  Mean accuracy       : {game_results['accuracy'].mean():.3%}",
         f"  Mean ROC-AUC        : {game_results['roc_auc'].mean():.4f}",
         f"  Mean Brier score    : {game_results['brier_score'].mean():.4f}",
-        f"  Accuracy range      : {game_results['accuracy'].min():.3%} → "
+        f"  Accuracy range      : {game_results['accuracy'].min():.3%} -> "
                                   f"{game_results['accuracy'].max():.3%}",
         "",
     ]
@@ -404,8 +405,8 @@ def write_summary_report(
         if len(df) == 0:
             continue
         lines += [
-            f"PLAYER MODEL — {target.upper()}",
-            "─" * 60,
+            f"PLAYER MODEL -- {target.upper()}",
+            "-" * 60,
             f"  Seasons evaluated   : {len(df)}",
             f"  Mean MAE            : {df['mae'].mean():.3f}",
             f"  Mean RMSE           : {df['rmse'].mean():.3f}",
@@ -415,7 +416,7 @@ def write_summary_report(
 
     lines += [
         "NOTE: Walk-forward validation trains on all history up to",
-        "season N and tests on season N alone — simulating real-world",
+        "season N and tests on season N alone -- simulating real-world",
         "deployment. Results are generally more conservative than a",
         "single train/test split.",
     ]
@@ -423,10 +424,10 @@ def write_summary_report(
     with open(path, "w") as f:
         f.write("\n".join(lines))
 
-    print(f"\nSummary report saved → {path}")
+    print(f"\nSummary report saved -> {path}")
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# -- Entry point ----------------------------------------------------------------
 
 if __name__ == "__main__":
     game_results   = run_game_outcome_backtest()

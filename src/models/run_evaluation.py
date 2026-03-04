@@ -19,7 +19,7 @@ Usage:
 Notes:
   - The models must be trained first (run the individual model scripts).
   - Walk-forward backtesting retrains the model for each season and can
-    take 5–15 minutes depending on hardware.
+    take 5-15 minutes depending on hardware.
   - SHAP requires the shap package (pip install shap).
     If not installed, permutation importance is used as a fallback.
 """
@@ -51,11 +51,11 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # ── 1. Walk-forward backtesting ───────────────────────────────────────────
+    # -- 1. Walk-forward backtesting -------------------------------------------
     if not args.skip_backtest:
-        print("─" * 60)
-        print("STEP 1 OF 3 — Walk-Forward Backtesting")
-        print("─" * 60)
+        print("-" * 60)
+        print("STEP 1 OF 3 -- Walk-Forward Backtesting")
+        print("-" * 60)
         try:
             from src.models.backtesting import (
                 run_game_outcome_backtest,
@@ -65,39 +65,39 @@ def main():
             game_results   = run_game_outcome_backtest()
             player_results = run_player_model_backtest()
             write_summary_report(game_results, player_results)
-            print("\n✓ Backtesting complete")
+            print("\n[OK] Backtesting complete")
         except Exception as e:
-            print(f"\n✗ Backtesting failed: {e}")
+            print(f"\n[FAIL] Backtesting failed: {e}")
             import traceback; traceback.print_exc()
     else:
         print("Step 1: Backtesting skipped (--skip-backtest)")
 
     print()
 
-    # ── 2. Calibration analysis ───────────────────────────────────────────────
+    # -- 2. Calibration analysis -----------------------------------------------
     if not args.skip_calibration:
-        print("─" * 60)
-        print("STEP 2 OF 3 — Calibration Analysis")
-        print("─" * 60)
+        print("-" * 60)
+        print("STEP 2 OF 3 -- Calibration Analysis")
+        print("-" * 60)
         try:
             from src.models.calibration import run_calibration_analysis
             metrics = run_calibration_analysis()
-            print("\n✓ Calibration analysis complete")
+            print("\n[OK] Calibration analysis complete")
         except FileNotFoundError as e:
-            print(f"\n✗ Calibration failed: {e}")
+            print(f"\n[FAIL] Calibration failed: {e}")
         except Exception as e:
-            print(f"\n✗ Calibration failed: {e}")
+            print(f"\n[FAIL] Calibration failed: {e}")
             import traceback; traceback.print_exc()
     else:
         print("Step 2: Calibration analysis skipped (--skip-calibration)")
 
     print()
 
-    # ── 3. Explainability ─────────────────────────────────────────────────────
+    # -- 3. Explainability -----------------------------------------------------
     if not args.skip_explain:
-        print("─" * 60)
-        print("STEP 3 OF 3 — Explainability")
-        print("─" * 60)
+        print("-" * 60)
+        print("STEP 3 OF 3 -- Explainability")
+        print("-" * 60)
         try:
             from src.models.model_explainability import (
                 explain_game_outcome_model,
@@ -105,20 +105,20 @@ def main():
             )
             explain_game_outcome_model()
             explain_player_model()
-            print("\n✓ Explainability analysis complete")
+            print("\n[OK] Explainability analysis complete")
         except FileNotFoundError as e:
-            print(f"\n✗ Explainability failed: {e}")
+            print(f"\n[FAIL] Explainability failed: {e}")
         except Exception as e:
-            print(f"\n✗ Explainability failed: {e}")
+            print(f"\n[FAIL] Explainability failed: {e}")
             import traceback; traceback.print_exc()
     else:
         print("Step 3: Explainability skipped (--skip-explain)")
 
-    # ── Done ──────────────────────────────────────────────────────────────────
+    # -- Done ------------------------------------------------------------------
     elapsed = datetime.now() - start
     print()
     print("=" * 60)
-    print(f"Evaluation complete — {elapsed.seconds // 60}m {elapsed.seconds % 60}s")
+    print(f"Evaluation complete -- {elapsed.seconds // 60}m {elapsed.seconds % 60}s")
     print()
     print("Reports written to:")
     print("  reports/backtest_game_outcome.csv")

@@ -26,7 +26,7 @@ from sklearn.preprocessing import StandardScaler
 warnings.filterwarnings("ignore")
 
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# -- Config ---------------------------------------------------------------------
 
 FEATURES_PATH = "data/features/player_game_features.csv"
 ARTIFACTS_DIR = "models/artifacts"
@@ -36,7 +36,7 @@ MIN_TRAIN_GAMES = 20
 VALIDATION_SEASON = "202223"
 
 
-# ── Feature selection ──────────────────────────────────────────────────────────
+# -- Feature selection ----------------------------------------------------------
 
 def get_feature_cols(df: pd.DataFrame, target: str) -> list:
     """Return numeric predictors while excluding leakage columns."""
@@ -69,7 +69,7 @@ def get_feature_cols(df: pd.DataFrame, target: str) -> list:
     return sorted(set(priority if priority else cols))
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# -- Helpers --------------------------------------------------------------------
 
 def _build_candidates() -> dict:
     return {
@@ -131,7 +131,7 @@ def _extract_importance(model_pipe: Pipeline, feat_cols: list) -> pd.Series:
     return pd.Series(np.zeros(len(feat_cols)), index=feat_cols)
 
 
-# ── Main trainer ───────────────────────────────────────────────────────────────
+# -- Main trainer ---------------------------------------------------------------
 
 def train_player_models(
     features_path: str = FEATURES_PATH,
@@ -162,7 +162,7 @@ def train_player_models(
     os.makedirs(artifacts_dir, exist_ok=True)
 
     for target in targets:
-        print(f"\n{'─' * 46}")
+        print(f"\n{'-' * 46}")
         print(f"Target: {target.upper()}")
 
         feat_cols = get_feature_cols(df, target)

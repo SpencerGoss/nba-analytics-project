@@ -7,7 +7,7 @@ If SHAP is not installed, falls back to sklearn's permutation importance
 
 Why SHAP over raw feature importances:
   - Raw GBM importances only tell you which features were used most
-    across all splits — they don't tell you the *direction* or *magnitude*
+    across all splits -- they don't tell you the *direction* or *magnitude*
     of impact for a specific prediction.
   - SHAP values tell you exactly how much each feature pushed the prediction
     up or down for any given game or player.
@@ -17,8 +17,8 @@ Why SHAP over raw feature importances:
 Outputs (saved to reports/explainability/):
   Game outcome model:
     - shap_summary_game_outcome.png  (or permutation_importance_game.png)
-    - shap_game_outcome.csv          — raw SHAP values for test set sample
-    - feature_direction_game.csv     — mean SHAP per feature (sign = direction)
+    - shap_game_outcome.csv          -- raw SHAP values for test set sample
+    - feature_direction_game.csv     -- mean SHAP per feature (sign = direction)
 
   Player model (per target: pts, reb, ast):
     - shap_summary_player_{target}.png
@@ -45,13 +45,13 @@ import warnings
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")          # non-interactive backend — safe for scripts
+matplotlib.use("Agg")          # non-interactive backend -- safe for scripts
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 warnings.filterwarnings("ignore")
 
 
-# ── Optional SHAP import ───────────────────────────────────────────────────────
+# -- Optional SHAP import -------------------------------------------------------
 try:
     import shap
     SHAP_AVAILABLE = True
@@ -61,7 +61,7 @@ except ImportError:
 from sklearn.inspection import permutation_importance
 
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# -- Config ---------------------------------------------------------------------
 
 MATCHUP_PATH    = "data/features/game_matchup_features.csv"
 PLAYER_PATH     = "data/features/player_game_features.csv"
@@ -76,7 +76,7 @@ PLAYER_TARGETS  = ["pts", "reb", "ast"]
 TARGET_CLASS    = "home_win"
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# -- Helpers --------------------------------------------------------------------
 
 def _load_artifact(name: str, artifacts_dir: str = ARTIFACTS_DIR):
     path = os.path.join(artifacts_dir, name)
@@ -126,7 +126,7 @@ def _diverging_bar_chart(
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Chart saved → {output_path}")
+    print(f"  Chart saved -> {output_path}")
 
 
 def _permutation_bar_chart(
@@ -155,10 +155,10 @@ def _permutation_bar_chart(
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Chart saved → {output_path}")
+    print(f"  Chart saved -> {output_path}")
 
 
-# ── Game outcome explainability ────────────────────────────────────────────────
+# -- Game outcome explainability ------------------------------------------------
 
 def explain_game_outcome_model(
     matchup_path:  str = MATCHUP_PATH,
@@ -174,10 +174,10 @@ def explain_game_outcome_model(
     per feature, sorted by absolute magnitude.
     """
     print("=" * 60)
-    print("EXPLAINABILITY — Game Outcome Model")
+    print("EXPLAINABILITY -- Game Outcome Model")
     print("=" * 60)
 
-    # ── Load model and data ───────────────────────────────────────────────────
+    # -- Load model and data ---------------------------------------------------
     model     = _load_artifact("game_outcome_model.pkl", artifacts_dir)
     feat_cols = _load_artifact("game_outcome_features.pkl", artifacts_dir)
 
@@ -213,47 +213,50 @@ def explain_game_outcome_model(
         shap_values = explainer.shap_values(X_sample)
 
         # For binary classification, shap_values may be a list [class0, class1]
+        # or a 3D ndarray of shape (n_samples, n_features, n_classes).
         if isinstance(shap_values, list):
             sv = shap_values[1]   # use class 1 = home win
+        elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
+            sv = shap_values[:, :, 1]  # use class 1 = home win
         else:
             sv = shap_values
 
-        # ── SHAP beeswarm summary plot ─────────────────────────────────────
+        # -- SHAP beeswarm summary plot -------------------------------------
         plt.figure(figsize=(10, 8))
         shap.summary_plot(sv, X_sample, feature_names=feat_cols, show=False, max_display=25)
-        plt.title("SHAP Feature Impact — Game Outcome Model", fontsize=12, fontweight="bold", pad=14)
+        plt.title("SHAP Feature Impact -- Game Outcome Model", fontsize=12, fontweight="bold", pad=14)
         plt.tight_layout()
         beeswarm_path = os.path.join(output_dir, "shap_summary_game_outcome.png")
         plt.savefig(beeswarm_path, dpi=150, bbox_inches="tight")
         plt.close()
-        print(f"  SHAP beeswarm saved → {beeswarm_path}")
+        print(f"  SHAP beeswarm saved -> {beeswarm_path}")
 
-        # ── Mean SHAP per feature ──────────────────────────────────────────
+        # -- Mean SHAP per feature ------------------------------------------
         mean_shap = pd.Series(sv.mean(axis=0), index=feat_cols, name="mean_shap")
         abs_shap  = pd.Series(np.abs(sv).mean(axis=0), index=feat_cols, name="abs_mean_shap")
         direction = pd.DataFrame({"mean_shap": mean_shap, "abs_mean_shap": abs_shap})
         direction = direction.sort_values("abs_mean_shap", ascending=False)
 
-        # ── Diverging bar chart ────────────────────────────────────────────
+        # -- Diverging bar chart --------------------------------------------
         _diverging_bar_chart(
             mean_shap,
-            "Mean SHAP Value per Feature — Game Outcome Model\n"
+            "Mean SHAP Value per Feature -- Game Outcome Model\n"
             "(positive = increases P(home win))",
             os.path.join(output_dir, "shap_direction_game_outcome.png"),
         )
 
-        # ── Save raw SHAP values ───────────────────────────────────────────
+        # -- Save raw SHAP values -------------------------------------------
         shap_df = pd.DataFrame(sv, columns=feat_cols)
         shap_df.to_csv(os.path.join(output_dir, "shap_game_outcome.csv"), index=False)
 
         print("\nTop 15 features by mean |SHAP|:")
         for feat, row in direction.head(15).iterrows():
-            direction_str = "↑" if row["mean_shap"] > 0 else "↓"
+            direction_str = "^" if row["mean_shap"] > 0 else "v"
             print(f"  {direction_str}  {feat:<45} {row['abs_mean_shap']:>8.5f}")
 
     else:
-        # ── Fallback: permutation importance ──────────────────────────────
-        print("\nSHAP not installed — using permutation importance as fallback.")
+        # -- Fallback: permutation importance ------------------------------
+        print("\nSHAP not installed -- using permutation importance as fallback.")
         print("Install SHAP with: pip install shap")
         print("\nComputing permutation importance (this takes ~1 minute)...")
 
@@ -269,7 +272,7 @@ def explain_game_outcome_model(
 
         _permutation_bar_chart(
             feat_cols, perm.importances_mean, perm.importances_std,
-            "Permutation Importance — Game Outcome Model\n"
+            "Permutation Importance -- Game Outcome Model\n"
             "(mean decrease in ROC-AUC when feature is shuffled)",
             os.path.join(output_dir, "permutation_importance_game_outcome.png"),
         )
@@ -278,15 +281,15 @@ def explain_game_outcome_model(
         for feat, row in direction.head(15).iterrows():
             print(f"  {feat:<45} {row['abs_mean_shap']:>8.5f}")
 
-    # ── Save direction CSV ─────────────────────────────────────────────────────
+    # -- Save direction CSV -----------------------------------------------------
     direction_path = os.path.join(output_dir, "feature_direction_game.csv")
     direction.reset_index().rename(columns={"index": "feature"}).to_csv(direction_path, index=False)
-    print(f"\nFeature direction table saved → {direction_path}")
+    print(f"\nFeature direction table saved -> {direction_path}")
 
     return direction
 
 
-# ── Player model explainability ────────────────────────────────────────────────
+# -- Player model explainability ------------------------------------------------
 
 def explain_player_model(
     player_path:   str  = PLAYER_PATH,
@@ -302,7 +305,7 @@ def explain_player_model(
     Returns a dict of {target: mean_shap_DataFrame}.
     """
     print("\n" + "=" * 60)
-    print("EXPLAINABILITY — Player Performance Models")
+    print("EXPLAINABILITY -- Player Performance Models")
     print("=" * 60)
 
     df = pd.read_csv(player_path)
@@ -317,19 +320,19 @@ def explain_player_model(
     all_directions = {}
 
     for target in targets:
-        print(f"\n{'─'*50}")
+        print(f"\n{'-'*50}")
         print(f"Target: {target.upper()}")
 
         try:
             model     = _load_artifact(f"player_{target}_model.pkl", artifacts_dir)
             feat_cols = _load_artifact(f"player_{target}_features.pkl", artifacts_dir)
         except FileNotFoundError as e:
-            print(f"  Skipping — {e}")
+            print(f"  Skipping -- {e}")
             continue
 
         t_test = test.dropna(subset=[target]).copy()
         if len(t_test) < 50:
-            print(f"  Skipping — insufficient test data ({len(t_test)} rows)")
+            print(f"  Skipping -- insufficient test data ({len(t_test)} rows)")
             continue
 
         imp   = SimpleImputer(strategy="mean")
@@ -350,14 +353,14 @@ def explain_player_model(
 
             plt.figure(figsize=(10, 8))
             shap.summary_plot(shap_values, X_sample, feature_names=feat_cols, show=False, max_display=20)
-            plt.title(f"SHAP Feature Impact — Player {target.upper()} Model",
+            plt.title(f"SHAP Feature Impact -- Player {target.upper()} Model",
                       fontsize=12, fontweight="bold", pad=14)
             plt.tight_layout()
             beeswarm_path = os.path.join(output_dir, f"shap_summary_player_{target}.png")
             os.makedirs(output_dir, exist_ok=True)
             plt.savefig(beeswarm_path, dpi=150, bbox_inches="tight")
             plt.close()
-            print(f"  SHAP beeswarm saved → {beeswarm_path}")
+            print(f"  SHAP beeswarm saved -> {beeswarm_path}")
 
             mean_shap = pd.Series(shap_values.mean(axis=0), index=feat_cols, name="mean_shap")
             abs_shap  = pd.Series(np.abs(shap_values).mean(axis=0), index=feat_cols, name="abs_mean_shap")
@@ -366,7 +369,7 @@ def explain_player_model(
 
             _diverging_bar_chart(
                 mean_shap,
-                f"Mean SHAP Value per Feature — Player {target.upper()} Model",
+                f"Mean SHAP Value per Feature -- Player {target.upper()} Model",
                 os.path.join(output_dir, f"shap_direction_player_{target}.png"),
             )
 
@@ -387,7 +390,7 @@ def explain_player_model(
 
             _permutation_bar_chart(
                 feat_cols, np.abs(perm.importances_mean), perm.importances_std,
-                f"Permutation Importance — Player {target.upper()} Model",
+                f"Permutation Importance -- Player {target.upper()} Model",
                 os.path.join(output_dir, f"permutation_importance_player_{target}.png"),
             )
 
@@ -395,11 +398,11 @@ def explain_player_model(
         direction_path = os.path.join(output_dir, f"feature_direction_player_{target}.csv")
         os.makedirs(output_dir, exist_ok=True)
         direction.reset_index().rename(columns={"index": "feature"}).to_csv(direction_path, index=False)
-        print(f"  Feature direction saved → {direction_path}")
+        print(f"  Feature direction saved -> {direction_path}")
 
         print(f"\n  Top 10 features for {target}:")
         for feat, row in direction.head(10).iterrows():
-            direction_str = "↑" if row["mean_shap"] > 0 else "↓"
+            direction_str = "^" if row["mean_shap"] > 0 else "v"
             print(f"    {direction_str}  {feat:<40} {row['abs_mean_shap']:>8.5f}")
 
         all_directions[target] = direction
@@ -407,7 +410,7 @@ def explain_player_model(
     return all_directions
 
 
-# ── Single-prediction explainability ──────────────────────────────────────────
+# -- Single-prediction explainability ------------------------------------------
 
 def explain_prediction(
     home_team_abbr:  str,
@@ -451,7 +454,7 @@ def explain_prediction(
     )
 
     # Build feature vector from the home_row (it already has home_ and away_ cols
-    # from the matchup feature table — we need the home team's latest game as home)
+    # from the matchup feature table -- we need the home team's latest game as home)
     from sklearn.impute import SimpleImputer
     row_df = home_row[feat_cols].to_frame().T
     imp    = SimpleImputer(strategy="mean")
@@ -461,7 +464,7 @@ def explain_prediction(
     X_background = imp.transform(background)
     X_row        = imp.transform(row_df)
 
-    # v2 model artifact is CalibratedClassifierCV — extract inner GBM for SHAP
+    # v2 model artifact is CalibratedClassifierCV -- extract inner GBM for SHAP
     from sklearn.calibration import CalibratedClassifierCV as _CalCV
     if isinstance(model, _CalCV):
         clf = model.estimator.named_steps["clf"]
@@ -472,6 +475,8 @@ def explain_prediction(
 
     if isinstance(sv, list):
         sv = sv[1]
+    elif isinstance(sv, np.ndarray) and sv.ndim == 3:
+        sv = sv[:, :, 1]
 
     win_prob = float(model.predict_proba(row_df.fillna(0))[0][1])
 
@@ -483,12 +488,12 @@ def explain_prediction(
     print(f"Predicted home win probability: {win_prob:.1%}")
     print(f"\nTop {top_n} factors driving this prediction:")
     print(f"{'Feature':<45} {'SHAP':>8}  {'Direction'}")
-    print("─" * 65)
+    print("-" * 65)
     for feat, val in shap_series.head(top_n).items():
-        arrow = "↑ increases" if val > 0 else "↓ decreases"
+        arrow = "^ increases" if val > 0 else "v decreases"
         print(f"  {_friendly_feature_name(feat):<43} {val:>+8.4f}  {arrow} P(home win)")
 
-    # ── Waterfall plot ─────────────────────────────────────────────────────────
+    # -- Waterfall plot ---------------------------------------------------------
     plt.figure(figsize=(9, 6))
     top_features = shap_series.head(top_n)
     labels   = [_friendly_feature_name(f) for f in top_features.index]
@@ -508,7 +513,7 @@ def explain_prediction(
     out = os.path.join(output_dir, f"explanation_{home_team_abbr}_vs_{away_team_abbr}.png")
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"\nWaterfall plot saved → {out}")
+    print(f"\nWaterfall plot saved -> {out}")
 
     return {
         "home_team": home_team_abbr,
@@ -518,7 +523,7 @@ def explain_prediction(
     }
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# -- Entry point ----------------------------------------------------------------
 
 if __name__ == "__main__":
     explain_game_outcome_model()
