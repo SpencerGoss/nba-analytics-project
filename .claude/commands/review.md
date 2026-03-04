@@ -1,0 +1,1 @@
+Run the code-reviewer agent on the current diff. Check for: logic bugs, data leakage (missing shift(1)), unhandled errors, missing tests, style violations per .claude/rules/code-style.md, and NBA domain rule violations per .claude/rules/nba-domain.md. Output issues as [BLOCKING] or [SUGGESTION] with file:line reference.

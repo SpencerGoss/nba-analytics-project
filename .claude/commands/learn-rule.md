@@ -1,0 +1,1 @@
+Based on the correction just made, draft a rule to prevent this mistake. Format: "When [situation], always [action] because [reason]." Propose adding it to CLAUDE.md or the relevant .claude/rules/ file (nba-domain.md for NBA-specific rules, code-style.md for Python style, testing.md for test conventions). Wait for approval before writing.

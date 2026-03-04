@@ -1,0 +1,1 @@
+Read AI_INDEX.md to find relevant files for this task. Read only those files. State your plan in 3 bullets before writing any code. Flag any data leakage risks or hard-rule conflicts before starting. Ask about ambiguities first.
