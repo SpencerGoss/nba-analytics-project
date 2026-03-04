@@ -301,14 +301,16 @@ def load_model_game_projections() -> pd.DataFrame:
     """Load model win probabilities from game_matchup_features.csv + trained model.
 
     Returns a DataFrame with columns: date, home_team, away_team, model_win_prob.
-    Falls back to feature-based proxy if model cannot be loaded.
+    Prefers the calibrated model (game_outcome_model_calibrated.pkl) when available,
+    falling back to the uncalibrated model, then to a feature-based proxy.
     """
     import pickle
     import numpy as np
 
-    features_path = PROJECT_ROOT / "data" / "features" / "game_matchup_features.csv"
-    model_path    = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_model.pkl"
-    feats_path    = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_features.pkl"
+    features_path      = PROJECT_ROOT / "data" / "features" / "game_matchup_features.csv"
+    calibrated_path    = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_model_calibrated.pkl"
+    model_path         = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_model.pkl"
+    feats_path         = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_features.pkl"
 
     df = pd.read_csv(features_path)
     # Use only the current season (most recent data)
@@ -316,8 +318,19 @@ def load_model_game_projections() -> pd.DataFrame:
     recent = df[df["game_date"] >= "2025-10-01"].copy()
 
     try:
-        with open(model_path, "rb") as f:
-            model = pickle.load(f)
+        # Prefer calibrated model; fall back to uncalibrated if not found
+        try:
+            with open(calibrated_path, "rb") as f:
+                model = pickle.load(f)
+            log.info("Loaded calibrated game outcome model")
+        except FileNotFoundError:
+            log.warning(
+                "Calibrated model not found at %s -- using uncalibrated model. "
+                "Run src/models/calibrate_model.py to generate the calibrated artifact.",
+                calibrated_path,
+            )
+            with open(model_path, "rb") as f:
+                model = pickle.load(f)
         with open(feats_path, "rb") as f:
             feature_cols = pickle.load(f)
 
