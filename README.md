@@ -1,46 +1,115 @@
 # NBA Analytics Project
 
-## A Note on Approach
+End-to-end NBA analytics system: data ingestion, feature engineering, game outcome prediction, player performance forecasting, and ATS betting analysis.
 
-After getting the data loaded into SQL, I had a realization that continuing to build this project without leaning into AI tools would be leaving one of the most powerful resources on the table. The fundamentals I worked through early on, including data ingestion, cleaning, and modeling, were absolutely worth doing manually. Going through that process gave me a real understanding of what's happening under the hood, and that context matters. But going forward, it makes far more sense to use AI as a core part of the workflow. This project is now as much about learning to effectively collaborate with AI to do real analytical work as it is about the basketball data itself. The goal isn't to do things the hard way for its own sake. It's to build something genuinely useful and to develop the skills that actually matter.
+## What It Does
 
-## Overview
-This project is a full end‑to‑end NBA analytics system built to showcase my data engineering, analytics, and programming skills. It combines my interest in basketball with a structured, professional workflow that mirrors real analytics engineering practices. The project includes data ingestion, cleaning, database modeling, and the foundation for deeper analytical work.
+- **Game Outcome Prediction** — 66.8% accuracy on modern-era holdout seasons (GradientBoosting classifier)
+- **Player Performance Forecasting** — Next-game pts/reb/ast predictions per player (GBM regressors)
+- **Playoff Odds Simulation** — Monte Carlo simulation of remaining season + playoff bracket
+- **ATS Value Bet Detection** — Identifies spread-covering opportunities (+1.28% ROI on 18,233-game backtest)
+- **ATS Betting Model** — Against-the-spread classifier with 18,233-game backtest (+1.28% ROI on value-bet subset)
+- **Web Dashboard** — Static Chart.js dashboard: today's picks, accuracy history, value bets, player lookup
+- **Data Integrity Validation** — Stage-by-stage validators catch silent failures before they propagate
+- **Automated Data Pipeline** — Daily refresh from NBA API via Windows Task Scheduler
 
-## Why This Project?
-I’ve always been an avid NBA fan and have been fascinated by the advanced analytics discussed during broadcasts. Choosing a topic I genuinely care about keeps me motivated and makes the technical work more meaningful. NBA data provides a rich, structured environment for practicing real‑world analytics skills, including data ingestion, transformation, relational modeling, and exploratory analysis.
+## Quick Start
 
-## Project Goals
-- **Showcase Technical Skills** — Demonstrate proficiency in Python, SQL, data cleaning, and analytics workflows.  
-- **Learn by Doing** — Build practical experience with real-world datasets and reproducible pipelines.  
-- **Document Progress** — Maintain clear, ongoing documentation of decisions, methods, and project evolution.  
-- **Generate Insights** — Explore NBA data to uncover meaningful trends, patterns, and stories.  
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
----
+# First-time setup: fetch all historical data (~30-45 min)
+python backfill.py
 
-## Where Things Live
-- **Raw data** → `data/raw/`  
-  - Contains subfolders for each dataset (`players/`, `player_stats/`, `team_stats/`, `team_game_logs/`)
+# Build features, train models, calibrate
+python src/features/team_game_features.py
+python src/models/train_all_models.py
+python src/models/calibration.py
 
-- **Processed data** → `data/processed/`  
-  - Cleaned CSVs used for analysis and SQL loading  
-  - (`players.csv`, `player_stats.csv`, `team_stats.csv`, `team_game_logs.csv`)
+# Predict a game
+python src/models/predict_cli.py game --home BOS --away LAL
 
-- **Database** → `database/nba.db`  
-  - SQLite database containing all cleaned tables
+# Predict player performance
+python src/models/predict_cli.py player --name "LeBron James"
+```
 
-- **Data ingestion scripts** → `src/data/`  
-  - (`get_player_master.py`, `get_player_stats.py`, `get_team_stats.py`, `get_game_log.py`)
+## Daily Updates
 
-- **Processing & loading scripts** → `src/processing/`  
-  - (`preprocessing_data.ipynb`, `load_to_sql.py`)
+```bash
+python update.py    # Fetches current-season data + rebuilds processed CSVs
+```
 
-- **Documentation** → `docs/`  
-  - Full project description and progress log (`project_overview.md`)
+Runs automatically at 7:00 AM via `scripts/run_update.bat` (Windows Task Scheduler).
 
-- **Model training entrypoint** → `src/models/train_all_models.py`  
-  - Trains one workflow per core task (game outcome, player performance, playoff odds)
-  - Optional `--rebuild-features` refreshes team/player feature tables before training
+## Project Structure
 
-- **Prediction CLI** → `src/models/predict_cli.py`
-  - Predict game outcome probabilities and player points/rebounds/assists from trained artifacts
+```text
+├── data/
+│   ├── raw/              # Raw API pulls (one CSV per season per table)
+│   ├── processed/        # Cleaned combined CSVs
+│   ├── features/         # Model-ready feature tables
+│   └── odds/             # Sportsbook data
+├── src/
+│   ├── data/             # API ingestion scripts
+│   │   └── external/     # Referee scraper, injury report fetcher
+│   ├── features/         # Feature engineering (team, player, injury, ATS, era)
+│   ├── models/           # ML models, evaluation, prediction CLI
+│   ├── outputs/          # Prediction store + JSON export
+│   └── processing/       # Preprocessing pipeline
+├── src/
+│   └── validation/       # Data integrity validators (stage-by-stage)
+├── dashboard/
+│   └── index.html        # Static web dashboard (Chart.js, no build step)
+├── models/artifacts/     # Trained models + metadata (gitignored)
+├── reports/              # Calibration, explainability, backtest reports
+├── docs/
+│   ├── PIPELINE.md       # Pipeline reference (6 stages with commands)
+│   └── project_overview.md  # Full project description
+├── update.py             # Daily refresh orchestrator
+├── backfill.py           # One-time historical data fetch
+└── requirements.txt
+```
+
+## Pipeline Stages
+
+| Stage | Command | What It Does |
+| ----- | ------- | ------------ |
+| 1. Fetch | `python update.py` | Pull current-season data from NBA API |
+| 2. Preprocess | (called by update.py) | Clean and combine raw CSVs |
+| 3. Features | `python src/features/team_game_features.py` | Build rolling/matchup features |
+| 4. Train | `python src/models/train_all_models.py` | Train game, player, and playoff models |
+| 5. Calibrate | `python src/models/calibration.py` | Calibrate probability outputs |
+| 6. Predict | `python src/models/predict_cli.py` | Generate predictions |
+
+See [docs/PIPELINE.md](docs/PIPELINE.md) for full details.
+
+## Key Features
+
+- **No data leakage**: All rolling features use `shift(1)` — only prior-game data used
+- **18 data tables** covering 1946-present (varies by endpoint)
+- **6 NBA eras** mapped to rule changes for era-aware modeling
+- **Injury proxy**: Detects absent rotation players from game log gaps
+- **Walk-forward backtesting**: Season-by-season expanding window evaluation
+- **Calibration**: Isotonic regression wrapper for trustworthy probability outputs
+- **Prediction store**: WAL-mode SQLite + daily JSON snapshots
+
+## Tech Stack
+
+- Python, pandas, scikit-learn, numpy
+- nba_api (NBA Stats endpoints)
+- SQLite (prediction history)
+- The Odds API (live sportsbook lines)
+
+## Dashboard
+
+```bash
+python scripts/export_dashboard_data.py     # Export DB → dashboard/data/*.json
+python -m http.server 8080 --directory dashboard   # Serve at localhost:8080
+```
+
+## Documentation
+
+- [Pipeline Reference](docs/PIPELINE.md) — Stage-by-stage commands, inputs, outputs, runtimes
+- [Project Overview](docs/project_overview.md) — Architecture, models, evaluation, known limitations
+- [Session Journal](PROJECT_JOURNAL.md) — Dated session log, what was done and what's next
