@@ -355,6 +355,23 @@ def _transform_shot_chart(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _transform_lineup_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize lineup efficiency data.
+
+    Lineup CSVs are already written with lowercase column names by get_lineup_data.py,
+    so clean_columns() is a no-op but is applied for consistency.
+    """
+    df = clean_columns(df)
+    if "team_id" in df.columns:
+        df["team_id"] = df["team_id"].astype(int)
+    if "gp" in df.columns:
+        df["gp"] = df["gp"].astype(int)
+    if "season" in df.columns:
+        df["season"] = df["season"].astype(int)
+    return df
+
+
 # ── Table registry ────────────────────────────────────────────────────────────
 
 # Each entry: (table_name, raw_glob, prefix, output_file, transform_fn, dedup_subset, optional)
@@ -399,6 +416,8 @@ SEASONAL_TABLES: list[tuple[str, str, str, str, Callable, list[str] | None, bool
      "data/processed/player_bio_stats.csv", _transform_player_bio, None, True),
     ("shot_chart", "data/raw/shot_chart/*.csv", "shot_chart_",
      "data/processed/shot_chart.csv", _transform_shot_chart, None, True),
+    ("lineup_data", "data/raw/lineups/lineup_data_*.csv", "lineup_data_",
+     "data/processed/lineup_data.csv", _transform_lineup_data, None, True),
 ]
 
 
