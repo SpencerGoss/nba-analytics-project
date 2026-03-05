@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (66.8%) → ATS betting model → prediction store → web dashboard. Currently in v2.0 (Phase 9).
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store → web dashboard. Currently in v2.0 (Phase 10 — gap closure).
 
 ## Stack
 Python 3.12+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
@@ -38,6 +38,11 @@ Python 3.12+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
 | Something is broken | `debug-session` — read CONCERNS.md first |
 | Structured GSD debugging | `gsd:debug` |
 | New feature / task | `/new-task` |
+| Adding features or data scripts | `nba-feature-dev` |
+| Backfilling or fetching historical data | `nba-backfill` |
+| Evaluating or comparing model performance | `nba-model-evaluation` |
+| Implementing any feature or fix (TDD) | `tdd-workflow` |
+| Cleaning up code structure | `refactor-session` |
 | Code review | `/review` → `code-reviewer` agent |
 | Any git commit / push | `git-workflow` |
 | Before pushing to GitHub | `security-audit` |

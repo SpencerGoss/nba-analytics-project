@@ -29,6 +29,11 @@
 | `git-workflow` | any commit, branch, or push |
 | `debug-session` | broken build / failing tests (quick session) |
 | `gsd:debug` | structured debugging with persistent state across resets |
+| `nba-feature-dev` | adding features, scripts, or models to the pipeline |
+| `nba-backfill` | backfilling or fetching historical data |
+| `nba-model-evaluation` | evaluating or comparing model performance |
+| `tdd-workflow` | implementing any feature or fix (write tests first) |
+| `refactor-session` | cleaning up code structure without changing behavior |
 | `env-config` | .env / API key setup |
 | `context-file-maintainer` | CLAUDE.md too long or stale |
 | `security-audit` | before push / any security concern |
