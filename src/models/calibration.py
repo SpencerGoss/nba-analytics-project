@@ -229,6 +229,9 @@ def _plot_calibration_curve(
 
 # -- Per-season Brier score trend -----------------------------------------------
 
+BRIER_MIN_SEASON = "200001"   # only walk-forward from modern era (avoids 70+ fits)
+
+
 def _compute_season_brier(
     model,
     df:       pd.DataFrame,
@@ -239,6 +242,7 @@ def _compute_season_brier(
     """
     Walk forward and compute the Brier score for each test season.
     Lightweight version -- uses only 50 estimators for speed.
+    Restricted to BRIER_MIN_SEASON onward to avoid 70+ GBM fits on historical data.
     """
     print("\nComputing per-season Brier score (walk-forward)...")
     rows = []
@@ -246,6 +250,9 @@ def _compute_season_brier(
     for i in range(min_train, len(all_seasons)):
         train_seasons = all_seasons[:i]
         test_season   = all_seasons[i]
+
+        if test_season < BRIER_MIN_SEASON:
+            continue
 
         train = df[df["season"].isin(train_seasons)]
         test  = df[df["season"] == test_season]

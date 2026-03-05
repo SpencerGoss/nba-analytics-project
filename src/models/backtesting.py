@@ -430,6 +430,16 @@ def write_summary_report(
 # -- Entry point ----------------------------------------------------------------
 
 if __name__ == "__main__":
-    game_results   = run_game_outcome_backtest()
-    player_results = run_player_model_backtest()
+    game_results = run_game_outcome_backtest()
+
+    # Skip player model if the CSV is very large (>200 MB) -- it takes hours
+    # and is not critical for the game outcome / ATS pipeline.
+    player_file_mb = os.path.getsize(PLAYER_PATH) / 1e6 if os.path.exists(PLAYER_PATH) else 0
+    if player_file_mb > 200:
+        print(f"\nSkipping player model backtest: {PLAYER_PATH} is {player_file_mb:.0f} MB "
+              f"(too large for interactive run). Run separately if needed.")
+        player_results = {t: pd.DataFrame() for t in PLAYER_TARGETS}
+    else:
+        player_results = run_player_model_backtest()
+
     write_summary_report(game_results, player_results)
