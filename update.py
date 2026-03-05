@@ -7,6 +7,7 @@ Run daily (or on demand):
     python update.py
 """
 
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -110,8 +111,31 @@ def fetch_current_season_data(current_year: int, now: datetime) -> None:
     get_teams()
 
 
+def _check_env_vars() -> None:
+    """Warn if optional API keys are missing so the user knows which features are disabled."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass  # python-dotenv not installed; fall back to checking os.environ directly
+
+    missing = []
+    if not os.getenv("ODDS_API_KEY"):
+        missing.append("ODDS_API_KEY")
+    if not os.getenv("BALLDONTLIE_API_KEY"):
+        missing.append("BALLDONTLIE_API_KEY")
+
+    for key in missing:
+        print(
+            f"WARNING: {key} is not set in environment or .env file. "
+            f"Features that depend on this key will be skipped."
+        )
+
+
 def main() -> None:
     try:
+        _check_env_vars()
+
         start_time = datetime.now()
         now = datetime.now()
         current_year = get_current_season_year(now)
