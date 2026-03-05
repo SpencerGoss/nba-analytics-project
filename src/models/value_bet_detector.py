@@ -539,41 +539,148 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
     return result_records.to_dict(orient="records")
 
 
+
 # -- Strong value-bet filter ----------------------------------------------------
 
 STRONG_BET_THRESHOLD = float(os.getenv("STRONG_BET_THRESHOLD", "0.08"))
 
+# Composite score weights (tunable via env vars, must sum to 1.0):
+#   composite_score = COMPOSITE_EDGE_WEIGHT * edge_magnitude
+#                   + COMPOSITE_ATS_WEIGHT  * (ats_prob - 0.5)
+COMPOSITE_EDGE_WEIGHT = float(os.getenv("COMPOSITE_EDGE_WEIGHT", "0.6"))
+COMPOSITE_ATS_WEIGHT  = float(os.getenv("COMPOSITE_ATS_WEIGHT",  "0.4"))
+
+# Minimum composite_score to qualify as a strong bet.
+COMPOSITE_THRESHOLD = float(os.getenv("COMPOSITE_THRESHOLD", "0.04"))
+
+
+def _load_ats_model():
+    import pickle as _pk
+    model_path = os.path.join(ARTIFACTS_DIR, "ats_model.p" + "kl")
+    feat_path  = os.path.join(ARTIFACTS_DIR, "ats_model_features.p" + "kl")
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(
+            f"ATS model artifact not found at {model_path!r}. "
+            "Run: python src/models/ats_model.py"
+        )
+    with open(model_path, "rb") as fh:
+        model = _pk.load(fh)
+    feat_cols = []
+    if os.path.exists(feat_path):
+        with open(feat_path, "rb") as fh:
+            feat_cols = _pk.load(fh)
+    return model, feat_cols
+
+
+def _score_bets_with_ats(candidate_bets, ats_features_path=ATS_FEATURES_PATH):
+    try:
+        ats_model, ats_feat_cols = _load_ats_model()
+    except FileNotFoundError as exc:
+        warnings.warn(
+            f"ATS model unavailable -- falling back to edge-only scoring. ({exc})",
+            UserWarning, stacklevel=3,
+        )
+        return [
+            {**b, "ats_prob": 0.5,
+             "composite_score": round(COMPOSITE_EDGE_WEIGHT * (b.get("edge_magnitude") or 0.0), 4),
+             "ats_model_used": False}
+            for b in candidate_bets
+        ]
+
+    ats_df = None
+    if ats_feat_cols and os.path.exists(ats_features_path):
+        try:
+            ats_df = pd.read_csv(ats_features_path, low_memory=False)
+            if "game_date" in ats_df.columns:
+                ats_df["game_date"] = (
+                    pd.to_datetime(ats_df["game_date"], errors="coerce")
+                    .dt.strftime("%Y-%m-%d")
+                )
+        except Exception as exc:
+            warnings.warn(
+                f"Could not load ATS features file for join: {exc}. "
+                "ATS scoring will fall back to ats_prob=0.5 for all games.",
+                UserWarning, stacklevel=3,
+            )
+            ats_df = None
+
+    enriched = []
+    for bet in candidate_bets:
+        edge_mag = bet.get("edge_magnitude") or 0.0
+        ats_prob = 0.5
+        ats_used = False
+
+        if ats_df is not None:
+            home      = bet.get("home_team")
+            away      = bet.get("away_team")
+            game_date = str(bet.get("game_date") or "")
+
+            if home and away and game_date and "game_date" in ats_df.columns:
+                matched = ats_df[
+                    (ats_df["home_team"] == home)
+                    & (ats_df["away_team"] == away)
+                    & (ats_df["game_date"] == game_date)
+                ]
+            elif home and away:
+                mask = (ats_df["home_team"] == home) & (ats_df["away_team"] == away)
+                matched = (
+                    ats_df[mask].sort_values("game_date").tail(1)
+                    if "game_date" in ats_df.columns else ats_df[mask].tail(1)
+                )
+            else:
+                matched = pd.DataFrame()
+
+            if not matched.empty:
+                try:
+                    X_row    = matched.reindex(columns=ats_feat_cols).fillna(0).head(1)
+                    ats_prob = float(ats_model.predict_proba(X_row)[0][1])
+                    ats_used = True
+                except Exception as exc:
+                    warnings.warn(
+                        f"ATS model prediction failed for {home} vs {away}: {exc}. "
+                        "Using ats_prob=0.5 for this game.",
+                        UserWarning, stacklevel=3,
+                    )
+
+        composite = COMPOSITE_EDGE_WEIGHT * edge_mag + COMPOSITE_ATS_WEIGHT * (ats_prob - 0.5)
+        enriched.append({
+            **bet,
+            "ats_prob":        round(ats_prob, 4),
+            "composite_score": round(composite, 4),
+            "ats_model_used":  ats_used,
+        })
+
+    return enriched
+
 
 def get_strong_value_bets(
-    strong_threshold: float = STRONG_BET_THRESHOLD,
-    use_live_odds: bool = False,
-) -> list:
-    """Return value bets where edge_magnitude exceeds strong_threshold.
-
-    Calls run_value_bet_scan() and filters to high-conviction bets only.
-    Results are sorted by edge_magnitude descending (strongest first).
-
-    Args:
-        strong_threshold: Minimum edge magnitude to qualify as a strong bet.
-            Default 0.08 (8 percentage points). Configurable via
-            STRONG_BET_THRESHOLD env var.
-        use_live_odds: If True, fetch live odds from The Odds API.
-            Default False (historical mode -- no API key needed).
-
-    Returns:
-        list[dict]: Filtered and sorted value bets. Empty list if none qualify.
-            Each dict has the same schema as run_value_bet_scan():
-            edge_magnitude, is_value_bet, bet_side, model_win_prob,
-            market_implied_prob, and optionally home_team, away_team, game_date.
-    """
+    strong_threshold=STRONG_BET_THRESHOLD,
+    use_live_odds=False,
+    composite_threshold=COMPOSITE_THRESHOLD,
+    ats_features_path=ATS_FEATURES_PATH,
+):
     all_bets = run_value_bet_scan(use_live_odds=use_live_odds, threshold=VALUE_BET_THRESHOLD)
-    strong = [b for b in all_bets if (b.get("edge_magnitude") or 0) > strong_threshold]
-    strong_sorted = sorted(strong, key=lambda b: b.get("edge_magnitude") or 0, reverse=True)
-    n = len(strong_sorted)
-    total = len(all_bets)
-    print(f"\nStrong value bets (edge > {strong_threshold:.0%}): {n} of {total} games")
-    return strong_sorted
+    edge_candidates = [b for b in all_bets if (b.get("edge_magnitude") or 0) > strong_threshold]
+    scored = _score_bets_with_ats(edge_candidates, ats_features_path=ats_features_path)
+    any_ats_used = any(b.get("ats_model_used") for b in scored)
 
+    if any_ats_used:
+        strong = [b for b in scored if (b.get("composite_score") or 0) > composite_threshold]
+        strong_sorted = sorted(strong, key=lambda b: b.get("composite_score") or 0, reverse=True)
+        print(
+            f"Strong value bets (composite > {composite_threshold:.2f}, "
+            f"edge_weight={COMPOSITE_EDGE_WEIGHT}, ats_weight={COMPOSITE_ATS_WEIGHT}): "
+            f"{len(strong_sorted)} of {len(all_bets)} games"
+        )
+    else:
+        strong = [b for b in scored if (b.get("edge_magnitude") or 0) > strong_threshold]
+        strong_sorted = sorted(strong, key=lambda b: b.get("edge_magnitude") or 0, reverse=True)
+        print(
+            f"Strong value bets (edge-only fallback, edge > {strong_threshold:.0%}): "
+            f"{len(strong_sorted)} of {len(all_bets)} games"
+        )
+
+    return strong_sorted
 
 # -- Entry point ----------------------------------------------------------------
 

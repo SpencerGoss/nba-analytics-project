@@ -150,3 +150,92 @@ def test_return_schema():
     for bet in result:
         missing = required_keys - set(bet.keys())
         assert not missing, f"Bet dict missing keys: {missing}"
+
+
+# ---------------------------------------------------------------------------
+# Test 7: Composite score formula correctness
+# ---------------------------------------------------------------------------
+
+def test_composite_score_formula():
+    from src.models.value_bet_detector import (
+        _score_bets_with_ats, COMPOSITE_EDGE_WEIGHT, COMPOSITE_ATS_WEIGHT,
+    )
+    import pandas as pd, tempfile, os
+    from unittest.mock import patch, MagicMock
+    bets = [_make_bet(0.10)]
+    mock_model = MagicMock()
+    mock_model.predict_proba.return_value = [[0.4, 0.65]]
+    ats_rows = [{"home_team": "LAL", "away_team": "GSW", "game_date": "2025-01-15",
+                 "spread": -3.5, "home_implied_prob": 0.55, "away_implied_prob": 0.45}]
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+        pd.DataFrame(ats_rows).to_csv(f, index=False)
+        tmp_path = f.name
+    try:
+        feat_cols = ["spread", "home_implied_prob", "away_implied_prob"]
+        with patch("src.models.value_bet_detector._load_ats_model",
+                   return_value=(mock_model, feat_cols)):
+            result = _score_bets_with_ats(bets, ats_features_path=tmp_path)
+    finally:
+        os.unlink(tmp_path)
+    assert len(result) == 1
+    b = result[0]
+    expected = COMPOSITE_EDGE_WEIGHT * 0.10 + COMPOSITE_ATS_WEIGHT * (0.65 - 0.5)
+    assert b["ats_prob"] == pytest.approx(0.65, abs=0.001)
+    assert b["composite_score"] == pytest.approx(round(expected, 4), abs=0.0001)
+    assert b["ats_model_used"] is True
+
+
+# ---------------------------------------------------------------------------
+# Test 8: ATS model fallback when artifact missing (cold start)
+# ---------------------------------------------------------------------------
+
+def test_ats_model_missing_falls_back():
+    from src.models.value_bet_detector import _score_bets_with_ats, COMPOSITE_EDGE_WEIGHT
+    from unittest.mock import patch
+    bets = [_make_bet(0.10)]
+    with patch("src.models.value_bet_detector._load_ats_model",
+               side_effect=FileNotFoundError("no file")):
+        result = _score_bets_with_ats(bets)
+    assert len(result) == 1
+    b = result[0]
+    assert b["ats_prob"] == 0.5
+    assert b["ats_model_used"] is False
+    expected = round(COMPOSITE_EDGE_WEIGHT * 0.10, 4)
+    assert b["composite_score"] == pytest.approx(expected, abs=0.0001)
+
+
+# ---------------------------------------------------------------------------
+# Test 9: Composite path filters on composite_score, not raw edge
+# ---------------------------------------------------------------------------
+
+def test_composite_path_filters_on_composite_score():
+    from src.models.value_bet_detector import get_strong_value_bets
+    from unittest.mock import patch
+    bet_high_edge = {**_make_bet(0.12), "ats_prob": 0.4, "composite_score": 0.03, "ats_model_used": True}
+    bet_low_edge  = {**_make_bet(0.09), "ats_prob": 0.7, "composite_score": 0.08, "ats_model_used": True}
+    scored = [bet_high_edge, bet_low_edge]
+    with (patch("src.models.value_bet_detector.run_value_bet_scan", return_value=SAMPLE_BETS),
+          patch("src.models.value_bet_detector._score_bets_with_ats", return_value=scored)):
+        result = get_strong_value_bets(strong_threshold=0.08, composite_threshold=0.05)
+    assert len(result) == 1
+    assert result[0]["edge_magnitude"] == pytest.approx(0.09)
+    assert result[0]["composite_score"] == pytest.approx(0.08)
+
+
+# ---------------------------------------------------------------------------
+# Test 10: Composite path sorts by composite_score descending
+# ---------------------------------------------------------------------------
+
+def test_composite_path_sorted_by_composite_score():
+    from src.models.value_bet_detector import get_strong_value_bets
+    from unittest.mock import patch
+    bet_a = {**_make_bet(0.12), "ats_prob": 0.6, "composite_score": 0.12, "ats_model_used": True}
+    bet_b = {**_make_bet(0.09), "ats_prob": 0.7, "composite_score": 0.09, "ats_model_used": True}
+    scored = [bet_b, bet_a]  # deliberately wrong order
+    with (patch("src.models.value_bet_detector.run_value_bet_scan", return_value=SAMPLE_BETS),
+          patch("src.models.value_bet_detector._score_bets_with_ats", return_value=scored)):
+        result = get_strong_value_bets(strong_threshold=0.08, composite_threshold=0.04)
+    assert len(result) == 2
+    assert result[0]["composite_score"] >= result[1]["composite_score"]
+    assert result[0]["composite_score"] == pytest.approx(0.12)
+
