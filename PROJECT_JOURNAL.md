@@ -4,6 +4,20 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-05 — Bug fix: calibrated model not loading in fetch_odds.py
+
+**Done:**
+- Diagnosed fetch_odds.py silently falling back to a feature-based proxy instead of the trained 68% game outcome model
+- Root cause: PROJECT_ROOT was not on sys.path, so the deserializer could not find src.models.calibration._CalibratedWrapper
+- Fix: Added sys.path.insert guard after PROJECT_ROOT is resolved in scripts/fetch_odds.py
+- Verified: now logs "Loaded calibrated game outcome model"; win probs generated for 870 current-season games
+- All 59 tests still passing
+
+**Next:**
+- Audit other scripts/ scripts for the same missing sys.path guard
+
+---
+
 ## 2026-03-04 — Project restructure
 
 **Done:**

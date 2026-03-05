@@ -44,6 +44,10 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Add project root to sys.path so src.* modules are importable when
+# deserializing pickled model artifacts (e.g. src.models.calibration._CalibratedWrapper).
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 load_dotenv(PROJECT_ROOT / ".env")
 
 API_KEY = os.getenv("ODDS_API_KEY")
