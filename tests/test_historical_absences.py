@@ -223,9 +223,17 @@ class TestNoFutureData:
         )
 
         # Get Player A's row for game 6 (index 5, game_id "0022400006")
+        # Note: game_id may have leading zeros stripped when read from CSV
+        # as integer. Match against both forms.
+        target_game_id = game_ids[5]
+        target_game_id_int = str(int(target_game_id))  # "22400006"
         game6_player_a = result[
             (result["player_id"].astype(str) == "101")
-            & (result["game_id"].astype(str).str.strip() == game_ids[5])
+            & (
+                result["game_id"].astype(str).str.strip().isin(
+                    [target_game_id, target_game_id_int]
+                )
+            )
         ]
 
         assert not game6_player_a.empty, (
