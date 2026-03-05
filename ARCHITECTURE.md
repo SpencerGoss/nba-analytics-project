@@ -18,7 +18,7 @@ src/processing/preprocessing.py  →  data/processed/
 src/features/team_game_features.py  →  data/features/game_matchup_features.csv (291 cols)
 src/features/lineup_features.py    →  data/features/lineup_team_features.csv
     ↓
-src/models/train_model.py          →  models/artifacts/*.pkl
+src/models/game_outcome_model.py   →  models/artifacts/*.pkl
 src/models/calibration.py          →  models/artifacts/*_calibrated.pkl
     ↓
 update.py (daily)
@@ -43,7 +43,7 @@ dashboard/index.html (Chart.js)
 | `database/` | nba.db (18 tables) + predictions_history.db |
 | `dashboard/` | Static HTML dashboard |
 | `.planning/` | GSD roadmap, STATE.md, phase plans |
-| `tests/` | pytest suite (59 tests passing) |
+| `tests/` | pytest suite (115 tests passing) |
 
 ## Key Files
 | File | Purpose |
@@ -53,10 +53,16 @@ dashboard/index.html (Chart.js)
 | `fetch_odds.py` | Loads calibrated model → queries odds API → writes predictions |
 | `src/features/team_game_features.py` | Main feature matrix builder |
 | `src/features/lineup_features.py` | Lineup net rating aggregates |
-| `src/models/train_model.py` | Game outcome model training |
+| `src/models/game_outcome_model.py` | Game outcome model training |
 | `src/models/calibration.py` | Probability calibration (run after every retrain) |
 | `src/models/ats_model.py` | ATS logistic regression |
-| `retrain_all.py` | Convenience script — retrains all models in order |
+| `src/models/retrain_all.py` | Convenience script — retrains all models in order |
+| `src/models/value_bet_detector.py` | Detects value bets using game-outcome edge; `get_strong_value_bets()` filters by confidence threshold |
+| `src/models/model_explainability.py` | SHAP-based feature importance and single-prediction explanation |
+| `src/data/get_historical_absences.py` | Generates player absence features from game logs (Phase 10) |
+| `src/data/get_balldontlie.py` | BallDontLie API client (injuries, stats, teams) |
+| `src/data/get_injury_data.py` | Injury report normalization from PDF and nba_api |
+| `src/data/get_lineup_data.py` | On-court lineup data from nba_py |
 
 ## External Services
 | Service | Used For | Config |

@@ -4,7 +4,7 @@
 
 ## Framework
 pytest. Run with: `pytest -v` or `python -m pytest tests/ -q`
-Current baseline: 59 tests passing.
+Current baseline: 115 tests passing (as of 2026-03-05).
 
 ## Coverage Target
 80%+ for any new module added in v2.0.
@@ -13,6 +13,11 @@ Current baseline: 59 tests passing.
 - `tests/test_preprocessing.py` — preprocessing pipeline
 - `tests/test_injury_proxy.py` — injury feature generation
 - `tests/test_team_game_features.py` — feature matrix builder
+- `tests/test_value_bet_detector.py` — value bet detection
+- `tests/test_get_balldontlie.py` — BallDontLie API client
+- `tests/test_get_injury_data.py` — injury report fetcher
+- `tests/test_get_lineup_data.py` — lineup data fetcher
+- `tests/test_lineup_features.py` — lineup feature engineering
 - New tests go in `tests/` with `test_<module_name>.py` naming
 
 ## What to Test

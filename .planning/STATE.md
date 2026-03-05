@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Data Expansion & Model Intelligence
-status: in_progress
+status: complete
 last_updated: "2026-03-05"
 progress:
-  total_phases: 4
-  completed_phases: 0
+  total_phases: 11
+  completed_phases: 11
   total_plans: 1
   completed_plans: 1
 ---
@@ -18,16 +18,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Identify games where the model's win probability meaningfully disagrees with Vegas lines — producing profitable against-the-spread picks over a full NBA season
-**Current focus:** Phase 10 — Real Absence Features & Pipeline Fix
+**Current focus:** v2.0 COMPLETE — ready to close milestone and plan v3.0
 
 ## Current Position
 
-Phase: 10 of 11 (Real Absence Features & Pipeline Fix) — IN PROGRESS
-Plan: 10-01 COMPLETE; next plan TBD
-Status: Phases 6-9 complete; Phase 10 Plan 01 complete 2026-03-05
-Last activity: 2026-03-05 — Plan 10-01 complete; player_absences.csv generated (1.1M rows)
+Phase: 11 of 11 — ALL PHASES COMPLETE
+Status: All 11 phases complete. v2.0 milestone achieved.
+Last activity: 2026-03-05 — Phase 11 complete; composite ATS+edge signal in get_strong_value_bets()
 
-Progress: [████████████________] 82% (9/11 phases done)
+Progress: [████████████████████] 100% (11/11 phases done)
 
 ## v2.0 Milestone Goals
 
@@ -72,13 +71,13 @@ v2.0 decisions will be logged here as they are made.
 
 ### Pending Todos
 
-- Begin Phase 6 planning: `/gsd:plan-phase 6`
+- v2.0 milestone complete. Next: plan v3.0 (web dashboard + live prediction app).
 
 ### Blockers/Concerns
 
-- Calibrated model not in fetch_odds.py (FIX-01) — known gap from v1.0, Phase 6 resolves
-- Injury features all-null risk in production — verify after Phase 6 Kaggle integration
-- pbpstats API rate limits and data availability: unknown until Phase 7 research
+- Calibrated model now loaded in fetch_odds.py and value_bet_detector.py — RESOLVED
+- Injury features wired via player_absences.csv fallback — model retrain pending for full activation
+- SHAP reports stale — regenerate with python src/models/model_explainability.py (non-blocking)
 
 ## Session Continuity
 

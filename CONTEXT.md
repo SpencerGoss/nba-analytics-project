@@ -41,4 +41,5 @@ producing profitable against-the-spread picks. Current v1 baseline: 66.8% game a
 | 6 — Production Fixes & Injury Data | COMPLETE |
 | 7 — New Data Sources | COMPLETE |
 | 8 — Feature Engineering | COMPLETE |
-| 9 — Model Retraining & ATS Optimization | IN PROGRESS |
+| 9 — Model Retraining & ATS Optimization | COMPLETE |
+| 10 — Real Absence Features & Pipeline Fix | IN PROGRESS |

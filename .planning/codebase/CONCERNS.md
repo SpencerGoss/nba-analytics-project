@@ -1,6 +1,6 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-03-01
+**Analysis Date:** 2026-03-05
 
 ## Tech Debt
 
@@ -40,18 +40,19 @@
 - Workaround: Ignore SHAP files; rely on importances CSV files instead
 - Fix: Run `python src/models/run_evaluation.py` to regenerate all explainability reports against current trained models
 
-**Calibration Artifacts Saved But Never Loaded:**
+**Calibration Artifacts Saved But Never Loaded: RESOLVED**
 - Symptoms: `models/artifacts/game_outcome_model_calibrated.pkl` exists but no production code ever loads it
 - Files: `src/models/calibration.py` line 377-380 saves calibrated model; `scripts/fetch_odds.py` and `src/models/predict_cli.py` never import it
 - Impact: Calibration work is wasted; `fetch_odds.py` outputs uncalibrated probabilities to sportsbook comparison file
-- Fix: Either wire calibrated model into `fetch_odds.py` to use for comparison, or remove the save logic and document why calibration is compute-only
+- **RESOLVED (commit 942d909, 2026-03-05):** Calibrated model is now loaded first in `fetch_odds.py` and `src/models/value_bet_detector.py`.
 
-**Missing Injury Features in Game Outcome Model:**
+**Missing Injury Features in Game Outcome Model: IN PROGRESS / PARTIAL**
 - Symptoms: Model importances file does not list `home_missing_minutes`, `away_missing_minutes`, `home_star_player_out`, etc.
 - Files: `src/models/game_outcome_model.py` lines 73-78 explicitly include injury columns in feature selection, but they don't appear in final importances
 - Trigger: Features either missing from input CSV or silently all-null and imputed to mean value, making them invisible to model
 - Impact: Player availability (strongest predictor of game outcome) has zero effect on predictions
-- Fix: (a) Debug `src/features/injury_proxy.py` and `src/features/team_game_features.py` to verify injury features actually reach `data/features/game_matchup_features.csv`, (b) if present but all-null, investigate why, (c) retrain model; (d) verify importances file includes them
+- **Phase 10 partial (2026-03-05):** `data/processed/player_absences.csv` generated (1.1M rows). Real absence features are NOT yet wired into `src/features/injury_proxy.py` or `team_game_features.py` — integration into training pipeline is the remaining work.
+- Fix: Wire `player_absences.csv` into `injury_proxy.py`; regenerate `game_matchup_features.csv`; retrain models; verify importances include injury columns.
 
 **Player Backtest Stops in 2015-16:**
 - Symptoms: `reports/backtest_player_pts.csv` only covers through 2015-16 test season; missing 10 years of modern NBA data
@@ -138,11 +139,9 @@
 - Safe modification: (a) Add assertions after every join: `assert len(before_join) == len(after_join) or len(after_join) == 0` with descriptive error, (b) log join statistics (how many rows matched), (c) add unit tests with synthetic data
 - Test coverage: Gaps — no tests for feature engineering; difficult to debug missing features in downstream model
 
-**Custom NumPy GBM Implementation Has No Variance Estimates:**
-- Files: `src/models/numpy_gbm.py` (699 lines)
-- Why fragile: Hand-rolled gradient boosting can accumulate numerical errors or diverge; no validation that predictions remain in [0,1] for classification
-- Safe modification: (a) Add assertions that predicted probabilities stay in valid range, (b) compare performance against `sklearn.ensemble.GradientBoostingClassifier` periodically, (c) document expected RMSE on synthetic regression tasks to catch silent drift
-- Test coverage: Gaps — no unit tests for GBM implementation; only integration tests via backtesting
+**Custom NumPy GBM Implementation: RESOLVED**
+- `src/models/numpy_gbm.py` was deleted (2026-03-05) — 700 lines of dead code that was never imported anywhere.
+- All production models now use `sklearn.ensemble.GradientBoostingClassifier` and related sklearn estimators.
 
 ## Scaling Limits
 
@@ -192,11 +191,9 @@
 - Current status: In docs as TODO; not run as part of daily pipeline due to 3-4 hour runtime
 - Documentation: `src/processing/preprocessing.py` line 329 acknowledges it's optional and skipped
 
-**Calibration Outputs Not Integrated:**
-- Problem: `src/models/calibration.py` computes calibration curves but calibrated models never loaded in production
-- Blocks: Reliable sportsbook probability comparison; model outputs are uncalibrated
-- Current status: Artifacts computed and saved; pipeline script exists but disconnected
-- Documentation: `docs/debugger_notes.md` flags this as "saved but not yet loaded"
+**Calibration Outputs Not Integrated: RESOLVED**
+- Calibrated model (`game_outcome_model_calibrated.pkl`) is now loaded first in `scripts/fetch_odds.py` and `src/models/value_bet_detector.py` (fixed 2026-03-05, commit 942d909).
+- sys.path guard added to ensure model wrapper class is importable during deserialization.
 
 **Player Model Prediction Confidence Intervals:**
 - Problem: Player points/rebounds/assists projections are point estimates with no uncertainty
@@ -230,11 +227,8 @@
 - Risk: Silent data loss during joins; rolling calculations with edge-case dates; null values imputed without logging
 - Priority: High — model accuracy depends entirely on feature correctness; bugs invisible in black-box model performance
 
-**No Unit Tests for Custom NumPy GBM:**
-- Untested area: Gradient computations, tree building, probability predictions
-- Files: `src/models/numpy_gbm.py` (699 lines of custom implementation)
-- Risk: Numerical stability issues, silent divergence, probability bounds violations
-- Priority: Medium — only used if sklearn alternative unavailable; less critical path
+**No Unit Tests for Custom NumPy GBM: RESOLVED**
+- `src/models/numpy_gbm.py` was deleted (2026-03-05). All models use sklearn. No custom GBM to test.
 
 **Integration Tests Only; No End-to-End Validation:**
 - Current approach: Rely on successful CSV/model file generation as implicit proof of correctness

@@ -23,7 +23,27 @@
       "Bash(git add .gitignore)",
       "Bash(python -c \"import pandas as pd; df = pd.read_csv\\(''data/features/player_game_features.csv''\\); print\\(''Unique seasons:'', sorted\\(df[''season''].unique\\(\\)\\)\\); print\\(''dtype:'', df[''season''].dtype\\)\")",
       "Bash(python -c \"import pandas as pd; df = pd.read_csv\\(''data/processed/player_game_logs.csv'', usecols=[''season'']\\); print\\(''Seasons:'', sorted\\(df[''season''].unique\\(\\)\\)\\)\")",
-      "Bash(python -c \"import pandas as pd; df = pd.read_csv\\(''data/features/player_game_features.csv'', usecols=[''season''], low_memory=False\\); print\\(''Seasons:'', sorted\\(df[''season''].unique\\(\\)\\)\\); print\\(''Total rows:'', len\\(df\\)\\)\")"
+      "Bash(python -c \"import pandas as pd; df = pd.read_csv\\(''data/features/player_game_features.csv'', usecols=[''season''], low_memory=False\\); print\\(''Seasons:'', sorted\\(df[''season''].unique\\(\\)\\)\\); print\\(''Total rows:'', len\\(df\\)\\)\")",
+      "Bash(python -c \"import shutil; shutil.make_archive\\(''nba_data'', ''zip'', ''.'', ''data''\\)\")",
+      "Bash(gh repo view SpencerGoss/nba-analytics-project --json visibility --jq .visibility)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://github.com/SpencerGoss/nba-analytics-project)",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs: initialize project\" --files .planning/PROJECT.md)",
+      "Read(//c/Users/spenc/.claude/get-shit-done/templates/**)",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" state add-decision --phase \"05-ats-model\" --summary \"Kaggle team name format discovery: dataset uses lowercase short codes \\(gs, sa, no, utah, wsh\\) not full names -- KAGGLE_TEAM_TO_ABB built from inspecting actual data\")",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" state add-decision --phase \"05-ats-model\" --summary \"Season normalization: Kaggle stores season as end-year int \\(2008=2007-08\\) converted to project format \\(200708\\)\")",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" state add-decision --phase \"05-ats-model\" --summary \"Data separation guard at build time: assert checks matchup features have no spread/odds columns before join\")",
+      "Bash(node \"C:/Users/spenc/.claude/get-shit-done/bin/gsd-tools.cjs\" state advance-plan)",
+      "Bash(python src/models/predict_cli.py ats --help)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(claude plugin:*)",
+      "Bash(python:*)",
+      "Bash(npm install:*)",
+      "Bash(firecrawl login:*)",
+      "Bash(firecrawl:*)",
+      "Bash(export:*)",
+      "Bash(~/.bashrc:*)",
+      "Bash(claude install:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\spenc\\.claude\\projects\\c--Users-spenc-OneDrive-Desktop-GIT-nba-analytics-project\\memory"

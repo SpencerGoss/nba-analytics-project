@@ -24,24 +24,69 @@ Hard rule: expanding-window validation only. After retraining → run calibratio
 
 ### Fix a bug
 Read: `.planning/codebase/CONCERNS.md` → `CONTEXT.md` → failing file
-Then: invoke `debug-session` skill.
+Then: invoke `debug-session` skill
 
 ### Review code
-Use: `.claude/agents/code-reviewer.md` via Agent tool
-Or: `/review` command
+Invoke: `code-review-session` skill after writing code
+PR review: `superpowers:requesting-code-review`
 
 ### Plan a new phase
-Use: `gsd:plan-phase` skill → `.planning/STATE.md` for current position
+Invoke: `spec-driven-dev` (spec first) → `.planning/STATE.md` for position
+
+### Implement a feature or fix (TDD)
+Invoke: `superpowers:test-driven-development` → `tdd-workflow`
+
+### Before claiming work is done
+Invoke: `superpowers:verification-before-completion`
+
+### Write a multi-step plan
+Invoke: `superpowers:writing-plans`
+
+### Brainstorm approach or architecture
+Invoke: `superpowers:brainstorming`
+
+### Check project progress / what's next
+Read: `.planning/STATE.md` → `PROJECT_JOURNAL.md`
 
 ### Commit changes
-Use: `git-workflow` skill → `/wrap-up` command
+Invoke: `git-workflow` skill → `/wrap-up` command
 
 ### Security check before push
-Use: `security-audit` skill
+Invoke: `security-audit` skill
 
 ### Update journal / log progress
-Use: `project-journal` skill → `/wrap-up` command
+Invoke: `project-journal` skill → `/wrap-up` command → `session-wrap-up`
 
 ### Something is broken
 Read: `.planning/codebase/CONCERNS.md` first
 Then: invoke `debug-session` skill
+
+### Pipeline is slow or using too much memory
+Invoke: `performance-tuning` skill
+
+### Add or upgrade packages
+Invoke: `dependency-management` skill
+
+### Context window filling up
+Invoke: `context-rescue` skill
+
+### Add a new data provider or API client
+Invoke: `nba-backfill` skill (data ingestion) + `env-config` skill (secrets)
+
+### Work with player absence / injury features
+Read: `src/data/get_historical_absences.py` (generates player_absences.csv from game logs — Phase 10)
+Read: `src/data/get_injury_data.py` (injury report normalization from PDF and nba_api)
+Read: `src/data/get_balldontlie.py` (BallDontLie API client — injuries, stats, teams)
+Read: `src/data/get_lineup_data.py` (on-court lineup data from nba_py)
+
+### Detect or analyze value bets
+Read: `src/models/value_bet_detector.py` (value bet detection using calibrated model + edge filtering; `get_strong_value_bets()` is main entry point)
+
+### Explain model predictions or feature importance
+Read: `src/models/model_explainability.py` (SHAP-based feature importance analysis)
+
+### Validate data integrity
+Read: `src/validation/data_integrity.py` (data validation utilities — v2 addition)
+
+### Isolate feature work from main branch
+Use a separate git branch via `git-workflow` skill
