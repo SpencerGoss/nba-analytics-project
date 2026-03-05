@@ -198,7 +198,7 @@ def test_ats_model_missing_falls_back():
         result = _score_bets_with_ats(bets)
     assert len(result) == 1
     b = result[0]
-    assert b["ats_prob"] == 0.5
+    assert b["ats_prob"] is None
     assert b["ats_model_used"] is False
     expected = round(COMPOSITE_EDGE_WEIGHT * 0.10, 4)
     assert b["composite_score"] == pytest.approx(expected, abs=0.0001)
