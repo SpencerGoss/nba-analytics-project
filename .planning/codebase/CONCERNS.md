@@ -164,10 +164,8 @@
 - Current state: `requirements.txt` specifies `>=1.3.0` (loose constraint)
 - Migration plan: (a) Pin scikit-learn to specific minor version (e.g., `==1.3.2`) in `requirements.txt`, (b) add pickle format validation at load time (check sklearn version), (c) implement model re-serialization on version change
 
-**SHAP Dependency Optional But Model Explainability Depends On It:**
-- Risk: `shap>=0.44.0` is listed as optional in `requirements.txt` but `src/models/model_explainability.py` imports it unconditionally
-- Impact: `run_evaluation.py` fails if shap not installed; no graceful fallback
-- Migration plan: Either (a) make shap required in `requirements.txt`, (b) add try-except in model_explainability.py to fall back to sklearn's permutation importance, (c) document that explainability reports require shap installation
+**SHAP Dependency Optional But Model Explainability Depends On It: RESOLVED**
+- **RESOLVED (2026-03-05):** `model_explainability.py` refactored with `try/except ImportError` guard and `SHAP_AVAILABLE` flag. Falls back to sklearn's permutation importance when shap is absent. No hard failure.
 
 ## Missing Critical Features
 
@@ -199,11 +197,8 @@
 - **RESOLVED (2026-03-05):** `tests/test_get_balldontlie.py`, `tests/test_get_injury_data.py`, `tests/test_get_lineup_data.py` added (31 tests covering retry logic, pagination, schema contracts, and error paths).
 - Remaining gap: `src/data/get_player_stats.py`, `get_team_stats.py`, `get_standings.py` nba_api callers still lack unit tests (they require nba_api mocking or live network).
 
-**No Unit Tests for Preprocessing:**
-- Untested area: Column cleaning, type coercion, duplicate removal, multi-file concatenation
-- Files: `src/processing/preprocessing.py`
-- Risk: Silent data corruption (e.g., rows with NaN values in ID columns silently dropped); schema mismatches not caught
-- Priority: High — preprocessing is the bottleneck between raw and processed; bugs propagate through entire pipeline
+**No Unit Tests for Preprocessing: RESOLVED**
+- **RESOLVED (2026-03-05):** `tests/test_preprocessing.py` has 35 tests covering `clean_columns`, `load_season_folder`, `load_season_files`, `get_stale_seasons`, `merge_incremental`, `_season_label`, type coercion patterns, and duplicate removal.
 
 **No Unit Tests for Feature Engineering:**
 - Untested area: Rolling window calculations, join operations, null imputation
