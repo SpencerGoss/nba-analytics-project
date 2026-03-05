@@ -58,20 +58,14 @@
 
 ## Security Considerations
 
-**Environment Variables Not Validated at Startup:**
-- Risk: Missing `ODDS_API_KEY` is only caught when `refresh_odds_data()` tries to call `scripts/fetch_odds.py`
-- Files: `src/data/get_odds.py`, `.env` (note: never read, but configuration issue)
-- Current mitigation: `refresh_odds_data()` catches subprocess failures and returns False; `update.py` continues pipeline
-- Recommendations: (a) Add startup validation in `update.py` that warns about missing critical API keys before fetching begins, (b) document which env vars are required vs. optional, (c) consider loading `.env` with explicit validation
+**Environment Variables Not Validated at Startup: RESOLVED**
+- **RESOLVED (2026-03-05):** `update.py` now calls `_check_env_vars()` as the first statement in `main()`. Loads `.env` via python-dotenv, warns clearly for each missing key (`ODDS_API_KEY`, `BALLDONTLIE_API_KEY`) without halting the pipeline.
 
 **API Headers Hardcoded Across Scripts: RESOLVED**
 - **RESOLVED (2026-03-05):** `HEADERS` dict now defined once in `src/data/api_client.py` and imported by all data scripts. Still a single User-Agent fingerprint — but now centrally managed (one edit vs 19 files).
 
-**Error Logs May Contain Sensitive Data:**
-- Risk: `logs/pipeline_errors.log` captures full exception text which could include API responses with rate-limit info or private data
-- Files: `src/data/get_odds.py` line 63, `update.py` line 36, `backfill.py` line 37
-- Current state: Log file is created at runtime; `.gitignore` should exclude it
-- Recommendations: (a) Verify `logs/` is in `.gitignore`, (b) sanitize error messages before writing (exclude stack traces that contain full URLs/payloads)
+**Error Logs May Contain Sensitive Data: MITIGATED**
+- **MITIGATED (2026-03-05):** `.gitignore` confirmed to include `logs/` and `*.log` — log files will never be committed. Remaining recommendation: sanitize error messages to exclude full URL/payload stack traces (low priority, v3.0 scope).
 
 ## Performance Bottlenecks
 
@@ -158,11 +152,8 @@
 - Impact: All 15+ data-fetching scripts fail simultaneously; no data pipeline update until fix is available
 - Migration plan: (a) Document fallback endpoint URLs in case nba_api breaks, (b) fork nba_api and maintain internally if breaking changes occur frequently, (c) investigate official NBA Stats API alternatives (e.g., SportsRadar)
 
-**scikit-learn Version Compatibility:**
-- Risk: Model pickle files (`.pkl`) are version-specific; upgrading scikit-learn could break model loading
-- Files: `models/artifacts/*.pkl`
-- Current state: `requirements.txt` specifies `>=1.3.0` (loose constraint)
-- Migration plan: (a) Pin scikit-learn to specific minor version (e.g., `==1.3.2`) in `requirements.txt`, (b) add pickle format validation at load time (check sklearn version), (c) implement model re-serialization on version change
+**scikit-learn Version Compatibility: RESOLVED**
+- **RESOLVED (2026-03-05):** `requirements.txt` now pins `scikit-learn==1.8.0` (exact installed version). Model artifacts will not silently break on version upgrades.
 
 **SHAP Dependency Optional But Model Explainability Depends On It: RESOLVED**
 - **RESOLVED (2026-03-05):** `model_explainability.py` refactored with `try/except ImportError` guard and `SHAP_AVAILABLE` flag. Falls back to sklearn's permutation importance when shap is absent. No hard failure.
@@ -200,19 +191,14 @@
 **No Unit Tests for Preprocessing: RESOLVED**
 - **RESOLVED (2026-03-05):** `tests/test_preprocessing.py` has 35 tests covering `clean_columns`, `load_season_folder`, `load_season_files`, `get_stale_seasons`, `merge_incremental`, `_season_label`, type coercion patterns, and duplicate removal.
 
-**No Unit Tests for Feature Engineering:**
-- Untested area: Rolling window calculations, join operations, null imputation
-- Files: `src/features/injury_proxy.py`, `src/features/team_game_features.py`, `src/features/player_features.py`
-- Risk: Silent data loss during joins; rolling calculations with edge-case dates; null values imputed without logging
-- Priority: High — model accuracy depends entirely on feature correctness; bugs invisible in black-box model performance
+**No Unit Tests for Feature Engineering: RESOLVED**
+- **RESOLVED (2026-03-05):** `tests/test_injury_proxy.py` (9 tests: absent rotation detection, star player flag, staleness window, output schema, join key types) and `tests/test_team_game_features.py` (28 tests: parse_home_away, rolling mean shift, rolling win pct, haversine, no-leakage integration test) cover all critical paths. Explicit `shift(1)` leakage test verifies no data leakage regresses.
 
 **No Unit Tests for Custom NumPy GBM: RESOLVED**
 - `src/models/numpy_gbm.py` was deleted (2026-03-05). All models use sklearn. No custom GBM to test.
 
-**Integration Tests Only; No End-to-End Validation:**
-- Current approach: Rely on successful CSV/model file generation as implicit proof of correctness
-- Gap: No schema validation, no output sample verification, no comparison against expected ranges
-- Improvement: Add `test_data_integrity.py` that runs after each pipeline stage and checks invariants (e.g., game_id uniqueness, date ranges, season counts)
+**Integration Tests Only; No End-to-End Validation: RESOLVED**
+- **RESOLVED (2026-03-05):** `tests/test_data_integrity.py` added with 17 tests: game_id uniqueness, season integer dtype, home_win valid values, (game_id, player_id) pair uniqueness, rolling feature leakage spot-check. All tests skip cleanly on fresh clones via `pytest.mark.skipif` guards.
 
 ---
 
