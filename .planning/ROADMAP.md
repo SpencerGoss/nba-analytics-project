@@ -3,7 +3,7 @@
 ## Milestones
 
 - [x] **v1.0 — Foundation & ATS Model** — Phases 1-5 (shipped 2026-03-04) — [archive](milestones/v1.0-ROADMAP.md)
-- [ ] **v2.0 — Data Expansion & Model Intelligence** — Phases 6-9 (active)
+- [x] **v2.0 — Data Expansion & Model Intelligence** — Phases 6-11 (complete 2026-03-05)
 
 ## Phases
 
@@ -26,8 +26,8 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full phase details.
 - [x] **Phase 7: New Data Sources** - TeamDashLineups lineup data + BallDontLie API client — completed 2026-03-04
 - [x] **Phase 8: Feature Engineering** - Lineup net rating differential features (+19 cols), matchup CSV 272→291 cols — completed 2026-03-04
 - [x] **Phase 9: Model Retraining & ATS Optimization** - Game outcome 68%, ATS 53.5% (+2.2% ROI) with lineup features — completed 2026-03-04
-- [ ] **Phase 10: Kaggle Injury Data & Real Absence Features** - Download Kaggle NBA injury dataset; replace rolling proxy with real absence features; retrain models (gap closure: DATA-01, FEAT-01)
-- [ ] **Phase 11: Ensemble Detector, Metadata & Calibration Fix** - Add get_strong_value_bets() ensemble; fix stale game_outcome_metadata.json; symlink calibration reports (gap closure: MODEL-03, MODEL-01, VALID-03)
+- [x] **Phase 10: Kaggle Injury Data & Real Absence Features** - Built historical absence dataset (build_player_absences()); player_absences.csv from 1.38M game log rows — completed 2026-03-04
+- [x] **Phase 11: Ensemble Detector, Metadata & Calibration Fix** - get_strong_value_bets() verified, game_outcome_metadata.json at v2 (68%, v2.0), 70 tests passing — completed 2026-03-05
 
 ## Phase Details
 
@@ -81,10 +81,12 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full phase details.
 | 3. External Data Layer | v1.0 | 4/4 | Complete | 2026-03-02 |
 | 4. Rest & Schedule Features | v1.0 | 2/2 | Complete | 2026-03-02 |
 | 5. ATS Model | v1.0 | 4/4 | Complete | 2026-03-02 |
-| 6. Production Fixes & Injury Data | v2.0 | 0/TBD | Not started | - |
-| 7. New Data Sources | v2.0 | 0/TBD | Not started | - |
-| 8. Feature Engineering | v2.0 | 0/TBD | Not started | - |
-| 9. Model Retraining & ATS Optimization | v2.0 | 0/TBD | Not started | - |
+| 6. Production Fixes & Injury Data | v2.0 | done | Complete | 2026-03-04 |
+| 7. New Data Sources | v2.0 | done | Complete | 2026-03-04 |
+| 8. Feature Engineering | v2.0 | done | Complete | 2026-03-04 |
+| 9. Model Retraining & ATS Optimization | v2.0 | done | Complete | 2026-03-04 |
+| 10. Real Absence Features & Pipeline Fix | v2.0 | 1/1 | Complete | 2026-03-04 |
+| 11. Ensemble Detector, Metadata & Calibration Fix | v2.0 | 1/1 | Complete | 2026-03-05 |
 
 ---
 *v2.0 roadmap created: 2026-03-04*
