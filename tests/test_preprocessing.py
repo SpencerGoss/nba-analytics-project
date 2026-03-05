@@ -8,6 +8,7 @@ Focuses on:
   - Multi-file concatenation via load_season_folder
 """
 
+import time
 import pytest
 import pandas as pd
 import numpy as np
@@ -16,7 +17,14 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.processing.preprocessing import clean_columns, load_season_folder
+from src.processing.preprocessing import (
+    clean_columns,
+    load_season_folder,
+    get_stale_seasons,
+    load_season_files,
+    merge_incremental,
+    _season_label,
+)
 
 
 # ── clean_columns ─────────────────────────────────────────────────────────────
@@ -249,3 +257,172 @@ class TestLoadSeasonFolder:
 
         result = load_season_folder(str(season_dir / "data_*.csv"), "data_")
         assert list(result.index) == [0, 1, 2, 3]
+
+
+# ── get_stale_seasons ─────────────────────────────────────────────────────────
+
+
+class TestGetStaleSeasons:
+
+    def test_returns_all_files_when_no_processed_output(self, tmp_path):
+        """First run: processed file absent → all raw files considered stale."""
+        raw1 = tmp_path / "player_stats_202324.csv"
+        raw2 = tmp_path / "player_stats_202425.csv"
+        raw1.write_text("col\n1")
+        raw2.write_text("col\n2")
+
+        result = get_stale_seasons(
+            raw_dir=str(tmp_path / "player_stats_*.csv"),
+            processed_path=str(tmp_path / "player_stats.csv"),
+        )
+        assert sorted(result) == sorted([str(raw1), str(raw2)])
+
+    def test_returns_empty_when_all_raw_older_than_processed(self, tmp_path):
+        """Processed file newer than raw → nothing stale."""
+        raw = tmp_path / "player_stats_202425.csv"
+        raw.write_text("col\n1")
+
+        time.sleep(0.05)
+        processed = tmp_path / "player_stats.csv"
+        processed.write_text("col\n1")
+
+        result = get_stale_seasons(
+            raw_dir=str(tmp_path / "player_stats_*.csv"),
+            processed_path=str(processed),
+        )
+        assert result == []
+
+    def test_returns_only_newer_raw_files(self, tmp_path):
+        """Only raw files newer than processed are stale."""
+        old_raw = tmp_path / "player_stats_202324.csv"
+        old_raw.write_text("col\n1")
+
+        time.sleep(0.05)
+        processed = tmp_path / "player_stats.csv"
+        processed.write_text("col\n1")
+
+        time.sleep(0.05)
+        new_raw = tmp_path / "player_stats_202425.csv"
+        new_raw.write_text("col\n2")
+
+        result = get_stale_seasons(
+            raw_dir=str(tmp_path / "player_stats_*.csv"),
+            processed_path=str(processed),
+        )
+        assert result == [str(new_raw)]
+
+    def test_returns_empty_list_when_no_raw_files(self, tmp_path):
+        """No raw files → empty list, no error."""
+        result = get_stale_seasons(
+            raw_dir=str(tmp_path / "player_stats_*.csv"),
+            processed_path=str(tmp_path / "player_stats.csv"),
+        )
+        assert result == []
+
+
+# ── load_season_files ─────────────────────────────────────────────────────────
+
+
+class TestLoadSeasonFiles:
+
+    def test_adds_season_column_from_filename(self, tmp_path):
+        csv = tmp_path / "player_stats_202425.csv"
+        csv.write_text("player_id,pts\n1,20\n")
+
+        result = load_season_files([str(csv)], prefix="player_stats_")
+
+        assert "season" in result.columns
+        assert (result["season"] == "202425").all()
+
+    def test_concatenates_multiple_files(self, tmp_path):
+        csv1 = tmp_path / "player_stats_202324.csv"
+        csv2 = tmp_path / "player_stats_202425.csv"
+        csv1.write_text("player_id,pts\n1,18\n")
+        csv2.write_text("player_id,pts\n2,22\n")
+
+        result = load_season_files([str(csv1), str(csv2)], prefix="player_stats_")
+
+        assert len(result) == 2
+        assert set(result["season"].unique()) == {"202324", "202425"}
+
+    def test_raises_on_empty_file_list(self):
+        with pytest.raises(FileNotFoundError):
+            load_season_files([], prefix="player_stats_")
+
+
+# ── merge_incremental ─────────────────────────────────────────────────────────
+
+
+class TestMergeIncremental:
+
+    def test_returns_new_df_when_processed_does_not_exist(self, tmp_path):
+        """First run: no processed CSV → return new_df unchanged."""
+        new_df = pd.DataFrame({"season": ["202425"], "player_id": [1], "pts": [20]})
+        processed_path = str(tmp_path / "player_stats.csv")
+        stale = [str(tmp_path / "player_stats_202425.csv")]
+
+        result = merge_incremental(new_df, processed_path, stale, prefix="player_stats_")
+
+        assert len(result) == 1
+        assert result["season"].iloc[0] == "202425"
+
+    def test_appends_new_seasons_to_existing(self, tmp_path):
+        existing = pd.DataFrame({
+            "season": ["202324", "202324"],
+            "player_id": [1, 2],
+            "pts": [20, 15],
+        })
+        processed_path = str(tmp_path / "player_stats.csv")
+        existing.to_csv(processed_path, index=False)
+
+        new_df = pd.DataFrame({"season": ["202425"], "player_id": [3], "pts": [25]})
+        stale = [str(tmp_path / "player_stats_202425.csv")]
+
+        result = merge_incremental(new_df, processed_path, stale, prefix="player_stats_")
+
+        assert len(result) == 3
+        assert set(result["season"].unique()) == {"202324", "202425"}
+
+    def test_replaces_existing_rows_for_updated_season(self, tmp_path):
+        """Stale season rows replaced, not duplicated."""
+        existing = pd.DataFrame({
+            "season": ["202425", "202425"],
+            "player_id": [1, 2],
+            "pts": [10, 12],
+        })
+        processed_path = str(tmp_path / "player_stats.csv")
+        existing.to_csv(processed_path, index=False)
+
+        new_df = pd.DataFrame({
+            "season": ["202425", "202425"],
+            "player_id": [1, 2],
+            "pts": [20, 25],
+        })
+        stale = [str(tmp_path / "player_stats_202425.csv")]
+
+        result = merge_incremental(
+            new_df, processed_path, stale,
+            prefix="player_stats_",
+            dedup_subset=["season", "player_id"],
+        )
+
+        assert len(result) == 2
+        assert set(result["pts"].tolist()) == {20, 25}
+
+
+# ── _season_label ─────────────────────────────────────────────────────────────
+
+
+class TestSeasonLabel:
+
+    def test_six_digit_code_formatted_with_dash(self):
+        result = _season_label("data/raw/player_stats/player_stats_202425.csv", "player_stats_")
+        assert result == "2024-25"
+
+    def test_early_season_code(self):
+        result = _season_label("player_stats_200001.csv", "player_stats_")
+        assert result == "2000-01"
+
+    def test_non_six_digit_code_returned_unchanged(self):
+        result = _season_label("player_stats_abc.csv", "player_stats_")
+        assert result == "abc"

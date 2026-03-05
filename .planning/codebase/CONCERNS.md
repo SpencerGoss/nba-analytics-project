@@ -4,12 +4,8 @@
 
 ## Tech Debt
 
-**Duplicated Error Handling and Logging:**
-- Issue: The same retry logic and error logging pattern is duplicated across all data-fetching scripts
-- Files: `src/data/get_player_stats.py`, `src/data/get_team_stats.py`, `src/data/get_standings.py`, `src/data/get_shot_chart.py`, and 10+ others
-- Pattern: Each file defines `HEADERS`, `MAX_RETRIES`, `RETRY_DELAY`, `fetch_with_retry()` independently
-- Impact: Code maintenance burden; changes to retry strategy require updates to 15+ files
-- Fix approach: Extract `fetch_with_retry()` and retry config into a shared `src/data/api_client.py` module that all data scripts import from
+**Duplicated Error Handling and Logging: RESOLVED**
+- **RESOLVED (2026-03-05):** `src/data/api_client.py` created with shared `fetch_with_retry()`, `HEADERS`, and retry config. All 19 data-fetching scripts now import from it. No script defines its own retry logic.
 
 **Shot Chart API Bottleneck:**
 - Issue: `src/data/get_shot_chart.py` makes one API call per player per season (~11,000 calls, 3-4 hours runtime)
@@ -33,12 +29,8 @@
 
 ## Known Bugs
 
-**Stale SHAP Explainability Reports:**
-- Symptoms: SHAP importance files reference features (`fantasy_pts`, raw `dreb`, raw `oreb`) that no longer exist in current production models
-- Files: `reports/explainability/feature_direction_*.csv` (stale); `src/models/run_evaluation.py` (needs re-run)
-- Trigger: Model was retrained to remove leaky features, but `run_evaluation.py` was never re-executed
-- Workaround: Ignore SHAP files; rely on importances CSV files instead
-- Fix: Run `python src/models/run_evaluation.py` to regenerate all explainability reports against current trained models
+**Stale SHAP Explainability Reports: RESOLVED**
+- **RESOLVED (2026-03-05):** `src/models/model_explainability.py` refactored with graceful SHAP fallback to sklearn permutation importance. All reports regenerated against current model schema. SHAP is now a soft optional dependency with `SHAP_AVAILABLE` guard.
 
 **Calibration Artifacts Saved But Never Loaded: RESOLVED**
 - Symptoms: `models/artifacts/game_outcome_model_calibrated.pkl` exists but no production code ever loads it
@@ -54,11 +46,8 @@
 - **Phase 10 partial (2026-03-05):** `data/processed/player_absences.csv` generated (1.1M rows). Real absence features are NOT yet wired into `src/features/injury_proxy.py` or `team_game_features.py` — integration into training pipeline is the remaining work.
 - Fix: Wire `player_absences.csv` into `injury_proxy.py`; regenerate `game_matchup_features.csv`; retrain models; verify importances include injury columns.
 
-**Player Backtest Stops in 2015-16:**
-- Symptoms: `reports/backtest_player_pts.csv` only covers through 2015-16 test season; missing 10 years of modern NBA data
-- Files: `src/models/backtesting.py` (loop boundary); `src/models/player_performance_model.py`
-- Impact: No visibility into model accuracy on post-2015 data (3-point era, load management, modern pace)
-- Fix: Update `backtesting.py` loop to run player backtests through all available seasons matching game outcome backtest range (through 2025-26)
+**Player Backtest Stops in 2015-16: RESOLVED**
+- **RESOLVED (2026-03-05 audit):** `reports/backtest_player_pts.csv` verified to cover 2001-02 through 2025-26 (30 seasons). Player features CSV has data for all seasons 1996-97 to 2025-26. Loop boundary in `backtesting.py` is correct — `PLAYER_BACKTEST_START = "200001"` with no upper bound.
 
 **Minor V1 Model Calibration Data Leakage:**
 - Symptoms: `src/models/calibration.py` lines 377-380 fit isotonic regression on the same data the model trained on
@@ -75,11 +64,8 @@
 - Current mitigation: `refresh_odds_data()` catches subprocess failures and returns False; `update.py` continues pipeline
 - Recommendations: (a) Add startup validation in `update.py` that warns about missing critical API keys before fetching begins, (b) document which env vars are required vs. optional, (c) consider loading `.env` with explicit validation
 
-**API Headers Hardcoded Across Scripts:**
-- Risk: User-Agent string is identical across all data-fetching scripts; could be flagged as bot traffic if NBA tightens rate limiting
-- Files: `src/data/get_player_stats.py`, `src/data/get_team_stats.py`, `src/data/get_standings.py`, `src/data/get_shot_chart.py`, and others (lines 9-17 in each)
-- Current mitigation: nba_api handles rate limiting internally
-- Recommendations: Either (a) vary User-Agent with script/session ID for anonymity, or (b) document that this is a known fingerprint if NBA begins filtering by User-Agent
+**API Headers Hardcoded Across Scripts: RESOLVED**
+- **RESOLVED (2026-03-05):** `HEADERS` dict now defined once in `src/data/api_client.py` and imported by all data scripts. Still a single User-Agent fingerprint — but now centrally managed (one edit vs 19 files).
 
 **Error Logs May Contain Sensitive Data:**
 - Risk: `logs/pipeline_errors.log` captures full exception text which could include API responses with rate-limit info or private data
@@ -209,11 +195,9 @@
 
 ## Test Coverage Gaps
 
-**No Unit Tests for Data Fetchers:**
-- Untested area: All fetch_with_retry logic, API endpoint calls, CSV writing
-- Files: All `src/data/get_*.py` files
-- Risk: Silent API changes, rate-limit behavior changes, or nba_api version incompatibilities discovered only in production runs
-- Priority: High — data ingestion is the foundation; downstream failures cascade to all analyses
+**No Unit Tests for Data Fetchers: PARTIALLY RESOLVED**
+- **RESOLVED (2026-03-05):** `tests/test_get_balldontlie.py`, `tests/test_get_injury_data.py`, `tests/test_get_lineup_data.py` added (31 tests covering retry logic, pagination, schema contracts, and error paths).
+- Remaining gap: `src/data/get_player_stats.py`, `get_team_stats.py`, `get_standings.py` nba_api callers still lack unit tests (they require nba_api mocking or live network).
 
 **No Unit Tests for Preprocessing:**
 - Untested area: Column cleaning, type coercion, duplicate removal, multi-file concatenation
