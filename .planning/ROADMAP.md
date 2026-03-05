@@ -22,10 +22,12 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full phase details.
 
 ### v2.0 — Data Expansion & Model Intelligence
 
-- [ ] **Phase 6: Production Fixes & Injury Data** - Wire calibrated model into all inference paths; download and integrate Kaggle injury dataset
-- [ ] **Phase 7: New Data Sources** - Add pbpstats lineup tracking and BallDontLie API as new structured data sources
-- [ ] **Phase 8: Feature Engineering** - Replace injury proxy with real absence features; add lineup net rating differentials; regenerate matchup CSV
-- [ ] **Phase 9: Model Retraining & ATS Optimization** - Retrain game outcome and ATS models with new features; build ensemble; run full backtests
+- [x] **Phase 6: Production Fixes & Injury Data** - Wire calibrated model into all inference paths; add daily injury fetcher — completed 2026-03-04
+- [x] **Phase 7: New Data Sources** - TeamDashLineups lineup data + BallDontLie API client — completed 2026-03-04
+- [x] **Phase 8: Feature Engineering** - Lineup net rating differential features (+19 cols), matchup CSV 272→291 cols — completed 2026-03-04
+- [x] **Phase 9: Model Retraining & ATS Optimization** - Game outcome 68%, ATS 53.5% (+2.2% ROI) with lineup features — completed 2026-03-04
+- [ ] **Phase 10: Kaggle Injury Data & Real Absence Features** - Download Kaggle NBA injury dataset; replace rolling proxy with real absence features; retrain models (gap closure: DATA-01, FEAT-01)
+- [ ] **Phase 11: Ensemble Detector, Metadata & Calibration Fix** - Add get_strong_value_bets() ensemble; fix stale game_outcome_metadata.json; symlink calibration reports (gap closure: MODEL-03, MODEL-01, VALID-03)
 
 ## Phase Details
 
