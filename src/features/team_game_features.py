@@ -427,7 +427,8 @@ def build_team_game_features(
         )
 
     # ── Cumulative wins/games in season (context) ─────────────────────────────
-    df["season_game_num"] = df.groupby(["team_id", "season"]).cumcount() + 1
+    # 0-indexed: value at row N = games played BEFORE this game (no current-game leakage)
+    df["season_game_num"] = df.groupby(["team_id", "season"]).cumcount()
 
     # ── Rolling stats per team ────────────────────────────────────────────────
     print("Computing rolling features...")
@@ -495,9 +496,10 @@ def build_team_game_features(
     ]
     df = df.merge(opp_box, on=["opponent_abbr", "game_id"], how="left")
 
-    assert df["opp_fga"].notna().sum() > 0, (
-        "Opponent box score join matched zero rows -- check opponent_abbr/game_id alignment"
-    )
+    if df["opp_fga"].notna().sum() == 0:
+        raise ValueError(
+            "Opponent box score join matched zero rows -- check opponent_abbr/game_id alignment"
+        )
 
     # ── Possession estimates (Oliver formula) ────────────────────────────────
     df["poss_est"]     = df["fga"] - df["oreb"] + df["tov"] + 0.44 * df["fta"]

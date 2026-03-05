@@ -46,7 +46,7 @@ except ImportError:
 ATS_FEATURES_PATH = "data/features/game_ats_features.csv"
 ARTIFACTS_DIR = "models/artifacts"
 TARGET = "covers_spread"
-TEST_SEASONS = ["202324", "202425"]
+from src.models.game_outcome_model import TEST_SEASONS, _best_threshold
 EXCLUDED_SEASONS = ["201920", "202021"]
 # Kaggle data starts ~2007-08; MIN_TRAIN_SEASONS=4 gives first validation split
 # at season 5 (roughly 2011-12), leaving enough expanding windows.
@@ -151,18 +151,6 @@ def _clone_pipeline(pipe: Pipeline) -> Pipeline:
     """Create a fresh clone of a pipeline with the same hyperparameters."""
     from sklearn.base import clone
     return clone(pipe)
-
-
-def _best_threshold(y_true: pd.Series, proba: np.ndarray) -> tuple:
-    """Find probability threshold that maximizes accuracy."""
-    best_t, best_acc = 0.50, -1.0
-    for t in np.arange(0.35, 0.66, 0.01):
-        pred = (proba >= t).astype(int)
-        acc = accuracy_score(y_true, pred)
-        if acc > best_acc:
-            best_acc = acc
-            best_t = float(round(t, 2))
-    return best_t, best_acc
 
 
 def _validate_null_rates(df: pd.DataFrame, feat_cols: list, threshold: float = 0.95) -> None:

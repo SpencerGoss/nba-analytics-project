@@ -32,6 +32,16 @@ These features are computed per (team_id, game_id) and merged into
 team_game_features, then flow through to the matchup table as
 home_/away_ prefixed columns and a diff_missing_minutes differential.
 
+Primary data source:
+  data/processed/player_absences.csv (built by get_historical_absences.py).
+  When this file exists, the expensive merge_asof derivation is skipped and
+  the pre-computed absence records are used directly.
+
+Fallback:
+  If player_absences.csv is not found, absence data is re-derived from
+  player_game_logs.csv using the original merge_asof logic. A warning is
+  printed. Run src/data/get_historical_absences.py to rebuild the CSV.
+
 Leakage note:
   All rolling stats use shift(1) so only prior games inform the
   "expected minutes" baseline. The fact that a player is absent in the
@@ -62,6 +72,7 @@ Usage:
 import os
 import sys
 import warnings
+from pathlib import Path
 import pandas as pd
 import numpy as np
 warnings.filterwarnings("ignore")
@@ -77,10 +88,15 @@ _CODE_PATH = "TRAINING"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-GAME_LOG_PATH    = "data/processed/player_game_logs.csv"
-ADV_STATS_PATH   = "data/processed/player_stats_advanced.csv"
-OUTPUT_PATH      = "data/features/injury_proxy_features.csv"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+GAME_LOG_PATH     = "data/processed/player_game_logs.csv"
+ADV_STATS_PATH    = "data/processed/player_stats_advanced.csv"
+OUTPUT_PATH       = "data/features/injury_proxy_features.csv"
 ABSENCES_CSV_PATH = "data/processed/player_absences.csv"
+
+# pathlib constant — used by load_real_absences() and build_injury_proxy_features()
+ABSENCES_PATH = PROJECT_ROOT / "data" / "processed" / "player_absences.csv"
 
 # A player is considered "in the rotation" if they've averaged at least
 # this many minutes over the last 5 games they played.
@@ -98,15 +114,146 @@ STAR_USG_THRESHOLD = 0.25
 ROLL_WINDOW = 5
 
 
+# ── Load real absence data ─────────────────────────────────────────────────────
+
+def load_real_absences(season: int | None = None) -> pd.DataFrame | None:
+    """
+    Load pre-computed player absence records from ``player_absences.csv``.
+
+    The CSV was built by Phase 10 (get_historical_absences.py) and contains
+    one row per (player_id, game_date) covering all seasons in the pipeline.
+    Each row records whether the player was absent for that specific game
+    (``was_absent=1``) or present (``was_absent=0``).
+
+    Leakage safety: the ``was_absent`` value for game N is pre-game-observable
+    information (teams publish official injury reports ~1 hour before tip-off),
+    so joining on ``player_id + game_date`` does NOT introduce data leakage.
+
+    Args:
+        season: Optional integer season code (e.g. ``202425``).  When provided,
+                only rows matching that season are returned.  Pass ``None`` to
+                load all seasons.
+
+    Returns:
+        DataFrame with at least: ``player_id``, ``game_date``, ``season``,
+        ``team_id``, ``min_roll5``, ``usg_pct``, ``was_absent``.
+        Returns ``None`` when the CSV does not exist, which triggers the
+        rolling-proxy fallback in ``build_injury_proxy_features()``.
+    """
+    if not ABSENCES_PATH.exists():
+        return None
+
+    required_cols = ["player_id", "game_date", "season", "team_id",
+                     "min_roll5", "usg_pct", "was_absent"]
+    try:
+        df = pd.read_csv(ABSENCES_PATH, usecols=required_cols)
+    except ValueError as exc:
+        # Column subset missing — file schema mismatch; treat as unavailable.
+        print(
+            f"  WARNING: player_absences.csv column mismatch ({exc}). "
+            "Falling back to rolling proxy."
+        )
+        return None
+
+    if season is not None:
+        df = df[df["season"] == season].copy()
+
+    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["player_id"] = df["player_id"].astype(int)
+    df["team_id"]   = df["team_id"].astype(int)
+    df["was_absent"] = df["was_absent"].astype(int)
+    df["min_roll5"]  = pd.to_numeric(df["min_roll5"],  errors="coerce").fillna(0.0)
+    df["usg_pct"]    = pd.to_numeric(df["usg_pct"],    errors="coerce").fillna(0.18)
+
+    return df
+
+
+# ── Helper: aggregate pre-built absences DataFrame ────────────────────────────
+
+def _aggregate_from_absences_df(absences: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aggregate a player_absences DataFrame (schema from get_historical_absences.py)
+    into per-(team_id, game_id) injury proxy aggregate rows.
+
+    Expected input columns:
+        player_id, team_id, game_id, min_roll5, usg_pct, was_absent
+
+    The min_roll5 values in the input were already computed with shift(1) before
+    rolling by get_historical_absences.py, so no additional shift is needed here.
+
+    Returns a DataFrame with columns:
+        game_id, team_id,
+        missing_minutes, missing_usg_pct, n_missing_rotation,
+        star_player_out, total_expected_minutes
+    """
+    absences = absences.copy()
+    absences["game_id"] = absences["game_id"].astype(str).str.strip()
+    absences["team_id"] = absences["team_id"].astype(int)
+
+    # All rotation player-games (absent + present) contribute to total expected minutes.
+    # This mirrors the original logic: expected_df (absent) + played_rotation combined.
+    total_agg = (
+        absences
+        .groupby(["game_id", "team_id"])["min_roll5"]
+        .sum()
+        .reset_index()
+        .rename(columns={"min_roll5": "total_expected_minutes"})
+    )
+
+    absent = absences[absences["was_absent"] == 1].copy()
+
+    if absent.empty:
+        absent_agg = pd.DataFrame(
+            columns=["game_id", "team_id", "missing_minutes",
+                     "missing_usg_pct", "n_missing_rotation", "star_player_out"]
+        )
+    else:
+        absent_agg = (
+            absent
+            .groupby(["game_id", "team_id"])
+            .agg(
+                missing_minutes    =("min_roll5",  "sum"),
+                missing_usg_pct    =("usg_pct",    "sum"),
+                n_missing_rotation =("player_id",  "count"),
+            )
+            .reset_index()
+        )
+
+        # Star player out: any absent player with usg >= threshold
+        star_out = (
+            absent[absent["usg_pct"] >= STAR_USG_THRESHOLD]
+            .groupby(["game_id", "team_id"])
+            .size()
+            .reset_index(name="star_player_out")
+        )
+        star_out["star_player_out"] = 1
+
+        absent_agg = absent_agg.merge(star_out, on=["game_id", "team_id"], how="left")
+        absent_agg["star_player_out"] = absent_agg["star_player_out"].fillna(0).astype(int)
+
+    result = total_agg.merge(absent_agg, on=["game_id", "team_id"], how="left")
+    return result
+
+
 # ── Core builder ───────────────────────────────────────────────────────────────
 
 def build_injury_proxy_features(
     game_log_path:  str = GAME_LOG_PATH,
     adv_stats_path: str = ADV_STATS_PATH,
     output_path:    str = OUTPUT_PATH,
+    absences_path:  str = ABSENCES_CSV_PATH,
 ) -> pd.DataFrame:
     """
     Build per-(team_id, game_id) lineup availability features.
+
+    Primary source: absences_path (player_absences.csv). When present, the
+    pre-built per-player absence records are aggregated directly, bypassing
+    the expensive merge_asof derivation.
+
+    Fallback: if absences_path is None or does not exist, absence data is
+    derived from game_log_path + adv_stats_path using the original logic.
+    A warning is logged. This path is also used by unit tests that supply
+    synthetic game logs directly.
 
     Returns a DataFrame with columns:
         team_id, game_id,
@@ -120,207 +267,295 @@ def build_injury_proxy_features(
     print("INJURY PROXY FEATURE ENGINEERING")
     print("=" * 60)
 
-    # ── Load player game logs ─────────────────────────────────────────────────
-    print("\nLoading player_game_logs...")
-    cols = ["season", "player_id", "player_name", "team_id",
-            "team_abbreviation", "game_id", "game_date", "min"]
-    df = pd.read_csv(game_log_path, usecols=cols)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    # ── Primary path: load player_absences.csv via load_real_absences() ─────────
+    # load_real_absences() returns None when the file is missing, which triggers
+    # the fallback.  We only use this path when the caller has not overridden the
+    # game log (i.e. it's a standard pipeline run, not a unit test with synthetic
+    # data).
+    using_default_game_log = (game_log_path == GAME_LOG_PATH)
+    real_absences = load_real_absences() if using_default_game_log else None
 
-    # Ensure minutes is numeric — handle "MM:SS" strings from older seasons
-    df["min"] = pd.to_numeric(df["min"], errors="coerce").fillna(0)
+    # Legacy CSV path guard: the old ABSENCES_CSV_PATH constant (expects game_id
+    # column) is kept for backward compatibility.  If load_real_absences() already
+    # returned data we skip the legacy check entirely.
+    if real_absences is None and using_default_game_log:
+        # Check legacy path that has game_id column (pre-Phase-10 format)
+        legacy_path = absences_path or ABSENCES_CSV_PATH
+        if legacy_path and os.path.exists(legacy_path):
+            try:
+                absences_legacy = pd.read_csv(
+                    legacy_path,
+                    usecols=["player_id", "team_id", "game_id",
+                             "min_roll5", "usg_pct", "was_absent"],
+                )
+                print(f"\nPrimary source (legacy game_id format): {legacy_path}")
+                print(f"  Loaded {len(absences_legacy):,} rotation player-game rows")
+                print(
+                    f"  Absent rows (was_absent=1): "
+                    f"{(absences_legacy['was_absent'] == 1).sum():,}"
+                )
+                result_intermediate = _aggregate_from_absences_df(absences_legacy)
+                # Jump to final output section
+                _use_intermediate = True
+            except (ValueError, KeyError) as exc:
+                print(
+                    f"\n  WARNING: {legacy_path} missing expected columns ({exc}). "
+                    "Falling back to rolling proxy."
+                )
+                _use_intermediate = False
+        else:
+            _use_intermediate = False
+    else:
+        _use_intermediate = False
 
-    # Sort chronologically within each player
-    df = df.sort_values(["player_id", "game_date"]).reset_index(drop=True)
-    print(f"  Loaded {len(df):,} player-game rows")
-
-    # ── Load season-level usage rates ─────────────────────────────────────────
-    print("Loading advanced stats for usage rates...")
-    adv = pd.read_csv(adv_stats_path, usecols=["player_id", "season", "usg_pct"])
-    adv = adv.drop_duplicates(subset=["player_id", "season"])
-    # Fill missing usage with a neutral league-average estimate
-    adv["usg_pct"] = adv["usg_pct"].fillna(0.18)
-
-    df = df.merge(adv, on=["player_id", "season"], how="left")
-    df["usg_pct"] = df["usg_pct"].fillna(0.18)
-
-    # ── Compute rolling baseline minutes per player ───────────────────────────
-    # shift(1) means we only know what they AVERAGED in the 5 games before this one.
-    print("Computing rolling baseline minutes per player...")
-
-    df["min_roll5"] = (
-        df.groupby("player_id")["min"]
-        .transform(lambda x: x.shift(1).rolling(ROLL_WINDOW, min_periods=MIN_ROTATION_GAMES).mean())
-    )
-    df["games_in_roll5"] = (
-        df.groupby("player_id")["min"]
-        .transform(lambda x: x.shift(1).rolling(ROLL_WINDOW, min_periods=1).count())
-    )
-
-    # A player is "in the rotation" for a given game if:
-    #   - They averaged MIN_ROTATION_MINUTES+ over their last 5 games (shift-1)
-    #   - They appeared in at least MIN_ROTATION_GAMES of those 5 games
-    # NOTE: in_rotation is based on prior-games rolling stats (shift-1), so it is
-    # the pre-game expectation — it does NOT use the current game's minutes.
-    df["in_rotation"] = (
-        (df["min_roll5"] >= MIN_ROTATION_MINUTES) &
-        (df["games_in_roll5"] >= MIN_ROTATION_GAMES)
-    )
-
-    # ── Identify absent rotation players (vectorized) ─────────────────────────
-    # Design: for each player-team, use pd.merge_asof to project their last
-    # known rotation status onto ALL team-game dates (sorted merge on game_date).
-    # A player was "expected" to play game G if their most recent appearance
-    # before G shows in_rotation=True and was within MAX_STALE_DAYS days.
-    # Then anti-join against actual appearances to find who was absent.
-    print("Identifying absent rotation players per team-game...")
-
-    MAX_STALE_DAYS = ROLL_WINDOW * 5   # ~25 days; beyond this, don't flag player
-
-    # All (team_id, game_id, game_date) pairs that actually occurred.
-    team_games = (
-        df[["team_id", "game_id", "game_date"]]
-        .drop_duplicates()
-        .copy()
-    )
-
-    # Player status timeline per player per team, sorted for merge_asof
-    player_status = (
-        df[["player_id", "team_id", "game_date", "in_rotation", "min_roll5", "usg_pct"]]
-        .copy()
-        .sort_values(["player_id", "team_id", "game_date"])
-    )
-
-    # Actual played: all (game_id, team_id, player_id) entries in the logs
-    # (game logs only include rows where the player actually played)
-    actual_played = (
-        df[["game_id", "team_id", "player_id"]]
-        .drop_duplicates()
-        .assign(played=True)
-    )
-
-    # Vectorized expected-rotation builder using merge_asof per (team, player)
-    expected_parts = []
-    for team_id_val, tg_grp in team_games.groupby("team_id"):
-        ps_team = player_status[player_status["team_id"] == team_id_val]
-        if ps_team.empty:
-            continue
-        tg_sorted = tg_grp.sort_values("game_date")[["team_id", "game_id", "game_date"]]
-
-        for player_id_val, player_grp in ps_team.groupby("player_id"):
-            ps_sorted = (
-                player_grp
-                .sort_values("game_date")
-                .rename(columns={"game_date": "last_date"})
-                [["last_date", "in_rotation", "min_roll5", "usg_pct"]]
-            )
-            # merge_asof: for each team-game date, find the player's last prior appearance
-            merged = pd.merge_asof(
-                tg_sorted,
-                ps_sorted,
-                left_on="game_date",
-                right_on="last_date",
-                direction="backward",
-            )
-            # Keep rows where the player had a prior appearance showing in_rotation=True
-            # and that appearance was strictly before the game (days_since > 0)
-            # and not stale (days_since <= MAX_STALE_DAYS)
-            merged = merged[merged["last_date"].notna()].copy()
-            merged["days_since"] = (merged["game_date"] - merged["last_date"]).dt.days
-            merged = merged[
-                (merged["in_rotation"])
-                & (merged["days_since"] > 0)
-                & (merged["days_since"] <= MAX_STALE_DAYS)
-            ]
-            if merged.empty:
-                continue
-            merged["player_id"] = player_id_val
-            expected_parts.append(
-                merged[["game_id", "team_id", "player_id", "min_roll5", "usg_pct"]]
-            )
-
-    expected_df = (
-        pd.concat(expected_parts, ignore_index=True)
-        if expected_parts
-        else pd.DataFrame(columns=["game_id", "team_id", "player_id", "min_roll5", "usg_pct"])
-    )
-    print(f"  Expected rotation appearances: {len(expected_df):,}")
-
-    # Anti-join: expected players who did NOT appear in the actual game log
-    merged_check = expected_df.merge(
-        actual_played,
-        on=["game_id", "team_id", "player_id"],
-        how="left",
-    )
-    # played=NaN → player was expected but did not appear in the game log
-    absent = merged_check[merged_check["played"].isna()].copy()
-
-    print(f"  Absent rotation instances: {len(absent):,}")
-    if len(absent) > 0:
-        print(f"  Games with at least one absent rotation player: "
-              f"{absent['game_id'].nunique():,}")
-
-    # ── Aggregate absent players per (team_id, game_id) ──────────────────────
-    absent_agg = (
-        absent
-        .groupby(["game_id", "team_id"])
-        .agg(
-            missing_minutes    =("min_roll5",  "sum"),
-            missing_usg_pct    =("usg_pct",    "sum"),
-            n_missing_rotation =("player_id",  "count"),
+    if real_absences is not None:
+        # ── New primary path: game_date-based player_absences.csv ─────────────
+        # The CSV schema from Phase 10 uses game_date (not game_id).  We join
+        # with the game log's (team_id, game_date) → game_id mapping so that
+        # _aggregate_from_absences_df() (which groups by game_id) can be reused.
+        print(f"\nPrimary source: {ABSENCES_PATH}")
+        print(f"  Loaded {len(real_absences):,} rotation player-game rows")
+        print(
+            f"  Absent rows (was_absent=1): "
+            f"{(real_absences['was_absent'] == 1).sum():,}"
         )
-        .reset_index()
-    )
 
-    # Star player out: any absent player with usg >= threshold
-    star_out = (
-        absent[absent["usg_pct"] >= STAR_USG_THRESHOLD]
-        .groupby(["game_id", "team_id"])
-        .size()
-        .reset_index(name="star_player_out")
-    )
-    star_out["star_player_out"] = 1
+        # Build game_date → game_id mapping from the game log
+        print("  Resolving game_id from player_game_logs...")
+        log_map_cols = ["team_id", "game_id", "game_date"]
+        log_map = pd.read_csv(game_log_path, usecols=log_map_cols)
+        log_map["game_date"] = pd.to_datetime(log_map["game_date"])
+        log_map["team_id"]   = log_map["team_id"].astype(int)
+        log_map["game_id"]   = log_map["game_id"].astype(str).str.strip()
+        log_map = log_map.drop_duplicates(subset=["team_id", "game_date"])
 
-    absent_agg = absent_agg.merge(star_out, on=["game_id", "team_id"], how="left")
-    absent_agg["star_player_out"] = absent_agg["star_player_out"].fillna(0).astype(int)
+        absences_with_id = real_absences.merge(
+            log_map[["team_id", "game_date", "game_id"]],
+            on=["team_id", "game_date"],
+            how="left",
+        )
 
-    # ── Compute total expected minutes per team-game ──────────────────────────
-    # total_expected_minutes = absent rotation minutes + played rotation minutes.
-    # expected_df only contains absent players; we also need rotation players
-    # who DID play (their min_roll5 from the game log, in_rotation=True).
-    played_rotation = df[df["in_rotation"]][
-        ["game_id", "team_id", "min_roll5"]
-    ].copy()
+        missing_game_id = absences_with_id["game_id"].isna().sum()
+        if missing_game_id > 0:
+            print(
+                f"  WARNING: {missing_game_id:,} absence rows could not be matched "
+                "to a game_id and will be dropped."
+            )
+        absences_with_id = absences_with_id.dropna(subset=["game_id"])
 
-    combined_for_total = pd.concat([
-        expected_df[["game_id", "team_id", "min_roll5"]],
-        played_rotation[["game_id", "team_id", "min_roll5"]],
-    ], ignore_index=True)
+        result_intermediate = _aggregate_from_absences_df(absences_with_id)
+        _use_intermediate = True
 
-    expected_agg = (
-        combined_for_total
-        .groupby(["game_id", "team_id"])["min_roll5"]
-        .sum()
-        .reset_index()
-        .rename(columns={"min_roll5": "total_expected_minutes"})
-    )
+    if not _use_intermediate:
+        # ── Fallback path: derive from raw game logs ──────────────────────────
+        if absences_path:
+            print(
+                f"\n  WARNING: {absences_path} not found — "
+                "falling back to deriving absence data from game logs. "
+                "Run src/data/get_historical_absences.py to build the primary data source."
+            )
 
-    # ── Build final output ────────────────────────────────────────────────────
-    # Start from expected_agg (all team-games with a rotation)
-    result = expected_agg.merge(absent_agg, on=["game_id", "team_id"], how="left")
+        print("\nLoading player_game_logs...")
+        cols = ["season", "player_id", "player_name", "team_id",
+                "team_abbreviation", "game_id", "game_date", "min"]
+        df = pd.read_csv(game_log_path, usecols=cols)
+        df["game_date"] = pd.to_datetime(df["game_date"])
 
-    result["missing_minutes"]     = result["missing_minutes"].fillna(0)
-    result["missing_usg_pct"]     = result["missing_usg_pct"].fillna(0)
-    result["n_missing_rotation"]  = result["n_missing_rotation"].fillna(0).astype(int)
-    result["star_player_out"]     = result["star_player_out"].fillna(0).astype(int)
+        # Ensure minutes is numeric — handle "MM:SS" strings from older seasons
+        df["min"] = pd.to_numeric(df["min"], errors="coerce").fillna(0)
+
+        # Sort chronologically within each player
+        df = df.sort_values(["player_id", "game_date"]).reset_index(drop=True)
+        print(f"  Loaded {len(df):,} player-game rows")
+
+        # ── Load season-level usage rates ──────────────────────────────────────
+        print("Loading advanced stats for usage rates...")
+        adv = pd.read_csv(adv_stats_path, usecols=["player_id", "season", "usg_pct"])
+        adv = adv.drop_duplicates(subset=["player_id", "season"])
+        # Fill missing usage with a neutral league-average estimate
+        adv["usg_pct"] = adv["usg_pct"].fillna(0.18)
+
+        df = df.merge(adv, on=["player_id", "season"], how="left")
+        df["usg_pct"] = df["usg_pct"].fillna(0.18)
+
+        # ── Compute rolling baseline minutes per player ────────────────────────
+        # CRITICAL: shift(1) BEFORE rolling so row N only uses rows 0..N-1.
+        print("Computing rolling baseline minutes per player...")
+
+        df["min_roll5"] = (
+            df.groupby("player_id")["min"]
+            .transform(lambda x: x.shift(1).rolling(ROLL_WINDOW, min_periods=MIN_ROTATION_GAMES).mean())
+        )
+        df["games_in_roll5"] = (
+            df.groupby("player_id")["min"]
+            .transform(lambda x: x.shift(1).rolling(ROLL_WINDOW, min_periods=1).count())
+        )
+
+        # A player is "in the rotation" for a given game if:
+        #   - They averaged MIN_ROTATION_MINUTES+ over their last 5 games (shift-1)
+        #   - They appeared in at least MIN_ROTATION_GAMES of those 5 games
+        # NOTE: in_rotation is based on prior-games rolling stats (shift-1), so it is
+        # the pre-game expectation — it does NOT use the current game's minutes.
+        df["in_rotation"] = (
+            (df["min_roll5"] >= MIN_ROTATION_MINUTES) &
+            (df["games_in_roll5"] >= MIN_ROTATION_GAMES)
+        )
+
+        # ── Identify absent rotation players (vectorized) ──────────────────────
+        # Design: for each player-team, use pd.merge_asof to project their last
+        # known rotation status onto ALL team-game dates (sorted merge on game_date).
+        # A player was "expected" to play game G if their most recent appearance
+        # before G shows in_rotation=True and was within MAX_STALE_DAYS days.
+        # Then anti-join against actual appearances to find who was absent.
+        print("Identifying absent rotation players per team-game...")
+
+        MAX_STALE_DAYS = ROLL_WINDOW * 5   # ~25 days; beyond this, don't flag player
+
+        # All (team_id, game_id, game_date) pairs that actually occurred.
+        team_games = (
+            df[["team_id", "game_id", "game_date"]]
+            .drop_duplicates()
+            .copy()
+        )
+
+        # Player status timeline per player per team, sorted for merge_asof
+        player_status = (
+            df[["player_id", "team_id", "game_date", "in_rotation", "min_roll5", "usg_pct"]]
+            .copy()
+            .sort_values(["player_id", "team_id", "game_date"])
+        )
+
+        # Actual played: all (game_id, team_id, player_id) entries in the logs
+        # (game logs only include rows where the player actually played)
+        actual_played = (
+            df[["game_id", "team_id", "player_id"]]
+            .drop_duplicates()
+            .assign(played=True)
+        )
+
+        # Vectorized expected-rotation builder using merge_asof per (team, player)
+        expected_parts = []
+        for team_id_val, tg_grp in team_games.groupby("team_id"):
+            ps_team = player_status[player_status["team_id"] == team_id_val]
+            if ps_team.empty:
+                continue
+            tg_sorted = tg_grp.sort_values("game_date")[["team_id", "game_id", "game_date"]]
+
+            for player_id_val, player_grp in ps_team.groupby("player_id"):
+                ps_sorted = (
+                    player_grp
+                    .sort_values("game_date")
+                    .rename(columns={"game_date": "last_date"})
+                    [["last_date", "in_rotation", "min_roll5", "usg_pct"]]
+                )
+                # merge_asof: for each team-game date, find the player's last prior appearance
+                merged = pd.merge_asof(
+                    tg_sorted,
+                    ps_sorted,
+                    left_on="game_date",
+                    right_on="last_date",
+                    direction="backward",
+                )
+                # Keep rows where the player had a prior appearance showing in_rotation=True
+                # and that appearance was strictly before the game (days_since > 0)
+                # and not stale (days_since <= MAX_STALE_DAYS)
+                merged = merged[merged["last_date"].notna()].copy()
+                merged["days_since"] = (merged["game_date"] - merged["last_date"]).dt.days
+                merged = merged[
+                    (merged["in_rotation"])
+                    & (merged["days_since"] > 0)
+                    & (merged["days_since"] <= MAX_STALE_DAYS)
+                ]
+                if merged.empty:
+                    continue
+                merged["player_id"] = player_id_val
+                expected_parts.append(
+                    merged[["game_id", "team_id", "player_id", "min_roll5", "usg_pct"]]
+                )
+
+        expected_df = (
+            pd.concat(expected_parts, ignore_index=True)
+            if expected_parts
+            else pd.DataFrame(columns=["game_id", "team_id", "player_id", "min_roll5", "usg_pct"])
+        )
+        print(f"  Expected rotation appearances: {len(expected_df):,}")
+
+        # Anti-join: expected players who did NOT appear in the actual game log
+        merged_check = expected_df.merge(
+            actual_played,
+            on=["game_id", "team_id", "player_id"],
+            how="left",
+        )
+        # played=NaN → player was expected but did not appear in the game log
+        absent = merged_check[merged_check["played"].isna()].copy()
+
+        print(f"  Absent rotation instances: {len(absent):,}")
+        if len(absent) > 0:
+            print(f"  Games with at least one absent rotation player: "
+                  f"{absent['game_id'].nunique():,}")
+
+        # ── Aggregate absent players per (team_id, game_id) ──────────────────
+        absent_agg = (
+            absent
+            .groupby(["game_id", "team_id"])
+            .agg(
+                missing_minutes    =("min_roll5",  "sum"),
+                missing_usg_pct    =("usg_pct",    "sum"),
+                n_missing_rotation =("player_id",  "count"),
+            )
+            .reset_index()
+        )
+
+        # Star player out: any absent player with usg >= threshold
+        star_out = (
+            absent[absent["usg_pct"] >= STAR_USG_THRESHOLD]
+            .groupby(["game_id", "team_id"])
+            .size()
+            .reset_index(name="star_player_out")
+        )
+        star_out["star_player_out"] = 1
+
+        absent_agg = absent_agg.merge(star_out, on=["game_id", "team_id"], how="left")
+        absent_agg["star_player_out"] = absent_agg["star_player_out"].fillna(0).astype(int)
+
+        # ── Compute total expected minutes per team-game ──────────────────────
+        # total_expected_minutes = absent rotation minutes + played rotation minutes.
+        # expected_df only contains absent players; we also need rotation players
+        # who DID play (their min_roll5 from the game log, in_rotation=True).
+        played_rotation = df[df["in_rotation"]][
+            ["game_id", "team_id", "min_roll5"]
+        ].copy()
+
+        combined_for_total = pd.concat([
+            expected_df[["game_id", "team_id", "min_roll5"]],
+            played_rotation[["game_id", "team_id", "min_roll5"]],
+        ], ignore_index=True)
+
+        expected_agg = (
+            combined_for_total
+            .groupby(["game_id", "team_id"])["min_roll5"]
+            .sum()
+            .reset_index()
+            .rename(columns={"min_roll5": "total_expected_minutes"})
+        )
+
+        result_intermediate = expected_agg.merge(absent_agg, on=["game_id", "team_id"], how="left")
+
+    # ── Build final output (shared by both paths) ──────────────────────────────
+    result = result_intermediate.copy()
+
+    result["missing_minutes"]    = result["missing_minutes"].fillna(0)
+    result["missing_usg_pct"]    = result["missing_usg_pct"].fillna(0)
+    result["n_missing_rotation"] = result["n_missing_rotation"].fillna(0).astype(int)
+    result["star_player_out"]    = result["star_player_out"].fillna(0).astype(int)
 
     result["rotation_availability"] = (
         1.0 - result["missing_minutes"] / result["total_expected_minutes"].replace(0, np.nan)
     ).fillna(1.0).clip(0.0, 1.0)
 
     # Round floats for cleaner storage
-    result["missing_minutes"]    = result["missing_minutes"].round(2)
-    result["missing_usg_pct"]    = result["missing_usg_pct"].round(4)
+    result["missing_minutes"]       = result["missing_minutes"].round(2)
+    result["missing_usg_pct"]       = result["missing_usg_pct"].round(4)
     result["rotation_availability"] = result["rotation_availability"].round(4)
 
     # Drop the intermediate column

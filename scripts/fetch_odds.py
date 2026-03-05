@@ -27,6 +27,7 @@ import os
 import sys
 import json
 import logging
+import datetime as dt
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -107,11 +108,18 @@ ODDS_TEAM_TO_ABB = {
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def get_odds_api(endpoint: str, params: dict) -> list | dict | None:
-    """Call The Odds API and return parsed JSON, or None on error."""
-    params["apiKey"] = API_KEY
+    """Call The Odds API and return parsed JSON, or None on error.
+
+    The API key is passed as the Authorization header (Bearer token) rather
+    than a URL query parameter to prevent it from appearing in server logs,
+    proxy logs, or URL-based monitoring tools. The Odds API v4 accepts the
+    key via the ``Authorization: Bearer <key>`` header as an alternative to
+    the ``apiKey`` query param.
+    """
     url = f"{BASE_URL}/{endpoint}"
+    headers = {"Authorization": f"Bearer {API_KEY}"}
     try:
-        r = requests.get(url, params=params, timeout=20)
+        r = requests.get(url, params=params, headers=headers, timeout=20)
         remaining = r.headers.get("x-requests-remaining", "?")
         used = r.headers.get("x-requests-used", "?")
         log.info(f"API call: {endpoint} → {r.status_code} | used={used} remaining={remaining}")
@@ -317,9 +325,16 @@ def load_model_game_projections() -> pd.DataFrame:
     feats_path         = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_features.pkl"
 
     df = pd.read_csv(features_path)
-    # Use only the current season (most recent data)
-    today = datetime.now(timezone.utc).date().isoformat()
-    recent = df[df["game_date"] >= "2025-10-01"].copy()
+    # Use only the current season (most recent data).
+    # NBA regular seasons start in mid-October. If today is before June 1,
+    # the current season started last October; otherwise it starts this October.
+    today = datetime.now(timezone.utc).date()
+    if today < dt.date(today.year, 6, 1):
+        season_start = dt.date(today.year - 1, 10, 1)
+    else:
+        season_start = dt.date(today.year, 10, 1)
+    season_start_str = season_start.isoformat()
+    recent = df[df["game_date"] >= season_start_str].copy()
 
     try:
         # Prefer calibrated model; fall back to uncalibrated if not found
@@ -382,7 +397,8 @@ def load_model_player_projections() -> pd.DataFrame:
         # Try loading the trained model
         model_path = PROJECT_ROOT / "models" / "artifacts" / f"player_{stat}_model.pkl"
         feats_path = PROJECT_ROOT / "models" / "artifacts" / f"player_{stat}_features.pkl"
-        model_proj = None
+        # model_pred_series: index-aligned Series (keyed by latest.index) so .loc[] is safe
+        model_pred_series: "pd.Series | None" = None
 
         try:
             with open(model_path, "rb") as f:
@@ -390,13 +406,25 @@ def load_model_player_projections() -> pd.DataFrame:
             with open(feats_path, "rb") as f:
                 feature_cols = pickle.load(f)
             X = latest[feature_cols].fillna(0)
-            model_proj = model.predict(X)
+            # Wrap numpy array as a Series keyed by latest.index — prevents positional misalignment
+            raw_preds = model.predict(X)
+            model_pred_series = pd.Series(raw_preds, index=latest.index)
             log.info(f"Player {stat} model projections generated for {len(latest)} players")
+            null_count = int(model_pred_series.isna().sum())
+            if null_count > 0:
+                log.warning(
+                    f"Player {stat}: {null_count} null predictions after model.predict — "
+                    "feature columns may not align with training data"
+                )
         except Exception as e:
             log.warning(f"Could not load player {stat} model ({e}). Using rolling 10-game avg.")
 
-        for i, row in latest.iterrows():
-            proj = float(model_proj[i]) if model_proj is not None else row.get(roll_col)
+        for idx, row in latest.iterrows():
+            # Use .loc[idx] on the index-aligned Series — safe even if index is non-sequential
+            if model_pred_series is not None:
+                proj = float(model_pred_series.loc[idx])
+            else:
+                proj = row.get(roll_col)
             if pd.notna(proj):
                 rows.append({
                     "player_name":       row["player_name"],

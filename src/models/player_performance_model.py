@@ -31,7 +31,7 @@ warnings.filterwarnings("ignore")
 FEATURES_PATH = "data/features/player_game_features.csv"
 ARTIFACTS_DIR = "models/artifacts"
 TARGETS = ["pts", "reb", "ast"]
-TEST_SEASONS = ["202324", "202425"]
+from src.models.game_outcome_model import TEST_SEASONS
 MIN_TRAIN_GAMES = 20
 VALIDATION_SEASON = "202223"
 

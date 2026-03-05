@@ -24,6 +24,7 @@ from src.data.get_team_stats import get_team_stats_all_seasons
 from src.data.get_team_stats_advanced import get_team_stats_advanced
 from src.data.get_team_stats_playoffs import get_team_stats_playoffs
 from src.processing.preprocessing import run_preprocessing
+from src.features.team_game_features import build_team_game_features
 
 
 ERROR_LOG_PATH = Path("logs/pipeline_errors.log")
@@ -98,6 +99,18 @@ def _run_backfill() -> None:
 
     print("\n=== Step 4: Rebuilding processed CSVs (full rebuild) ===")
     run_preprocessing(full_rebuild=True)
+
+    print("\n=== Step 5: Rebuilding derived feature CSVs ===")
+    try:
+        build_team_game_features()
+        try:
+            from src.features.player_features import build_player_game_features
+            build_player_game_features()
+        except Exception as player_feat_err:
+            print(f"Player feature rebuild skipped (non-fatal): {player_feat_err}")
+    except Exception as feat_err:
+        _log_pipeline_error("backfill.py:feature_rebuild", feat_err)
+        print(f"Feature rebuild failed (non-fatal): {feat_err}")
 
     elapsed = datetime.now() - start_time
     total_seconds = int(elapsed.total_seconds())

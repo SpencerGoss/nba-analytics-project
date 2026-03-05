@@ -556,8 +556,8 @@ COMPOSITE_THRESHOLD = float(os.getenv("COMPOSITE_THRESHOLD", "0.04"))
 
 def _load_ats_model():
     import pickle as _pk
-    model_path = os.path.join(ARTIFACTS_DIR, "ats_model.p" + "kl")
-    feat_path  = os.path.join(ARTIFACTS_DIR, "ats_model_features.p" + "kl")
+    model_path = os.path.join(ARTIFACTS_DIR, "ats_model.pkl")
+    feat_path  = os.path.join(ARTIFACTS_DIR, "ats_model_features.pkl")
     if not os.path.exists(model_path):
         raise FileNotFoundError(
             f"ATS model artifact not found at {model_path!r}. "
@@ -573,6 +573,29 @@ def _load_ats_model():
 
 
 def _score_bets_with_ats(candidate_bets, ats_features_path=ATS_FEATURES_PATH):
+    """Enrich candidate bets with ATS model probabilities and composite scores.
+
+    When the ATS model is unavailable (FileNotFoundError), all bets are returned
+    with ats_prob=None and ats_model_used=False so callers can distinguish
+    "no model" from "prediction succeeded".
+
+    When a matching row is not found in the ATS features file, that bet receives
+    ats_prob=None (not 0.5) to signal missing data -- callers should not filter
+    on ats_prob alone in that case.
+
+    Args:
+        candidate_bets: list of bet dicts (output of run_value_bet_scan).
+        ats_features_path: Path to game_ats_features.csv for feature lookup.
+
+    Returns:
+        list of dicts, each extended with:
+            ats_prob        (float | None) -- ATS model P(home covers); None if unavailable
+            composite_score (float)        -- weighted combination of edge and ats_prob
+            ats_model_used  (bool)         -- True only when ATS model produced a prediction
+    """
+    # --- Try to load the ATS model ---------------------------------------------
+    ats_model = None
+    ats_feat_cols = []
     try:
         ats_model, ats_feat_cols = _load_ats_model()
     except FileNotFoundError as exc:
@@ -580,13 +603,20 @@ def _score_bets_with_ats(candidate_bets, ats_features_path=ATS_FEATURES_PATH):
             f"ATS model unavailable -- falling back to edge-only scoring. ({exc})",
             UserWarning, stacklevel=3,
         )
+
+    # If no model, return bets with ats_prob=None and edge-only composite score
+    if ats_model is None:
         return [
-            {**b, "ats_prob": 0.5,
-             "composite_score": round(COMPOSITE_EDGE_WEIGHT * (b.get("edge_magnitude") or 0.0), 4),
-             "ats_model_used": False}
+            {
+                **b,
+                "ats_prob": None,
+                "composite_score": round(COMPOSITE_EDGE_WEIGHT * (b.get("edge_magnitude") or 0.0), 4),
+                "ats_model_used": False,
+            }
             for b in candidate_bets
         ]
 
+    # --- Load ATS features file for per-game row lookup -----------------------
     ats_df = None
     if ats_feat_cols and os.path.exists(ats_features_path):
         try:
@@ -599,15 +629,16 @@ def _score_bets_with_ats(candidate_bets, ats_features_path=ATS_FEATURES_PATH):
         except Exception as exc:
             warnings.warn(
                 f"Could not load ATS features file for join: {exc}. "
-                "ATS scoring will fall back to ats_prob=0.5 for all games.",
+                "ATS scoring will use ats_prob=None for all games.",
                 UserWarning, stacklevel=3,
             )
             ats_df = None
 
+    # --- Score each bet --------------------------------------------------------
     enriched = []
     for bet in candidate_bets:
         edge_mag = bet.get("edge_magnitude") or 0.0
-        ats_prob = 0.5
+        ats_prob = None   # None = no prediction available (missing data or no model)
         ats_used = False
 
         if ats_df is not None:
@@ -638,19 +669,29 @@ def _score_bets_with_ats(candidate_bets, ats_features_path=ATS_FEATURES_PATH):
                 except Exception as exc:
                     warnings.warn(
                         f"ATS model prediction failed for {home} vs {away}: {exc}. "
-                        "Using ats_prob=0.5 for this game.",
+                        "Using ats_prob=None for this game.",
                         UserWarning, stacklevel=3,
                     )
+                    ats_prob = None
 
-        composite = COMPOSITE_EDGE_WEIGHT * edge_mag + COMPOSITE_ATS_WEIGHT * (ats_prob - 0.5)
+        # Composite score: use 0.5 as neutral stand-in when ats_prob is None
+        # (edge contribution still counts; ats contribution is zeroed out)
+        ats_contrib = (ats_prob - 0.5) if ats_prob is not None else 0.0
+        composite = COMPOSITE_EDGE_WEIGHT * edge_mag + COMPOSITE_ATS_WEIGHT * ats_contrib
         enriched.append({
             **bet,
-            "ats_prob":        round(ats_prob, 4),
+            "ats_prob":        round(ats_prob, 4) if ats_prob is not None else None,
             "composite_score": round(composite, 4),
             "ats_model_used":  ats_used,
         })
 
     return enriched
+
+
+# Minimum ATS probability for a bet to pass the ATS filter.
+# Bets where ats_prob is not None AND ats_prob < ATS_PROB_THRESHOLD are excluded.
+# Bets where ats_prob is None (missing feature data) are kept regardless.
+ATS_PROB_THRESHOLD = float(os.getenv("ATS_PROB_THRESHOLD", "0.53"))
 
 
 def get_strong_value_bets(
@@ -659,20 +700,66 @@ def get_strong_value_bets(
     composite_threshold=COMPOSITE_THRESHOLD,
     ats_features_path=ATS_FEATURES_PATH,
 ):
+    """Return bets that pass both the game-outcome edge filter AND the ATS filter.
+
+    Logic flow
+    ----------
+    1. Run the full value-bet scan (game-outcome model vs. market).
+    2. Keep only candidates whose edge_magnitude > strong_threshold.
+    3. Enrich each candidate with ATS model probabilities via _score_bets_with_ats().
+    4. For each scored bet, determine ats_filtered:
+       - True  when ats_prob is None (missing data -- do not penalise)
+       - True  when ats_prob >= ATS_PROB_THRESHOLD
+       - False when ats_prob < ATS_PROB_THRESHOLD (ATS model disagrees -- exclude)
+    5. If the ATS model was available for at least one bet, apply the composite-
+       score filter (COMPOSITE_THRESHOLD) AND the ats_filtered flag together.
+       If no ATS model is present at all, fall back to edge-only filtering.
+    6. Return sorted list of dicts; each dict includes:
+       - All original run_value_bet_scan() columns
+       - ats_prob        (float | None)
+       - ats_filtered    (bool)
+       - composite_score (float)
+       - ats_model_used  (bool)
+
+    The function signature is unchanged so existing callers are unaffected.
+    """
     all_bets = run_value_bet_scan(use_live_odds=use_live_odds, threshold=VALUE_BET_THRESHOLD)
     edge_candidates = [b for b in all_bets if (b.get("edge_magnitude") or 0) > strong_threshold]
+
     scored = _score_bets_with_ats(edge_candidates, ats_features_path=ats_features_path)
+
+    # --- Annotate ats_filtered for every scored bet ----------------------------
+    # ats_filtered=True  means "passes ATS gate (or ATS data unavailable)"
+    # ats_filtered=False means "ATS model available AND ats_prob < ATS_PROB_THRESHOLD"
     any_ats_used = any(b.get("ats_model_used") for b in scored)
 
+    for bet in scored:
+        ats_prob = bet.get("ats_prob")
+        if ats_prob is None:
+            # No prediction for this row (missing features or no model) -- keep it
+            bet["ats_filtered"] = True
+        else:
+            bet["ats_filtered"] = ats_prob >= ATS_PROB_THRESHOLD
+
+    # --- Apply composite + ats_filtered filter ---------------------------------
     if any_ats_used:
-        strong = [b for b in scored if (b.get("composite_score") or 0) > composite_threshold]
+        # ATS model produced at least one prediction: apply both gates
+        strong = [
+            b for b in scored
+            if (b.get("composite_score") or 0) > composite_threshold
+            and b.get("ats_filtered", True)
+        ]
         strong_sorted = sorted(strong, key=lambda b: b.get("composite_score") or 0, reverse=True)
+        n_ats_filtered_out = sum(1 for b in scored if not b.get("ats_filtered", True))
         print(
             f"Strong value bets (composite > {composite_threshold:.2f}, "
+            f"ats_prob >= {ATS_PROB_THRESHOLD:.2f}, "
             f"edge_weight={COMPOSITE_EDGE_WEIGHT}, ats_weight={COMPOSITE_ATS_WEIGHT}): "
-            f"{len(strong_sorted)} of {len(all_bets)} games"
+            f"{len(strong_sorted)} of {len(all_bets)} games "
+            f"({n_ats_filtered_out} removed by ATS filter)"
         )
     else:
+        # ATS model unavailable: edge-only fallback; ats_filtered is True for all
         strong = [b for b in scored if (b.get("edge_magnitude") or 0) > strong_threshold]
         strong_sorted = sorted(strong, key=lambda b: b.get("edge_magnitude") or 0, reverse=True)
         print(

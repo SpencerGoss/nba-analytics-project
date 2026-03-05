@@ -9,7 +9,7 @@ Usage:
 
     result = fetch_with_retry(
         lambda: some_endpoint(headers=HEADERS, timeout=60).get_data_frames()[0],
-        label="2024-25",
+        label="202425",
     )
     if result["success"]:
         df = result["data"]

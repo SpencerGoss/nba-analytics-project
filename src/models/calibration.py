@@ -68,7 +68,7 @@ from sklearn.preprocessing import StandardScaler
 MATCHUP_PATH   = "data/features/game_matchup_features.csv"
 ARTIFACTS_DIR  = "models/artifacts"
 OUTPUT_DIR     = "reports/calibration"
-TEST_SEASONS   = ["202324", "202425"]
+from src.models.game_outcome_model import TEST_SEASONS
 TARGET         = "home_win"
 N_BINS         = 10            # number of calibration bins
 
@@ -291,7 +291,8 @@ def _plot_brier_trend(df: pd.DataFrame, output_dir: str) -> None:
     ax.plot(df["season"], df["brier_score"], color="#3498db", linewidth=2, marker="o",
             markersize=4, alpha=0.85, label="Brier score (lower = better)")
 
-    # Rolling 5-season average
+    # Rolling 5-season average — work on a copy to avoid mutating the caller's DataFrame
+    df = df.copy()
     df["brier_roll5"] = df["brier_score"].rolling(5, min_periods=1).mean()
     ax.plot(df["season"], df["brier_roll5"], color="#e67e22", linewidth=2.5,
             linestyle="--", label="5-season rolling avg")

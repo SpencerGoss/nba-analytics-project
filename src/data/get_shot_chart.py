@@ -36,7 +36,7 @@ def get_shot_chart(start_year=2000, end_year=2024):
         season_shots = []
 
         for i, player_id in enumerate(player_ids):
-            time.sleep(0.8)
+            time.sleep(1.0)
 
             result = fetch_with_retry(
                 lambda p=player_id, s=season: shotchartdetail.ShotChartDetail(

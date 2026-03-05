@@ -34,9 +34,18 @@ Usage:
         results = simulate_playoff_odds(season="202425")
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Ensure PROJECT_ROOT is on sys.path so src.* modules (e.g. _CalibratedWrapper)
+# are importable when deserialising pickled model artifacts.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import pandas as pd
 import numpy as np
-import os
 import pickle
 import warnings
 warnings.filterwarnings("ignore")
@@ -66,15 +75,29 @@ REGRESSION_ALPHA     = 0.15
 def _load_game_model(artifacts_dir: str = ARTIFACTS_DIR):
     """
     Try to load the trained game outcome model + feature list.
+    Prefers the calibrated model; falls back to uncalibrated with a warning.
     Returns (model, feat_cols) or (None, None) if not available.
     """
-    model_path = os.path.join(artifacts_dir, "game_outcome_model.pkl")
+    cal_path   = os.path.join(artifacts_dir, "game_outcome_model_calibrated.pkl")
+    base_path  = os.path.join(artifacts_dir, "game_outcome_model.pkl")
     feat_path  = os.path.join(artifacts_dir, "game_outcome_features.pkl")
-    if not os.path.exists(model_path) or not os.path.exists(feat_path):
+
+    if not os.path.exists(feat_path):
         return None, None
+    if not os.path.exists(cal_path) and not os.path.exists(base_path):
+        return None, None
+
     try:
-        with open(model_path, "rb") as f:
-            model = pickle.load(f)
+        if os.path.exists(cal_path):
+            with open(cal_path, "rb") as f:
+                model = pickle.load(f)
+        else:
+            warnings.warn(
+                "Calibrated model not found, using uncalibrated game_outcome_model.pkl",
+                UserWarning,
+            )
+            with open(base_path, "rb") as f:
+                model = pickle.load(f)
         with open(feat_path, "rb") as f:
             feat_cols = pickle.load(f)
         return model, feat_cols

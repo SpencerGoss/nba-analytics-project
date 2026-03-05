@@ -24,8 +24,10 @@ from src.data.get_team_stats import get_team_stats_all_seasons
 from src.data.get_team_stats_advanced import get_team_stats_advanced
 from src.data.get_teams import get_teams
 from src.processing.preprocessing import run_preprocessing
+from src.features.team_game_features import build_team_game_features
 from src.data.get_odds import refresh_odds_data
 from src.data.get_injury_data import get_injury_report
+from src.data.get_balldontlie import get_balldontlie_stats
 
 
 ERROR_LOG_PATH = Path("logs/pipeline_errors.log")
@@ -120,14 +122,37 @@ def main() -> None:
 
         fetch_current_season_data(current_year, now)
 
+        print("\n=== Step 1E: BallDontLie supplementary game stats ===")
+        try:
+            bdl_df = get_balldontlie_stats(season=current_year)
+            if bdl_df.empty:
+                print("BallDontLie returned no data (API key missing or no games yet).")
+            else:
+                print(f"BallDontLie stats fetched: {len(bdl_df)} game records.")
+        except Exception as bdl_err:
+            log_pipeline_error("update.py:balldontlie", bdl_err)
+            print(f"BallDontLie fetch failed (non-fatal): {bdl_err}")
+
         print("\n=== Step 2: Updating processed CSVs (incremental) ===")
         run_preprocessing(full_rebuild=False)
 
-        print("\n=== Step 3: Refreshing sportsbook odds ===")
+        print("\n=== Step 3: Rebuilding derived feature CSVs ===")
+        try:
+            build_team_game_features()
+            try:
+                from src.features.player_features import build_player_game_features
+                build_player_game_features()
+            except Exception as player_feat_err:
+                print(f"Player feature rebuild skipped (non-fatal): {player_feat_err}")
+        except Exception as feat_err:
+            log_pipeline_error("update.py:feature_rebuild", feat_err)
+            print(f"Feature rebuild failed (non-fatal): {feat_err}")
+
+        print("\n=== Step 4: Refreshing sportsbook odds ===")
         if not refresh_odds_data():
             print("Odds refresh skipped/failed; continuing update pipeline.")
 
-        print("\n=== Step 4: Fetching today's injury report ===")
+        print("\n=== Step 5: Fetching today's injury report ===")
         try:
             injury_df = get_injury_report(season_year=current_year)
             if injury_df.empty:

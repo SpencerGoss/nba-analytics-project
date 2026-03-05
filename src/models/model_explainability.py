@@ -40,8 +40,16 @@ Usage:
 """
 
 import os
+import sys
 import pickle
 import warnings
+from pathlib import Path
+
+# Ensure project root is on sys.path so src.* imports work when running directly.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -70,7 +78,7 @@ OUTPUT_DIR      = "reports/explainability"
 
 # Number of test-set rows to use for SHAP computation (SHAP is slow on large sets)
 SHAP_SAMPLE     = 500
-TEST_SEASONS    = ["202324", "202425"]
+from src.models.game_outcome_model import TEST_SEASONS
 
 PLAYER_TARGETS  = ["pts", "reb", "ast"]
 TARGET_CLASS    = "home_win"
@@ -178,7 +186,18 @@ def explain_game_outcome_model(
     print("=" * 60)
 
     # -- Load model and data ---------------------------------------------------
-    model     = _load_artifact("game_outcome_model.pkl", artifacts_dir)
+    # Prefer calibrated model; fall back to uncalibrated with a warning.
+    cal_name  = "game_outcome_model_calibrated.pkl"
+    base_name = "game_outcome_model.pkl"
+    cal_path  = os.path.join(artifacts_dir, cal_name)
+    if os.path.exists(cal_path):
+        model = _load_artifact(cal_name, artifacts_dir)
+    else:
+        warnings.warn(
+            "Calibrated model not found, using uncalibrated game_outcome_model.pkl",
+            UserWarning,
+        )
+        model = _load_artifact(base_name, artifacts_dir)
     feat_cols = _load_artifact("game_outcome_features.pkl", artifacts_dir)
 
     df = pd.read_csv(matchup_path)
@@ -202,11 +221,17 @@ def explain_game_outcome_model(
 
     if SHAP_AVAILABLE:
         print("\nComputing SHAP values (this may take a minute)...")
-        # v2 model artifact is CalibratedClassifierCV wrapping a Pipeline;
-        # SHAP needs the raw tree estimator, not the calibration wrapper.
+        # SHAP needs the raw tree estimator, not any calibration wrapper.
+        # Handle three model artifact shapes:
+        #   _CalibratedWrapper  — custom isotonic wrapper (base_model is a Pipeline)
+        #   CalibratedClassifierCV — sklearn calibration wrapper (estimator is a Pipeline)
+        #   Pipeline            — v1 plain pipeline (direct named_steps access)
         from sklearn.calibration import CalibratedClassifierCV as _CalCV
-        if isinstance(model, _CalCV):
-            clf = model.estimator.named_steps["clf"]   # inner GBM
+        from src.models.calibration import _CalibratedWrapper as _CalWrap
+        if isinstance(model, _CalWrap):
+            clf = model.base_model.named_steps["clf"]  # custom wrapper -> base Pipeline -> clf
+        elif isinstance(model, _CalCV):
+            clf = model.estimator.named_steps["clf"]   # sklearn wrapper -> estimator Pipeline -> clf
         else:
             clf = model.named_steps["clf"]             # v1 plain Pipeline
         explainer   = shap.TreeExplainer(clf)
@@ -261,7 +286,7 @@ def explain_game_outcome_model(
         print("\nComputing permutation importance (this takes ~1 minute)...")
 
         perm = permutation_importance(
-            model, X_df, test[TARGET_CLASS].values,
+            model, X_sample, test.iloc[sample_idx][TARGET_CLASS].values,
             n_repeats=10, random_state=42, scoring="roc_auc",
         )
 
@@ -308,11 +333,33 @@ def explain_player_model(
     print("EXPLAINABILITY -- Player Performance Models")
     print("=" * 60)
 
-    df = pd.read_csv(player_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
-    df["season"]    = df["season"].astype(str)
+    # player_game_features.csv is 700MB+ (700K+ rows).  Loading it whole
+    # takes 25+ seconds and uses ~2 GB of RAM.  Narrow to needed columns and
+    # filter by season in chunks so we only materialise the test-set rows.
+    _needed_features: set = set()
+    for _t in targets:
+        try:
+            _needed_features.update(
+                _load_artifact(f"player_{_t}_features.pkl", artifacts_dir)
+            )
+        except FileNotFoundError:
+            pass
+    _meta_cols = ["season", "game_date"] + list(targets)
+    # Intersect with actual CSV header to avoid usecols errors on missing cols
+    _csv_header = pd.read_csv(player_path, nrows=0).columns.tolist()
+    _usecols = [c for c in _csv_header if c in _needed_features or c in _meta_cols]
 
-    test = df[df["season"].isin(test_seasons)].copy()
+    test_season_set = set(str(s) for s in test_seasons)
+    chunks = []
+    for chunk in pd.read_csv(
+        player_path, chunksize=50_000, low_memory=False, usecols=_usecols
+    ):
+        chunk["season"] = chunk["season"].astype(str)
+        sub = chunk[chunk["season"].isin(test_season_set)]
+        if len(sub):
+            chunks.append(sub)
+    test = pd.concat(chunks, ignore_index=True) if chunks else pd.DataFrame()
+    test["game_date"] = pd.to_datetime(test["game_date"])
     print(f"\nTest set size: {len(test):,} rows")
 
     from sklearn.impute import SimpleImputer
@@ -335,19 +382,34 @@ def explain_player_model(
             print(f"  Skipping -- insufficient test data ({len(t_test)} rows)")
             continue
 
-        imp   = SimpleImputer(strategy="mean")
-        X_raw = t_test[feat_cols]
-        X_imp = imp.fit_transform(X_raw)
-        X_df  = pd.DataFrame(X_imp, columns=feat_cols)
-
+        # Sample BEFORE imputation — player datasets can be 50K+ rows;
+        # running SimpleImputer on the full set is the source of the hang.
         sample_idx = np.random.default_rng(42).choice(
-            len(X_df), size=min(shap_sample, len(X_df)), replace=False
+            len(t_test), size=min(shap_sample, len(t_test)), replace=False
         )
-        X_sample = X_df.iloc[sample_idx]
+        t_sample = t_test.iloc[sample_idx].copy()
+
+        imp      = SimpleImputer(strategy="mean")
+        X_raw    = t_sample[feat_cols]
+        X_imp    = imp.fit_transform(X_raw)
+        X_sample = pd.DataFrame(X_imp, columns=feat_cols)
+
+        # Keep X_df as an alias so the permutation-importance fallback
+        # (which needs labels too) still works on the same sample.
+        X_df = X_sample
 
         if SHAP_AVAILABLE:
             print(f"  Computing SHAP values for {target}...")
-            reg       = model.named_steps["model"]
+            try:
+                reg = model.named_steps["model"]
+            except KeyError:
+                try:
+                    reg = model.named_steps["clf"]
+                except KeyError:
+                    try:
+                        reg = model.named_steps["estimator"]
+                    except (KeyError, AttributeError):
+                        reg = model  # not a Pipeline � use directly
             explainer   = shap.TreeExplainer(reg)
             shap_values = explainer.shap_values(X_sample)
 
@@ -380,7 +442,7 @@ def explain_player_model(
             neg_mae_scorer = make_scorer(mae_fn, greater_is_better=False)
 
             perm = permutation_importance(
-                model, X_df, t_test[target].values,
+                model, X_df, t_sample[target].values,
                 n_repeats=8, random_state=42, scoring=neg_mae_scorer,
             )
             direction = pd.DataFrame({
@@ -438,7 +500,18 @@ def explain_prediction(
         print("Install with: pip install shap")
         return {}
 
-    model     = _load_artifact("game_outcome_model.pkl", artifacts_dir)
+    # Prefer calibrated model; fall back to uncalibrated with a warning.
+    _cal_name  = "game_outcome_model_calibrated.pkl"
+    _base_name = "game_outcome_model.pkl"
+    _cal_path  = os.path.join(artifacts_dir, _cal_name)
+    if os.path.exists(_cal_path):
+        model = _load_artifact(_cal_name, artifacts_dir)
+    else:
+        warnings.warn(
+            "Calibrated model not found, using uncalibrated game_outcome_model.pkl",
+            UserWarning,
+        )
+        model = _load_artifact(_base_name, artifacts_dir)
     feat_cols = _load_artifact("game_outcome_features.pkl", artifacts_dir)
 
     df = pd.read_csv(matchup_path)
