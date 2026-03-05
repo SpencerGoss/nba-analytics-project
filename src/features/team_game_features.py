@@ -469,7 +469,10 @@ def build_team_game_features(
     opp_strength = df[["team_abbreviation", "game_id", "cum_win_pct"]].copy()
     opp_strength.columns = ["opponent_abbr", "game_id", "opp_pre_game_win_pct"]
 
+    _n_before_sos = len(df)
     df = df.merge(opp_strength, on=["opponent_abbr", "game_id"], how="left")
+    _n_after_sos = len(df)
+    print(f"  SOS join: {_n_before_sos:,} rows → {_n_after_sos:,} rows (dropped {_n_before_sos - _n_after_sos:,})")
 
     sos_group = df.groupby("team_id", group_keys=False)
     for window in [10, 20]:
@@ -494,7 +497,10 @@ def build_team_game_features(
         "opp_oreb", "opp_tov", "opp_fta", "opp_dreb",
         "opp_three_rate_game",
     ]
+    _n_before_opp = len(df)
     df = df.merge(opp_box, on=["opponent_abbr", "game_id"], how="left")
+    _n_after_opp = len(df)
+    print(f"  Opponent box join: {_n_before_opp:,} rows → {_n_after_opp:,} rows (dropped {_n_before_opp - _n_after_opp:,})")
 
     if df["opp_fga"].notna().sum() == 0:
         raise ValueError(
@@ -896,11 +902,13 @@ def build_matchup_dataset(
     meta = home[["game_id", "season", "game_date", "team_abbreviation", "opponent_abbr"]].copy()
     meta.columns = ["game_id", "season", "game_date", "home_team", "away_team"]
 
+    _n_meta = len(meta)
     matchup = (
         meta
         .merge(home_feat, on="game_id", how="inner")
         .merge(away_feat, on="game_id", how="inner")
     )
+    print(f"  Home/away matchup join: {_n_meta:,} games → {len(matchup):,} rows (dropped {_n_meta - len(matchup):,})")
 
     # -- Season-segment context (Phase 4, FR-3.4) --
     matchup["season_month"] = pd.to_datetime(matchup["game_date"]).dt.month
