@@ -539,6 +539,42 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
     return result_records.to_dict(orient="records")
 
 
+# -- Strong value-bet filter ----------------------------------------------------
+
+STRONG_BET_THRESHOLD = float(os.getenv("STRONG_BET_THRESHOLD", "0.08"))
+
+
+def get_strong_value_bets(
+    strong_threshold: float = STRONG_BET_THRESHOLD,
+    use_live_odds: bool = False,
+) -> list:
+    """Return value bets where edge_magnitude exceeds strong_threshold.
+
+    Calls run_value_bet_scan() and filters to high-conviction bets only.
+    Results are sorted by edge_magnitude descending (strongest first).
+
+    Args:
+        strong_threshold: Minimum edge magnitude to qualify as a strong bet.
+            Default 0.08 (8 percentage points). Configurable via
+            STRONG_BET_THRESHOLD env var.
+        use_live_odds: If True, fetch live odds from The Odds API.
+            Default False (historical mode -- no API key needed).
+
+    Returns:
+        list[dict]: Filtered and sorted value bets. Empty list if none qualify.
+            Each dict has the same schema as run_value_bet_scan():
+            edge_magnitude, is_value_bet, bet_side, model_win_prob,
+            market_implied_prob, and optionally home_team, away_team, game_date.
+    """
+    all_bets = run_value_bet_scan(use_live_odds=use_live_odds, threshold=VALUE_BET_THRESHOLD)
+    strong = [b for b in all_bets if (b.get("edge_magnitude") or 0) > strong_threshold]
+    strong_sorted = sorted(strong, key=lambda b: b.get("edge_magnitude") or 0, reverse=True)
+    n = len(strong_sorted)
+    total = len(all_bets)
+    print(f"\nStrong value bets (edge > {strong_threshold:.0%}): {n} of {total} games")
+    return strong_sorted
+
+
 # -- Entry point ----------------------------------------------------------------
 
 if __name__ == "__main__":
