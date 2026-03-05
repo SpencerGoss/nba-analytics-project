@@ -2,13 +2,12 @@
 Historical Absence Dataset Builder
 ====================================
 Scans existing player game logs to produce a structured per-player absence
-record file at data/raw/injuries/player_absences.csv.
+record file at data/processed/player_absences.csv.
 
 Purpose:
-  The data/raw/injuries/ directory is normally populated by live injury reports
-  during inference. This script backfills it from historical game logs using
-  the same rotation-detection proxy logic as injury_proxy.py — but outputs
-  per-player rows rather than team-level aggregates.
+  This script backfills historical absence data from game logs using the same
+  rotation-detection proxy logic as injury_proxy.py — but outputs per-player
+  rows rather than team-level aggregates.
 
   Downstream consumers (injury_proxy.py feature builder, future real-absence
   replacement) can use this file to look up who was absent for a given game.
@@ -24,7 +23,7 @@ Algorithm:
   5. Anti-join against actual appearances: rotation players with no game-log
      entry for a given game_id are marked was_absent=1.
   6. Append rows for rotation players who DID appear (was_absent=0).
-  7. Save to data/raw/injuries/player_absences.csv and return the DataFrame.
+  7. Save to data/processed/player_absences.csv and return the DataFrame.
 
 Output schema:
   player_id   (int)    — NBA player ID
@@ -50,11 +49,8 @@ Usage:
 
 import os
 import sys
-import warnings
 import pandas as pd
 import numpy as np
-
-warnings.filterwarnings("ignore")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -62,7 +58,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 GAME_LOG_PATH = "data/processed/player_game_logs.csv"
 ADV_STATS_PATH = "data/processed/player_stats_advanced.csv"
-OUTPUT_PATH = "data/raw/injuries/player_absences.csv"
+OUTPUT_PATH = "data/processed/player_absences.csv"
 
 # Rotation threshold: player must average >= this many minutes over last 5 games
 MIN_ROTATION_MINUTES = 15.0

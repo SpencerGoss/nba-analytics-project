@@ -77,9 +77,10 @@ _CODE_PATH = "TRAINING"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-GAME_LOG_PATH  = "data/processed/player_game_logs.csv"
-ADV_STATS_PATH = "data/processed/player_stats_advanced.csv"
-OUTPUT_PATH    = "data/features/injury_proxy_features.csv"
+GAME_LOG_PATH    = "data/processed/player_game_logs.csv"
+ADV_STATS_PATH   = "data/processed/player_stats_advanced.csv"
+OUTPUT_PATH      = "data/features/injury_proxy_features.csv"
+ABSENCES_CSV_PATH = "data/processed/player_absences.csv"
 
 # A player is considered "in the rotation" if they've averaged at least
 # this many minutes over the last 5 games they played.
