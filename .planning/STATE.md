@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Data Expansion & Model Intelligence
-status: not started
-last_updated: "2026-03-04"
+status: in_progress
+last_updated: "2026-03-05"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 1
+  completed_plans: 1
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Identify games where the model's win probability meaningfully disagrees with Vegas lines — producing profitable against-the-spread picks over a full NBA season
-**Current focus:** Phase 6 — Production Fixes & Injury Data (not started)
+**Current focus:** Phase 10 — Real Absence Features & Pipeline Fix
 
 ## Current Position
 
-Phase: 6 of 9 (Production Fixes & Injury Data) — NOT STARTED
-Plan: None started
-Status: v2.0 roadmap created; ready to begin Phase 6 planning
-Last activity: 2026-03-04 — v2.0 roadmap initialized
+Phase: 10 of 11 (Real Absence Features & Pipeline Fix) — IN PROGRESS
+Plan: 10-01 COMPLETE; next plan TBD
+Status: Phases 6-9 complete; Phase 10 Plan 01 complete 2026-03-05
+Last activity: 2026-03-05 — Plan 10-01 complete; player_absences.csv generated (1.1M rows)
 
-Progress: [____________________] 0%
+Progress: [████████████________] 82% (9/11 phases done)
 
 ## v2.0 Milestone Goals
 
@@ -54,6 +54,7 @@ Progress: [____________________] 0%
 | 07-new-data-sources | TBD | - | - |
 | 08-feature-engineering | TBD | - | - |
 | 09-model-retraining-ats-optimization | TBD | - | - |
+| 10-kaggle-injury-real-features | 1 completed | ~9 min | 9 min |
 
 *Updated after each plan completion*
 
@@ -64,6 +65,10 @@ Progress: [____________________] 0%
 Decisions from v1.0 carried forward — see v1.0 STATE.md archive or .planning/PROJECT.md Key Decisions table.
 
 v2.0 decisions will be logged here as they are made.
+
+**2026-03-05 (10-01):** Output includes both was_absent=0 (played) and was_absent=1 (absent) rows for full rotation coverage. was_absent rate of 12.6% is correct — plan's 40-65% expectation was for a different metric (team-game level, not player-game level).
+
+**2026-03-05 (10-01):** game_id normalized as str from int64 source (leading zeros stripped). Matches real player_game_logs.csv behavior where game_id is int64.
 
 ### Pending Todos
 
@@ -77,6 +82,6 @@ v2.0 decisions will be logged here as they are made.
 
 ## Session Continuity
 
-Last session: 2026-03-04 (v2.0 roadmap created)
-Stopped at: Roadmap written; no plans started
-Resume file: None — start with `/gsd:plan-phase 6`
+Last session: 2026-03-05 (Phase 10 Plan 01 executed)
+Stopped at: Completed 10-01-PLAN.md — player_absences.csv generated
+Resume file: None — next is Phase 10 Plan 02 (if planned) or Phase 11
