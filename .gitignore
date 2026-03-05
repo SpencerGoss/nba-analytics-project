@@ -51,3 +51,7 @@ data/outputs/
 
 # External repos
 freqtrade/
+
+# Claude Code local state (never commit)
+.claude/settings.local.json
+.claude/worktrees/
