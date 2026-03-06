@@ -155,10 +155,14 @@ def fetch_game_lines() -> pd.DataFrame:
         log.warning("No markets returned from Pinnacle API.")
         return empty
 
-    # Filter matchups to regular h2h games only -- must have exactly one "home"
-    # and one "away" participant (excludes futures/playoffs with "neutral" alignment).
+    # Filter matchups to regular h2h games only:
+    # - parentId must be None (child records are alternate/period lines)
+    # - must have exactly one "home" and one "away" participant
+    #   (excludes futures/playoffs with "neutral" alignment)
     matchups = {}
     for m in matchups_raw:
+        if m.get("parentId") is not None:
+            continue   # skip alternate spreads, period lines, etc.
         participants = m.get("participants", [])
         alignments = {p["alignment"]: p["name"] for p in participants
                       if p.get("alignment") in ("home", "away")}
@@ -462,7 +466,7 @@ def main():
     # 4. Build and save comparison file
     mvs = build_model_vs_odds(game_lines, player_props, game_projections, player_projections)
     mvs.to_csv(ODDS_DIR / "model_vs_odds.csv", index=False)
-    flagged_count = mvs["flagged"].sum() if "flagged" in mvs else 0
+    flagged_count = int(mvs["flagged"].dropna().sum()) if "flagged" in mvs.columns else 0
     log.info(f"Saved model_vs_odds.csv ({len(mvs)} rows, {flagged_count} flagged)")
 
     log.info("=== fetch_odds.py complete ===")
