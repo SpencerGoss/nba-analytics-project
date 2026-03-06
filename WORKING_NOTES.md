@@ -13,7 +13,7 @@
 - Season codes are integers (e.g., `202425`), not strings like "2024-25"
 - 145 tests passing (2026-03-05); run with `.venv/Scripts/python.exe -m pytest tests/ -q`
 - `database/nba.db` is empty/legacy — pipeline runs entirely on CSV files; only `predictions_history.db` is active
-- Odds source: The Odds API key expired; decision made to replace with Pinnacle API (free, keyless, sharper lines)
+- Pinnacle guest API (`https://guest.api.arcadia.pinnacle.com/0.1`, league 487) — no auth, no quota; replaces expired Odds API; ODDS_API_KEY permanently removed
 
 ## Domain Notes
 
@@ -57,6 +57,11 @@
 
 [2026-03-05] [injury] INSIGHT: build_team_game_features() silently drops injury proxy columns when build_injury_proxy_features() raises any exception — bare `except Exception` swallows it, CSV is written without those columns, and fetch_odds.py falls back to proxy win-prob model.
 [2026-03-05] [injury] WHY: Fix: merge injury_proxy_features.csv directly into team_game_features.csv then rebuild matchup dataset. Root cause: except block should only catch ImportError, not all exceptions.
+
+### [api]
+
+[2026-03-06] [api] INSIGHT: Pinnacle guest API works without auth — GET /leagues/487/matchups + GET /leagues/487/markets/straight; filter matchups to parentId=None with alignment=home/away (neutral=futures); join on matchupId; prices use designation: home/away
+[2026-03-06] [api] WHY: The Odds API key was expired (401); Pinnacle guest API confirmed free+keyless 2026-03-06; team names are identical to Odds API full names so ODDS_TEAM_TO_ABB mapping reused unchanged; player props stubbed (Pinnacle props need different endpoint)
 
 ### [skills]
 
