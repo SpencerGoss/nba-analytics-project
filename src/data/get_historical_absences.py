@@ -99,7 +99,7 @@ def build_player_absences(
         "team_abbreviation", "game_id", "game_date", "min",
     ]
     df = pd.read_csv(game_log_path, usecols=cols)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
     # Ensure minutes is numeric — handle "MM:SS" strings from older seasons
     df["min"] = pd.to_numeric(df["min"], errors="coerce").fillna(0)

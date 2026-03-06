@@ -26,7 +26,7 @@ from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+from sklearn.metrics import accuracy_score, brier_score_loss, classification_report, roc_auc_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -48,6 +48,9 @@ ARTIFACTS_DIR = "models/artifacts"
 TARGET = "covers_spread"
 from src.models.game_outcome_model import TEST_SEASONS, _best_threshold
 EXCLUDED_SEASONS = ["201920", "202021"]
+# Held-out calibration season: excluded from train CV, used to fit isotonic calibrator
+# University of Bath research: calibration-optimized = +34.69% ROI vs accuracy -35.17%
+CALIBRATION_SEASON = "202122"
 # Kaggle data starts ~2007-08; MIN_TRAIN_SEASONS=4 gives first validation split
 # at season 5 (roughly 2011-12), leaving enough expanding windows.
 MIN_TRAIN_SEASONS = 4
@@ -182,6 +185,7 @@ def train_ats_model(
     artifacts_dir: str = ARTIFACTS_DIR,
     test_seasons: list = TEST_SEASONS,
     excluded_seasons: list = EXCLUDED_SEASONS,
+    calibration_season: str = CALIBRATION_SEASON,
 ) -> tuple:
     """Train ATS classifier and return (pipeline, metrics).
 
@@ -189,11 +193,15 @@ def train_ats_model(
       1. Load game_ats_features.csv
       2. Drop push rows (NaN covers_spread)
       3. Filter excluded seasons
-      4. Split into train / test by season
-      5. Expanding-window validation to select best model
+      4. Split into train / calibration / test by season
+         - calibration_season is held out from CV (used later by calibration.py)
+      5. Expanding-window validation to select best model using Brier score
+         (NOT accuracy -- University of Bath research: accuracy-optimized = -35% ROI,
+          calibration-optimized = +35% ROI)
       6. Tune decision threshold
       7. Retrain winner on full train set, evaluate on test holdout
       8. Save artifacts: ats_model.pkl, ats_model_features.pkl, ats_model_metadata.json
+         (also saves ats_calibration_split.pkl for calibration.py)
     """
     print("=" * 60)
     print("ATS PREDICTION MODEL")
@@ -219,10 +227,15 @@ def train_ats_model(
         n_excluded = before - len(df)
         print(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
 
-    # Train / test split
+    # Train / calibration / test split
+    # calibration_season is held out from CV -- used by calibration.py for isotonic fit
     train = df[~df["season"].astype(str).isin(test_seasons)].copy()
     test = df[df["season"].astype(str).isin(test_seasons)].copy()
-    print(f"  Train: {len(train):,} games | Test: {len(test):,} games")
+    calib = train[train["season"].astype(str) == calibration_season].copy()
+    train_cv = train[train["season"].astype(str) != calibration_season].copy()
+    print(f"  Train (all): {len(train):,} games | Test: {len(test):,} games")
+    print(f"  Calibration season ({calibration_season}): {len(calib):,} games (held out from CV)")
+    print(f"  Train for CV: {len(train_cv):,} games")
     print(f"  Test seasons: {test_seasons}")
 
     feat_cols = get_ats_feature_cols(df)
@@ -316,12 +329,13 @@ def train_ats_model(
             )),
         ])
 
-    splits = _ats_season_splits(train)
+    splits = _ats_season_splits(train_cv)
     print(f"\n--- Model selection across {len(splits)} validation split(s) ---")
+    print("    (selecting on Brier score -- lower = better calibration = higher ROI)")
 
     model_scores = {}
     for name, pipe in candidates.items():
-        split_accs, split_aucs, split_thresholds = [], [], []
+        split_accs, split_aucs, split_briers, split_thresholds = [], [], [], []
 
         for tr, va, split_name in splits:
             X_sub = tr[feat_cols]
@@ -332,27 +346,33 @@ def train_ats_model(
             pipe.fit(X_sub, y_sub)
             val_proba = pipe.predict_proba(X_val)[:, 1]
             val_auc = roc_auc_score(y_val, val_proba)
+            val_brier = brier_score_loss(y_val, val_proba)
             best_t, val_acc = _best_threshold(y_val, val_proba)
 
             split_accs.append(val_acc)
             split_aucs.append(val_auc)
+            split_briers.append(val_brier)
             split_thresholds.append(best_t)
             print(
                 f"  {name:>17} | split={split_name} | "
-                f"acc={val_acc:.4f} | auc={val_auc:.4f} | th={best_t:.2f}"
+                f"brier={val_brier:.4f} | acc={val_acc:.4f} | auc={val_auc:.4f} | th={best_t:.2f}"
             )
 
         model_scores[name] = {
+            "mean_val_brier": float(np.mean(split_briers)),
             "mean_val_acc": float(np.mean(split_accs)),
             "mean_val_auc": float(np.mean(split_aucs)),
             "threshold": float(round(np.mean(split_thresholds), 2)),
         }
 
-    best_name = max(model_scores, key=lambda k: model_scores[k]["mean_val_acc"])
+    # Select on Brier score (lower = better calibration = higher ROI)
+    # Research: accuracy-optimized = -35.17% ROI; calibration-optimized = +34.69% ROI
+    best_name = min(model_scores, key=lambda k: model_scores[k]["mean_val_brier"])
     best_threshold = model_scores[best_name]["threshold"]
     print(
         f"\nSelected model: {best_name} "
-        f"(mean val acc={model_scores[best_name]['mean_val_acc']:.4f}, "
+        f"(mean val brier={model_scores[best_name]['mean_val_brier']:.4f}, "
+        f"mean val acc={model_scores[best_name]['mean_val_acc']:.4f}, "
         f"mean val auc={model_scores[best_name]['mean_val_auc']:.4f}, "
         f"threshold={best_threshold:.2f})"
     )
@@ -431,11 +451,30 @@ def train_ats_model(
     model_path = os.path.join(artifacts_dir, "ats_model.pkl")
     feat_path = os.path.join(artifacts_dir, "ats_model_features.pkl")
     meta_path = os.path.join(artifacts_dir, "ats_model_metadata.json")
+    calib_split_path = os.path.join(artifacts_dir, "ats_calibration_split.pkl")
 
     with open(model_path, "wb") as f:
         pickle.dump(best_pipe, f)
     with open(feat_path, "wb") as f:
         pickle.dump(feat_cols, f)
+    # Save calibration split predictions for calibration.py (held-out isotonic fit)
+    # Uses numpy save (not pickle) to avoid security scanner false positives
+    if not calib.empty:
+        calib_proba = best_pipe.predict_proba(calib[feat_cols])[:, 1]
+        calib_data = {
+            "season": calibration_season,
+            "y_true": calib[TARGET].values,
+            "y_proba": calib_proba,
+        }
+        calib_json_path = os.path.join(artifacts_dir, "ats_calibration_split.json")
+        import json as _json
+        with open(calib_json_path, "w") as f:
+            _json.dump({
+                "season": calibration_season,
+                "y_true": calib_data["y_true"].tolist(),
+                "y_proba": calib_data["y_proba"].tolist(),
+            }, f)
+        print(f"  Calibration split saved -> {calib_json_path} ({len(calib):,} rows)")
 
     print(f"\nModel saved -> {model_path}")
 
@@ -463,6 +502,8 @@ def train_ats_model(
         "n_test_rows": int(len(test)),
         "test_seasons": list(test_seasons),
         "excluded_seasons": list(excluded_seasons),
+        "calibration_season": calibration_season,
+        "validation_mean_brier": float(model_scores[best_name]["mean_val_brier"]),
         "validation_mean_accuracy": float(model_scores[best_name]["mean_val_acc"]),
         "validation_mean_auc": float(model_scores[best_name]["mean_val_auc"]),
         "n_validation_splits": int(len(splits)),
@@ -480,6 +521,7 @@ def train_ats_model(
         "n_train_rows": int(len(train)),
         "n_test_rows": int(len(test)),
         "n_features": int(len(feat_cols)),
+        "validation_mean_brier": float(model_scores[best_name]["mean_val_brier"]),
         "validation_mean_accuracy": float(model_scores[best_name]["mean_val_acc"]),
         "validation_mean_auc": float(model_scores[best_name]["mean_val_auc"]),
         "all_model_scores": {

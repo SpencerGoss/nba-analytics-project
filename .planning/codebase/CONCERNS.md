@@ -38,23 +38,14 @@
 - Impact: Calibration work is wasted; `fetch_odds.py` outputs uncalibrated probabilities to sportsbook comparison file
 - **RESOLVED (commit 942d909, 2026-03-05):** Calibrated model is now loaded first in `fetch_odds.py` and `src/models/value_bet_detector.py`.
 
-**Missing Injury Features in Game Outcome Model: IN PROGRESS / PARTIAL**
-- Symptoms: Model importances file does not list `home_missing_minutes`, `away_missing_minutes`, `home_star_player_out`, etc.
-- Files: `src/models/game_outcome_model.py` lines 73-78 explicitly include injury columns in feature selection, but they don't appear in final importances
-- Trigger: Features either missing from input CSV or silently all-null and imputed to mean value, making them invisible to model
-- Impact: Player availability (strongest predictor of game outcome) has zero effect on predictions
-- **Phase 10 partial (2026-03-05):** `data/processed/player_absences.csv` generated (1.1M rows). Real absence features are NOT yet wired into `src/features/injury_proxy.py` or `team_game_features.py` — integration into training pipeline is the remaining work.
-- Fix: Wire `player_absences.csv` into `injury_proxy.py`; regenerate `game_matchup_features.csv`; retrain models; verify importances include injury columns.
+**Missing Injury Features in Game Outcome Model: RESOLVED**
+- **RESOLVED (2026-03-06):** `src/data/get_historical_absences.py` now uses `format="mixed"` for game_date parsing (was crashing). `data/processed/player_absences.csv` generated (1,098,538 rows, 12.6% absence rate). `injury_proxy.py` now uses primary path (126,818 team-game rows, 60.9% with missing minutes). `game_matchup_features.csv` rebuilt. After retraining: 11 injury features appear in `game_outcome_importances.csv` — `home_rotation_availability` is rank #5 (0.027), `diff_missing_usg_pct` rank #10 (0.015).
 
 **Player Backtest Stops in 2015-16: RESOLVED**
 - **RESOLVED (2026-03-05 audit):** `reports/backtest_player_pts.csv` verified to cover 2001-02 through 2025-26 (30 seasons). Player features CSV has data for all seasons 1996-97 to 2025-26. Loop boundary in `backtesting.py` is correct — `PLAYER_BACKTEST_START = "200001"` with no upper bound.
 
-**Minor V1 Model Calibration Data Leakage:**
-- Symptoms: `src/models/calibration.py` lines 377-380 fit isotonic regression on the same data the model trained on
-- Files: `src/models/calibration.py` line 377
-- Impact: Calibrator learns from slightly overconfident predictions; may under-correct when applied to truly unseen data
-- Workaround: V2 models use proper cross-validated calibration during training, so issue only affects V1 models
-- Fix: For V1 path, use a held-out calibration set (3rd split separate from train and test) or cross-validated calibration approach
+**Minor V1 Model Calibration Data Leakage: RESOLVED**
+- **RESOLVED (2026-03-06):** `calibration.py` `run_calibration_analysis()` now accepts `calibration_season="202122"` parameter. When season is in the training pool and has >=100 games, isotonic regression is fit on held-out predictions from that season instead of in-sample. `ats_model.py` reserves `202122` as a dedicated calibration split (excluded from expanding-window CV) and saves `models/artifacts/ats_calibration_split.json` for downstream use.
 
 ## Security Considerations
 

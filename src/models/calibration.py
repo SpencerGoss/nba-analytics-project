@@ -344,6 +344,7 @@ def run_calibration_analysis(
     artifacts_dir: str  = ARTIFACTS_DIR,
     output_dir:    str  = OUTPUT_DIR,
     test_seasons:  list = TEST_SEASONS,
+    calibration_season: str = "202122",
 ) -> dict:
     """
     Run the full calibration analysis suite.
@@ -402,23 +403,27 @@ def run_calibration_analysis(
         y_prob_cal = model.predict_proba(X_test)[:, 1]
         cal_model  = model   # already saved; no extra write needed
     else:
-        print("\nFitting isotonic calibration on training data (v1 model)...")
-        train   = df[~df["season"].isin(test_seasons)].copy()
-        train   = train.dropna(subset=[TARGET])
-        # Get base model probability predictions on training data
-        train_probs = model.predict_proba(train[feat_cols])[:, 1]
-        # Fit isotonic regression: maps raw probabilities -> calibrated
-        #
-        # KNOWN V1 LIMITATION: The isotonic calibrator is fit on the same data
-        # the base GBM was trained on (in-sample). This means the GBM's train-set
-        # probabilities are overconfident (lower entropy), and the isotonic mapping
-        # learned here may be slightly mis-fitted compared to held-out probabilities.
-        # V2 mitigates this by using CalibratedClassifierCV with cv='prefit' on a
-        # dedicated calibration split, producing a properly out-of-sample calibrator.
-        # For v1 model artifacts this in-sample approach is retained for compatibility;
-        # retrain with game_outcome_model.py to get the v2 calibrated artifact.
-        iso = IsotonicRegression(out_of_bounds="clip")
-        iso.fit(train_probs, train[TARGET].values)
+        train_all = df[~df["season"].isin(test_seasons)].copy()
+        train_all = train_all.dropna(subset=[TARGET])
+
+        # Use held-out calibration season if available -- avoids in-sample leakage
+        calib_rows = None
+        if calibration_season and calibration_season in train_all["season"].values:
+            calib_rows = train_all[train_all["season"] == calibration_season].copy()
+
+        if calib_rows is not None and len(calib_rows) >= 100:
+            print(f"\nFitting isotonic calibration on held-out season {calibration_season} "
+                  f"({len(calib_rows):,} games) -- out-of-sample, no leakage...")
+            calib_probs = model.predict_proba(calib_rows[feat_cols])[:, 1]
+            iso = IsotonicRegression(out_of_bounds="clip")
+            iso.fit(calib_probs, calib_rows[TARGET].values)
+        else:
+            print("\nFitting isotonic calibration on training data (v1 model, in-sample)...")
+            # Fallback: in-sample fit (less accurate but compatible)
+            train_probs = model.predict_proba(train_all[feat_cols])[:, 1]
+            iso = IsotonicRegression(out_of_bounds="clip")
+            iso.fit(train_probs, train_all[TARGET].values)
+
         # Calibrate test predictions
         y_prob_cal = iso.predict(y_prob)
         # Build a lightweight wrapper that has predict_proba()
