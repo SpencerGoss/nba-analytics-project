@@ -337,7 +337,7 @@ def build_team_game_features(
     """
     print("Loading team_game_logs...")
     df = pd.read_csv(data_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values(["team_id", "game_date"]).reset_index(drop=True)
 
     # ── Basic context features ────────────────────────────────────────────────
@@ -472,7 +472,7 @@ def build_team_game_features(
     _n_before_sos = len(df)
     df = df.merge(opp_strength, on=["opponent_abbr", "game_id"], how="left")
     _n_after_sos = len(df)
-    print(f"  SOS join: {_n_before_sos:,} rows → {_n_after_sos:,} rows (dropped {_n_before_sos - _n_after_sos:,})")
+    print(f"  SOS join: {_n_before_sos:,} rows -> {_n_after_sos:,} rows (dropped {_n_before_sos - _n_after_sos:,})")
 
     sos_group = df.groupby("team_id", group_keys=False)
     for window in [10, 20]:
@@ -500,7 +500,7 @@ def build_team_game_features(
     _n_before_opp = len(df)
     df = df.merge(opp_box, on=["opponent_abbr", "game_id"], how="left")
     _n_after_opp = len(df)
-    print(f"  Opponent box join: {_n_before_opp:,} rows → {_n_after_opp:,} rows (dropped {_n_before_opp - _n_after_opp:,})")
+    print(f"  Opponent box join: {_n_before_opp:,} rows -> {_n_after_opp:,} rows (dropped {_n_before_opp - _n_after_opp:,})")
 
     if df["opp_fga"].notna().sum() == 0:
         raise ValueError(
@@ -846,7 +846,7 @@ def build_matchup_dataset(
     """
     print("Loading team game features...")
     df = pd.read_csv(features_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
     home = df[df["is_home"] == 1].copy()
     away = df[df["is_home"] == 0].copy()
@@ -908,7 +908,7 @@ def build_matchup_dataset(
         .merge(home_feat, on="game_id", how="inner")
         .merge(away_feat, on="game_id", how="inner")
     )
-    print(f"  Home/away matchup join: {_n_meta:,} games → {len(matchup):,} rows (dropped {_n_meta - len(matchup):,})")
+    print(f"  Home/away matchup join: {_n_meta:,} games -> {len(matchup):,} rows (dropped {_n_meta - len(matchup):,})")
 
     # -- Season-segment context (Phase 4, FR-3.4) --
     matchup["season_month"] = pd.to_datetime(matchup["game_date"]).dt.month

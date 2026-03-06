@@ -25,7 +25,7 @@ from src.data.get_team_stats import get_team_stats_all_seasons
 from src.data.get_team_stats_advanced import get_team_stats_advanced
 from src.data.get_teams import get_teams
 from src.processing.preprocessing import run_preprocessing
-from src.features.team_game_features import build_team_game_features
+from src.features.team_game_features import build_team_game_features, build_matchup_dataset
 from src.data.get_odds import refresh_odds_data
 from src.data.get_injury_data import get_injury_report
 from src.data.get_balldontlie import get_balldontlie_stats
@@ -163,6 +163,7 @@ def main() -> None:
         print("\n=== Step 3: Rebuilding derived feature CSVs ===")
         try:
             build_team_game_features()
+            build_matchup_dataset()
             try:
                 from src.features.player_features import build_player_game_features
                 build_player_game_features()

@@ -158,7 +158,7 @@ def load_real_absences(season: int | None = None) -> pd.DataFrame | None:
     if season is not None:
         df = df[df["season"] == season].copy()
 
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df["player_id"] = df["player_id"].astype(int)
     df["team_id"]   = df["team_id"].astype(int)
     df["was_absent"] = df["was_absent"].astype(int)
@@ -324,7 +324,7 @@ def build_injury_proxy_features(
         print("  Resolving game_id from player_game_logs...")
         log_map_cols = ["team_id", "game_id", "game_date"]
         log_map = pd.read_csv(game_log_path, usecols=log_map_cols)
-        log_map["game_date"] = pd.to_datetime(log_map["game_date"])
+        log_map["game_date"] = pd.to_datetime(log_map["game_date"], format="mixed")
         log_map["team_id"]   = log_map["team_id"].astype(int)
         log_map["game_id"]   = log_map["game_id"].astype(str).str.strip()
         log_map = log_map.drop_duplicates(subset=["team_id", "game_date"])
@@ -359,7 +359,7 @@ def build_injury_proxy_features(
         cols = ["season", "player_id", "player_name", "team_id",
                 "team_abbreviation", "game_id", "game_date", "min"]
         df = pd.read_csv(game_log_path, usecols=cols)
-        df["game_date"] = pd.to_datetime(df["game_date"])
+        df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
         # Ensure minutes is numeric — handle "MM:SS" strings from older seasons
         df["min"] = pd.to_numeric(df["min"], errors="coerce").fillna(0)
@@ -670,7 +670,7 @@ def apply_live_injuries(
         return matchup_row
 
     pf = pd.read_csv(player_features_path)
-    pf["game_date"] = pd.to_datetime(pf["game_date"])
+    pf["game_date"] = pd.to_datetime(pf["game_date"], format="mixed")
 
     row = matchup_row.copy()
 
