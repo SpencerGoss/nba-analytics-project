@@ -4,14 +4,14 @@
 
 - `shift(1)` before ALL rolling features -- data leakage is the #1 silent killer of model validity
 - Expanding-window validation only; ALL inference paths load `game_outcome_model_calibrated.pkl`, not base .pkl
-- sys.path must include PROJECT_ROOT before any model load (src.* class path must be importable for pickle)
+- sys.path must include PROJECT_ROOT before any model load (src.* class path must be importable during deserialization)
 - update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; step 6: writes 9 predictions/night to `predictions_history.db`
-- Injury proxy join uses bare `except Exception` -- silent failure drops injury cols; merge injury_proxy_features.csv directly to fix
+- ATS model selection uses `min(brier_score_loss)` NOT `max(accuracy)` -- University of Bath: accuracy-opt = -35% ROI, calibration-opt = +35% ROI; CALIBRATION_SEASON="202122" held out from CV
 - NBA API game_date: use `format="mixed"` in ALL pd.to_datetime() calls; never use Unicode arrow in print() (cp1252); season codes are integers (`202425`)
 - Pinnacle guest API (https://guest.api.arcadia.pinnacle.com/0.1, league 487) -- no auth, no quota; filter matchups to parentId=None + alignment=home/away; ODDS_API_KEY removed
 - `database/nba.db` is empty/legacy; pipeline is CSV-based; only `predictions_history.db` is active
 - 145 tests passing; run with `.venv/Scripts/python.exe -m pytest tests/ -q`
-- Basketball Reference scraper blocked by Cloudflare on Windows; nba_api is the primary live data source
+- injury_proxy.py primary path requires `data/processed/player_absences.csv`; if missing, fallback produces all-zero injury cols silently; regenerate with `python src/data/get_historical_absences.py`
 
 ## Domain Notes
 
@@ -53,8 +53,16 @@
 
 ### [injury]
 
-[2026-03-05] [injury] INSIGHT: build_team_game_features() silently drops injury proxy columns when build_injury_proxy_features() raises any exception — bare `except Exception` swallows it, CSV is written without those columns, and fetch_odds.py falls back to proxy win-prob model.
+[2026-03-05] [injury] INSIGHT: build_team_game_features() silently drops injury proxy columns when build_injury_proxy_features() raises any exception -- bare `except Exception` swallows it, CSV is written without those columns, and fetch_odds.py falls back to proxy win-prob model.
 [2026-03-05] [injury] WHY: Fix: merge injury_proxy_features.csv directly into team_game_features.csv then rebuild matchup dataset. Root cause: except block should only catch ImportError, not all exceptions.
+
+[2026-03-06] [injury] INSIGHT: get_historical_absences.py crashed with ValueError on current-season game_dates due to time suffix ("YYYY-MM-DD 00:00:00") -- same format="mixed" issue as other files.
+[2026-03-06] [injury] WHY: Added format="mixed" to line 102. After fix: 1,098,538 rows generated (75 seasons), 12.6% absence rate. injury_proxy.py primary path now works -- 60.9% of games have missing_minutes > 0, 9.2% have star_player_out.
+
+### [ats]
+
+[2026-03-06] [ats] INSIGHT: ATS model was selecting on max(accuracy) -- University of Bath research shows calibration-optimized = +34.69% ROI vs accuracy-optimized = -35.17% ROI on NBA data. Switching to min(brier_score_loss) changed selected model from logistic to logistic_l1 and improved test accuracy from 53.5% to 54.9%.
+[2026-03-06] [ats] WHY: Brier score measures probability calibration quality, not just correct/wrong. A well-calibrated model assigns higher probability to home-covers bets that actually cover, enabling more reliable Kelly sizing. Accuracy metric ignores probability magnitude entirely.
 
 ### [api]
 

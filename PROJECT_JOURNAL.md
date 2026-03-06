@@ -4,6 +4,30 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-06 — Model Improvement Phase 1 (complete)
+
+**Done:**
+- Deployed 5 parallel research agents to identify highest-leverage model improvements. Synthesized into prioritized plan at `docs/plans/2026-03-06-model-improvement-research.md`.
+- **CF-2 (injury features zero-filled) — FIXED:** `get_historical_absences.py` was crashing on game_date time suffix; added `format="mixed"`. Generated `data/processed/player_absences.csv` (1,098,538 rows, 12.6% absence rate, 75 seasons). `injury_proxy.py` now uses primary path — 60.9% of games have non-zero missing_minutes (was 0% before). Rebuilt `game_matchup_features.csv` (68,216 rows x 291 cols). After retraining: 11 injury features appear in importances; `home_rotation_availability` is rank #5. AUC improved 0.7256 -> **0.7419**.
+- **CF-1 (ATS optimizing wrong metric) — FIXED:** Switched ATS model selection from `max(accuracy)` to `min(brier_score_loss)`. Added `CALIBRATION_SEASON="202122"` held out from expanding-window CV. `calibration.py` now fits isotonic calibrator on held-out 2021-22 season (1,230 games, no in-sample leakage). ATS retrained: `logistic_l1` selected (vs old accuracy-based winner), test accuracy **54.9%** (up from 53.5%), AUC 0.5571. Metadata includes `validation_mean_brier` and `calibration_season` fields.
+- Fixed Unicode `→` arrows in 3 model files that crashed on Windows cp1252 (`game_outcome_model.py`, `playoff_odds_model.py`, `train_all_models.py`).
+- Spec written and completed: `docs/specs/2026-03-06-model-improvement-phase1.md`.
+- 145 tests passing throughout; 0 regressions.
+
+**Files changed:**
+- `src/data/get_historical_absences.py` — `format="mixed"` fix for game_date parsing
+- `src/models/ats_model.py` — Brier score selection, calibration split, metadata update
+- `src/models/calibration.py` — held-out calibration season parameter
+- `src/models/game_outcome_model.py`, `playoff_odds_model.py`, `train_all_models.py` — Unicode arrow fix
+- `.planning/codebase/CONCERNS.md` — two issues marked RESOLVED
+- `HANDOFF.md` — updated to reflect new model state
+- `docs/plans/2026-03-06-model-improvement-research.md` — new research synthesis
+- `docs/specs/2026-03-06-model-improvement-phase1.md` — new spec (COMPLETE)
+
+**Next:** Add LightGBM candidate model, Pythagorean win% feature, Fractional Kelly sizing, CLV tracking.
+
+---
+
 ## 2026-03-06 — Pinnacle API migration (complete)
 
 **Done:**

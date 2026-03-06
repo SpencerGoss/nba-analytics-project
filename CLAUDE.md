@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store (9 predictions/night via ScoreboardV2) → web dashboard. v2.0 complete. Odds: Pinnacle guest API (free, keyless, live). Next: v3.0 web dashboard polish.
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.4%, AUC 0.742) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → web dashboard. v2.1 complete. Odds: Pinnacle guest API (free, keyless, live). Next: LightGBM, Pythagorean win%, CLV tracking.
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
@@ -33,7 +33,8 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - NBA API (nba_api): throttle at 1 req/sec minimum; never loop without sleep; shot chart fetch is 3-4h — never run in daily pipeline
 - `pd.to_datetime()` on game_date must use `format="mixed"` — NBA API sends "YYYY-MM-DD 00:00:00" for current season, plain dates for history
 - `update.py` step 3: call both `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` writes to predictions_history.db
-- If injury cols missing from matchup CSV — injury proxy join silently failed (bare `except Exception`); fix: merge `injury_proxy_features.csv` into `team_game_features.csv` then rebuild matchup
+- If injury cols missing from matchup CSV — `player_absences.csv` may be missing; run `get_historical_absences.py` first, then rebuild injury_proxy + matchup
+- ATS model selection uses `min(brier_score_loss)` NOT accuracy — never revert to accuracy; CALIBRATION_SEASON="202122" is permanently held out from CV
 - Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use `->` instead
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
 

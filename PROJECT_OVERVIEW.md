@@ -1,15 +1,15 @@
 # NBA Analytics Project — Overview
 
-End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store → web dashboard.
+End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (67.4%, AUC 0.742) → ATS betting model (54.9%, Brier-optimized) → prediction store → web dashboard.
 
-## v2.0 Results (March 2026)
-- Game outcome model: **68% accuracy** (up from 66.8% in v1)
-- ATS model: **53.5%** (+2.2% holdout ROI — above 52.4% breakeven)
-- Feature matrix: 291-column matchup CSV (incl. injury proxy features), rebuilt daily via `update.py`
-- Prediction store: `predictions_history.db` — 9 predictions written for Mar 5 games; healthy
+## v2.1 Results (March 2026)
+- Game outcome model: **67.4% accuracy, AUC 0.7419** — injury features active for the first time (home_rotation_availability rank #5 in importances); 11 injury features now contributing
+- ATS model: **54.9% accuracy** (up from 53.5%) — now selects on Brier score (calibration), not accuracy; 2021-22 held-out calibration split
+- Feature matrix: 291-column matchup CSV; 60.9% of games have non-zero missing_minutes (was 0% before Phase 1)
+- `player_absences.csv`: 1,098,538 rows, 75 seasons, 12.6% absence rate — fully wired into injury pipeline
 - Tests: 145 passing
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
-- **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv now populates live with NBA moneylines + spreads; model_vs_odds.csv compares model probabilities to market lines
+- **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv populates live with NBA moneylines + spreads
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)
