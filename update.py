@@ -34,6 +34,50 @@ from src.data.get_balldontlie import get_balldontlie_stats
 ERROR_LOG_PATH = Path("logs/pipeline_errors.log")
 
 
+def generate_today_predictions(game_date: str) -> int:
+    """Fetch today's NBA schedule and write a prediction per game to predictions_history.db.
+
+    Returns the number of predictions written (0 on failure).
+    """
+    import time
+    from nba_api.stats.endpoints import scoreboardv2
+    from nba_api.stats.static import teams as nba_teams_static
+    from src.models.game_outcome_model import predict_game
+
+    team_id_to_abbr = {t["id"]: t["abbreviation"] for t in nba_teams_static.get_teams()}
+
+    try:
+        time.sleep(1)
+        board = scoreboardv2.ScoreboardV2(game_date=game_date, timeout=30)
+        games_df = board.get_data_frames()[0]
+    except Exception as e:
+        print(f"  Could not fetch today's schedule: {e}")
+        return 0
+
+    if games_df.empty:
+        print("  No games scheduled today.")
+        return 0
+
+    written = 0
+    for _, row in games_df.iterrows():
+        home_abbr = team_id_to_abbr.get(row["HOME_TEAM_ID"])
+        away_abbr = team_id_to_abbr.get(row["VISITOR_TEAM_ID"])
+        if not home_abbr or not away_abbr:
+            print(f"  Skipping unknown team IDs: {row['HOME_TEAM_ID']} / {row['VISITOR_TEAM_ID']}")
+            continue
+        try:
+            result = predict_game(home_abbr, away_abbr, game_date=game_date)
+            if "error" not in result:
+                written += 1
+                print(f"  {away_abbr} @ {home_abbr}: home_win_prob={result['home_win_prob']:.3f}")
+            else:
+                print(f"  {away_abbr} @ {home_abbr}: {result['error']}")
+        except Exception as e:
+            print(f"  {away_abbr} @ {home_abbr}: prediction failed ({e})")
+
+    return written
+
+
 def log_pipeline_error(script_name: str, error: Exception) -> None:
     """Append pipeline errors to logs/pipeline_errors.log."""
     ERROR_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -186,6 +230,15 @@ def main() -> None:
                 print(f"Injury report saved: {len(injury_df)} entries.")
         except Exception as injury_err:
             print(f"Injury report fetch failed (non-fatal): {injury_err}")
+
+        print("\n=== Step 6: Generating today's game predictions ===")
+        try:
+            today_str = now.strftime("%Y-%m-%d")
+            n_written = generate_today_predictions(today_str)
+            print(f"  Wrote {n_written} prediction(s) to predictions_history.db")
+        except Exception as pred_err:
+            log_pipeline_error("update.py:generate_predictions", pred_err)
+            print(f"  Prediction generation failed (non-fatal): {pred_err}")
 
         elapsed = datetime.now() - start_time
         total_seconds = int(elapsed.total_seconds())

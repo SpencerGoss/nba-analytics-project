@@ -4,12 +4,12 @@
 
 - `shift(1)` before ALL rolling features — data leakage is the #1 silent killer of model validity
 - Expanding-window validation only — never train on future data
-- sys.path must include PROJECT_ROOT before any model load referencing `src.*` modules (deserializer needs dotted class path importable)
-- ALL inference paths must load calibrated model — game_outcome_model_calibrated.pkl, not the base .pkl
-- update.py step 3 must call BOTH `build_team_game_features()` AND `build_matchup_dataset()` — matchup CSV was silently stale on every daily run (fixed 2026-03-05)
-- NBA API game_date is "YYYY-MM-DD 00:00:00" for current season — use `format="mixed"` in ALL pd.to_datetime() for game_date cols (team_game_features.py, injury_proxy.py)
+- sys.path must include PROJECT_ROOT before any model load referencing `src.*` modules (calibrated model deserializer needs dotted class path importable)
+- ALL inference paths must load calibrated model — game_outcome_model_calibrated.pkl, not base .pkl
+- update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` via ScoreboardV2 writes to predictions_history.db
+- Injury proxy join in `build_team_game_features()` uses bare `except Exception` — silent failure leaves matchup CSV without injury cols; fix: merge injury_proxy_features.csv directly and rebuild matchup
+- NBA API game_date is "YYYY-MM-DD 00:00:00" for current season — use `format="mixed"` in ALL pd.to_datetime() for game_date cols
 - Never use Unicode → in print() on Windows — cp1252 raises UnicodeEncodeError; use `->` instead
-- `get_strong_value_bets()` applies ATS filter (0.53 threshold); ats_prob=None when model missing (not 0.5)
 - Season codes are integers (e.g., `202425`), not strings like "2024-25"
 - 145 tests passing (2026-03-05); run with `.venv/Scripts/python.exe -m pytest tests/ -q`
 
@@ -40,7 +40,7 @@
 ### [testing]
 
 [2026-03-04] [testing] INSIGHT: ~~59 tests passing as of v2.0 baseline~~ — superseded
-[2026-03-05] [testing] INSIGHT: 115 tests passing after full audit session; 4 new test files committed (BallDontLie, injury data, lineup data, lineup features)
+[2026-03-05] [testing] INSIGHT: 145 tests passing (2026-03-05); 4 test files added in audit session (BallDontLie, injury data, lineup data, lineup features)
 [2026-03-05] [testing] WHY: run with `python -m pytest tests/ -q`; test_ats_model_missing_falls_back expects ats_prob=None (not 0.5) when model file missing
 
 ### [features]
@@ -50,6 +50,11 @@
 
 [2026-03-05] [features] INSIGHT: Unicode arrows (→) in Python print() raise UnicodeEncodeError on Windows cp1252 terminals — use ASCII -> instead
 [2026-03-05] [features] WHY: Windows default console encoding is cp1252 which cannot encode \u2192; affects any print() with non-ASCII chars regardless of source file encoding
+
+### [injury]
+
+[2026-03-05] [injury] INSIGHT: build_team_game_features() silently drops injury proxy columns when build_injury_proxy_features() raises any exception — bare `except Exception` swallows it, CSV is written without those columns, and fetch_odds.py falls back to proxy win-prob model.
+[2026-03-05] [injury] WHY: Fix: merge injury_proxy_features.csv directly into team_game_features.csv then rebuild matchup dataset. Root cause: except block should only catch ImportError, not all exceptions.
 
 ### [skills]
 

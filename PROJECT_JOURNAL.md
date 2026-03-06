@@ -4,6 +4,33 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-05 — Injury features restored + prediction store wired up
+
+**Done:**
+- Fixed missing injury proxy columns in `game_matchup_features.csv` (11 cols: `home_/away_/diff_missing_minutes`, `missing_usg_pct`, `rotation_availability`, `star_player_out`). Root cause: `build_team_game_features()` wraps the injury proxy join in a bare `except Exception` — any failure is swallowed silently, CSV written without those columns. Fix: merged `injury_proxy_features.csv` directly into `team_game_features.csv` (92.9% match rate, 126,818 rows), then rebuilt matchup dataset. Matchup CSV now has 291 cols.
+- Verified calibrated model inference: 921 current-season games, win prob range 0.0–1.0 ✓
+- Wired up `predictions_history.db` — was always 0 rows because nothing ever called `predict_game()` for today's schedule. Added `generate_today_predictions(game_date)` to `update.py` as Step 6: fetches schedule via `ScoreboardV2`, maps team IDs → abbreviations using `nba_api.stats.static.teams`, calls `predict_game()` for each game (which writes to store). Wrote 9 predictions for tonight's games using calibrated model.
+- Also ran `fetch_odds.py` — confirmed 401 on ODDS_API_KEY (key expired, needs renewal); non-blocking.
+- 145 tests passing throughout.
+
+**Files changed:**
+- `update.py` — added `generate_today_predictions()` function + Step 6 call in `main()`
+- `WORKING_NOTES.md` — new `[injury]` domain entry
+- `data/features/team_game_features.csv` — patched with 5 injury proxy columns (123 cols total)
+- `data/features/game_matchup_features.csv` — rebuilt with 291 cols (was 278)
+
+**Issues found (not yet fixed):**
+- `build_team_game_features()` uses bare `except Exception` for injury proxy join — should be narrowed to `except ImportError` so real failures surface
+- `ODDS_API_KEY` is expired — fetch_odds.py returns 401; needs new key from the-odds-api.com
+- `database/nba.db` remains 0 bytes (pipeline runs entirely off CSVs)
+
+**Next:**
+- Renew ODDS_API_KEY in .env
+- Tighten `except Exception` in `build_team_game_features()` injury proxy join
+- v3.0 planning — web dashboard polish
+
+---
+
 ## 2026-03-05 — Data refresh + feature pipeline bug fixes
 
 **Done:**

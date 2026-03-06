@@ -5,9 +5,10 @@ End-to-end NBA analytics system: data ingestion → feature engineering → game
 ## v2.0 Results (March 2026)
 - Game outcome model: **68% accuracy** (up from 66.8% in v1)
 - ATS model: **53.5%** (+2.2% holdout ROI — above 52.4% breakeven)
-- Feature matrix: 278-column matchup CSV, rebuilt daily via `update.py`
+- Feature matrix: 291-column matchup CSV (incl. injury proxy features), rebuilt daily via `update.py`
+- Prediction store: `predictions_history.db` wired up — `update.py` Step 6 writes today's predictions via `ScoreboardV2`
 - Tests: 145 passing
-- Pipeline: fully operational; daily `update.py` refreshes data + features in one command
+- Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)

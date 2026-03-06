@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store → web dashboard. v2.0 complete; v3.0 (web dashboard polish) is next.
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store (wired, 9 predictions/night via ScoreboardV2) → web dashboard. v2.0 complete; v3.0 (web dashboard polish) is next.
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
@@ -29,11 +29,11 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `shift(1)` before ALL rolling features — no data leakage
 - Expanding-window validation only — never train on future data
 - Never modify `data/raw/` files — source of truth
-- After retraining any model → run `src/models/calibration.py` immediately
-- `scripts/fetch_odds.py` must load calibrated model first
+- After retraining any model → run `src/models/calibration.py` immediately; `fetch_odds.py` must always load `game_outcome_model_calibrated.pkl`
 - NBA API (nba_api): throttle at 1 req/sec minimum; never loop without sleep; shot chart fetch is 3-4h — never run in daily pipeline
 - `pd.to_datetime()` on game_date must use `format="mixed"` — NBA API sends "YYYY-MM-DD 00:00:00" for current season, plain dates for history
-- `update.py` step 3 must call both `build_team_game_features()` AND `build_matchup_dataset()` — matchup CSV is what fetch_odds.py reads
+- `update.py` step 3: call both `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` writes to predictions_history.db
+- If injury cols missing from matchup CSV — injury proxy join silently failed (bare `except Exception`); fix: merge `injury_proxy_features.csv` into `team_game_features.csv` then rebuild matchup
 - Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use `->` instead
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
 
