@@ -1,14 +1,14 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store → web dashboard. Currently in v2.0 (Phase 10 — gap closure).
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store → web dashboard. v2.0 complete; v3.0 (web dashboard polish) is next.
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `pytest -v` — run tests (115 passing baseline)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (145 passing baseline)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
@@ -18,8 +18,8 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `src/data/` — NBA API fetchers | `src/features/` — feature engineering
 - `src/models/` — models + calibration | `src/processing/` — preprocessing
 - `src/validation/` — data integrity validation
-- `src/models/value_bet_detector.py` — value bet detection (recent addition)
-- `src/models/model_explainability.py` — SHAP-based feature importance (recent addition)
+- `src/models/value_bet_detector.py` — value bet detection
+- `src/models/model_explainability.py` — SHAP-based feature importance
 - `data/raw/`, `data/processed/`, `data/features/` — pipeline stages
 - `models/artifacts/` — trained model PKLs (gitignored)
 - `.planning/STATE.md` — phase tracker | `.planning/codebase/CONCERNS.md` — known bugs
@@ -32,6 +32,9 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - After retraining any model → run `src/models/calibration.py` immediately
 - `scripts/fetch_odds.py` must load calibrated model first
 - NBA API (nba_api): throttle at 1 req/sec minimum; never loop without sleep; shot chart fetch is 3-4h — never run in daily pipeline
+- `pd.to_datetime()` on game_date must use `format="mixed"` — NBA API sends "YYYY-MM-DD 00:00:00" for current season, plain dates for history
+- `update.py` step 3 must call both `build_team_game_features()` AND `build_matchup_dataset()` — matchup CSV is what fetch_odds.py reads
+- Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use `->` instead
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
 
 ## Skill Routing (auto-trigger — no prompting needed)
@@ -88,25 +91,6 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Adding a new API key or secret | `env-config` |
 | Adding or upgrading Python packages | `dependency-management` |
 | Setting up or updating CI pipelines | `ci-cd-setup` |
-
-### Python
-
-| Situation | Skill |
-|-----------|-------|
-| Python testing patterns (pytest, fixtures, mocks) | `python-development:python-testing-patterns` |
-| Typed settings / env var configuration | `python-development:python-configuration` |
-| KISS / SRP design patterns | `python-development:python-design-patterns` |
-| Managing packages with uv | `python-development:uv-package-manager` |
-
-### Project Meta
-
-| Situation | Skill |
-|-----------|-------|
-| CLAUDE.md too long / add a rule | `context-file-maintainer` |
-| Architecture change / new project scaffolding | `vscode-ai-project-scaffolder` |
-
-## Working Memory Loop
-After debug/TDD sessions, `working-memory` skill extracts insights into `WORKING_NOTES.md`. `session-kickoff` loads Core Insights from that file each session. `session-wrap-up` synthesizes and updates it. Check `WORKING_NOTES.md` before touching any domain you've worked in before.
 
 ## See Also
 - `AI_INDEX.md` — task routing | `ARCHITECTURE.md` — system structure

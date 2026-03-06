@@ -4,14 +4,14 @@
 
 - `shift(1)` before ALL rolling features — data leakage is the #1 silent killer of model validity
 - Expanding-window validation only — never train on future data
-- sys.path must include PROJECT_ROOT before any model load that references `src.*` modules
-- ALL inference paths must load calibrated model — check playoff_odds_model, model_explainability, fetch_odds (not just fetch_odds)
-- update.py + backfill.py must call `build_team_game_features()` after preprocessing — otherwise features are stale when fetch_odds runs
-- injury_proxy.py now has 3-tier fallback: real absences CSV → legacy CSV → rolling proxy; player_absences.csv is now wired in
-- `get_strong_value_bets()` now loads ats_model.pkl and applies ATS filter (0.53 threshold); ats_prob=None when model missing (not 0.5)
+- sys.path must include PROJECT_ROOT before any model load referencing `src.*` modules (deserializer needs dotted class path importable)
+- ALL inference paths must load calibrated model — game_outcome_model_calibrated.pkl, not the base .pkl
+- update.py step 3 must call BOTH `build_team_game_features()` AND `build_matchup_dataset()` — matchup CSV was silently stale on every daily run (fixed 2026-03-05)
+- NBA API game_date is "YYYY-MM-DD 00:00:00" for current season — use `format="mixed"` in ALL pd.to_datetime() for game_date cols (team_game_features.py, injury_proxy.py)
+- Never use Unicode → in print() on Windows — cp1252 raises UnicodeEncodeError; use `->` instead
+- `get_strong_value_bets()` applies ATS filter (0.53 threshold); ats_prob=None when model missing (not 0.5)
 - Season codes are integers (e.g., `202425`), not strings like "2024-25"
-- 115 tests passing as of 2026-03-05 audit (was 59 baseline)
-- numpy_gbm.py deleted — was 700 lines of dead code, never imported anywhere
+- 145 tests passing (2026-03-05); run with `.venv/Scripts/python.exe -m pytest tests/ -q`
 
 ## Domain Notes
 
@@ -28,6 +28,9 @@
 [2026-03-05] [pipeline] INSIGHT: update.py and backfill.py were missing feature rebuild step — preprocessing alone leaves game_matchup_features.csv stale; fixed by adding build_team_game_features() call after preprocessing in both scripts
 [2026-03-05] [pipeline] WHY: fetch_odds.py loads features from data/features/game_matchup_features.csv; if that CSV is stale, all predictions use outdated team stats
 
+[2026-03-05] [pipeline] INSIGHT: build_matchup_dataset() was also missing from update.py — only build_team_game_features() was called, leaving game_matchup_features.csv (used by fetch_odds.py) perpetually stale after every daily run
+[2026-03-05] [pipeline] WHY: build_matchup_dataset() is only in the __main__ block of team_game_features.py, not called by build_team_game_features(); update.py must import and call both explicitly
+
 [2026-03-05] [pipeline] INSIGHT: Basketball Reference scraper is blocked by Cloudflare in Windows dev environment
 [2026-03-05] [pipeline] WHY: BallDontLie stub also blocked without BALLDONTLIE_API_KEY; nba_api remains the primary data source
 
@@ -39,6 +42,14 @@
 [2026-03-04] [testing] INSIGHT: ~~59 tests passing as of v2.0 baseline~~ — superseded
 [2026-03-05] [testing] INSIGHT: 115 tests passing after full audit session; 4 new test files committed (BallDontLie, injury data, lineup data, lineup features)
 [2026-03-05] [testing] WHY: run with `python -m pytest tests/ -q`; test_ats_model_missing_falls_back expects ats_prob=None (not 0.5) when model file missing
+
+### [features]
+
+[2026-03-05] [features] INSIGHT: NBA API returns game_date as "YYYY-MM-DD 00:00:00" for current season but "YYYY-MM-DD" for historical seasons — mixed formats in one CSV column
+[2026-03-05] [features] WHY: pandas infers format="%Y-%m-%d" from historical rows first, then raises ValueError on the time suffix; fix is format="mixed" in all pd.to_datetime() calls in team_game_features.py (lines 340, 849) and injury_proxy.py (lines 161, 327, 362, 673)
+
+[2026-03-05] [features] INSIGHT: Unicode arrows (→) in Python print() raise UnicodeEncodeError on Windows cp1252 terminals — use ASCII -> instead
+[2026-03-05] [features] WHY: Windows default console encoding is cp1252 which cannot encode \u2192; affects any print() with non-ASCII chars regardless of source file encoding
 
 ### [skills]
 

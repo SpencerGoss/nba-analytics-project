@@ -4,6 +4,34 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-05 — Data refresh + feature pipeline bug fixes
+
+**Done:**
+- Ran full daily update (update.py): fetched 2025-26 season data (1,852 team games, 20,103 player game logs, standings, hustle stats, reference tables)
+- Found and fixed 3 bugs blocking the feature rebuild:
+  1. `pd.to_datetime()` without `format="mixed"` — NBA API now sends current season game_date as "2025-10-21 00:00:00" (with time suffix) while historical rows use "YYYY-MM-DD". Pandas inferred the wrong format. Fixed in 6 places across `team_game_features.py` and `injury_proxy.py`.
+  2. `build_matchup_dataset()` was missing from `update.py` step 3 — `game_matchup_features.csv` (the file `fetch_odds.py` reads for predictions) was never being rebuilt on daily runs. Added explicit import and call.
+  3. Unicode `→` in print statements raised `UnicodeEncodeError` on Windows cp1252 terminal. Replaced with `->` in 3 print statements.
+- Feature rebuild now completes: `team_game_features.csv` (136,452 rows × 118 cols), `game_matchup_features.csv` (68,216 rows × 278 cols) — both fresh as of Mar 5
+- Used parallel agents: Agent 1 ran update.py in background while Agent 2 pre-validated data state; Agent 1 surfaced the feature rebuild error; fixed and re-ran
+- 145 tests passing throughout (no regressions)
+- Committed: `51f3d11 fix(features): handle mixed game_date formats from NBA API`
+
+**Files changed:**
+- `src/features/team_game_features.py` — format="mixed" at lines 340, 849; `->` arrows in 3 print statements
+- `src/features/injury_proxy.py` — format="mixed" at lines 161, 327, 362, 673
+- `update.py` — import + call `build_matchup_dataset()` after `build_team_game_features()` in step 3
+
+**Pre-validation findings (noted for future work):**
+- `database/nba.db` is empty (0 bytes, no tables) — pipeline runs entirely off CSVs; DB population is a separate unreached step
+- `predictions_history.db` has schema but 0 rows — `fetch_odds.py` has not yet written predictions successfully
+
+**Next:**
+- Run `scripts/fetch_odds.py` to generate today's game predictions using fresh features
+- Investigate empty `nba.db` — determine if DB population is needed or if CSV-only is the intended architecture
+
+---
+
 ## 2026-03-05 — Bug fix: calibrated model not loading in fetch_odds.py
 
 **Done:**

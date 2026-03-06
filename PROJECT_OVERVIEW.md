@@ -1,12 +1,13 @@
 # NBA Analytics Project — Overview
 
-End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (66.8%) → ATS betting model → prediction store → web dashboard.
+End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store → web dashboard.
 
-## v1.0 Results (March 2026)
-- Game outcome model: **66.8% accuracy** on 2023-24 / 2024-25 holdout
-- ATS backtest: 18,233 games, **+1.28% ROI** on value-bet filtered subset
-- Prediction store: WAL-mode SQLite + daily JSON snapshots
-- Pipeline: 6 documented stages, all independently runnable
+## v2.0 Results (March 2026)
+- Game outcome model: **68% accuracy** (up from 66.8% in v1)
+- ATS model: **53.5%** (+2.2% holdout ROI — above 52.4% breakeven)
+- Feature matrix: 278-column matchup CSV, rebuilt daily via `update.py`
+- Tests: 145 passing
+- Pipeline: fully operational; daily `update.py` refreshes data + features in one command
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)
