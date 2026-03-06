@@ -4,6 +4,27 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-05 — Investigated nba.db + odds API replacement decision
+
+**Done:**
+- Confirmed `predictions_history.db` has 9 rows (healthy) — was already written by last session's `update.py` run; no action needed
+- Investigated `database/nba.db` (0 bytes): confirmed it is a legacy artifact from Feb 2026 early dev (populated once via `src/processing/load_to_sql.py`). No current code in `src/` reads or writes to it. Pipeline is entirely CSV-based. Safe to ignore.
+- Ran `scripts/fetch_odds.py`: confirmed ODDS_API_KEY returns 401 (key expired/invalid). Model pipeline inside the script works correctly (loaded calibrated model, generated win probs for 921 games).
+- Researched free/legal odds API alternatives: Pinnacle (keyless public API, sharp-money lines), Action Network (unofficial), ESPN embedded JSON, The Odds API free tier (just needs new key).
+- **Decision:** Replace The Odds API with Pinnacle API across the entire project. Remove all Odds API references. Pinnacle is free, keyless, no quota limits, and provides sharper lines (better for value-bet detection).
+- Updated stale docs: `ARCHITECTURE.md` and `.claude/rules/nba-domain.md` both said "nba.db — 18 tables"; corrected to reflect legacy/empty status.
+
+**Files changed:**
+- `ARCHITECTURE.md` — corrected nba.db description (legacy/empty, not 18 tables)
+- `.claude/rules/nba-domain.md` — corrected nba.db description
+
+**Next:**
+- Switch `scripts/fetch_odds.py` to Pinnacle API (free, keyless) — remove all The Odds API code
+- Remove `ODDS_API_KEY` from `.env`, `.env.example`, and any references in project docs
+- Audit all files referencing "odds api", "ODDS_API_KEY", or "the-odds-api.com" and update
+
+---
+
 ## 2026-03-05 — Injury features restored + prediction store wired up
 
 **Done:**

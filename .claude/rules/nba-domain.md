@@ -20,8 +20,8 @@
 - Lineup features are 0.0 for seasons before 2015-16 — this is expected
 
 ## Database
-- `database/nba.db` — 18 tables, season as integer
-- `database/predictions_history.db` — WAL mode, prediction store
+- `database/nba.db` — legacy artifact, currently empty; pipeline uses CSV files for all game data
+- `database/predictions_history.db` — WAL mode, prediction store (active)
 - Always use parameterized queries — no string formatting in SQL
 
 ## Secrets

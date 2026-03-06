@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store (wired, 9 predictions/night via ScoreboardV2) → web dashboard. v2.0 complete; v3.0 (web dashboard polish) is next.
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store (wired, 9 predictions/night via ScoreboardV2) → web dashboard. v2.0 complete. Immediate next: migrate odds source from The Odds API to Pinnacle (free, keyless). Then v3.0 (web dashboard polish).
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
@@ -77,8 +77,6 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Situation | Skill |
 |-----------|-------|
 | Brainstorming approach / architecture | `superpowers:brainstorming` |
-| Writing a multi-step implementation plan | `superpowers:writing-plans` |
-| Before implementing (TDD superpowers) | `superpowers:test-driven-development` |
 | Before claiming work is complete | `superpowers:verification-before-completion` |
 | Independent tasks that can run in parallel | `superpowers:dispatching-parallel-agents` |
 

@@ -12,6 +12,8 @@
 - Never use Unicode → in print() on Windows — cp1252 raises UnicodeEncodeError; use `->` instead
 - Season codes are integers (e.g., `202425`), not strings like "2024-25"
 - 145 tests passing (2026-03-05); run with `.venv/Scripts/python.exe -m pytest tests/ -q`
+- `database/nba.db` is empty/legacy — pipeline runs entirely on CSV files; only `predictions_history.db` is active
+- Odds source: The Odds API key expired; decision made to replace with Pinnacle API (free, keyless, sharper lines)
 
 ## Domain Notes
 

@@ -40,7 +40,7 @@ dashboard/index.html (Chart.js)
 | `data/processed/` | Cleaned game logs, player stats |
 | `data/features/` | Feature matrices for training/inference |
 | `models/artifacts/` | Serialized models (gitignored — large files) |
-| `database/` | nba.db (18 tables) + predictions_history.db |
+| `database/` | predictions_history.db (WAL mode, prediction store); nba.db is legacy/empty |
 | `dashboard/` | Static HTML dashboard |
 | `.planning/` | GSD roadmap, STATE.md, phase plans |
 | `tests/` | pytest suite (115 tests passing) |
