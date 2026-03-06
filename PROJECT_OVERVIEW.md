@@ -9,7 +9,7 @@ End-to-end NBA analytics system: data ingestion → feature engineering → game
 - Prediction store: `predictions_history.db` — 9 predictions written for Mar 5 games; healthy
 - Tests: 145 passing
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
-- **Odds source:** Migrating from The Odds API (expired key) to Pinnacle API (free, keyless, sharper lines) — in progress next session
+- **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv now populates live with NBA moneylines + spreads; model_vs_odds.csv compares model probabilities to market lines
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)

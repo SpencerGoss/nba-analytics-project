@@ -4,6 +4,40 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-06 — Pinnacle API migration (complete)
+
+**Done:**
+- Replaced The Odds API with Pinnacle guest API across the entire project. Pinnacle is free, keyless, no quota, and provides sharper lines (better for value-bet signal).
+- Rewrote `scripts/fetch_odds.py`: new `get_pinnacle()` client (no auth), `fetch_game_lines()` using `/leagues/487/matchups` + `/leagues/487/markets/straight`, `fetch_player_props()` stubbed (empty DataFrame — Pinnacle props use different endpoint structure).
+- Removed `QuotaError`, `check_remaining_quota()`, and `ODDS_API_KEY` guard from `src/models/value_bet_detector.py`.
+- Removed `ODDS_API_KEY` from `update.py` env check, `.env`, `.env.example`.
+- Updated `src/data/get_odds.py` and `src/models/predict_cli.py` help text.
+- Updated 5 doc files: `ARCHITECTURE.md`, `CONTEXT.md`, `docs/PIPELINE.md`, `.claude/rules/nba-domain.md`, `.planning/codebase/INTEGRATIONS.md`.
+- Bug fixes from code review: (1) added `parentId is not None` filter to exclude Pinnacle alternate/period lines from matchup list; (2) fixed `flagged.sum()` to use `dropna()` for pandas >= 2.0 compatibility.
+- Spec written: `docs/specs/2026-03-06-pinnacle-api-migration.md`.
+- Live run confirmed: 7 NBA game lines fetched from Pinnacle with no errors; `game_lines.csv` populated.
+- 145 tests passing throughout; 0 regressions.
+
+**Files changed:**
+- `scripts/fetch_odds.py` — full rewrite of API client section
+- `src/models/value_bet_detector.py` — removed quota guard + ODDS_API_KEY check
+- `src/data/get_odds.py` — removed ODDS_API_KEY log branch
+- `update.py` — removed ODDS_API_KEY from env check
+- `.env` / `.env.example` — ODDS_API_KEY removed
+- `src/models/predict_cli.py` — updated --live help text
+- `ARCHITECTURE.md`, `CONTEXT.md`, `docs/PIPELINE.md`, `.claude/rules/nba-domain.md`, `.planning/codebase/INTEGRATIONS.md` — updated to reference Pinnacle
+- `docs/specs/2026-03-06-pinnacle-api-migration.md` — new spec file
+
+**Decision: Pinnacle guest API over The Odds API**
+- Context: ODDS_API_KEY expired (401); The Odds API free tier is 500 req/month (limiting)
+- Chose: Pinnacle guest API (`https://guest.api.arcadia.pinnacle.com/0.1`, NBA league 487) — verified free + keyless 2026-03-06
+- Trade-off: player props not yet implemented (Pinnacle props use different endpoint; stubbed for now)
+
+**Next:**
+- v3.0 web dashboard — wire Pinnacle game lines (`game_lines.csv`, `model_vs_odds.csv`) into the dashboard display; surface value bets flagged by the model
+
+---
+
 ## 2026-03-05 — Investigated nba.db + odds API replacement decision
 
 **Done:**

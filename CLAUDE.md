@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store (wired, 9 predictions/night via ScoreboardV2) → web dashboard. v2.0 complete. Immediate next: migrate odds source from The Odds API to Pinnacle (free, keyless). Then v3.0 (web dashboard polish).
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (68%) → ATS betting model (53.5%, +2.2% ROI) → prediction store (9 predictions/night via ScoreboardV2) → web dashboard. v2.0 complete. Odds: Pinnacle guest API (free, keyless, live). Next: v3.0 web dashboard polish.
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.

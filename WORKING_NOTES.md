@@ -2,18 +2,16 @@
 
 ## Core Insights (loaded by session-kickoff)
 
-- `shift(1)` before ALL rolling features — data leakage is the #1 silent killer of model validity
-- Expanding-window validation only — never train on future data
-- sys.path must include PROJECT_ROOT before any model load referencing `src.*` modules (calibrated model deserializer needs dotted class path importable)
-- ALL inference paths must load calibrated model — game_outcome_model_calibrated.pkl, not base .pkl
-- update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` via ScoreboardV2 writes to predictions_history.db
-- Injury proxy join in `build_team_game_features()` uses bare `except Exception` — silent failure leaves matchup CSV without injury cols; fix: merge injury_proxy_features.csv directly and rebuild matchup
-- NBA API game_date is "YYYY-MM-DD 00:00:00" for current season — use `format="mixed"` in ALL pd.to_datetime() for game_date cols
-- Never use Unicode → in print() on Windows — cp1252 raises UnicodeEncodeError; use `->` instead
-- Season codes are integers (e.g., `202425`), not strings like "2024-25"
-- 145 tests passing (2026-03-05); run with `.venv/Scripts/python.exe -m pytest tests/ -q`
-- `database/nba.db` is empty/legacy — pipeline runs entirely on CSV files; only `predictions_history.db` is active
-- Pinnacle guest API (`https://guest.api.arcadia.pinnacle.com/0.1`, league 487) — no auth, no quota; replaces expired Odds API; ODDS_API_KEY permanently removed
+- `shift(1)` before ALL rolling features -- data leakage is the #1 silent killer of model validity
+- Expanding-window validation only; ALL inference paths load `game_outcome_model_calibrated.pkl`, not base .pkl
+- sys.path must include PROJECT_ROOT before any model load (src.* class path must be importable for pickle)
+- update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; step 6: writes 9 predictions/night to `predictions_history.db`
+- Injury proxy join uses bare `except Exception` -- silent failure drops injury cols; merge injury_proxy_features.csv directly to fix
+- NBA API game_date: use `format="mixed"` in ALL pd.to_datetime() calls; never use Unicode arrow in print() (cp1252); season codes are integers (`202425`)
+- Pinnacle guest API (https://guest.api.arcadia.pinnacle.com/0.1, league 487) -- no auth, no quota; filter matchups to parentId=None + alignment=home/away; ODDS_API_KEY removed
+- `database/nba.db` is empty/legacy; pipeline is CSV-based; only `predictions_history.db` is active
+- 145 tests passing; run with `.venv/Scripts/python.exe -m pytest tests/ -q`
+- Basketball Reference scraper blocked by Cloudflare on Windows; nba_api is the primary live data source
 
 ## Domain Notes
 
