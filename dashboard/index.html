@@ -37,6 +37,59 @@
   --shadow-h: 0 1px 3px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.32);
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--b1);background:transparent;cursor:pointer;color:var(--t1);transition:all 160ms ease;margin-left:4px;flex-shrink:0}
+.theme-toggle:hover{background:rgba(255,255,255,.06);color:var(--t0)}
+.theme-toggle svg{width:14px;height:14px;pointer-events:none}
+
+/* ── LIGHT MODE ── */
+body.light{--bg:#F0F4FF;--bg2:#E8EDF8;--bg3:#DDE4F5;--card:rgba(0,0,0,.04);--card-h:rgba(0,0,0,.07);--b0:rgba(0,0,0,.08);--b1:rgba(0,0,0,.14);--t0:#0D1117;--t1:#3D4C6B;--t2:#8B9BB8}
+body.light .nav{background:rgba(240,244,255,.92)}
+body.light .bgl::before{opacity:.15}
+body.light .blob{opacity:.3}
+
+/* ── SORTABLE STANDINGS ── */
+.sort-th{cursor:pointer;transition:color 120ms;user-select:none;white-space:nowrap}
+.sort-th:hover{color:var(--t0)!important}
+.sort-th.sort-active{color:var(--gold)!important}
+.sort-arrow-s{font-size:9px;margin-left:2px;opacity:.5}
+
+/* ── VALUE BETS ── */
+.vb-edge{font-family:var(--fm);font-size:12px;font-weight:700;padding:2px 8px;border-radius:100px}
+.vb-edge.hi{background:rgba(16,185,129,.12);color:var(--green)}
+.vb-edge.md{background:rgba(245,158,11,.12);color:var(--gold)}
+.vb-prob-bar{height:3px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:3px}
+.vb-prob-fill{height:100%;border-radius:3px;transition:width 600ms cubic-bezier(.16,1,.3,1)}
+
+/* ── VALUE BET PULSE (from research: CSS box-shadow keyframe on high-kelly picks) ── */
+@keyframes value-pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.35)}50%{box-shadow:0 0 0 8px rgba(16,185,129,0)}}
+.pc.hi.value-active{animation:value-pulse 2.4s ease-in-out infinite}
+
+/* ── ROW FLASH on data update ── */
+@keyframes flash-green{0%{background-color:rgba(16,185,129,.18)}100%{background-color:transparent}}
+.row-updated{animation:flash-green 1.4s ease-out forwards}
+
+/* ── GAME TICKER ── */
+.ticker-wrap{position:fixed;top:60px;left:0;right:0;z-index:90;height:26px;display:flex;align-items:center;background:rgba(13,17,25,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--b0);overflow:hidden}
+.ticker-label{padding:0 12px;font-size:9px;font-weight:800;letter-spacing:.8px;color:var(--gold);text-transform:uppercase;flex-shrink:0;border-right:1px solid var(--b0)}
+.ticker-overflow{flex:1;overflow:hidden}
+.ticker-track{display:inline-flex;gap:28px;white-space:nowrap;animation:ticker-scroll 45s linear infinite}
+.ticker-track:hover{animation-play-state:paused}
+@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.t-item{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--fm);color:var(--t1)}
+.t-item .t-sep{color:var(--t2);font-size:9px}
+.t-item .t-pick{color:var(--green);font-weight:700}
+.t-item .t-dot{width:4px;height:4px;border-radius:50%;background:var(--b1);flex-shrink:0}
+/* adjust main content for ticker */
+.wrap{padding-top:120px!important}
+
+/* ── CLV SUMMARY ── */
+.clv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:768px){.clv-grid{grid-template-columns:1fr}}
+.clv-stat{text-align:center;padding:14px;background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.12);border-radius:12px}
+.clv-val{font-family:var(--fm);font-size:24px;font-weight:700;color:var(--green);display:block;margin-bottom:3px}
+.clv-lbl{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var(--f);font-size:14px;line-height:1.6;overflow-x:hidden}
 
@@ -510,6 +563,9 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
     Model
   </button>
   <div class="nlive"><span class="ldot"></span>Live</div>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode" aria-label="Toggle theme">
+    <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
 
   <div class="acct">
     <button class="acct-btn" onclick="toggleAcct()" id="acct-btn" aria-expanded="false" aria-haspopup="true">
@@ -532,6 +588,14 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
     </div>
   </div>
 </nav>
+
+<!-- ── GAME TICKER ── -->
+<div class="ticker-wrap" id="game-ticker" style="display:none">
+  <span class="ticker-label">Today</span>
+  <div class="ticker-overflow">
+    <div class="ticker-track" id="ticker-track"></div>
+  </div>
+</div>
 
 <main class="wrap">
 
@@ -592,7 +656,7 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
           <div class="tw"><table><thead><tr><th>#</th><th>Player</th><th>PPG</th><th></th></tr></thead><tbody id="dash-leaders"></tbody></table></div>
         </div>
         <div class="card">
-          <div class="sh"><div class="st">League Scoring Trend</div><div class="ss">Points per game, by week</div></div>
+          <div class="sh"><div class="st">Model Win Rate Trend</div><div class="ss">Rolling accuracy — season 2025-26</div></div>
           <div id="dash-chart" style="height:175px"></div>
         </div>
       </div>
@@ -664,11 +728,11 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
     <div class="g2" style="margin-top:4px">
       <div class="card" style="padding:0;overflow:hidden">
         <div class="confh">Eastern Conference</div>
-        <div class="tw"><table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div>
+        <div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">▼</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">↕</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">↕</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="confh">Western Conference</div>
-        <div class="tw"><table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div>
+        <div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">▼</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">↕</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">↕</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div>
       </div>
     </div>
   </div>
@@ -775,6 +839,7 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
     <button class="tab active" data-tab="picks" onclick="switchTab('model','picks')">Today's Picks</button>
     <button class="tab" data-tab="backtest" onclick="switchTab('model','backtest'); renderBacktest()">Track Record</button>
     <button class="tab" data-tab="parlay" onclick="switchTab('model','parlay')">Parlay Builder</button>
+    <button class="tab" data-tab="valuebets" onclick="switchTab('model','valuebets');renderValueBets()">Value Bets</button>
   </div>
 
   <div class="tab-content active" id="model-tab-picks">
@@ -806,7 +871,16 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
       <div class="bt-stat"><span class="sl">Total Picks Made</span><span class="bt-val">18,496</span><div class="schange" style="justify-content:center;font-size:11px">games in backtest (2007-2025)</div></div>
     </div>
     <div class="card" style="margin-bottom:14px">
-      <div class="sh"><div><div class="st">Win Rate Over Time</div><div class="ss">Each point = one week · Dashed line = 50% baseline (coin flip)</div></div></div>
+      <div class="sh"><div><div class="st">Closing Line Value (CLV)</div><div class="ss">Did we get a better line than where the market settled?</div></div><span class="badge g" id="clv-edge-badge">Loading...</span></div>
+      <div class="clv-grid" id="clv-summary-grid">
+        <div class="clv-stat"><span class="clv-val" id="clv-mean">—</span><span class="clv-lbl">Mean CLV</span></div>
+        <div class="clv-stat"><span class="clv-val" id="clv-pos-rate">—</span><span class="clv-lbl">Positive CLV Rate</span></div>
+        <div class="clv-stat"><span class="clv-val" id="clv-games">—</span><span class="clv-lbl">Games Tracked</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="sh"><div><div class="st">Win Rate Over Time</div><div class="ss">Each point = one day · Dashed line = 50% baseline (coin flip)</div></div></div>
       <div id="bt-chart" style="height:230px"></div>
     </div>
     <div class="g2">
@@ -847,6 +921,35 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
       </div>
     </div>
   </div>
+  <div class="tab-content" id="model-tab-valuebets">
+    <div class="sgrid" style="margin-bottom:20px">
+      <div class="sc accent-green"><span class="sl">Avg Edge</span><span class="sv g" id="vb-avg-edge">—</span><div class="schange up">Model vs market prob</div></div>
+      <div class="sc accent-gold"><span class="sl">Value Bets</span><span class="sv o" id="vb-count">—</span><div class="schange">Recent high-edge games</div></div>
+      <div class="sc accent-blue"><span class="sl">Best Edge</span><span class="sv b" id="vb-best-edge">—</span><div class="schange">Single game top edge</div></div>
+      <div class="sc accent-green"><span class="sl">Avg Model Conf</span><span class="sv g" id="vb-avg-conf">—</span><div class="schange">Mean model probability</div></div>
+    </div>
+    <div class="card" style="margin-bottom:18px;background:rgba(16,185,129,.03);border-color:rgba(16,185,129,.12)">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:40px;height:40px;border-radius:12px;background:var(--green-d);border:1px solid rgba(16,185,129,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px;color:var(--t0)">What is a Value Bet?</div>
+          <div style="font-size:12px;color:var(--t1);line-height:1.65">A value bet occurs when our model's probability is significantly higher than the market's implied probability — meaning the betting line underestimates our edge. Edge % = model prob minus market prob.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sh"><div><div class="st">Recent Value Bets</div><div class="ss">Games where model probability exceeds market implied by >5%</div></div><span class="badge g" id="vb-total-badge">Loading...</span></div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Date</th><th>Matchup</th><th>Pick</th><th>Model</th><th>Market</th><th>Edge</th></tr></thead>
+          <tbody id="value-bets-tb"><tr><td colspan="6" style="text-align:center;color:var(--t2);padding:28px;font-size:13px">Loading value bet data...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Model v2.2 · 67.1% game outcome · 54.9% ATS</p>
 </section>
 
@@ -957,6 +1060,9 @@ button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
 </main>
 
 <script>
+// ─── HTML ESCAPE HELPER (XSS prevention for any string fields from JSON) ───
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
 // ─── PLAYER DATA with NBA CDN headshot IDs ───
 // NBA CDN headshots: https://cdn.nba.com/headshots/nba/latest/260x190/{id}.png
 // These are official NBA media assets, publicly served, no login required
@@ -1035,12 +1141,15 @@ const ADV = {
 };
 
 // ─── HEADSHOT HELPER ───
+function hsErr(img,ini){if(img&&img.parentElement){img.parentElement.textContent=ini;}}
 function headshot(nbaId, ini, size=36) {
-  const url = `https://cdn.nba.com/headshots/nba/latest/260x190/${nbaId}.png`;
+  const safeId=Number.isInteger(nbaId)?nbaId:0;
+  const safeIni=esc(ini);
+  const url=`https://cdn.nba.com/headshots/nba/latest/260x190/${safeId}.png`;
   return `<div class="player-shot-wrap" style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(245,158,11,.1));border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-    <img src="${url}" alt="${ini}" 
+    <img src="${url}" alt="${safeIni}"
       style="width:${Math.round(size*1.5)}px;height:${Math.round(size*1.2)}px;object-fit:cover;object-position:top center;margin-top:${Math.round(size*.1)}px"
-      onerror="this.parentElement.innerHTML='<span style=\\'font-size:9px;font-weight:700;color:var(--t1);font-family:var(--fm)\\'>${ini}</span>'"
+      onerror="hsErr(this,'${safeIni}')"
     />
   </div>`;
 }
@@ -1200,28 +1309,51 @@ function sortPlayers(col){
 }
 
 // ─── STANDINGS ───
+const standState={east:{key:'w',dir:-1},west:{key:'w',dir:-1}};
+function sortStand(key,conf){
+  const s=standState[conf];
+  if(s.key===key)s.dir*=-1;else{s.key=key;s.dir=-1;}
+  // Update header indicators
+  ['w','l','pct'].forEach(k=>{
+    const el=document.getElementById('sarr-'+conf+'-'+k);
+    if(el)el.textContent=k===key?(s.dir===-1?'▼':'▲'):'↕';
+    const th=el?el.closest('th'):null;
+    if(th)th.classList.toggle('sort-active',k===key);
+  });
+  renderStandings();
+}
 function renderStandings(){
-  function conf(data,id){
+  function conf(rawData,id,confKey){
+    const s=standState[confKey];
+    const data=[...rawData].sort((a,b)=>{
+      const va=s.key==='pct'?a.w/(a.w+a.l):s.key==='l'?a.l:a.w;
+      const vb=s.key==='pct'?b.w/(b.w+b.l):s.key==='l'?b.l:b.w;
+      return (va-vb)*s.dir;
+    });
     document.getElementById(id).innerHTML=data.map((t,i)=>{
       const pct=(t.w/(t.w+t.l)).toFixed(3);
       const sc=t.streak.startsWith('W')?'var(--green)':'var(--red)';
       const border=i===5?'border-bottom:2px solid rgba(245,158,11,.2);':'';
-      return `<tr style="${border}"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${t.team}</td><td>${t.w}</td><td>${t.l}</td><td>${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${t.streak}</td></tr>`;
+      return `<tr style="${border}"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${t.team}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${t.streak}</td></tr>`;
     }).join('');
   }
-  conf(DATA.east,'east-tb');conf(DATA.west,'west-tb');
+  conf(DATA.east,'east-tb','east');conf(DATA.west,'west-tb','west');
 }
 
 // ─── PICKS ───
 function renderPicks(){
   document.getElementById('picks-grid').innerHTML=DATA.picks.map(p=>`
     <div class="pc ${p.tier}">
-      <div class="pm">${p.matchup}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="pm" style="margin-bottom:0">${p.matchup}</div>
+        ${p.value_bet?'<span class="badge g" style="font-size:9px;padding:1px 6px;flex-shrink:0">VALUE</span>':''}
+      </div>
       <div class="pmt">${p.time}${p.result?' · '+p.result:''}</div>
       <div class="pp"><span class="ppt">Pick: <strong>${p.pick}</strong></span><span class="psp">${p.spread}</span></div>
       <div class="cl"><span>Confidence</span><span style="color:${p.tier==='hi'?'var(--green)':'var(--gold)'};font-weight:700;font-family:var(--fm)">${p.conf}%</span></div>
       <div class="cb"><div class="cf ${p.tier}" style="width:0%" data-t="${p.conf}"></div></div>
       <div style="font-size:11px;color:var(--t2);margin-top:7px;font-weight:500">${p.reason}</div>
+      ${p.kelly!=null?`<div style="font-size:10px;color:var(--green);margin-top:5px;font-family:var(--fm);font-weight:600">Kelly: ${(p.kelly*100).toFixed(1)}% of bankroll</div>`:''}
     </div>`).join('');
   setTimeout(()=>document.querySelectorAll('.cf').forEach(el=>{el.style.width=el.dataset.t+'%'}),100);
 }
@@ -1242,24 +1374,37 @@ function renderDashPicks(){
 
 // ─── DASH CHART ───
 function renderDashChart(){
-  const wks=["W7", "W8", "W9", "W10", "W11", "W12", "W13", "W14", "W15", "W16", "W17", "W18", "W19", "W20"];
-  const ppg=[114.6, 117.3, 115.4, 118.4, 115.9, 110.9, 115.1, 112.7, 112.4, 115.6, 115.0, 113.9, 112.8, 110.2];
-  Plotly.newPlot('dash-chart',[{
-    x:wks,y:ppg,type:'scatter',mode:'lines',
-    line:{color:'#60A5FA',width:2,shape:'spline'},
-    fill:'tozeroy',fillcolor:'rgba(96,165,250,.06)',
-    hovertemplate:'<b>%{x}</b><br>%{y} PPG<extra></extra>'
-  }],ML({y:{range:[105,122]},margin:{l:44,r:12,t:8,b:34}}),{responsive:true,displayModeBar:false});
+  const acc=window.ACCURACY_DATA||[];
+  if(!acc.length){
+    const el=document.getElementById('dash-chart');
+    if(el){Object.assign(el.style,{height:'175px',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--t2)',fontSize:'12px',fontWeight:'500'});el.textContent='No accuracy data — run update.py to populate';}
+    return;
+  }
+  const last40=acc.slice(-40);
+  const xs=last40.map(d=>d.date);
+  const ys=last40.map(d=>+(d.rolling_accuracy*100).toFixed(1));
+  Plotly.newPlot('dash-chart',[
+    {x:xs,y:ys,type:'scatter',mode:'lines',line:{color:'#60A5FA',width:2,shape:'spline'},fill:'tozeroy',fillcolor:'rgba(96,165,250,.06)',hovertemplate:'<b>%{x}</b><br>%{y}% accuracy<extra></extra>',name:'Win Rate'},
+    {x:[xs[0],xs[xs.length-1]],y:[50,50],type:'scatter',mode:'lines',line:{color:'rgba(248,113,113,.3)',dash:'dot',width:1.5},hoverinfo:'skip',showlegend:false}
+  ],ML({y:{range:[45,90],ticksuffix:'%'},margin:{l:44,r:12,t:8,b:34},ex:{showlegend:false}}),{responsive:true,displayModeBar:false});
 }
 
 // ─── BACKTEST CHARTS ───
 let btRendered=false;
 function renderBacktest(){
   if(btRendered)return;btRendered=true;
-  const wks=["Oct '23", "Nov '23", "Dec '23", "Jan '24", "Feb '24", "Mar '24", "Apr '24", "Oct '24", "Nov '24", "Dec '24", "Jan '25", "Feb '25", "Mar '25", "Apr '25"];
-  const ats=[42.6, 51.1, 48.3, 51.5, 46.6, 48.7, 47.0, 45.1, 49.8, 49.7, 51.6, 57.4, 45.8, 46.7];
+  const acc=window.ACCURACY_DATA||[];
+  let xs,ys;
+  if(acc.length>=5){
+    xs=acc.map(d=>d.date);
+    ys=acc.map(d=>+(d.rolling_accuracy*100).toFixed(1));
+  } else {
+    xs=["Oct '23","Nov '23","Dec '23","Jan '24","Feb '24","Mar '24","Apr '24","Oct '24","Nov '24","Dec '24","Jan '25","Feb '25","Mar '25","Apr '25"];
+    ys=[42.6,51.1,48.3,51.5,46.6,48.7,47.0,45.1,49.8,49.7,51.6,57.4,45.8,46.7];
+  }
+
   Plotly.newPlot('bt-chart',[{
-    x:wks,y:ats,type:'scatter',mode:'lines+markers',name:'ATS Rate',
+    x:xs,y:ys,type:'scatter',mode:'lines+markers',name:'Win Rate',
     line:{color:'#F59E0B',width:2,shape:'spline'},
     marker:{color:'#F59E0B',size:5},
     fill:'tozeroy',fillcolor:'rgba(245,158,11,.06)',
@@ -1287,12 +1432,18 @@ function renderBacktest(){
 }
 
 // ─── PARLAY ───
+function probToAmerican(prob){
+  if(prob<=0||prob>=1)return'—';
+  if(prob>=0.5)return'-'+Math.round(100*prob/(1-prob));
+  return'+'+Math.round(100*(1-prob)/prob);
+}
 let parlaySelected=new Set();
 function renderParlay(){
   const el=document.getElementById('parlay-games');
-  const odds=["-230","-158","-896","-148","-1219","-213","-230","-231","-896"];
-  el.innerHTML=DATA.picks.map((p,i)=>`
-    <div class="par-game" id="par-${i}" onclick="toggleParlay(${i})">
+  el.innerHTML=DATA.picks.map((p,i)=>{
+    const prob=p.conf/100;
+    const odds=probToAmerican(prob);
+    return `<div class="par-game" id="par-${i}" onclick="toggleParlay(${i})">
       <div class="par-check" id="pchk-${i}">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="display:none" id="pchk-icon-${i}"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
@@ -1300,8 +1451,9 @@ function renderParlay(){
         <div class="par-matchup">${p.matchup}</div>
         <div class="par-pick">${p.pick} ${p.spread} · ${p.time}</div>
       </div>
-      <div class="par-odds">${odds[i]}</div>
-    </div>`).join('');
+      <div class="par-odds">${odds}</div>
+    </div>`;
+  }).join('');
   updateParlaySlip();
 }
 function toggleParlay(i){
@@ -1314,7 +1466,11 @@ function toggleParlay(i){
 function updateParlaySlip(){
   const n=parlaySelected.size;
   document.getElementById('par-legs').textContent=n;
-  document.getElementById('par-odds').textContent=n>0?'+'+Math.floor(n*175+50*n):'—';
+  if(n>0){
+    const probs=[...parlaySelected].map(i=>DATA.picks[i].conf/100);
+    const combined=probs.reduce((a,b)=>a*b,1);
+    document.getElementById('par-odds').textContent=probToAmerican(combined);
+  } else { document.getElementById('par-odds').textContent='—'; }
   const avgConf=n===0?0:Math.round([...parlaySelected].reduce((a,i)=>a+DATA.picks[i].conf,0)/n);
   document.getElementById('par-conf').textContent=n>0?avgConf+'%':'—';
   document.getElementById('par-legs-list').innerHTML=[...parlaySelected].map(i=>`
@@ -1586,8 +1742,8 @@ function renderStreaks(){
   }),{responsive:true,displayModeBar:false});
 
   Plotly.newPlot('homeway-chart',[
-    {x:['OKC','DET','SAS','BOS','NYK'],y:[81,77,78,67,72],type:'bar',name:'Home',marker:{color:'rgba(16,185,129,.7)',line:{width:0}},hovertemplate:'%{x} home: %{y}%<extra></extra>'},hovertemplate:'%{x} home: %{y}%<extra></extra>'},
-    {x:['OKC','DET','SAS','BOS','NYK'],y:[75,72,67,66,53],type:'bar',name:'Away',marker:{color:'rgba(96,165,250,.6)',line:{width:0}},hovertemplate:'%{x} away: %{y}%<extra></extra>'},hovertemplate:'%{x} away: %{y}%<extra></extra>'},
+    {x:['OKC','DET','SAS','BOS','NYK'],y:[81,77,78,67,72],type:'bar',name:'Home',marker:{color:'rgba(16,185,129,.7)',line:{width:0}},hovertemplate:'%{x} home: %{y}%<extra></extra>'},
+    {x:['OKC','DET','SAS','BOS','NYK'],y:[75,72,67,66,53],type:'bar',name:'Away',marker:{color:'rgba(96,165,250,.6)',line:{width:0}},hovertemplate:'%{x} away: %{y}%<extra></extra>'},
   ],{...ML({y:{ticksuffix:'%',range:[40,100]}}),barmode:'group',bargap:.3,bargroupgap:.1,
     legend:{font:{color:'#8B9BB8',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'}},
     {responsive:true,displayModeBar:false});
@@ -1619,9 +1775,133 @@ function renderShotMaps(){
     {responsive:true,displayModeBar:false});
 }
 
+// ─── THEME TOGGLE ───
+function toggleTheme(){
+  const light=document.body.classList.toggle('light');
+  localStorage.setItem('nba-theme',light?'light':'dark');
+  const icon=document.getElementById('theme-icon');
+  if(icon){
+    icon.innerHTML=light
+      ?'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+      :'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+}
+
+// ─── VALUE BETS RENDERER ───
+let vbRendered=false;
+function renderValueBets(){
+  if(vbRendered)return;vbRendered=true;
+  const vb=window.VALUE_BETS||[];
+  const tb=document.getElementById('value-bets-tb');
+  const badge=document.getElementById('vb-total-badge');
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  if(!vb.length){
+    if(tb){const r=tb.insertRow();const c=r.insertCell();c.colSpan=6;c.style.cssText='text-align:center;color:var(--t2);padding:28px;font-size:13px';c.textContent='No value bet data — run update.py to fetch.';}
+    if(badge){badge.textContent='0 bets';badge.className='badge o';}
+    return;
+  }
+  const avgEdge=(vb.reduce((a,b)=>a+b.edge_pct,0)/vb.length*100).toFixed(1);
+  const bestEdge=(Math.max(...vb.map(b=>b.edge_pct))*100).toFixed(1);
+  const avgConf=(vb.reduce((a,b)=>a+b.model_prob,0)/vb.length*100).toFixed(1);
+  set('vb-avg-edge',avgEdge+'%');set('vb-count',vb.length);set('vb-best-edge',bestEdge+'%');set('vb-avg-conf',avgConf+'%');
+  if(badge){badge.textContent=vb.length+' bets';badge.className='badge g';}
+  if(tb){
+    tb.innerHTML=vb.map(b=>{
+      const d=new Date(b.game_date);
+      const ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const edge=(b.edge_pct*100).toFixed(1);
+      const ecls=b.edge_pct>=0.1?'hi':'md';
+      const mp=(b.model_prob*100).toFixed(1);
+      const mkp=(b.market_prob*100).toFixed(1);
+      const fillW=Math.min(100,b.model_prob*100);
+      return `<tr><td style="color:var(--t2);font-family:var(--fm)">${esc(ds)}</td><td style="font-family:var(--f);font-weight:600">${esc(b.away_team)} @ ${esc(b.home_team)}</td><td><span class="badge g">${esc(b.recommended_side)}</span></td><td>${mp}%<div class="vb-prob-bar"><div class="vb-prob-fill" style="width:${fillW}%;background:var(--blue)"></div></div></td><td style="color:var(--t2)">${mkp}%</td><td><span class="vb-edge ${ecls}">+${edge}%</span></td></tr>`;
+    }).join('');
+  }
+}
+
+// ─── CLV SUMMARY (called from loadDashboardData so it populates regardless of tab order) ───
+function updateCLVSummary(){
+  const vb=window.VALUE_BETS||[];
+  const clvMean=document.getElementById('clv-mean');
+  const clvRate=document.getElementById('clv-pos-rate');
+  const clvGames=document.getElementById('clv-games');
+  const clvBadge=document.getElementById('clv-edge-badge');
+  if(!vb.length){
+    if(clvMean)clvMean.textContent='N/A';if(clvRate)clvRate.textContent='N/A';
+    if(clvGames)clvGames.textContent='0';if(clvBadge){clvBadge.textContent='No Data';clvBadge.className='badge o';}
+    return;
+  }
+  const avgEdge=(vb.reduce((a,b)=>a+b.edge_pct,0)/vb.length*100).toFixed(1);
+  const posRate=(vb.filter(b=>b.edge_pct>0).length/vb.length*100).toFixed(0);
+  if(clvMean)clvMean.textContent='+'+avgEdge+'%';
+  if(clvRate)clvRate.textContent=posRate+'%';
+  if(clvGames)clvGames.textContent=vb.length;
+  if(clvBadge){clvBadge.textContent=Number(posRate)>50?'Edge Confirmed':'Tracking';clvBadge.className=Number(posRate)>50?'badge g':'badge o';}
+}
+
+// ─── GAME TICKER ───
+function renderTicker(){
+  const ticker=document.getElementById('game-ticker');
+  const track=document.getElementById('ticker-track');
+  if(!ticker||!track||!DATA.games.length)return;
+  const items=DATA.games.map(g=>{
+    const pick=DATA.picks.find(p=>p.matchup===`${g.away} @ ${g.home}`);
+    const pickStr=pick?` <span class="t-pick">${pick.pick}</span>`:'';
+    const score=g.aS!=null?`<span style="color:var(--t0);font-weight:600">${g.aS}–${g.hS}</span>`:'';
+    const st=g.status==='live'?`<span style="color:var(--green);font-size:9px;font-weight:700">LIVE</span>`:g.status==='final'?`<span style="color:var(--t2);font-size:9px">FINAL</span>`:`<span style="color:var(--blue);font-size:9px">${g.q}</span>`;
+    return `<span class="t-item"><span>${esc(g.away)}</span><span class="t-sep">@</span><span>${esc(g.home)}</span>${score?` ${score}`:''}${pickStr} ${st}</span><span class="t-dot"></span>`;
+  }).join('');
+  // Duplicate for seamless loop
+  track.innerHTML=items+items;
+  ticker.style.display='flex';
+}
+
+// ─── DATA LOADER ───
+async function loadDashboardData(){
+  try{
+    const [picks,accuracy,valueBets,meta]=await Promise.all([
+      fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/meta.json').then(r=>r.ok?r.json():{}).catch(()=>({}))
+    ]);
+    window.ACCURACY_DATA=accuracy;
+    window.VALUE_BETS=valueBets;
+    window.META=meta;
+    if(picks.length){
+      DATA.picks=picks.map(p=>{
+        const conf=Math.round(Math.max(p.home_win_prob||0,p.away_win_prob||0)*100);
+        const d=new Date(p.game_date);
+        const mon=d.toLocaleString('default',{month:'short'});
+        return {
+          matchup:`${p.away_team} @ ${p.home_team}`,
+          time:`${mon} ${d.getDate()}`,
+          pick:p.ats_pick||p.predicted_winner,
+          spread:p.spread!=null?(p.spread>0?'+'+p.spread:String(p.spread)):'',
+          conf:conf,tier:conf>=70?'hi':'md',
+          reason:p.value_bet&&p.edge_pct?`Value edge: ${(p.edge_pct*100).toFixed(1)}%`:`Model: ${conf}% confidence`,
+          value_bet:!!p.value_bet,
+          kelly:p.kelly_fraction!=null?p.kelly_fraction:null
+        };
+      });
+    }
+    updateCLVSummary();
+    if(meta.exported_at){
+      const d=new Date(meta.exported_at);
+      const label=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const greet=document.getElementById('greet');
+      if(greet)greet.textContent=greet.textContent.replace(/Mar \d+, \d{4}/g,label);
+    }
+  }catch(e){console.warn('Dashboard data load:',e);}
+}
+
 // ─── INIT ───
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Restore theme preference
+  if(localStorage.getItem('nba-theme')==='light') toggleTheme();
   setGreeting();
+  // Load real data first, then render
+  await loadDashboardData();
   renderGames();
   renderLeaders();
   renderPlayersTable();
@@ -1630,8 +1910,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderPicks();
   renderDashPicks();
   renderParlay();
+  renderTicker();
   runCounters();
-  setTimeout(()=>{ renderDashChart(); }, 50);
+  // Flash pick cards that are value bets after brief delay
+  setTimeout(()=>{
+    document.querySelectorAll('.pc.hi').forEach(el=>{
+      const matchup=el.querySelector('.pm');
+      if(!matchup)return;
+      const pick=DATA.picks.find(p=>p.matchup===matchup.textContent.trim());
+      if(pick&&pick.value_bet)el.classList.add('value-active');
+    });
+    renderDashChart();
+  }, 120);
 });
 </script>
 </body>

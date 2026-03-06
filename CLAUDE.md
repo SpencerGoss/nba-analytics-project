@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → web dashboard (fully live data) + CLV tracking. v2.2 complete (Phase 1). Odds: Pinnacle guest API (free, keyless, live). Next: Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending.
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → web dashboard (fully live data, dark/light theme, Value Bets tab, CLV card, sortable standings, real accuracy chart) + CLV tracking. v2.3 complete. Odds: Pinnacle guest API (free, keyless). Next: Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending.
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
@@ -12,7 +12,6 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
-- Start each session: invoke `session-kickoff` skill before any work
 
 ## Key Paths
 - `src/data/` — NBA API fetchers | `src/features/` — feature engineering
@@ -41,6 +40,7 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - CLV formula: `clv = opening_spread - closing_spread` (positive = better line than closing); do NOT invert
 - `calibration.py`/`ats_model.py` need sys.path set before running as scripts; use python -c workaround
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
+- Dashboard JS: data-dependent UI (CLV card, value bets) must be populated from the Promise.all data loader, not only from tab-click handlers (tab never fires if user doesn't click that tab)
 
 ## Skill Routing (auto-trigger — no prompting needed)
 

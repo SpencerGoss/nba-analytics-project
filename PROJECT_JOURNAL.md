@@ -4,6 +4,34 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-06 — Dashboard UI Enhancement + Security Hardening + Bug Fixes
+
+**Done:**
+- **Dark/light theme toggle** — nav bar button; persists to localStorage; CSS variables for both modes.
+- **Game ticker bar** — scrolling strip of live game scores/picks (DATA.games + DATA.picks).
+- **Value Bets tab** — new tab rendering value_bets.json: matchup, side, model prob, market prob, edge%, kelly fraction via `renderValueBets()`.
+- **CLV summary card** in Track Record tab — mean CLV, positive CLV rate, edge flag badge. Extracted to `updateCLVSummary()`, called from data loader so it populates regardless of tab click order.
+- **Sortable standings** — W/L/PCT headers clickable; missing span IDs added (sarr-east-l/pct, sarr-west-l/pct).
+- **Real accuracy chart** — `renderDashChart()` replaced hardcoded PPG with accuracy_history.json (40-day rolling; Plotly area + 50% dashed baseline). Empty state uses textContent (not direct DOM injection).
+- **VALUE badge + Kelly display** on pick cards — green VALUE badge and Kelly % when data present. `kelly_fraction` now mapped from JSON in `loadDashboardData()`.
+- **probToAmerican()** helper — correct American odds formula (fav: neg round, dog: pos round).
+- **Security hardening** — `esc()` sanitizer on all external JSON strings; onerror fallback uses textContent via `hsErr()` function; integer guard on nbaId before CDN URL construction.
+- **Async data loader** — `loadDashboardData()` fetches all 4 JSON files in parallel via Promise.all.
+- **5 code review bugs fixed:** (1) Number() coercion on posRate string comparison; (2) 4 missing sort arrow span IDs; (3) consistent table rendering in renderValueBets; (4) CLV extracted to standalone function; (5) kelly_fraction mapped in picks + updateCLVSummary wired into data loader.
+- **CSS additions:** value-pulse keyframes, flash-green keyframes, ticker-scroll animation, light mode CSS vars, CLV badge styles.
+
+**Issues encountered:**
+- Security hook blocked direct DOM injection for empty state — replaced with textContent + Object.assign(el.style).
+- posRate comparison was string vs number — fixed with Number() coercion.
+- CLV card only populated on tab click — fixed by calling updateCLVSummary from data loader.
+
+**Files changed:**
+- `dashboard/index.html` — all UI enhancements, security fixes, bug fixes
+
+**Next:** Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending, SBRO historical odds, margin regression model.
+
+---
+
 ## 2026-03-06 — Dashboard Full Data Update (all mock sections wired to real data)
 
 **Done:**

@@ -12,7 +12,7 @@ End-to-end NBA analytics system: data ingestion → feature engineering → game
 - Tests: 145 passing
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
 - **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv populates live with NBA moneylines + spreads
-- **Dashboard:** all ~35 mock/hardcoded sections replaced with real data via `scripts/build_dashboard.py` — PPG trend, ATS backtest charts, matchup breakdown, hot/cold streaks, shot quality/zones, parlay odds all live
+- **Dashboard:** all ~35 mock/hardcoded sections live; new in this session: dark/light theme toggle (localStorage), scrolling game ticker, Value Bets tab (renderValueBets + kelly display), CLV summary card in Track Record tab, sortable standings, real accuracy chart (accuracy_history.json); full XSS hardening (esc() sanitizer, textContent fallbacks, nbaId guard)
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)
