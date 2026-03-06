@@ -7,11 +7,11 @@
 - sys.path must include PROJECT_ROOT before any model load AND before running calibration.py/ats_model.py as scripts (both have top-level `from src.*` imports)
 - update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; step 6: writes 9 predictions/night to `predictions_history.db`
 - ATS model selection uses `min(brier_score_loss)` NOT `max(accuracy)` -- University of Bath: accuracy-opt = -35% ROI, calibration-opt = +35% ROI; CALIBRATION_SEASON="202122" held out from CV
-- NBA API game_date: use `format="mixed"` in ALL pd.to_datetime() calls; never use Unicode arrow in print() (cp1252); season codes are integers (`202425`)
+- NBA API game_date: use `format="mixed"` in ALL pd.to_datetime() calls; never Unicode in print() (cp1252); season codes are integers (`202425`); player_game_logs uses `season_id=22025` for 202526 (not 202526)
 - Pinnacle guest API (https://guest.api.arcadia.pinnacle.com/0.1, league 487) -- no auth, no quota; filter matchups to parentId=None + alignment=home/away; ODDS_API_KEY removed
-- `database/nba.db` is empty/legacy; pipeline is CSV-based; only `predictions_history.db` is active
-- 145 tests passing; run with `.venv/Scripts/python.exe -m pytest tests/ -q`
-- Any feature col with `_roll` in its name is auto-captured by `roll_cols`; never also add to `context_cols` -- duplicates cause `ValueError: Cannot set a DataFrame with multiple columns` in build_matchup_dataset()
+- Pipeline is CSV-based; `database/nba.db` is empty/legacy; only `predictions_history.db` is active (145 tests pass: `.venv/Scripts/python.exe -m pytest tests/ -q`)
+- Any feature col with `_roll` in name is auto-captured by `roll_cols`; never also add to `context_cols` -- duplicates cause ValueError in build_matchup_dataset()
+- build_dashboard.py applies replacements sequentially to html; each section must match post-prior-section state (not original nba1.html); ATS cover rates flat 48-51% across all market signal buckets
 
 ## Domain Notes
 

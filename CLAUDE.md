@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → web dashboard + CLV tracking. v2.2 complete (Phase 1). Odds: Pinnacle guest API (free, keyless, live). Next: Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending.
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → web dashboard (fully live data) + CLV tracking. v2.2 complete (Phase 1). Odds: Pinnacle guest API (free, keyless, live). Next: Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending.
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
@@ -20,7 +20,7 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `src/validation/` — data integrity validation
 - `src/models/value_bet_detector.py` — value bet detection (kelly_fraction field)
 - `src/models/clv_tracker.py` — CLV tracking (opening/closing line, edge flag)
-- `src/models/model_explainability.py` — SHAP-based feature importance
+- `scripts/build_dashboard.py` — rebuilds dashboard/index.html from nba1.html template with real CSV data
 - `data/raw/`, `data/processed/`, `data/features/` — pipeline stages
 - `models/artifacts/` — trained model PKLs (gitignored)
 - `.planning/STATE.md` — phase tracker | `.planning/codebase/CONCERNS.md` — known bugs
@@ -32,7 +32,7 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - Never modify `data/raw/` files — source of truth
 - After retraining any model → run `src/models/calibration.py` immediately; `fetch_odds.py` must always load `game_outcome_model_calibrated.pkl`
 - NBA API (nba_api): throttle at 1 req/sec minimum; never loop without sleep; shot chart fetch is 3-4h — never run in daily pipeline
-- `pd.to_datetime()` on game_date must use `format="mixed"` — NBA API sends "YYYY-MM-DD 00:00:00" for current season, plain dates for history
+- `pd.to_datetime()` on game_date must use `format="mixed"` — NBA API sends "YYYY-MM-DD 00:00:00" for current season, plain dates for history; `player_game_logs.csv` uses `season_id=22025` for 202526 (all other CSVs use `season=202526`)
 - `update.py` step 3: call both `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` writes to predictions_history.db
 - If injury cols missing from matchup CSV — `player_absences.csv` may be missing; run `get_historical_absences.py` first, then rebuild injury_proxy + matchup
 - ATS model selection uses `min(brier_score_loss)` NOT accuracy — never revert to accuracy; CALIBRATION_SEASON="202122" is permanently held out from CV
@@ -72,10 +72,7 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Something is broken — read CONCERNS.md first | `debug-session` |
 | Code review after writing code | `code-review-session` |
 | Requesting a code review (superpowers) | `superpowers:requesting-code-review` |
-| Cleaning up code structure | `refactor-session` |
-| Pipeline is slow / memory issues | `performance-tuning` |
 | Testing the dashboard / UI | `webapp-testing` |
-| Dashboard UI design / production polish | `frontend-design` |
 
 ### Planning / Reasoning
 
@@ -93,7 +90,6 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Before pushing to GitHub (secret scan) | `security-audit` |
 | Adding a new API key or secret | `env-config` |
 | Adding or upgrading Python packages | `dependency-management` |
-| Setting up or updating CI pipelines | `ci-cd-setup` |
 
 ## See Also
 - `AI_INDEX.md` — task routing | `ARCHITECTURE.md` — system structure

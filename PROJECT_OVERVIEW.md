@@ -1,6 +1,6 @@
 # NBA Analytics Project — Overview
 
-End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized) → prediction store → web dashboard + CLV tracking.
+End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized) → prediction store → web dashboard (fully live data) + CLV tracking.
 
 ## v2.2 Results (March 2026)
 - Game outcome model: **67.1% accuracy, AUC 0.7406** — LightGBM added as candidate (guarded import); gradient_boosting still selected; 11 injury features active
@@ -12,6 +12,7 @@ End-to-end NBA analytics system: data ingestion → feature engineering → game
 - Tests: 145 passing
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
 - **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv populates live with NBA moneylines + spreads
+- **Dashboard:** all ~35 mock/hardcoded sections replaced with real data via `scripts/build_dashboard.py` — PPG trend, ATS backtest charts, matchup breakdown, hot/cold streaks, shot quality/zones, parlay odds all live
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)

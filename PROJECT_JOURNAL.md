@@ -4,6 +4,39 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-06 — Dashboard Full Data Update (all mock sections wired to real data)
+
+**Done:**
+- **`scripts/build_dashboard.py` overhauled** — 10 new data sections (16–25) read CSVs + predictions DB at build time and embed real values as JS in `dashboard/index.html`. All ~35 previously mock/hardcoded sections are now live.
+- **Section 16 — PPG Trend:** Weekly scoring trend from `team_game_logs.csv` (202526 season, W7–W20). Real values 110–118 PPG range replacing fake `[110,112,109...]`.
+- **Section 17 — ATS Win Rate Over Time:** 14 months of real monthly cover rates (42–57%) from `game_ats_features.csv`. Labels formatted as "Oct '23", "Feb '25" etc.
+- **Section 18 — ATS Best Pick Categories:** Cover rates by spread bucket (Pick'em 50.1%, Fav 3.5-7 49.4%, 7.5-10 49.2%, HeavyFav 48.3%). Honest data replacing fake "ATS/ML/Over-Under" labels.
+- **Section 19 — Confidence Calibration:** Implied prob buckets (50-75%+) vs. actual cover rate from market odds. Flat ~49-51% — honest display; axis range changed to [44,58] to show true signal level.
+- **Section 20 — Backtest Stat Tiles:** Best month = Feb '25 (57.4%); High conf tile = 49.0% (market implied >= 65%); Total = 18,496 games (2007-2025) replacing "1,240".
+- **Section 21 — Matchup Breakdown:** TOR@MIN (92% MIN), BKN@MIA (90% MIA), NOP@SAC (90% SAC) — real rolling stats from `game_matchup_features.csv` + predictions from `predictions_history.db`. Smart reason text (home advantage vs. offensive/defensive edge).
+- **Section 22 — Hot/Cold Streaks:** Real last-5 game scores per player from `player_game_logs.csv` (season_id=22025, min 15 PPG filter). Hot: Cooper Flagg (+8.2), Jalen Duren (+6.8), Jrue Holiday (+6.4), Saddiq Bey (+5.9). Cold: Jalen Johnson, Austin Reaves, Franz Wagner, Deni Avdija.
+- **Section 23 — Shot Quality/Efficiency:** Real TS% [61.3–67.6%] and pts/TSA [1.14–1.35] from `player_stats_advanced.csv` for top 8 scorers. Color thresholds updated to TS% scale.
+- **Section 24 — Shot Zones:** Luka/SGA/Edwards zone breakdown from `player_stats_scoring.csv` (pct_pts_3pt, pct_pts_paint, pct_uast_2pm). Replaces fake SGA/Jokic/Giannis data.
+- **Section 25 — Parlay Odds:** Model-derived American odds from `predictions_history.db` win probabilities. Signed string format ("-230" not "+230") with template literal fix.
+- 145 tests passing; 0 regressions.
+
+**Key discovery:** ATS cover rates are essentially flat (48–51%) across all implied-prob and spread buckets — no raw market edge. The model's 54.9% comes from 73-feature ML.
+
+**Issues encountered:**
+- `season_id=22025` is correct for player_game_logs.csv 202526 season (not integer 202526); other CSVs use `season=202526`.
+- Long 2s zone formula was computing `(pts_paint - pts_2mr - pts_paint) = -pts_2mr` → always 0. Fixed to `max(2, round((1.0 - pts_3 - pts_paint - pts_2mr) * 50))`.
+- ATS backtest chart ranges changed: PPG y=[105,122], calibration y=[44,58], TS% x=[50,72].
+- Parlay `+${odds[i]}` template must become `${odds[i]}` when odds are signed strings.
+
+**Files changed:**
+- `scripts/build_dashboard.py` — new file (~420 lines), 10 new real-data sections
+- `dashboard/index.html` — rebuilt with all real data embedded
+- `WORKING_NOTES.md` — new [dashboard] domain section (4 insights)
+
+**Next:** Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending, SBRO historical odds, margin regression model. Dashboard is now production-ready for data display.
+
+---
+
 ## 2026-03-06 — Phase 1 remaining items: LightGBM, Pythagorean win%, Fractional Kelly, CLV (complete)
 
 **Done:**
