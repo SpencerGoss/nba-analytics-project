@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.4%, AUC 0.742) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → web dashboard. v2.1 complete. Odds: Pinnacle guest API (free, keyless, live). Next: LightGBM, Pythagorean win%, CLV tracking.
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → web dashboard + CLV tracking. v2.2 complete (Phase 1). Odds: Pinnacle guest API (free, keyless, live). Next: Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending.
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
@@ -18,7 +18,8 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `src/data/` — NBA API fetchers | `src/features/` — feature engineering
 - `src/models/` — models + calibration | `src/processing/` — preprocessing
 - `src/validation/` — data integrity validation
-- `src/models/value_bet_detector.py` — value bet detection
+- `src/models/value_bet_detector.py` — value bet detection (kelly_fraction field)
+- `src/models/clv_tracker.py` — CLV tracking (opening/closing line, edge flag)
 - `src/models/model_explainability.py` — SHAP-based feature importance
 - `data/raw/`, `data/processed/`, `data/features/` — pipeline stages
 - `models/artifacts/` — trained model PKLs (gitignored)
@@ -35,7 +36,10 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `update.py` step 3: call both `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` writes to predictions_history.db
 - If injury cols missing from matchup CSV — `player_absences.csv` may be missing; run `get_historical_absences.py` first, then rebuild injury_proxy + matchup
 - ATS model selection uses `min(brier_score_loss)` NOT accuracy — never revert to accuracy; CALIBRATION_SEASON="202122" is permanently held out from CV
-- Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use `->` instead
+- Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use -> instead
+- Any feature col with `_roll` in name is auto-captured by `roll_cols` in build_matchup_dataset(); never also add to `context_cols` -- duplicates cause ValueError
+- CLV formula: `clv = opening_spread - closing_spread` (positive = better line than closing); do NOT invert
+- `calibration.py`/`ats_model.py` need sys.path set before running as scripts; use python -c workaround
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
 
 ## Skill Routing (auto-trigger — no prompting needed)

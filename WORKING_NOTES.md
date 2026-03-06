@@ -4,14 +4,14 @@
 
 - `shift(1)` before ALL rolling features -- data leakage is the #1 silent killer of model validity
 - Expanding-window validation only; ALL inference paths load `game_outcome_model_calibrated.pkl`, not base .pkl
-- sys.path must include PROJECT_ROOT before any model load (src.* class path must be importable during deserialization)
+- sys.path must include PROJECT_ROOT before any model load AND before running calibration.py/ats_model.py as scripts (both have top-level `from src.*` imports)
 - update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; step 6: writes 9 predictions/night to `predictions_history.db`
 - ATS model selection uses `min(brier_score_loss)` NOT `max(accuracy)` -- University of Bath: accuracy-opt = -35% ROI, calibration-opt = +35% ROI; CALIBRATION_SEASON="202122" held out from CV
 - NBA API game_date: use `format="mixed"` in ALL pd.to_datetime() calls; never use Unicode arrow in print() (cp1252); season codes are integers (`202425`)
 - Pinnacle guest API (https://guest.api.arcadia.pinnacle.com/0.1, league 487) -- no auth, no quota; filter matchups to parentId=None + alignment=home/away; ODDS_API_KEY removed
 - `database/nba.db` is empty/legacy; pipeline is CSV-based; only `predictions_history.db` is active
 - 145 tests passing; run with `.venv/Scripts/python.exe -m pytest tests/ -q`
-- injury_proxy.py primary path requires `data/processed/player_absences.csv`; if missing, fallback produces all-zero injury cols silently; regenerate with `python src/data/get_historical_absences.py`
+- Any feature col with `_roll` in its name is auto-captured by `roll_cols`; never also add to `context_cols` -- duplicates cause `ValueError: Cannot set a DataFrame with multiple columns` in build_matchup_dataset()
 
 ## Domain Notes
 
@@ -73,3 +73,16 @@
 
 [2026-03-05] [skills] INSIGHT: gsd:* skills removed from this project — replace with: `spec-driven-dev` (planning), `nba-feature-dev` (executing), `session-wrap-up` (milestone close)
 [2026-03-05] [skills] WHY: gsd skill family deprecated; workflow now uses spec-driven-dev -> tdd-workflow -> code-review-session -> session-wrap-up pipeline
+
+### [clv]
+
+[2026-03-06] [clv] INSIGHT: CLV formula is `opening_spread - closing_spread` (positive = we got a better/easier line than market settled). Do NOT invert.
+[2026-03-06] [clv] WHY: Example: logged home at -3.5, closed at -5.5 -> CLV=+2.0 (we got the easier cover = edge confirmed). Opening < closing (home more favored) = negative CLV = we took the harder line.
+
+[2026-03-06] [clv] INSIGHT: `clv_tracking` table lives in `predictions_history.db`; CLVTracker.log_opening_line() is INSERT OR IGNORE (idempotent); called from fetch_odds.py step 1b after game_lines.csv is saved.
+[2026-03-06] [clv] WHY: CLV tracking must be non-fatal (wrapped in try/except); get_clv_summary() returns has_edge=True only if n_games>=10 AND mean_clv>0 AND pos_rate>0.5.
+
+### [lightgbm]
+
+[2026-03-06] [lightgbm] INSIGHT: LightGBM added as guarded candidate in game_outcome_model.py; gradient_boosting still selected (67.1% acc, AUC 0.7406). LightGBM competed but did not win in v2.1.
+[2026-03-06] [lightgbm] WHY: Guarded import `try: from lightgbm import LGBMClassifier; _LGBM_AVAILABLE=True except ImportError: _LGBM_AVAILABLE=False`. LightGBM is available for Optuna HPO in Phase 2. Install: `lightgbm>=4.0.0` in requirements.txt.

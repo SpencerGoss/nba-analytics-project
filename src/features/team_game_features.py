@@ -396,6 +396,12 @@ def build_team_game_features(
     # plus_minus = team_pts - opp_pts  →  opp_pts = pts - plus_minus
     df["opp_pts"] = df["pts"] - df["plus_minus"]
 
+    # ── Pythagorean win% (per game, Morey exponent 14.3) ─────────────────────
+    _PYTH_EXP = 14.3
+    _pts_pow = df["pts"].clip(lower=1) ** _PYTH_EXP
+    _opp_pow = df["opp_pts"].clip(lower=1) ** _PYTH_EXP
+    df["pythagorean_win_pct_game"] = _pts_pow / (_pts_pow + _opp_pow)
+
     # ── Three-point attempt rate (raw, per game) ──────────────────────────────
     if "fg3a" in df.columns and "fga" in df.columns:
         df["three_rate_raw"] = (
@@ -448,6 +454,16 @@ def build_team_game_features(
             lambda g: _rolling_win_pct(g, window),
             include_groups=False,
         ).values
+
+    # ── Pythagorean win% rolling (10-game, shift-1 for leakage prevention) ────
+    df["pythagorean_win_pct_roll10"] = (
+        df.groupby("team_id", group_keys=False)
+        .apply(
+            lambda g: g["pythagorean_win_pct_game"].shift(1).rolling(10, min_periods=1).mean(),
+            include_groups=False,
+        )
+        .values
+    )
 
     # ── Season-level cumulative win% (prior to this game) ────────────────────
     df["cum_wins"] = (
@@ -692,6 +708,7 @@ def build_team_game_features(
         # Referee features (NaN when no scrape data -- do NOT fillna(0))
         "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
         "ref_crew_pace_impact_roll10",
+        # Note: pythagorean_win_pct_roll10 is auto-captured by roll_cols (_roll filter)
     ]
     # Filter to only include columns that exist in df
     context_cols = [c for c in context_cols if c in df.columns]
@@ -879,6 +896,7 @@ def build_matchup_dataset(
         # Referee features (NaN when no scrape data -- do NOT fillna(0))
         "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
         "ref_crew_pace_impact_roll10",
+        # Note: pythagorean_win_pct_roll10 is auto-captured by roll_cols (_roll filter)
     ] + injury_cols
 
     # Keep only context_cols that actually exist in df
@@ -1010,6 +1028,7 @@ def build_matchup_dataset(
         "ast_roll20", "tov_roll20",
         # Season context
         "cum_win_pct", "sos_roll10", "sos_roll20",
+        "pythagorean_win_pct_roll10",
         # Rest & fatigue
         "days_rest", "games_last_5_days", "games_last_7_days",
         "is_back_to_back",                         # Phase 4: fatigue asymmetry signal

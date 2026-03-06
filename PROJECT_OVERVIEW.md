@@ -1,11 +1,13 @@
 # NBA Analytics Project — Overview
 
-End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (67.4%, AUC 0.742) → ATS betting model (54.9%, Brier-optimized) → prediction store → web dashboard.
+End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized) → prediction store → web dashboard + CLV tracking.
 
-## v2.1 Results (March 2026)
-- Game outcome model: **67.4% accuracy, AUC 0.7419** — injury features active for the first time (home_rotation_availability rank #5 in importances); 11 injury features now contributing
-- ATS model: **54.9% accuracy** (up from 53.5%) — now selects on Brier score (calibration), not accuracy; 2021-22 held-out calibration split
-- Feature matrix: 291-column matchup CSV; 60.9% of games have non-zero missing_minutes (was 0% before Phase 1)
+## v2.2 Results (March 2026)
+- Game outcome model: **67.1% accuracy, AUC 0.7406** — LightGBM added as candidate (guarded import); gradient_boosting still selected; 11 injury features active
+- ATS model: **54.9% accuracy** — Brier-optimized; 2021-22 held-out calibration split; logistic_l1 selected
+- Feature matrix: **296-column** matchup CSV; includes `diff_pythagorean_win_pct_roll10` (Morey exponent 14.3, 10-game rolling)
+- Value bet output: now includes `kelly_fraction` (fractional Kelly, 0.5x scale) per bet
+- CLV tracking: `clv_tracking` table in `predictions_history.db`; opening lines logged automatically from `fetch_odds.py`; `CLVTracker.get_clv_summary()` reports mean CLV and edge flag
 - `player_absences.csv`: 1,098,538 rows, 75 seasons, 12.6% absence rate — fully wired into injury pipeline
 - Tests: 145 passing
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command

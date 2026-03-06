@@ -427,6 +427,48 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
 
 
 
+def _compute_kelly_fraction(bet: dict, kelly_scale: float = 0.5) -> float:
+    """Compute fractional Kelly position size (0.5x Kelly criterion).
+
+    Kelly formula: f = (p * b - (1 - p)) / b
+    where p = model win probability for the bet side,
+          b = decimal odds - 1 derived from no-vig market implied probability.
+
+    Args:
+        bet: Bet dict with model_win_prob, market_implied_prob, bet_side.
+        kelly_scale: Fractional Kelly multiplier. Default 0.5 (half-Kelly).
+
+    Returns:
+        float: Fractional Kelly fraction in [0, 1]. Returns 0.0 if inputs are
+        missing, market probability is degenerate, or Kelly is negative.
+    """
+    model_p = bet.get("model_win_prob")
+    market_p = bet.get("market_implied_prob")
+    bet_side = bet.get("bet_side", "home")
+
+    if model_p is None or market_p is None:
+        return 0.0
+
+    model_p = float(model_p)
+    market_p = float(market_p)
+
+    # For away bets, flip both probabilities
+    if bet_side == "away":
+        p = 1.0 - model_p
+        q = 1.0 - market_p   # no-vig market prob of away win
+    else:
+        p = model_p
+        q = market_p          # no-vig market prob of home win
+
+    # b = decimal odds - 1 = (1 - q) / q
+    if q <= 0.0 or q >= 1.0:
+        return 0.0
+    b = (1.0 - q) / q
+
+    kelly = (p * b - (1.0 - p)) / b
+    return round(max(0.0, kelly_scale * kelly), 4)
+
+
 # -- Strong value-bet filter ----------------------------------------------------
 
 STRONG_BET_THRESHOLD = float(os.getenv("STRONG_BET_THRESHOLD", "0.08"))
@@ -607,6 +649,7 @@ def get_strong_value_bets(
        - ats_filtered    (bool)
        - composite_score (float)
        - ats_model_used  (bool)
+       - kelly_fraction (float) -- 0.5x Kelly position size in [0, 1]
 
     The function signature is unchanged so existing callers are unaffected.
     """
@@ -653,6 +696,10 @@ def get_strong_value_bets(
             f"Strong value bets (edge-only fallback, edge > {strong_threshold:.0%}): "
             f"{len(strong_sorted)} of {len(all_bets)} games"
         )
+
+    # Add fractional Kelly sizing to each strong bet
+    for bet in strong_sorted:
+        bet["kelly_fraction"] = _compute_kelly_fraction(bet)
 
     return strong_sorted
 

@@ -453,6 +453,26 @@ def main():
     game_lines.to_csv(ODDS_DIR / "game_lines.csv", index=False)
     log.info(f"Saved game_lines.csv ({len(game_lines)} rows)")
 
+    # 1b. Log opening lines for CLV tracking
+    try:
+        from src.models.clv_tracker import CLVTracker
+        tracker = CLVTracker()
+        n_logged = 0
+        for _, row in game_lines.iterrows():
+            logged = tracker.log_opening_line(
+                game_date=str(row.get("date", "")),
+                home_team=str(row.get("home_team", "")),
+                away_team=str(row.get("away_team", "")),
+                opening_spread=row.get("spread"),
+                opening_home_ml=row.get("home_moneyline"),
+                opening_away_ml=row.get("away_moneyline"),
+            )
+            if logged:
+                n_logged += 1
+        log.info(f"CLV: logged {n_logged} new opening lines for CLV tracking")
+    except Exception as e:
+        log.warning(f"CLV tracking skipped (non-fatal): {e}")
+
     # 2. Player props -- stub returns empty DataFrame (Pinnacle props not yet implemented)
     player_props = fetch_player_props([], {})
     player_props.to_csv(ODDS_DIR / "player_props.csv", index=False)

@@ -4,6 +4,39 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-06 — Phase 1 remaining items: LightGBM, Pythagorean win%, Fractional Kelly, CLV (complete)
+
+**Done:**
+- **LightGBM candidate added** to `game_outcome_model.py` with guarded import (`_LGBM_AVAILABLE` flag). Competes in expanding-window CV but gradient_boosting still selected (67.1% acc, AUC 0.7406). LightGBM available for Phase 2 Optuna HPO.
+- **Pythagorean win% feature** added to `team_game_features.py`: `pythagorean_win_pct_game` (per-game, Morey exponent 14.3) + `pythagorean_win_pct_roll10` (10-game rolling with shift(1)). `diff_pythagorean_win_pct_roll10` added to matchup dataset diff_stats. Matchup CSV: 68,216 rows x 296 cols (was 291).
+- **Fractional Kelly sizing** added to `value_bet_detector.py` — `kelly_fraction` field in every `get_strong_value_bets()` output dict. Formula: `f = 0.5 * (p*b - (1-p)) / b` where `b = (1-q)/q` (no-vig market odds). Home/away side-aware.
+- **CLV tracker** created (`src/models/clv_tracker.py`): `clv_tracking` table in `predictions_history.db`, `CLVTracker.log_opening_line()` (INSERT OR IGNORE), `update_closing_line()` (computes CLV = opening - closing), `get_clv_summary()` with `has_edge` flag. `fetch_odds.py` updated to call `log_opening_line()` for each game after saving `game_lines.csv` (step 1b, non-fatal).
+- Calibrated model regenerated (02:02), ATS model retrained (02:23) — both artifacts fresh.
+- 145 tests passing throughout; 0 regressions.
+
+**Issues encountered:**
+- `pythagorean_win_pct_roll10` has `_roll` in name → auto-captured by `roll_cols` filter in `build_matchup_dataset()`. Adding it also to `context_cols` caused `ValueError: Cannot set a DataFrame with multiple columns` (duplicate). Fix: removed from `context_cols` in both functions; only kept in `diff_stats`.
+- CLV formula initially implemented as `closing - opening` (wrong). Corrected to `opening - closing` per research plan (positive = we got a better line).
+- `calibration.py` and `ats_model.py` don't set `sys.path` at top level — running as scripts fails with `ModuleNotFoundError: No module named 'src'`. Workaround: `python -c "import sys; sys.path.insert(0,'.'); from src.models.calibration import run_calibration_analysis; run_calibration_analysis()"`.
+
+**Files changed:**
+- `src/models/game_outcome_model.py` — LightGBM guarded import + candidate pipeline
+- `src/features/team_game_features.py` — pythagorean_win_pct_game, pythagorean_win_pct_roll10, diff_pythagorean_win_pct_roll10
+- `src/models/value_bet_detector.py` — `_compute_kelly_fraction()` + kelly_fraction field
+- `src/models/clv_tracker.py` — new file (~180 lines)
+- `scripts/fetch_odds.py` — step 1b CLV opening line logging
+- `requirements.txt` — `lightgbm>=4.0.0`
+- `WORKING_NOTES.md`, `HANDOFF.md` — updated
+
+**Decision: gradient_boosting over LightGBM for v2.1**
+- Context: LightGBM added as candidate; both ran in expanding-window CV
+- Chose: gradient_boosting (existing sklearn) — marginally better AUC in this run
+- Trade-off: LightGBM available for Optuna HPO in Phase 2 where hyperparameter search will give it proper tuning budget
+
+**Next:** Phase 2 — Optuna HPO on LightGBM/XGBoost, model blending, SBRO historical odds, margin regression model.
+
+---
+
 ## 2026-03-06 — Model Improvement Phase 1 (complete)
 
 **Done:**

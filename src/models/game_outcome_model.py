@@ -29,6 +29,12 @@ from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings("ignore")
 
+try:
+    from lightgbm import LGBMClassifier
+    _LGBM_AVAILABLE = True
+except ImportError:
+    _LGBM_AVAILABLE = False
+
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -282,6 +288,22 @@ def train_game_outcome_model(
             )),
         ]),
     }
+
+    if _LGBM_AVAILABLE:
+        candidates["lightgbm"] = Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("clf", LGBMClassifier(
+                n_estimators=500,
+                learning_rate=0.05,
+                max_depth=6,
+                num_leaves=31,
+                min_child_samples=20,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                verbose=-1,
+            )),
+        ])
 
     splits = _season_splits(train)
     print(f"\n--- Model selection across {len(splits)} validation split(s) ---")
