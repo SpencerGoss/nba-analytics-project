@@ -464,7 +464,7 @@ def simulate_playoff_odds(
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     results.to_csv(output_path, index=False)
-    print(f"\nSaved → {output_path}")
+    print(f"\nSaved -> {output_path}")
 
     return results
 

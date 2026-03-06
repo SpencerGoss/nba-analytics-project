@@ -353,7 +353,7 @@ def train_game_outcome_model(
         pickle.dump(feat_cols, f)
 
     importances.reset_index().rename(columns={"index": "feature", 0: "importance"}).to_csv(imp_path, index=False)
-    print(f"\nModel saved → {model_path}")
+    print(f"\nModel saved -> {model_path}")
 
     # ── Metadata JSON (FR-6.5, NFR-3) ─────────────────────────────────────────
     # Build feature importance dict (top 20) if model supports it
@@ -385,7 +385,7 @@ def train_game_outcome_model(
     meta_path = os.path.join(artifacts_dir, "game_outcome_metadata.json")
     with open(meta_path, "w") as f:
         json.dump(metadata, f, indent=2)
-    print(f"  Metadata saved → {meta_path}")
+    print(f"  Metadata saved -> {meta_path}")
 
     metrics = {
         "selected_model": best_name,

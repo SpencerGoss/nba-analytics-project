@@ -98,7 +98,7 @@ def main() -> None:
         + ", ".join([f"{k.upper()} ({v.get('selected_model','n/a')}): MAE={v.get('mae', 0):.3f}"
                        for k, v in player_metrics.items()])
     )
-    print(f"Playoff odds → teams simulated={len(playoff_df):,}")
+    print(f"Playoff odds -> teams simulated={len(playoff_df):,}")
     print(
         f"Calibration -> Brier={cal_metrics.get('brier_calibrated', 0):.5f} | "
         f"ECE={cal_metrics.get('ece_calibrated', 0):.5f}"
