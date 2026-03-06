@@ -51,15 +51,8 @@ def refresh_odds_data() -> bool:
     else:
         stderr = result.stderr.strip()
         stdout = result.stdout.strip()
-        # Exit code 1 from fetch_odds.py typically means missing API key
-        if "ODDS_API_KEY" in stderr or "ODDS_API_KEY" in stdout:
-            log.warning(
-                "Odds refresh skipped: ODDS_API_KEY not set in .env. "
-                "Add the key to enable daily odds comparison."
-            )
-        else:
-            log.warning(
-                f"Odds refresh failed (exit code {result.returncode}). "
-                f"Details: {(stderr or stdout)[:300]}"
-            )
+        log.warning(
+            f"Odds refresh failed (exit code {result.returncode}). "
+            f"Details: {(stderr or stdout)[:300]}"
+        )
         return False

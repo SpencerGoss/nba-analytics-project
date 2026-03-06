@@ -16,17 +16,10 @@ Two-tier sourcing:
    - Use case: Offline analysis, feature building, historical ATS performance
 
 2. Current-season upcoming game lines:
-   - Source: The Odds API free tier (500 monthly credits)
+   - Source: Pinnacle guest API (free, no key required)
    - Coverage: Upcoming games only -- NOT historical
-   - Cost: Free tier (500 req/month); historical endpoint is paid-only (Pitfall 1)
+   - Cost: Free, no authentication required
    - Use case: Daily value-bet scan for upcoming games
-   - Quota guard: check_remaining_quota() reads x-requests-remaining before any
-     batch call to prevent burning credits
-
-Pitfall 1 (The Odds API historical endpoint is paid-only):
-The /historical_odds endpoint costs 10 credits per region per market per call
-and is not available on the free tier. Never attempt to use The Odds API for
-historical odds -- use the Kaggle dataset instead.
 
 Pitfall 3 (Double-counting vig):
 american_odds_to_implied_prob() in fetch_odds.py returns vig-inclusive
@@ -62,17 +55,6 @@ MATCHUP_FEATURES_PATH = str(PROJECT_ROOT / "data" / "features" / "game_matchup_f
 # Configurable threshold: flag games where |model_prob - market_prob| > threshold
 # Default 5pp (same as WINPROB_FLAG_PP in fetch_odds.py)
 VALUE_BET_THRESHOLD = float(os.getenv("VALUE_BET_THRESHOLD", "0.05"))
-
-# Minimum API credits before aborting batch call
-MIN_QUOTA_DEFAULT = 50
-
-
-# -- Custom exceptions ----------------------------------------------------------
-
-class QuotaError(Exception):
-    """Raised when The Odds API remaining quota is below minimum threshold."""
-    pass
-
 
 # -- Probability helpers --------------------------------------------------------
 
@@ -125,76 +107,6 @@ def no_vig_prob(home_ml, away_ml):
 
     except (TypeError, ValueError):
         return (float("nan"), float("nan"))
-
-
-# -- Quota guard ----------------------------------------------------------------
-
-def check_remaining_quota(min_remaining=MIN_QUOTA_DEFAULT):
-    """Check The Odds API remaining credits before any batch call.
-
-    Makes a single cheap API call to /sports (1 credit) to read the
-    x-requests-remaining response header. Raises QuotaError if remaining
-    credits fall below min_remaining.
-
-    Args:
-        min_remaining: Minimum acceptable credits before raising QuotaError.
-            Default is 50. Pass 0 to disable the guard.
-
-    Returns:
-        int: Remaining API credits. Returns -1 with a warning if ODDS_API_KEY
-             is not set (non-fatal -- caller can fall back to historical mode).
-
-    Raises:
-        QuotaError: If remaining credits < min_remaining.
-    """
-    import requests
-    from dotenv import load_dotenv
-
-    load_dotenv(PROJECT_ROOT / ".env")
-    api_key = os.getenv("ODDS_API_KEY", "")
-
-    if not api_key:
-        warnings.warn(
-            "ODDS_API_KEY is not set. Skipping quota check. "
-            "Set ODDS_API_KEY in .env to use The Odds API for live odds.",
-            UserWarning,
-            stacklevel=2,
-        )
-        return -1
-
-    base_url = "https://api.the-odds-api.com/v4"
-    try:
-        r = requests.get(
-            f"{base_url}/sports",
-            params={"apiKey": api_key, "all": "false"},
-            timeout=10,
-        )
-        remaining_raw = r.headers.get("x-requests-remaining", None)
-        used_raw = r.headers.get("x-requests-used", None)
-
-        remaining = int(remaining_raw) if remaining_raw is not None else 0
-        used = int(used_raw) if used_raw is not None else 0
-
-        print(f"  Quota status: used={used} remaining={remaining}")
-
-        if remaining < min_remaining:
-            raise QuotaError(
-                f"Only {remaining} API credits remain (minimum {min_remaining}). "
-                "Aborting batch call to prevent quota exhaustion. "
-                "Use use_live_odds=False to run in historical mode."
-            )
-
-        return remaining
-
-    except QuotaError:
-        raise
-    except Exception as e:
-        warnings.warn(
-            f"Could not check API quota: {e}. Proceeding cautiously.",
-            UserWarning,
-            stacklevel=2,
-        )
-        return -1
 
 
 # -- Value-bet detection --------------------------------------------------------
@@ -302,8 +214,7 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
 
     Args:
         use_live_odds: If True, fetch current-season upcoming game lines from
-            The Odds API (requires ODDS_API_KEY). Falls back to historical mode
-            if ODDS_API_KEY is not set.
+            Pinnacle guest API (free, no key required).
             If False, run in historical mode using game_ats_features.csv
             (no API key needed -- safe for offline use and testing).
         threshold: Value-bet detection threshold (default VALUE_BET_THRESHOLD).
@@ -325,31 +236,7 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
 
     # -- Choose odds source ------------------------------------------------------
     if use_live_odds:
-        # Check API key before attempting live fetch
-        api_key = os.getenv("ODDS_API_KEY", "")
-        if not api_key:
-            warnings.warn(
-                "ODDS_API_KEY not set. Falling back to historical mode. "
-                "Set ODDS_API_KEY in .env to use live odds.",
-                UserWarning,
-                stacklevel=2,
-            )
-            use_live_odds = False
-        else:
-            # Quota check before batch call
-            try:
-                remaining = check_remaining_quota()
-                print(f"  API quota OK: {remaining} credits remaining")
-            except QuotaError as e:
-                warnings.warn(
-                    f"Quota check failed: {e}. Falling back to historical mode.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-                use_live_odds = False
-
-    if use_live_odds:
-        print("\nFetching live game lines from The Odds API...")
+        print("\nFetching live game lines from Pinnacle guest API...")
         # Import here to avoid hard dependency when running in historical mode
         sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
         try:

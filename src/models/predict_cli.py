@@ -49,7 +49,7 @@ def parse_args():
     ats.add_argument("--away-ml", type=float, default=None, help="Away moneyline (e.g., +130)")
 
     vb = sp.add_parser("value-bet", help="Scan for value bets (model vs market disagreement)")
-    vb.add_argument("--live", action="store_true", help="Use live odds from The Odds API (requires ODDS_API_KEY)")
+    vb.add_argument("--live", action="store_true", help="Use live odds from Pinnacle (free, no API key required)")
     vb.add_argument("--threshold", type=float, default=0.05, help="Edge threshold for flagging value bets (default: 0.05)")
 
     return p.parse_args()

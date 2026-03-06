@@ -1,8 +1,8 @@
-"""fetch_odds.py — Daily sportsbook data refresh for NBA Analytics Project.
+"""fetch_odds.py -- Daily sportsbook data refresh for NBA Analytics Project.
 
-Pulls NBA game lines (moneylines + spreads) and player props (pts/reb/ast)
-from The Odds API, then joins them with model projections to produce the
-model_vs_odds.csv comparison file used by the website.
+Pulls NBA game lines (moneylines + spreads) from the Pinnacle guest API,
+then joins them with model projections to produce the model_vs_odds.csv
+comparison file used by the website.
 
 Usage (run from project root):
     python scripts/fetch_odds.py
@@ -11,13 +11,12 @@ The script is designed to be run daily, either manually or via a scheduler
 (e.g., cron, Windows Task Scheduler, or GitHub Actions). See
 docs/odds_integration_notes.md for automation setup details.
 
-Environment variable required (in .env at project root):
-    ODDS_API_KEY=<your key from the-odds-api.com>
+No API key or authentication required -- uses the Pinnacle guest API.
 
 Output files (written to data/odds/):
-    game_lines.csv    — one row per game, moneyline + spread
-    player_props.csv  — one row per player per stat type
-    model_vs_odds.csv — joined comparison with model projections + flags
+    game_lines.csv    -- one row per game, moneyline + spread
+    player_props.csv  -- one row per player per stat type (stub, always empty)
+    model_vs_odds.csv -- joined comparison with model projections + flags
 
 Requires:
     python-dotenv, requests, pandas (all already in requirements.txt)
@@ -25,7 +24,6 @@ Requires:
 
 import os
 import sys
-import json
 import logging
 import datetime as dt
 from datetime import datetime, timezone
@@ -35,7 +33,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 
-# ── Setup ──────────────────────────────────────────────────────────────────────
+# -- Setup ---------------------------------------------------------------------
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,16 +49,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 load_dotenv(PROJECT_ROOT / ".env")
 
-API_KEY = os.getenv("ODDS_API_KEY")
-if not API_KEY:
-    log.error("ODDS_API_KEY not found in .env — cannot fetch odds. Exiting.")
-    sys.exit(1)
-
-BASE_URL = "https://api.the-odds-api.com/v4"
-SPORT    = "basketball_nba"
-REGION   = "us"
-ODDS_FMT = "american"
-DATE_FMT = "iso"
+PINNACLE_BASE = "https://guest.api.arcadia.pinnacle.com/0.1"
+LEAGUE_ID     = 487   # NBA
 
 ODDS_DIR = PROJECT_ROOT / "data" / "odds"
 ODDS_DIR.mkdir(parents=True, exist_ok=True)
@@ -69,8 +59,8 @@ ODDS_DIR.mkdir(parents=True, exist_ok=True)
 PROP_FLAG_GAP   = 1.5    # units (pts / reb / ast)
 WINPROB_FLAG_PP = 0.05   # 5 percentage points
 
-# ── Team abbreviation mapping ──────────────────────────────────────────────────
-# The Odds API uses full city names; our models use NBA 3-letter abbreviations.
+# -- Team abbreviation mapping -------------------------------------------------
+# Pinnacle uses the same full city+nickname team names as The Odds API.
 # This mapping covers all 30 current NBA teams.
 ODDS_TEAM_TO_ABB = {
     "Atlanta Hawks":          "ATL",
@@ -105,30 +95,22 @@ ODDS_TEAM_TO_ABB = {
     "Washington Wizards":     "WAS",
 }
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# -- Helpers -------------------------------------------------------------------
 
-def get_odds_api(endpoint: str, params: dict) -> list | dict | None:
-    """Call The Odds API and return parsed JSON, or None on error.
 
-    The API key is passed as the Authorization header (Bearer token) rather
-    than a URL query parameter to prevent it from appearing in server logs,
-    proxy logs, or URL-based monitoring tools. The Odds API v4 accepts the
-    key via the ``Authorization: Bearer <key>`` header as an alternative to
-    the ``apiKey`` query param.
+def get_pinnacle(endpoint: str) -> list | dict | None:
+    """Call the Pinnacle guest API and return parsed JSON, or None on error.
+
+    No authentication is required. The guest API is public and keyless.
     """
-    url = f"{BASE_URL}/{endpoint}"
-    headers = {"Authorization": f"Bearer {API_KEY}"}
+    url = f"{PINNACLE_BASE}/{endpoint}"
     try:
-        r = requests.get(url, params=params, headers=headers, timeout=20)
-        remaining = r.headers.get("x-requests-remaining", "?")
-        used = r.headers.get("x-requests-used", "?")
-        log.info(f"API call: {endpoint} → {r.status_code} | used={used} remaining={remaining}")
+        r = requests.get(url, timeout=20)
+        log.info(f"API call: {endpoint} -> {r.status_code}")
         if r.status_code == 200:
             return r.json()
-        elif r.status_code == 401:
-            log.error("API key is invalid or expired.")
         elif r.status_code == 429:
-            log.warning("Monthly quota exhausted on free tier. Upgrade plan or wait for reset.")
+            log.warning("Rate limited by Pinnacle guest API -- back off and retry.")
         else:
             log.error(f"Unexpected status {r.status_code}: {r.text[:300]}")
     except requests.RequestException as e:
@@ -150,78 +132,86 @@ def team_name_to_abb(name: str) -> str:
     """Return 3-letter abbreviation, or the original name if not found."""
     result = ODDS_TEAM_TO_ABB.get(name)
     if result is None:
-        log.warning(f"Unknown team name from odds API: '{name}' — no abbreviation mapped")
+        log.warning(f"Unknown team name from odds API: {name!r} -- no abbreviation mapped")
         return name   # pass through so caller can inspect
     return result
 
 
-# ── Game lines ─────────────────────────────────────────────────────────────────
+# -- Game lines ----------------------------------------------------------------
+
 
 def fetch_game_lines() -> pd.DataFrame:
-    """Fetch h2h and spreads for all upcoming NBA games."""
-    data = get_odds_api(
-        f"sports/{SPORT}/odds/",
-        {
-            "regions": REGION,
-            "markets": "h2h,spreads",
-            "oddsFormat": ODDS_FMT,
-            "dateFormat": DATE_FMT,
+    """Fetch moneylines and spreads for all upcoming NBA games from Pinnacle."""
+    empty = pd.DataFrame(columns=["date", "home_team", "away_team",
+                                   "home_moneyline", "away_moneyline", "spread"])
+
+    matchups_raw = get_pinnacle(f"leagues/{LEAGUE_ID}/matchups")
+    if not matchups_raw:
+        log.warning("No matchups returned from Pinnacle API.")
+        return empty
+
+    markets_raw = get_pinnacle(f"leagues/{LEAGUE_ID}/markets/straight")
+    if not markets_raw:
+        log.warning("No markets returned from Pinnacle API.")
+        return empty
+
+    # Filter matchups to regular h2h games only -- must have exactly one "home"
+    # and one "away" participant (excludes futures/playoffs with "neutral" alignment).
+    matchups = {}
+    for m in matchups_raw:
+        participants = m.get("participants", [])
+        alignments = {p["alignment"]: p["name"] for p in participants
+                      if p.get("alignment") in ("home", "away")}
+        if len(alignments) != 2:
+            continue   # skip futures, neutral-site placeholders, etc.
+        matchups[m["id"]] = {
+            "home_team": alignments["home"],
+            "away_team": alignments["away"],
+            "date":      m.get("startTime", "")[:10],
         }
-    )
-    if not data:
-        log.warning("No game lines returned from API.")
-        return pd.DataFrame(columns=["date","home_team","away_team",
-                                     "home_moneyline","away_moneyline","spread"])
+
+    # Index markets by matchupId, keeping only period 0 moneyline and spread.
+    moneylines: dict[int, dict] = {}   # matchupId -> {home: price, away: price}
+    spreads:    dict[int, dict] = {}   # matchupId -> {home_points, away_points}
+
+    for mkt in markets_raw:
+        mid    = mkt.get("matchupId")
+        mtype  = mkt.get("type")
+        period = mkt.get("period")
+        if period != 0 or mid not in matchups:
+            continue
+
+        prices = mkt.get("prices", [])
+        if mtype == "moneyline":
+            entry = {}
+            for p in prices:
+                if p.get("designation") == "home":
+                    entry["home"] = p.get("price")
+                elif p.get("designation") == "away":
+                    entry["away"] = p.get("price")
+            moneylines[mid] = entry
+
+        elif mtype == "spread":
+            entry = {}
+            for p in prices:
+                if p.get("designation") == "home":
+                    entry["home_points"] = p.get("points")
+                    entry["home_price"]  = p.get("price")
+                elif p.get("designation") == "away":
+                    entry["away_points"] = p.get("points")
+            spreads[mid] = entry
 
     rows = []
-    for game in data:
-        game_date = game.get("commence_time", "")[:10]   # ISO date only
-        home_name = game.get("home_team", "")
-        away_name = game.get("away_team", "")
-        home_abb  = team_name_to_abb(home_name)
-        away_abb  = team_name_to_abb(away_name)
-
-        home_ml = away_ml = spread = None
-
-        for bookmaker in game.get("bookmakers", []):
-            if bookmaker["key"] != "draftkings":   # prefer DraftKings; fallback handled below
-                continue
-            for market in bookmaker.get("markets", []):
-                if market["key"] == "h2h":
-                    for outcome in market["outcomes"]:
-                        if outcome["name"] == home_name:
-                            home_ml = outcome["price"]
-                        elif outcome["name"] == away_name:
-                            away_ml = outcome["price"]
-                elif market["key"] == "spreads":
-                    for outcome in market["outcomes"]:
-                        if outcome["name"] == home_name:
-                            spread = outcome["point"]   # negative = home favored
-
-        # Fallback: if DraftKings not available, use first bookmaker that has both markets
-        if home_ml is None and away_ml is None:
-            for bookmaker in game.get("bookmakers", []):
-                for market in bookmaker.get("markets", []):
-                    if market["key"] == "h2h":
-                        for outcome in market["outcomes"]:
-                            if outcome["name"] == home_name and home_ml is None:
-                                home_ml = outcome["price"]
-                            elif outcome["name"] == away_name and away_ml is None:
-                                away_ml = outcome["price"]
-                    elif market["key"] == "spreads" and spread is None:
-                        for outcome in market["outcomes"]:
-                            if outcome["name"] == home_name:
-                                spread = outcome["point"]
-                if home_ml is not None:
-                    break
-
+    for mid, info in matchups.items():
+        ml = moneylines.get(mid, {})
+        sp = spreads.get(mid, {})
         rows.append({
-            "date":            game_date,
-            "home_team":       home_abb,
-            "away_team":       away_abb,
-            "home_moneyline":  home_ml,
-            "away_moneyline":  away_ml,
-            "spread":          spread,
+            "date":           info["date"],
+            "home_team":      team_name_to_abb(info["home_team"]),
+            "away_team":      team_name_to_abb(info["away_team"]),
+            "home_moneyline": ml.get("home"),
+            "away_moneyline": ml.get("away"),
+            "spread":         sp.get("home_points"),   # negative = home favored
         })
 
     df = pd.DataFrame(rows)
@@ -229,85 +219,19 @@ def fetch_game_lines() -> pd.DataFrame:
     return df
 
 
-# ── Player props ───────────────────────────────────────────────────────────────
+# -- Player props (stub) -------------------------------------------------------
 
-# Map The Odds API player prop market keys to our stat names
-PROP_MARKET_MAP = {
-    "player_points":   "pts",
-    "player_rebounds": "reb",
-    "player_assists":  "ast",
-}
 
 def fetch_player_props(event_ids: list[str], game_dates: dict[str, str]) -> pd.DataFrame:
-    """Fetch pts/reb/ast player props for the given event IDs.
-
-    NOTE: Player prop markets count against quota more heavily (1 request per
-    event × 3 markets = 3 requests per game). With the free tier's 500
-    monthly requests, limit to games within the next 2 days to stay under quota.
+    """Return an empty DataFrame -- Pinnacle player props use a different endpoint
+    structure and are not yet implemented.
     """
-    if not event_ids:
-        log.warning("No event IDs provided for player props fetch.")
-        return pd.DataFrame(columns=["date","player_name","stat","line","over_odds","under_odds"])
-
-    rows = []
-    for event_id in event_ids:
-        markets_str = ",".join(PROP_MARKET_MAP.keys())
-        data = get_odds_api(
-            f"sports/{SPORT}/events/{event_id}/odds/",
-            {
-                "regions": REGION,
-                "markets": markets_str,
-                "oddsFormat": ODDS_FMT,
-                "dateFormat": DATE_FMT,
-            }
-        )
-        if not data:
-            continue
-
-        game_date = game_dates.get(event_id, data.get("commence_time", "")[:10])
-
-        for bookmaker in data.get("bookmakers", []):
-            if bookmaker["key"] != "draftkings":
-                continue
-            for market in bookmaker.get("markets", []):
-                stat = PROP_MARKET_MAP.get(market["key"])
-                if stat is None:
-                    continue
-                for outcome in market.get("outcomes", []):
-                    player = outcome.get("description", outcome.get("name", ""))
-                    side   = outcome.get("name", "").lower()   # "Over" or "Under"
-                    line   = outcome.get("point")
-                    price  = outcome.get("price")
-
-                    # Find or create a row for this (player, stat, line)
-                    key = (game_date, player, stat, line)
-                    existing = [r for r in rows if
-                                r["date"] == game_date and
-                                r["player_name"] == player and
-                                r["stat"] == stat and
-                                r["line"] == line]
-                    if existing:
-                        if "over" in side:
-                            existing[0]["over_odds"] = price
-                        else:
-                            existing[0]["under_odds"] = price
-                    else:
-                        rows.append({
-                            "date":        game_date,
-                            "player_name": player,
-                            "stat":        stat,
-                            "line":        line,
-                            "over_odds":   price if "over" in side else None,
-                            "under_odds":  price if "under" in side else None,
-                        })
-
-    df = pd.DataFrame(rows) if rows else pd.DataFrame(
-        columns=["date","player_name","stat","line","over_odds","under_odds"])
-    log.info(f"Fetched {len(df)} player prop rows")
-    return df
+    log.info("Player props not implemented for Pinnacle source -- returning empty DataFrame.")
+    return pd.DataFrame(columns=["date", "player_name", "stat", "line",
+                                  "over_odds", "under_odds"])
 
 
-# ── Model projections ──────────────────────────────────────────────────────────
+# -- Model projections ---------------------------------------------------------
 
 def load_model_game_projections() -> pd.DataFrame:
     """Load model win probabilities from game_matchup_features.csv + trained model.
@@ -391,7 +315,7 @@ def load_model_player_projections() -> pd.DataFrame:
     for stat in ["pts", "reb", "ast"]:
         roll_col = f"{stat}_roll10"
         if roll_col not in latest.columns:
-            log.warning(f"Column {roll_col} not in player features — skipping {stat} projections")
+            log.warning(f"Column {roll_col} not in player features -- skipping {stat} projections")
             continue
 
         # Try loading the trained model
@@ -406,21 +330,21 @@ def load_model_player_projections() -> pd.DataFrame:
             with open(feats_path, "rb") as f:
                 feature_cols = pickle.load(f)
             X = latest[feature_cols].fillna(0)
-            # Wrap numpy array as a Series keyed by latest.index — prevents positional misalignment
+            # Wrap numpy array as a Series keyed by latest.index -- prevents positional misalignment
             raw_preds = model.predict(X)
             model_pred_series = pd.Series(raw_preds, index=latest.index)
             log.info(f"Player {stat} model projections generated for {len(latest)} players")
             null_count = int(model_pred_series.isna().sum())
             if null_count > 0:
                 log.warning(
-                    f"Player {stat}: {null_count} null predictions after model.predict — "
+                    f"Player {stat}: {null_count} null predictions after model.predict -- "
                     "feature columns may not align with training data"
                 )
         except Exception as e:
             log.warning(f"Could not load player {stat} model ({e}). Using rolling 10-game avg.")
 
         for idx, row in latest.iterrows():
-            # Use .loc[idx] on the index-aligned Series — safe even if index is non-sequential
+            # Use .loc[idx] on the index-aligned Series -- safe even if index is non-sequential
             if model_pred_series is not None:
                 proj = float(model_pred_series.loc[idx])
             else:
@@ -436,7 +360,7 @@ def load_model_player_projections() -> pd.DataFrame:
         columns=["player_name","stat","model_projection"])
 
 
-# ── model_vs_odds.csv assembly ─────────────────────────────────────────────────
+# -- model_vs_odds.csv assembly ------------------------------------------------
 
 def build_model_vs_odds(
     game_lines: pd.DataFrame,
@@ -514,7 +438,8 @@ def build_model_vs_odds(
     return mvs
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+# -- Main ----------------------------------------------------------------------
+
 
 def main():
     log.info("=== fetch_odds.py starting ===")
@@ -524,39 +449,21 @@ def main():
     game_lines.to_csv(ODDS_DIR / "game_lines.csv", index=False)
     log.info(f"Saved game_lines.csv ({len(game_lines)} rows)")
 
-    # 2. Build event_id → date mapping for player props (requires raw event list)
-    #    Only fetch props for games today and tomorrow to stay inside free tier quota
-    today_str = datetime.now(timezone.utc).date().isoformat()
-    event_data = get_odds_api(
-        f"sports/{SPORT}/events/",
-        {"dateFormat": DATE_FMT}
-    )
-    event_ids   = []
-    game_dates  = {}
-    if event_data:
-        for event in event_data:
-            date = event.get("commence_time", "")[:10]
-            if date >= today_str:   # only upcoming games
-                event_ids.append(event["id"])
-                game_dates[event["id"]] = date
-
-    log.info(f"Events to fetch props for: {len(event_ids)}")
-
-    # 3. Fetch player props
-    player_props = fetch_player_props(event_ids, game_dates)
+    # 2. Player props -- stub returns empty DataFrame (Pinnacle props not yet implemented)
+    player_props = fetch_player_props([], {})
     player_props.to_csv(ODDS_DIR / "player_props.csv", index=False)
     log.info(f"Saved player_props.csv ({len(player_props)} rows)")
 
-    # 4. Load model projections
+    # 3. Load model projections
     log.info("Loading model projections...")
     game_projections   = load_model_game_projections()
     player_projections = load_model_player_projections()
 
-    # 5. Build and save comparison file
+    # 4. Build and save comparison file
     mvs = build_model_vs_odds(game_lines, player_props, game_projections, player_projections)
     mvs.to_csv(ODDS_DIR / "model_vs_odds.csv", index=False)
-    log.info(f"Saved model_vs_odds.csv ({len(mvs)} rows, "
-             f"{mvs['flagged'].sum() if 'flagged' in mvs else 0} flagged)")
+    flagged_count = mvs["flagged"].sum() if "flagged" in mvs else 0
+    log.info(f"Saved model_vs_odds.csv ({len(mvs)} rows, {flagged_count} flagged)")
 
     log.info("=== fetch_odds.py complete ===")
 

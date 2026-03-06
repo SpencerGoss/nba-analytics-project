@@ -164,8 +164,6 @@ def _check_env_vars() -> None:
         pass  # python-dotenv not installed; fall back to checking os.environ directly
 
     missing = []
-    if not os.getenv("ODDS_API_KEY"):
-        missing.append("ODDS_API_KEY")
     if not os.getenv("BALLDONTLIE_API_KEY"):
         missing.append("BALLDONTLIE_API_KEY")
 

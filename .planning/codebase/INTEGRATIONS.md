@@ -18,17 +18,15 @@
   - `src/data/get_game_log.py` - Team/player game logs via leaguegamelog endpoint
   - `src/data/get_standings.py` - Season standings via leaguestandingsv3 endpoint
 
-**The Odds API:**
-- Service: https://api.the-odds-api.com/v4
+**Pinnacle Guest API:**
+- Service: https://guest.api.arcadia.pinnacle.com/0.1
 - What it's used for: Daily refresh of sportsbook moneylines, spreads, and player prop odds for comparison with model predictions
-- Authentication: API key via `ODDS_API_KEY` environment variable (stored in `.env`)
+- Authentication: No authentication required (free, keyless guest endpoint)
+- NBA league ID: 487
 - Integration module: `scripts/fetch_odds.py`
-- Invoked by: `src/data/get_odds.py` (subprocess wrapper, non-fatal if key missing)
+- Invoked by: `src/data/get_odds.py` (subprocess wrapper, non-fatal on network error)
 - Output: Generates `data/odds/game_lines.csv`, `data/odds/player_props.csv`, `data/odds/model_vs_odds.csv`
-- Sport: basketball_nba
-- Region: us
 - Odds format: american
-- Date format: iso
 - Team mapping: Full team names → 3-letter NBA abbreviations (30 teams, mapping in fetch_odds.py lines 70-100)
 - Feature flags: Configurable thresholds for flagging significant model-vs-odds gaps (PROP_FLAG_GAP=1.5 units, WINPROB_FLAG_PP=0.05)
 
@@ -53,11 +51,11 @@
 ## Authentication & Identity
 
 **Auth Provider:**
-- None. Project uses API keys only (NBA Stats requires no auth; The Odds API uses key-based auth)
+- None. Project uses no API keys for odds data (NBA Stats requires no auth; Pinnacle guest API requires no auth)
 
 **API Key Management:**
-- ODDS_API_KEY stored in `.env` file at project root
-- Loaded by `src/data/get_odds.py` via python-dotenv
+- Pinnacle guest API requires no key
+- BALLDONTLIE_API_KEY stored in `.env` file at project root (if used)
 - Environment file is `.gitignore`d (never committed)
 
 ## Monitoring & Observability
@@ -94,9 +92,7 @@
 ## Environment Configuration
 
 **Required env vars:**
-- `ODDS_API_KEY` - Optional but recommended for daily odds refresh
-  - If missing: Odds refresh skipped gracefully, pipeline continues
-  - Location: `.env` at project root
+- Pinnacle - No API key required for daily odds refresh
 
 **Optional env vars:**
 - None others configured currently
@@ -104,7 +100,7 @@
 **Secrets location:**
 - `.env` file (project root)
 - Never committed to git
-- Should be treated as confidential (contains live API key)
+- No live odds API key needed (Pinnacle guest API is keyless)
 
 ## Data Source Details
 
@@ -164,10 +160,10 @@
 
 5. **Odds Refresh** (`scripts/fetch_odds.py`)
    - Called as subprocess by `src/data/get_odds.py`
-   - Fetches The Odds API → `data/odds/game_lines.csv`
+   - Fetches Pinnacle guest API (https://guest.api.arcadia.pinnacle.com/0.1, NBA league 487) → `data/odds/game_lines.csv`
    - Reads model predictions from `models/artifacts/`
    - Produces `data/odds/model_vs_odds.csv` for comparison
-   - Non-fatal; pipeline continues if skipped/failed
+   - Non-fatal; pipeline continues on network error
 
 ---
 

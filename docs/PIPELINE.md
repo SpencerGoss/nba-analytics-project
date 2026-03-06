@@ -37,7 +37,7 @@ Estimated runtime: 2-5 min for current-season fetch + preprocessing.
 - Conditionally fetches playoff data if month >= 4 (April)
 - Conditionally fetches hustle stats if year >= 2015 (NBA tracking data starts 2015-16)
 - Rebuilds ALL `data/processed/*.csv` tables from all accumulated raw seasons
-- Refreshes sportsbook odds data (non-fatal; continues if `ODDS_API_KEY` not set)
+- Refreshes sportsbook odds data via Pinnacle guest API (free, no key required; non-fatal on network error)
 - Logs errors to `logs/pipeline_errors.log`
 
 **Does NOT:**

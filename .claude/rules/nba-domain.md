@@ -26,5 +26,5 @@
 
 ## Secrets
 - Never commit `.env`
-- `ODDS_API_KEY` and `BALLDONTLIE_API_KEY` live in `.env` only
+- `BALLDONTLIE_API_KEY` lives in `.env` only (ODDS_API_KEY removed — Pinnacle API requires no key)
 - `.env.example` must be kept in sync with `.env` (no real values)

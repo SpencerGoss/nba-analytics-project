@@ -68,7 +68,7 @@ dashboard/index.html (Chart.js)
 | Service | Used For | Config |
 |---------|---------|--------|
 | nba_api | Game logs, team stats, lineups, play-by-play | No key needed |
-| Odds API | Game spreads and moneylines | `ODDS_API_KEY` in `.env` |
+| Pinnacle Guest API | Game spreads and moneylines | No key required |
 | BallDontLie API | Supplemental player/game data | `BALLDONTLIE_API_KEY` in `.env` (optional) |
 | Kaggle injury dataset | Historical injury proxy for training | Manual download |
 

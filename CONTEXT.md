@@ -24,7 +24,7 @@ producing profitable against-the-spread picks. Current v1 baseline: 66.8% game a
 ## External Dependencies
 - `nba_api` — primary data source, rate-limited (~0.6s between calls)
 - BallDontLie API — stub in place, needs `BALLDONTLIE_API_KEY` in `.env`
-- Odds API — `fetch_odds.py`, needs `ODDS_API_KEY` in `.env`
+- Pinnacle Guest API — `fetch_odds.py`, no API key required (free, keyless)
 - SQLite `database/nba.db` — 18 tables, season format integer `202425`
 - SQLite `database/predictions_history.db` — prediction store
 - Kaggle injury dataset — used in training as proxy (not real-time)
