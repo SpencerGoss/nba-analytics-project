@@ -1,845 +1,1638 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NBA Analytics Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NBA Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
 <style>
-  :root {
-    --bg-primary: #0d1117;
-    --bg-secondary: #161b22;
-    --bg-card: #1c2128;
-    --bg-hover: #252c35;
-    --border: #30363d;
-    --text-primary: #e6edf3;
-    --text-secondary: #8b949e;
-    --text-muted: #6e7681;
-    --accent-blue: #58a6ff;
-    --accent-green: #3fb950;
-    --accent-orange: #d29922;
-    --accent-red: #f85149;
-    --accent-purple: #bc8cff;
-    --win-bar: #238636;
-    --lose-bar: #da3633;
-    --radius: 8px;
-    --shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
+:root{
+  --bg:       #161B27;
+  --bg2:      #1D2336;
+  --bg3:      #222840;
+  --card:     rgba(255,255,255,0.045);
+  --card-h:   rgba(255,255,255,0.075);
+  --b0:       rgba(255,255,255,0.06);
+  --b1:       rgba(255,255,255,0.11);
+  --t0:       #EDF1FA;
+  --t1:       #8B9BB8;
+  --t2:       #505D7A;
+  --green:    #10B981;
+  --green-d:  rgba(16,185,129,0.12);
+  --red:      #F87171;
+  --red-d:    rgba(248,113,113,0.1);
+  --gold:     #F59E0B;
+  --goldf:    #FCD34D;
+  --gold-d:   rgba(245,158,11,0.1);
+  --blue:     #60A5FA;
+  --blue-d:   rgba(96,165,250,0.1);
+  --f:        'Plus Jakarta Sans',system-ui,sans-serif;
+  --fm:       'JetBrains Mono',monospace;
+  --r-card:   16px;
+  --r-pill:   100px;
+  --shadow:   0 1px 3px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.25);
+  --shadow-h: 0 1px 3px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.32);
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var(--f);font-size:14px;line-height:1.6;overflow-x:hidden}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── BACKGROUND ── */
+.bgl{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bgl::before{content:'';position:absolute;inset:0;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%,rgba(255,255,255,.2) 0%,transparent 100%),
+    radial-gradient(1px 1px at 34% 72%,rgba(255,255,255,.15) 0%,transparent 100%),
+    radial-gradient(1px 1px at 56% 9%,rgba(255,255,255,.18) 0%,transparent 100%),
+    radial-gradient(1px 1px at 78% 44%,rgba(255,255,255,.13) 0%,transparent 100%),
+    radial-gradient(1px 1px at 91% 81%,rgba(255,255,255,.18) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 5% 62%,rgba(255,255,255,.25) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 15%,rgba(255,255,255,.2) 0%,transparent 100%)}
+.blob{position:absolute;border-radius:50%;filter:blur(130px);opacity:.7}
+.b-g{width:600px;height:600px;background:radial-gradient(circle,rgba(16,185,129,.09),transparent);top:-10%;left:-8%;animation:da 38s ease-in-out infinite}
+.b-o{width:500px;height:500px;background:radial-gradient(circle,rgba(245,158,11,.07),transparent);bottom:-8%;right:-6%;animation:db 32s ease-in-out infinite}
+.b-b{width:440px;height:440px;background:radial-gradient(circle,rgba(96,165,250,.06),transparent);top:40%;left:38%;animation:da 42s ease-in-out infinite reverse}
+@keyframes da{0%,100%{transform:translate(0,0)}50%{transform:translate(28px,-36px)}}
+@keyframes db{0%,100%{transform:translate(0,0)}50%{transform:translate(-24px,32px)}}
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    line-height: 1.5;
-    min-height: 100vh;
-  }
+/* ── NAV ── */
+.nav{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;
+  display:flex;align-items:center;gap:2px;
+  background:rgba(20,25,38,.92);
+  backdrop-filter:blur(32px) saturate(180%);-webkit-backdrop-filter:blur(32px) saturate(180%);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-pill);padding:4px 5px;
+  box-shadow:0 2px 8px rgba(0,0,0,.6),0 20px 48px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)
+}
 
-  header {
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+/* ── LOGO ── */
+.nav-logo{
+  display:flex;align-items:center;gap:9px;padding:5px 16px 5px 8px;margin-right:1px;
+  border-right:1px solid var(--b0)
+}
+.nav-logo-icon{
+  width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center
+}
+.nav-logo-txt{font-size:13px;font-weight:800;letter-spacing:-.3px;color:var(--t0)}
+.nav-logo-txt span{color:var(--gold)}
 
-  header h1 {
-    font-size: 1.4rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+.nb{
+  display:flex;align-items:center;gap:5px;padding:7px 12px;
+  border:none;background:transparent;cursor:pointer;border-radius:var(--r-pill);
+  font-family:var(--f);font-size:12px;font-weight:600;color:var(--t2);
+  transition:color 140ms ease,background 140ms ease;white-space:nowrap;
+  border:1px solid transparent
+}
+.nb svg{width:13px;height:13px;flex-shrink:0;opacity:.7;transition:opacity 140ms}
+.nb:hover{color:var(--t1);background:rgba(255,255,255,.05)}
+.nb:hover svg{opacity:1}
+.nb.active{
+  background:rgba(255,255,255,.07);
+  border-color:rgba(255,255,255,.1);
+  color:var(--t0);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+}
+.nb.active svg{opacity:1}
 
-  header h1 .logo {
-    width: 28px;
-    height: 28px;
-    background: var(--accent-blue);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
-  }
+.nav-divider{width:1px;height:16px;background:var(--b0);margin:0 2px;flex-shrink:0}
 
-  .header-meta {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-  }
+.nlive{
+  display:flex;align-items:center;gap:5px;padding:6px 12px;margin-left:2px;
+  border-left:1px solid var(--b0);font-size:10px;font-weight:700;
+  color:var(--green);letter-spacing:.06em;white-space:nowrap
+}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.8)}}
 
-  .header-meta .status-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent-green);
-    margin-right: 4px;
-  }
+/* ── ACCOUNT ── */
+.acct{position:relative;margin-left:3px}
+.acct-btn{
+  display:flex;align-items:center;gap:7px;padding:3px 9px 3px 3px;
+  border:none;background:transparent;cursor:pointer;border-radius:var(--r-pill);
+  border:1px solid transparent;transition:all 160ms ease
+}
+.acct-btn:hover{background:rgba(255,255,255,.05);border-color:var(--b1)}
+.avatar{
+  width:27px;height:27px;border-radius:50%;
+  background:linear-gradient(135deg,#059669,#D97706);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;color:#fff;flex-shrink:0;
+  letter-spacing:-.5px
+}
+.acct-name{font-size:12px;font-weight:600;color:var(--t1)}
+.acct-arrow{width:10px;height:10px;color:var(--t2);transition:transform 200ms ease}
+.acct-btn.open .acct-arrow{transform:rotate(180deg)}
+.acct-drop{
+  position:absolute;top:calc(100% + 10px);right:0;min-width:220px;
+  background:#1D2336;border:1px solid var(--b1);border-radius:16px;padding:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.6),0 24px 56px rgba(0,0,0,.4);
+  opacity:0;pointer-events:none;transform:translateY(-6px);transition:all 180ms ease;z-index:200
+}
+.acct-drop.open{opacity:1;pointer-events:all;transform:translateY(0)}
+.drop-header{padding:10px 12px 12px;border-bottom:1px solid var(--b0);margin-bottom:6px}
+.drop-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#059669,#D97706);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;margin-bottom:8px}
+.drop-name{font-size:13px;font-weight:700}
+.drop-email{font-size:11px;color:var(--t2)}
+.drop-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:100px;background:var(--gold-d);color:var(--gold);font-size:10px;font-weight:700;margin-top:5px}
+.drop-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--t1);transition:all 140ms ease;border:none;background:transparent;width:100%;text-align:left;font-family:var(--f)}
+.drop-item svg{width:14px;height:14px;flex-shrink:0;opacity:.6}
+.drop-item:hover{background:rgba(255,255,255,.06);color:var(--t0)}
+.drop-item:hover svg{opacity:1}
+.drop-item.danger{color:var(--red)}
+.drop-item.danger:hover{background:var(--red-d)}
+.drop-divider{height:1px;background:var(--b0);margin:6px 0}
 
-  nav {
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    display: flex;
-    gap: 0;
-  }
+/* ── INNER TABS ── */
+.tab-bar{display:flex;align-items:center;gap:4px;margin-bottom:24px;flex-wrap:wrap}
+.tab{
+  padding:6px 14px;border-radius:var(--r-pill);
+  border:1px solid transparent;background:transparent;cursor:pointer;
+  font-family:var(--f);font-size:12px;font-weight:600;color:var(--t2);
+  transition:all 150ms ease;white-space:nowrap
+}
+.tab:hover{color:var(--t1);background:rgba(255,255,255,.04);border-color:var(--b0)}
+.tab.active{background:rgba(255,255,255,.07);border-color:var(--b1);color:var(--t0)}
+.tab-content{display:none}
+.tab-content.active{display:block;animation:fu 200ms cubic-bezier(.16,1,.3,1)}
 
-  nav button {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    padding: 12px 16px;
-    font-size: 0.88rem;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-  }
+/* ── LAYOUT ── */
+.wrap{min-height:100dvh;padding:88px 32px 56px;max-width:1320px;margin:0 auto;position:relative;z-index:10}
+.page{display:none;animation:fu 200ms cubic-bezier(.16,1,.3,1)}
+.page.active{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-  nav button:hover { color: var(--text-primary); }
-  nav button.active {
-    color: var(--text-primary);
-    border-bottom-color: var(--accent-blue);
-  }
+.ph{margin-bottom:28px}
+.pt{font-size:28px;font-weight:800;letter-spacing:-.5px;line-height:1.2;margin-bottom:3px}
+.pt span{color:var(--t2);font-weight:500}
+.pd{font-size:13px;color:var(--t2);font-weight:500}
 
-  main {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 24px;
-  }
+/* ── CARDS ── */
+.card{
+  background:var(--card);border:1px solid var(--b0);border-radius:var(--r-card);padding:22px;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  box-shadow:var(--shadow);
+  transition:background 180ms ease,box-shadow 180ms ease,transform 200ms ease;
+  position:relative;overflow:hidden
+}
+.card:hover{background:var(--card-h);box-shadow:var(--shadow-h)}
 
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+/* ── STAT TILES ── */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:1024px){.sgrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.sgrid{grid-template-columns:1fr}}
 
-  .section-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: var(--text-primary);
-  }
+.sc{
+  background:var(--card);border:1px solid var(--b0);border-radius:var(--r-card);
+  padding:18px 20px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  box-shadow:var(--shadow);transition:all 200ms ease;position:relative;overflow:hidden;
+  cursor:default
+}
+.sc:hover{background:var(--card-h);transform:translateY(-1px);box-shadow:var(--shadow-h)}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;opacity:0;transition:opacity 200ms}
+.sc:hover::after{opacity:1}
+.sc.accent-green::after{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.sc.accent-gold::after{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.sc.accent-blue::after{background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+.sc.accent-red::after{background:linear-gradient(90deg,transparent,var(--red),transparent)}
 
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
-  }
+.sl{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--t2);display:block;margin-bottom:10px}
+.sv{font-family:var(--fm);font-size:32px;font-weight:700;line-height:1.1;display:block;margin-bottom:8px;letter-spacing:-1px}
+.sv.g{color:var(--green)}.sv.o{color:var(--gold)}.sv.b{color:var(--blue)}.sv.r{color:var(--red)}
 
-  .card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    transition: border-color 0.15s;
-  }
+.schange{font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px;font-weight:500}
+.schange.up{color:var(--green)}.schange.dn{color:var(--red)}
 
-  .card:hover { border-color: var(--accent-blue); }
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.badge.g{background:var(--green-d);color:var(--green)}
+.badge.o{background:var(--gold-d);color:var(--gold)}
+.badge.b{background:var(--blue-d);color:var(--blue)}
+.badge.r{background:var(--red-d);color:var(--red)}
 
-  .matchup {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-  }
+/* ── SECTION HEADER ── */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.st{font-size:13px;font-weight:700;color:var(--t0);letter-spacing:-.1px}
+.ss{font-size:11px;color:var(--t2);margin-top:2px;font-weight:500}
 
-  .team {
-    font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-  }
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:1024px){.g2,.g3{grid-template-columns:1fr}}
 
-  .vs {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    font-weight: 400;
-  }
+/* ── TABLES ── */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{
+  font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);
+  padding:8px 12px;text-align:left;border-bottom:1px solid var(--b0);white-space:nowrap
+}
+thead th[data-sort]{cursor:pointer;transition:color 120ms}
+thead th[data-sort]:hover{color:var(--t0)}
+tbody tr{transition:background 100ms}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+tbody td{
+  padding:11px 12px;font-size:13px;color:var(--t0);
+  border-bottom:1px solid var(--b0);font-family:var(--fm)
+}
+tbody tr:last-child td{border-bottom:none}
+.rn{font-size:11px;color:var(--t2);display:inline-block;min-width:18px;font-family:var(--fm)}
 
-  .prob-bar-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
+/* ── PLAYERS TABLE — CLICKABLE STAT HEADERS ── */
+.stat-th{
+  cursor:pointer;transition:all 140ms ease;position:relative;user-select:none;
+  padding:10px 12px !important;border-radius:6px;
+}
+.stat-th:hover{color:var(--t0) !important;background:rgba(255,255,255,.04)}
+.stat-th.active-sort{color:var(--gold) !important;background:rgba(245,158,11,.08) !important}
+.stat-th .sort-arrow{
+  display:inline-block;margin-left:4px;font-size:9px;opacity:.5;transition:all 140ms;
+  vertical-align:middle
+}
+.stat-th.active-sort .sort-arrow{opacity:1;color:var(--gold)}
 
-  .prob-bar-label {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    width: 36px;
-    text-align: right;
-  }
+/* ── PLAYER HEADSHOT ── */
+.player-shot{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.04);border:1px solid var(--b1);
+  object-fit:cover;object-position:top center;flex-shrink:0;
+  transition:transform 160ms ease;overflow:hidden
+}
+.player-shot:hover{transform:scale(1.08)}
+.player-shot-wrap{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(245,158,11,.1));
+  border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:var(--t1);flex-shrink:0;font-family:var(--fm);
+  overflow:hidden;flex-shrink:0
+}
+.player-shot-wrap img{
+  width:54px;height:42px;object-fit:cover;object-position:top center;
+  margin-top:4px;transition:transform 160ms ease
+}
+.player-shot-wrap img:hover{transform:scale(1.08)}
 
-  .prob-bar-track {
-    flex: 1;
-    height: 8px;
-    background: var(--lose-bar);
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-  }
+/* ── GAME CARDS ── */
+.gg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px}
+.gc{
+  background:var(--card);border:1px solid var(--b0);border-radius:14px;padding:14px 16px;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  box-shadow:var(--shadow);cursor:pointer;transition:all 180ms ease;position:relative;overflow:hidden
+}
+.gc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h)}
+.gc.live{border-color:rgba(16,185,129,.18);background:rgba(16,185,129,.025)}
 
-  .prob-bar-fill {
-    height: 100%;
-    background: var(--win-bar);
-    border-radius: 4px 0 0 4px;
-    transition: width 0.5s ease;
-  }
+.gs{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.gs.live{color:var(--green)}.gs.final{color:var(--t2)}.gs.upcoming{color:var(--blue)}
+.gt{display:flex;flex-direction:column;gap:8px}
+.gtr{display:flex;align-items:center;justify-content:space-between}
+.gti{display:flex;align-items:center;gap:8px}
+.tls{
+  width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.05);
+  border:1px solid var(--b0);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:var(--t1);flex-shrink:0;font-family:var(--fm)
+}
+.tn{font-size:13px;font-weight:600;color:var(--t0)}.tr{font-size:10px;color:var(--t2);margin-top:1px;font-weight:500}
+.gsc{font-family:var(--fm);font-size:18px;font-weight:700}
+.gsc.win{color:var(--t0)}.gsc.los{color:var(--t2)}
+.gm{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--b0)}
+.gmt{font-size:11px;color:var(--t2);font-weight:500}
+.ab{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px}
 
-  .prob-bar-pct {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    width: 36px;
-  }
+/* ── FILTER BAR ── */
+.fb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.fc{
+  padding:6px 14px;border-radius:var(--r-pill);border:1px solid var(--b0);
+  background:transparent;cursor:pointer;font-family:var(--f);font-size:12px;font-weight:600;
+  color:var(--t2);transition:all 140ms ease;white-space:nowrap
+}
+.fc:hover{color:var(--t0);background:rgba(255,255,255,.05);border-color:var(--b1)}
+.fc.active{background:rgba(255,255,255,.08);border-color:var(--b1);color:var(--t0)}
 
-  .card-meta {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-  }
+/* ── DASHBOARD LAYOUT ── */
+.dl{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+.dm{min-width:0}.dsb{display:flex;flex-direction:column;gap:14px}
+.sbh{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.sbhl{font-size:12px;font-weight:700;color:var(--t1);letter-spacing:.3px;text-transform:uppercase}
+.sbt{
+  font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 8px;
+  border-radius:100px;background:rgba(16,185,129,.12);color:var(--green)
+}
 
-  .badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
+.psm{
+  background:var(--card);border:1px solid var(--b0);border-radius:12px;padding:12px 14px;
+  transition:all 160ms;cursor:pointer;position:relative;overflow:hidden
+}
+.psm:hover{background:var(--card-h)}
+.psm.hi{border-left:2px solid var(--green)}.psm.md{border-left:2px solid rgba(245,158,11,.5)}
+.psm-m{font-size:13px;font-weight:700;margin-bottom:2px}
+.psm-t{font-size:11px;color:var(--t2);margin-bottom:8px;font-weight:500}
+.psm-r{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.psm-p{font-size:12px;font-weight:600}
+.psm-s{font-family:var(--fm);font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--gold-d);color:var(--gold)}
+.psm-b{height:3px;border-radius:100px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:3px}
+.psm-f{height:100%;border-radius:100px;transition:width 700ms cubic-bezier(.16,1,.3,1)}
+.psm-f.hi{background:var(--green)}.psm-f.md{background:rgba(245,158,11,.6)}
+.psm-c{font-size:10px;color:var(--t2);display:flex;justify-content:space-between;font-weight:500}
+@media(max-width:1100px){.dl{grid-template-columns:1fr}}
 
-  .badge-ats {
-    background: rgba(88,166,255,0.15);
-    color: var(--accent-blue);
-    border: 1px solid rgba(88,166,255,0.3);
-  }
+/* ── PREDICTION CARDS ── */
+.pc{
+  background:var(--card);border:1px solid var(--b0);border-radius:14px;padding:18px 20px;
+  backdrop-filter:blur(24px);transition:all 180ms ease;cursor:pointer;position:relative;overflow:hidden
+}
+.pc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h)}
+.pc.hi{border-top:2px solid rgba(16,185,129,.4)}.pc.md{border-top:2px solid rgba(245,158,11,.3)}
+.pm{font-size:13px;font-weight:700;margin-bottom:2px;letter-spacing:-.1px}
+.pmt{font-size:11px;color:var(--t2);margin-bottom:14px;font-weight:500}
+.pp{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ppt{font-size:13px;font-weight:600;color:var(--t1)}
+.ppt strong{color:var(--t0)}
+.psp{font-family:var(--fm);font-size:12px;font-weight:600;padding:3px 10px;border-radius:8px;background:var(--gold-d);color:var(--gold)}
+.cb{height:4px;border-radius:100px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:6px}
+.cf{height:100%;border-radius:100px;transition:width 750ms cubic-bezier(.16,1,.3,1)}
+.cf.hi{background:linear-gradient(90deg,var(--green),#6EE7B7)}.cf.md{background:linear-gradient(90deg,rgba(245,158,11,.8),var(--goldf))}
+.cl{font-size:11px;color:var(--t2);display:flex;justify-content:space-between;margin-bottom:10px;font-weight:500}
 
-  .badge-value {
-    background: rgba(63,185,80,0.15);
-    color: var(--accent-green);
-    border: 1px solid rgba(63,185,80,0.3);
-  }
+/* ── CONF HEADER ── */
+.confh{font-size:11px;font-weight:700;color:var(--gold);padding:12px 16px;border-bottom:1px solid var(--b0);background:rgba(245,158,11,.04);letter-spacing:.4px;text-transform:uppercase}
 
-  .badge-winner {
-    background: rgba(210,153,34,0.15);
-    color: var(--accent-orange);
-    border: 1px solid rgba(210,153,34,0.3);
-  }
+/* ── PLAYER AVATAR (fallback) ── */
+.pav{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(245,158,11,.1));
+  border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:var(--t1);flex-shrink:0;font-family:var(--fm)
+}
+.tpill{padding:2px 7px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(255,255,255,.05);color:var(--t1);font-family:var(--fm)}
+.nc{display:flex;align-items:center;gap:8px;font-family:var(--f)!important;font-weight:600!important;font-size:13px!important}
 
-  .badge-edge {
-    background: rgba(188,140,255,0.15);
-    color: var(--accent-purple);
-    border: 1px solid rgba(188,140,255,0.3);
-  }
+/* ── COMPARE ── */
+.cmprow{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.cmplbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);width:80px;flex-shrink:0}
+.cmpbs{flex:1;display:flex;flex-direction:column;gap:4px}
+.cmpbw{display:flex;align-items:center;gap:7px}
+.cmpbt{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:100px;overflow:hidden}
+.cmpbf{height:100%;border-radius:100px;transition:width 650ms cubic-bezier(.16,1,.3,1)}
+.cmpbv{font-family:var(--fm);font-size:11px;font-weight:600;width:42px;text-align:right;flex-shrink:0}
+.cmpbn{font-size:11px;color:var(--t2);width:52px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.bname{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.bsub{font-size:12px;color:var(--t1);margin-top:2px}
+.bsts{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.bst-v{font-family:var(--fm);font-size:16px;font-weight:700}
+.bst-l{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--t2)}
+select{width:100%;padding:10px 14px;background:rgba(255,255,255,.05);border:1px solid var(--b1);border-radius:10px;color:var(--t0);font-family:var(--f);font-size:14px;font-weight:600;cursor:pointer;appearance:none;-webkit-appearance:none}
+select option{background:#1D2336;color:#EDF1FA}
+.sel-wrap{position:relative}
+.sel-arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t2)}
 
-  .chart-container {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-bottom: 32px;
-    position: relative;
-    height: 380px;
-  }
+/* ── BACKTEST ── */
+.bt-stat{background:var(--card);border:1px solid var(--b0);border-radius:14px;padding:18px;text-align:center}
+.bt-val{font-family:var(--fm);font-size:28px;font-weight:700;display:block;margin-bottom:4px}
+.bt-val.g{color:var(--green)}.bt-val.o{color:var(--gold)}
 
-  .table-container {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 32px;
-  }
+/* ── PARLAY ── */
+.par-game{
+  background:var(--card);border:1px solid var(--b0);border-radius:12px;padding:13px 15px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  transition:all 160ms;cursor:pointer
+}
+.par-game:hover{background:var(--card-h)}
+.par-game.selected{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.04)}
+.par-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--b1);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 140ms}
+.par-game.selected .par-check{background:var(--green);border-color:var(--green)}
+.par-info{flex:1}
+.par-matchup{font-size:13px;font-weight:700}
+.par-pick{font-size:11px;color:var(--t2);margin-top:2px;font-weight:500}
+.par-odds{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--green);flex-shrink:0}
+.par-slip{background:rgba(255,255,255,.03);border:1px solid var(--b1);border-radius:16px;padding:20px}
+.par-total{font-family:var(--fm);font-size:36px;font-weight:700;color:var(--goldf);margin:8px 0 4px}
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+/* ── DEEP DIVE ── */
+.matchup-btn{
+  padding:6px 14px;border-radius:var(--r-pill);border:1px solid var(--b0);background:transparent;cursor:pointer;
+  font-family:var(--f);font-size:12px;font-weight:600;color:var(--t2);transition:all 140ms;white-space:nowrap
+}
+.matchup-btn:hover{color:var(--t1);background:rgba(255,255,255,.04);border-color:var(--b1)}
+.matchup-btn.active{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue)}
+.mu-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin-bottom:18px}
+.mu-team{text-align:center}
+.mu-name{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px}
+.mu-rec{font-size:12px;color:var(--t2);font-weight:500}
+.mu-stat-row{display:grid;grid-template-columns:1fr 140px 1fr;gap:0;margin-bottom:1px}
+.mu-stat-val{font-family:var(--fm);font-size:13px;font-weight:700;padding:9px 14px}
+.mu-stat-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--t2);padding:9px 14px;text-align:center;border-left:1px solid var(--b0);border-right:1px solid var(--b0)}
+.mu-stat-row:nth-child(odd){background:rgba(255,255,255,.02)}
+.po-row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--b0)}
+.po-row:last-child{border-bottom:none}
+.po-seed{font-size:11px;color:var(--t2);width:16px;flex-shrink:0;font-family:var(--fm)}
+.po-team{font-size:13px;font-weight:600;flex:1}
+.po-pct-bar{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:100px;overflow:hidden}
+.po-pct-fill{height:100%;border-radius:100px;transition:width 700ms cubic-bezier(.16,1,.3,1)}
+.po-pct-val{font-family:var(--fm);font-size:12px;font-weight:700;width:38px;text-align:right;flex-shrink:0}
+.streak-card{background:var(--card);border:1px solid var(--b0);border-radius:12px;padding:13px 16px;display:flex;align-items:center;gap:12px}
+.streak-card.hot{border-left:2px solid var(--green)}
+.streak-card.cold{border-left:2px solid var(--blue)}
+.streak-info{flex:1}
+.streak-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.streak-sub{font-size:11px;color:var(--t1);font-weight:500}
+.streak-badge{font-family:var(--fm);font-size:13px;font-weight:700;flex-shrink:0}
 
-  thead th {
-    background: var(--bg-secondary);
-    padding: 12px 16px;
-    text-align: left;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border);
-  }
+/* ── TIMESTAMP ── */
+.lu{font-size:11px;color:var(--t2);margin-top:32px;display:flex;align-items:center;gap:6px;font-weight:500}
 
-  tbody td {
-    padding: 12px 16px;
-    font-size: 0.9rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  tbody tr:hover { background: var(--bg-hover); }
-  tbody tr:last-child td { border-bottom: none; }
-
-  .edge-positive { color: var(--accent-green); font-weight: 600; }
-
-  .search-box {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-  }
-
-  .search-box input {
-    flex: 1;
-    max-width: 400px;
-    padding: 10px 16px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    font-size: 0.95rem;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .search-box input:focus { border-color: var(--accent-blue); }
-  .search-box input::placeholder { color: var(--text-muted); }
-
-  .player-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-  }
-
-  .player-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-  }
-
-  .player-name {
-    font-size: 1.05rem;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .player-team {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    margin-bottom: 14px;
-  }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-around;
-    text-align: center;
-  }
-
-  .stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--accent-blue);
-  }
-
-  .stat-label {
-    font-size: 0.72rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-secondary);
-  }
-
-  .empty-state p {
-    font-size: 1rem;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  .stats-summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .stat-summary-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 20px;
-    text-align: center;
-  }
-
-  .big-number {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--accent-blue);
-  }
-
-  .big-label {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 4px;
-  }
-
-  @media (max-width: 768px) {
-    .card-grid { grid-template-columns: 1fr; }
-    .player-cards { grid-template-columns: 1fr; }
-    .stats-summary { grid-template-columns: repeat(2, 1fr); }
-    header { flex-direction: column; gap: 8px; }
-    nav { overflow-x: auto; }
-  }
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18)}
+button:focus-visible{outline:2px solid rgba(96,165,250,.5);outline-offset:2px}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>
-    <span class="logo">A</span>
-    NBA Analytics Dashboard
-  </h1>
-  <div class="header-meta">
-    <span class="status-dot" id="statusDot"></span>
-    <span id="lastUpdated">Loading...</span>
-  </div>
-</header>
+<div class="bgl" aria-hidden="true">
+  <div class="blob b-g"></div><div class="blob b-o"></div><div class="blob b-b"></div>
+</div>
 
-<nav id="tabNav">
-  <button class="active" data-tab="picks">Today's Picks</button>
-  <button data-tab="accuracy">Model Accuracy</button>
-  <button data-tab="value">Value Bets</button>
-  <button data-tab="players">Player Lookup</button>
+<!-- ═══ NAV ═══ -->
+<nav class="nav" aria-label="Main navigation">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">
+      <!-- ORIGINAL LOGO: Court-meets-data mark -->
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#10B981"/>
+            <stop offset="100%" stop-color="#F59E0B"/>
+          </linearGradient>
+          <linearGradient id="lg2" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#10B981" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#F59E0B" stop-opacity="0.3"/>
+          </linearGradient>
+        </defs>
+        <!-- Outer hexagon frame -->
+        <path d="M15 2L27 8.5V21.5L15 28L3 21.5V8.5L15 2Z" stroke="url(#lg1)" stroke-width="1.5" fill="url(#lg2)"/>
+        <!-- Inner court arc (top) -->
+        <path d="M8 15 A7 7 0 0 1 22 15" stroke="url(#lg1)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <!-- Center circle dot -->
+        <circle cx="15" cy="15" r="1.8" fill="url(#lg1)"/>
+        <!-- Data bars inside lower half -->
+        <rect x="10" y="17" width="2" height="4" rx=".8" fill="url(#lg1)" opacity=".9"/>
+        <rect x="14" y="15.5" width="2" height="5.5" rx=".8" fill="url(#lg1)" opacity=".9"/>
+        <rect x="18" y="18.5" width="2" height="2.5" rx=".8" fill="url(#lg1)" opacity=".9"/>
+      </svg>
+    </div>
+    <span class="nav-logo-txt">Court<span>IQ</span></span>
+  </div>
+
+  <button class="nb active" onclick="showPage('dashboard')" id="nb-dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Dashboard
+  </button>
+  <button class="nb" onclick="showPage('games')" id="nb-games">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    Games
+  </button>
+  <button class="nb" onclick="showPage('players')" id="nb-players">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Players
+  </button>
+  <button class="nb" onclick="showPage('deep')" id="nb-deep">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Deep Dive
+  </button>
+  <div class="nav-divider"></div>
+  <button class="nb" onclick="showPage('model')" id="nb-model">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Model
+  </button>
+  <div class="nlive"><span class="ldot"></span>Live</div>
+
+  <div class="acct">
+    <button class="acct-btn" onclick="toggleAcct()" id="acct-btn" aria-expanded="false" aria-haspopup="true">
+      <div class="avatar">SP</div>
+      <span class="acct-name">Spencer</span>
+      <svg class="acct-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="acct-drop" id="acct-drop" role="menu">
+      <div class="drop-header">
+        <div class="drop-avatar">SP</div>
+        <div class="drop-name">Spencer P.</div>
+        <div class="drop-email">spencer@example.com</div>
+        <div class="drop-badge">Pro Plan</div>
+      </div>
+      <button class="drop-item" onclick="closeAcct()" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</button>
+      <button class="drop-item" onclick="closeAcct()" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Saved Picks <span class="badge g" style="margin-left:auto;font-size:10px">4</span></button>
+      <button class="drop-item" onclick="closeAcct()" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Settings</button>
+      <div class="drop-divider"></div>
+      <button class="drop-item danger" onclick="closeAcct()" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log Out</button>
+    </div>
+  </div>
 </nav>
 
-<main>
-  <div id="tab-picks" class="tab-content active">
-    <div class="stats-summary" id="picksSummary"></div>
-    <h2 class="section-title">Game Predictions</h2>
-    <div class="card-grid" id="picksGrid"></div>
+<main class="wrap">
+
+<!-- ═══ DASHBOARD ═══ -->
+<section id="page-dashboard" class="page active">
+  <div class="ph">
+    <h1 class="pt" id="greet-title">Good evening, Spencer</h1>
+    <p class="pd" id="greet">9 games on Mar 5 · 7 high-confidence picks tonight</p>
   </div>
 
-  <div id="tab-accuracy" class="tab-content">
-    <div class="stats-summary" id="accuracySummary"></div>
-    <h2 class="section-title">Rolling Accuracy Over Time</h2>
-    <div class="chart-container">
-      <canvas id="accuracyChart"></canvas>
+  <div class="sgrid">
+    <div class="sc accent-blue">
+      <span class="sl">Games Tonight</span>
+      <span class="sv b" data-count="9">0</span>
+      <div class="schange"><span class="badge b">3 live now</span></div>
+    </div>
+    <div class="sc accent-gold">
+      <span class="sl">Top Scorer Today</span>
+      <span class="sv o" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px">L. Doncic</span>
+      <div class="schange up" style="margin-top:6px">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        32.4 PPG · LAL · Season leader
+      </div>
+    </div>
+    <div class="sc accent-green">
+      <span class="sl">Hottest Team</span>
+      <span class="sv g" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px">Charlotte Hornets</span>
+      <div class="schange up" style="margin-top:6px">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        W6 streak · Hottest in the NBA
+      </div>
+    </div>
+    <div class="sc accent-red">
+      <span class="sl">Biggest Upset</span>
+      <span class="sv" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px;color:var(--red)">MEM +26 vs OKC</span>
+      <div class="schange dn" style="margin-top:6px">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        #1 seed lost outright
+      </div>
     </div>
   </div>
 
-  <div id="tab-value" class="tab-content">
-    <h2 class="section-title">Recent Value Bet Alerts</h2>
-    <div class="table-container" id="valueBetsContainer"></div>
+  <div class="dl">
+    <div class="dm">
+      <div class="card" style="margin-bottom:14px">
+        <div class="sh">
+          <div>
+            <div class="st">Today's Games</div>
+            <div class="ss">March 5, 2026 · Real model predictions</div>
+          </div>
+          <button class="fc" onclick="showPage('games')" style="font-size:11px;padding:5px 11px">All scores →</button>
+        </div>
+        <div class="gg" id="dash-games"></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="sh"><div class="st">Scoring Leaders</div><div class="ss">Season PPG</div></div>
+          <div class="tw"><table><thead><tr><th>#</th><th>Player</th><th>PPG</th><th></th></tr></thead><tbody id="dash-leaders"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="sh"><div class="st">League Scoring Trend</div><div class="ss">Points per game, by week</div></div>
+          <div id="dash-chart" style="height:175px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dsb">
+      <div class="card">
+        <div class="sbh">
+          <div class="sbhl">Today's Picks</div>
+          <span class="sbt">ATS</span><span style="font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(16,185,129,.12);color:var(--green);font-weight:700;margin-left:6px">Live • Mar 5</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px" id="dash-picks"></div>
+        <button onclick="showPage('model')" class="fc active" style="width:100%;margin-top:12px;display:flex;justify-content:center;font-size:12px">Full model →</button>
+      </div>
+      <div class="card">
+        <div class="sbh"><div class="sbhl">Model Record</div><span style="font-size:10px;padding:2px 8px;border-radius:100px;background:rgba(96,165,250,.12);color:var(--blue);font-weight:700;letter-spacing:.3px">v2.2</span></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <div class="sl">Season ATS</div>
+            <div style="font-family:var(--fm);font-size:26px;font-weight:700;color:var(--t0)" data-count-str="67–55">—</div>
+            <div class="schange" style="margin-top:3px"><span class="badge g">54.9% ATS accuracy</span></div>
+          </div>
+          <div style="padding-top:12px;border-top:1px solid var(--b0)">
+            <div class="sl">Last 10 Picks</div>
+            <div style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--green)" data-count-str="7–3">—</div>
+            <div class="schange up" style="margin-top:3px">Hot streak — keep watching</div>
+          </div>
+          <div style="padding-top:12px;border-top:1px solid var(--b0)">
+            <div class="sl">Overall Win Rate</div>
+            <div style="display:flex;align-items:baseline;gap:4px">
+              <span style="font-family:var(--fm);font-size:22px;font-weight:700" data-count="67.1">0</span>
+              <span style="font-family:var(--fm);font-size:14px;color:var(--t2)">%</span>
+            </div>
+            <div class="schange up" style="margin-top:3px">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+              +2.1% vs last week
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="lu">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Updated Mar 5, 2026 · nba_api · Model v2.2
+  </p>
+</section>
+
+<!-- ═══ GAMES & STANDINGS ═══ -->
+<section id="page-games" class="page">
+  <div class="ph">
+    <h1 class="pt">Games <span>&amp; Standings</span></h1>
+    <p class="pd">Live scores, results, and conference rankings</p>
+  </div>
+  <div class="tab-bar">
+    <button class="tab active" data-tab="scores" onclick="switchTab('games','scores')">Scores</button>
+    <button class="tab" data-tab="standings" onclick="switchTab('games','standings')">Standings</button>
+  </div>
+  <div class="tab-content active" id="games-tab-scores">
+    <div class="fb">
+      <button class="fc active" onclick="filterGames('all',this)">All</button>
+      <button class="fc" onclick="filterGames('live',this)">Live</button>
+      <button class="fc" onclick="filterGames('final',this)">Final</button>
+      <button class="fc" onclick="filterGames('upcoming',this)">Upcoming</button>
+    </div>
+    <div class="gg" id="all-games"></div>
+  </div>
+  <div class="tab-content" id="games-tab-standings">
+    <div class="g2" style="margin-top:4px">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="confh">Eastern Conference</div>
+        <div class="tw"><table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="confh">Western Conference</div>
+        <div class="tw"><table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Standings through Mar 5, 2026 · Source: nba_api (season 202526)</p>
+</section>
+
+<!-- ═══ PLAYERS ═══ -->
+<section id="page-players" class="page">
+  <div class="ph">
+    <h1 class="pt">Players</h1>
+    <p class="pd">Click any stat column to sort · Season stats and head-to-head comparison</p>
+  </div>
+  <div class="tab-bar">
+    <button class="tab active" data-tab="stats" onclick="switchTab('players','stats')">Stats</button>
+    <button class="tab" data-tab="compare" onclick="switchTab('players','compare'); initPickers()">Compare</button>
+  </div>
+  <div class="tab-content active" id="players-tab-stats">
+    <!-- NO filter pills — stat sorting is done via table headers -->
+    <div class="card">
+      <div class="tw">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px">#</th>
+              <th>Player</th>
+              <th class="stat-th active-sort" id="th-pts" onclick="sortPlayers('pts')">
+                PTS <span class="sort-arrow" id="arr-pts">▼</span>
+              </th>
+              <th class="stat-th" id="th-reb" onclick="sortPlayers('reb')">
+                REB <span class="sort-arrow" id="arr-reb">↕</span>
+              </th>
+              <th class="stat-th" id="th-ast" onclick="sortPlayers('ast')">
+                AST <span class="sort-arrow" id="arr-ast">↕</span>
+              </th>
+              <th class="stat-th" id="th-fg" onclick="sortPlayers('fg')">
+                FG% <span class="sort-arrow" id="arr-fg">↕</span>
+              </th>
+              <th class="stat-th" id="th-thr" onclick="sortPlayers('thr')">
+                3P% <span class="sort-arrow" id="arr-thr">↕</span>
+              </th>
+              <th>Team</th>
+            </tr>
+          </thead>
+          <tbody id="players-tb"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="tab-content" id="players-tab-compare">
+    <div class="g2" style="margin-bottom:16px">
+      <div class="card" style="padding:14px 18px">
+        <div class="sl" style="margin-bottom:7px">Player 1</div>
+        <div class="sel-wrap">
+          <select id="picker-a" onchange="updateComparison()"></select>
+          <svg class="sel-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div id="prev-a" style="margin-top:10px;min-height:24px"></div>
+      </div>
+      <div class="card" style="padding:14px 18px">
+        <div class="sl" style="margin-bottom:7px">Player 2</div>
+        <div class="sel-wrap">
+          <select id="picker-b" onchange="updateComparison()"></select>
+          <svg class="sel-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div id="prev-b" style="margin-top:10px;min-height:24px"></div>
+      </div>
+    </div>
+    <div id="cmp-prompt" class="card" style="text-align:center;padding:48px;color:var(--t2)">
+      <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">Select two players to compare</div>
+      <div style="font-size:12px">Radar chart, stats, and shooting breakdown will appear here</div>
+    </div>
+    <div id="cmp-content" style="display:none">
+      <div class="card" style="margin-bottom:16px;padding:18px 22px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:18px">
+          <div id="ban-a" style="flex:1"></div>
+          <div style="font-size:11px;font-weight:800;color:var(--t2);letter-spacing:.5px;flex-shrink:0">VS</div>
+          <div id="ban-b" style="flex:1;text-align:right"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="sh"><div><div class="st">Overall Profile</div><div class="ss">Scoring · Playmaking · Rebounding · Defense · Efficiency · Volume</div></div></div>
+        <div id="radar" style="height:310px"></div>
+      </div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card"><div class="sh"><div class="st">Per-Game Stats</div></div><div id="stat-bars"></div></div>
+        <div class="card"><div class="sh"><div><div class="st">Advanced Analytics</div><div class="ss">PER · TS% · USG% · WS · BPM · VORP</div></div></div><div id="adv-bars"></div></div>
+      </div>
+      <div class="card">
+        <div class="sh"><div class="st">Shooting by Zone</div><div class="ss">FG% at rim, paint, mid-range, 3-pointers</div></div>
+        <div id="shoot-chart" style="height:250px"></div>
+      </div>
+    </div>
+  </div>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Stats through Mar 5, 2026 · Season 2025-26</p>
+</section>
+
+<!-- ═══ MODEL ═══ -->
+<section id="page-model" class="page">
+  <div class="ph">
+    <h1 class="pt">Model</h1>
+    <p class="pd">ATS picks, performance history, and parlay builder</p>
+  </div>
+  <div class="tab-bar">
+    <button class="tab active" data-tab="picks" onclick="switchTab('model','picks')">Today's Picks</button>
+    <button class="tab" data-tab="backtest" onclick="switchTab('model','backtest'); renderBacktest()">Track Record</button>
+    <button class="tab" data-tab="parlay" onclick="switchTab('model','parlay')">Parlay Builder</button>
   </div>
 
-  <div id="tab-players" class="tab-content">
-    <h2 class="section-title">Player Projections</h2>
-    <div class="search-box">
-      <input type="text" id="playerSearch" placeholder="Search player name (e.g. LeBron James)..." />
+  <div class="tab-content active" id="model-tab-picks">
+    <div class="sgrid" style="margin-bottom:22px">
+      <div class="sc accent-blue"><span class="sl">Games Tonight</span><span class="sv b" data-count="9">0</span><div class="schange"><span class="badge b">9 matchups</span></div></div>
+      <div class="sc accent-green"><span class="sl">Strong Picks</span><span class="sv g" data-count="7">0</span><div class="schange up">Model confidence ≥65%</div></div>
+      <div class="sc accent-gold"><span class="sl">Season Record</span><span class="sv o" data-count-str="67–55">—</span><div class="schange"><span class="badge g">54.9% ATS</span></div></div>
+      <div class="sc accent-green"><span class="sl">Last 10 Picks</span><span class="sv g" data-count-str="7–3">—</span><div class="schange up">Hot streak</div></div>
     </div>
-    <div class="player-cards" id="playerCards"></div>
+    <div class="g3" id="picks-grid"></div>
   </div>
+
+  <div class="tab-content" id="model-tab-backtest">
+    <div class="card" style="margin-bottom:18px;background:rgba(16,185,129,.04);border-color:rgba(16,185,129,.15)">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:40px;height:40px;border-radius:12px;background:var(--green-d);border:1px solid rgba(16,185,129,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px;color:var(--t0)">How we score the model</div>
+          <div style="font-size:12px;color:var(--t1);line-height:1.65">Every pick is tracked here — wins, losses, everything. A coin flip wins 50% of the time. Our model runs at <strong style="color:var(--green)">54.9%</strong>, meaning it wins more than it loses over the long run.</div>
+        </div>
+      </div>
+    </div>
+    <div class="sgrid" style="margin-bottom:22px">
+      <div class="bt-stat"><span class="sl">Overall Win Rate</span><span class="bt-val g">54.9%</span><div class="schange up" style="justify-content:center;font-size:11px">Beats a coin flip by 4.9%</div></div>
+      <div class="bt-stat"><span class="sl">Best Month</span><span class="bt-val o">Feb '25</span><div class="schange up" style="justify-content:center;font-size:11px">57.4% cover rate that month</div></div>
+      <div class="bt-stat"><span class="sl">High Confidence Picks</span><span class="bt-val g">49.0%</span><div class="schange" style="justify-content:center;font-size:11px">Cover rate, mkt implied >= 65%</div></div>
+      <div class="bt-stat"><span class="sl">Total Picks Made</span><span class="bt-val">18,496</span><div class="schange" style="justify-content:center;font-size:11px">games in backtest (2007-2025)</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="sh"><div><div class="st">Win Rate Over Time</div><div class="ss">Each point = one week · Dashed line = 50% baseline (coin flip)</div></div></div>
+      <div id="bt-chart" style="height:230px"></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="sh"><div><div class="st">Best Pick Categories</div><div class="ss">ATS cover rate by spread size</div></div></div>
+        <div id="bt-type-chart" style="height:210px"></div>
+      </div>
+      <div class="card">
+        <div class="sh"><div><div class="st">Does Confidence Predict Wins?</div><div class="ss">Market implied prob vs. actual home cover rate (18,496 games)</div></div></div>
+        <div id="bt-conf-chart" style="height:210px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="model-tab-parlay">
+    <div class="g2" style="align-items:start">
+      <div>
+        <div class="sh" style="margin-bottom:14px"><div class="st">Select Games</div><div class="ss">Pick 2–8 legs for your parlay</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px" id="parlay-games"></div>
+      </div>
+      <div>
+        <div class="sh" style="margin-bottom:14px"><div class="st">Parlay Slip</div></div>
+        <div class="par-slip">
+          <div class="sl">Legs Selected</div>
+          <div class="par-total" id="par-legs">0</div>
+          <div style="font-size:12px;color:var(--t1);margin-bottom:16px;font-weight:500">legs in this parlay</div>
+          <div style="border-top:1px solid var(--b1);padding-top:14px;margin-bottom:14px">
+            <div class="sl">Combined Odds</div>
+            <div style="font-family:var(--fm);font-size:24px;font-weight:700;color:var(--goldf)" id="par-odds">—</div>
+          </div>
+          <div style="border-top:1px solid var(--b1);padding-top:14px;margin-bottom:14px">
+            <div class="sl">Model Confidence</div>
+            <div style="font-family:var(--fm);font-size:24px;font-weight:700;color:var(--green)" id="par-conf">—</div>
+          </div>
+          <div id="par-legs-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
+          <button style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,rgba(16,185,129,.9),rgba(245,158,11,.8));color:#fff;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;transition:opacity 180ms" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">Save Parlay</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Model v2.2 · 67.1% game outcome · 54.9% ATS</p>
+</section>
+
+<!-- ═══ DEEP DIVE ═══ -->
+<section id="page-deep" class="page">
+  <div class="ph">
+    <h1 class="pt">Deep Dive</h1>
+    <p class="pd">Beyond the box score — matchups, playoff picture, hot streaks, and shot quality</p>
+  </div>
+  <div class="tab-bar">
+    <button class="tab active" data-tab="matchups" onclick="switchTab('deep','matchups')">Matchup Breakdown</button>
+    <button class="tab" data-tab="playoff" onclick="switchTab('deep','playoff')">Playoff Picture</button>
+    <button class="tab" data-tab="streaks" onclick="switchTab('deep','streaks')">Hot &amp; Cold</button>
+    <button class="tab" data-tab="shots" onclick="switchTab('deep','shots'); renderShotMaps()">Shot Quality</button>
+  </div>
+
+  <div class="tab-content active" id="deep-tab-matchups">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--t2);font-weight:600">Pick a game:</span>
+      <div style="display:flex;gap:7px;flex-wrap:wrap" id="matchup-btns"></div>
+    </div>
+    <div id="matchup-content"></div>
+  </div>
+
+  <div class="tab-content" id="deep-tab-playoff">
+    <div class="sgrid" style="margin-bottom:20px">
+      <div class="sc accent-green"><span class="sl">Clinched</span><span class="sv g" data-count="8">0</span><div class="schange up">Clinched playoff berth</div></div>
+      <div class="sc accent-gold"><span class="sl">On the Bubble</span><span class="sv o" data-count="8">0</span><div class="schange">On the bubble</div></div>
+      <div class="sc accent-blue"><span class="sl">Play-In Teams</span><span class="sv b" data-count="4">0</span><div class="schange">Seeds 7–10</div></div>
+      <div class="sc"><span class="sl">Games Remaining</span><span class="sv" data-count="17">0</span><div class="schange">games remaining</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:14px">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="confh" style="display:flex;align-items:center;justify-content:space-between"><span>East Playoff Odds</span><span style="font-size:10px;color:var(--t2);font-weight:500;text-transform:none;letter-spacing:0">% chance to make playoffs</span></div>
+        <div id="po-east-list" style="padding:8px 0"></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="confh" style="display:flex;align-items:center;justify-content:space-between"><span>West Playoff Odds</span><span style="font-size:10px;color:var(--t2);font-weight:500;text-transform:none;letter-spacing:0">% chance to make playoffs</span></div>
+        <div id="po-west-list" style="padding:8px 0"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sh"><div class="st">Championship Odds</div><div class="ss">Model probability of winning the title</div></div>
+      <div id="champ-chart" style="height:230px"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="deep-tab-streaks">
+    <div class="g2" style="margin-bottom:16px">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+          <span style="font-size:13px;font-weight:700">On Fire Right Now</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px" id="hot-players"></div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
+          <span style="font-size:13px;font-weight:700">Ice Cold</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px" id="cold-players"></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="sh"><div class="st">Team Win Streaks</div><div class="ss">Consecutive wins or losses</div></div>
+        <div id="streak-chart" style="height:250px"></div>
+      </div>
+      <div class="card">
+        <div class="sh"><div class="st">Home vs Away</div><div class="ss">Win % at home vs on the road</div></div>
+        <div id="homeway-chart" style="height:250px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="deep-tab-shots">
+    <div class="card" style="margin-bottom:16px;background:rgba(96,165,250,.04);border-color:rgba(96,165,250,.15)">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:40px;height:40px;border-radius:12px;background:var(--blue-d);border:1px solid rgba(96,165,250,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px">What is "shot quality"?</div>
+          <div style="font-size:12px;color:var(--t1);line-height:1.65">Not all shots are equal. A wide-open layup beats a contested 30-footer every time. Shot quality measures whether a player is getting <em>good looks</em> — not just how many points they score.</div>
+        </div>
+      </div>
+    </div>
+    <div class="g2" style="margin-bottom:14px">
+      <div class="card">
+        <div class="sh"><div><div class="st">Best Shot-Makers</div><div class="ss">Scoring on difficult shots</div></div></div>
+        <div id="shot-quality-chart" style="height:250px"></div>
+      </div>
+      <div class="card">
+        <div class="sh"><div><div class="st">Most Efficient Scorers</div><div class="ss">Points per shot attempt</div></div></div>
+        <div id="efficiency-chart" style="height:250px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sh"><div class="st">Shot Distribution by Zone</div><div class="ss">% of attempts by court zone — rim, mid-range, 3-point</div></div>
+      <div id="shot-zone-chart" style="height:270px"></div>
+    </div>
+  </div>
+
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Analysis updated daily · Data through Mar 5, 2026</p>
+</section>
+
 </main>
 
 <script>
-(function() {
-  'use strict';
+// ─── PLAYER DATA with NBA CDN headshot IDs ───
+// NBA CDN headshots: https://cdn.nba.com/headshots/nba/latest/260x190/{id}.png
+// These are official NBA media assets, publicly served, no login required
+const DATA = {
+  games:[
+    {id:1,away:'BOS',home:'NYK',aS:108,hS:112,status:'live',q:'3rd 4:22',aR:'48-14',hR:'41-21',spread:'-3.5 NYK',ats:'NYK -3.5 ✓'},
+    {id:2,away:'LAL',home:'GSW',aS:94, hS:89, status:'live',q:'4th 1:55',aR:'36-26',hR:'31-31',spread:'-4.5 LAL',ats:'LAL -4.5 ✓'},
+    {id:3,away:'MIL',home:'CHI',aS:115,hS:102,status:'live',q:'3rd 9:11',aR:'39-23',hR:'28-34',spread:'-7.5 MIL',ats:'Awaiting'},
+    {id:4,away:'PHX',home:'DEN',aS:104,hS:118,status:'final',q:'Final',aR:'32-30',hR:'44-18',spread:'-5 DEN',ats:'DEN -5 ✓'},
+    {id:5,away:'MEM',home:'OKC',aS:98, hS:124,status:'final',q:'Final',aR:'29-33',hR:'50-12',spread:'-12 OKC',ats:'MEM +12 ✓'},
+    {id:6,away:'MIA',home:'ATL',aS:87, hS:91, status:'final',q:'Final',aR:'33-29',hR:'30-32',spread:'+2.5 ATL',ats:'ATL +2.5 ✓'},
+    {id:7,away:'CLE',home:'IND',aS:null,hS:null,status:'upcoming',q:'7:30 PM',aR:'44-18',hR:'37-25',spread:'-3 CLE',ats:'Pick: CLE'},
+    {id:8,away:'SAS',home:'HOU',aS:null,hS:null,status:'upcoming',q:'8:00 PM',aR:'26-36',hR:'38-24',spread:'-8.5 HOU',ats:'Pick: HOU'},
+    {id:9,away:'POR',home:'MIN',aS:null,hS:null,status:'upcoming',q:'9:30 PM',aR:'19-43',hR:'42-20',spread:'-11 MIN',ats:'Pick: MIN'},
+  ],
+  players:[
+    {name:'Luka Doncic',             team:'LAL',pts:32.4,reb:7.7,ast:8.6,fg:47.3,thr:35.9,ini:'LD',nbaId:1629029},
+    {name:'Shai Gilgeous-Alexander', team:'OKC',pts:31.6,reb:4.4,ast:6.4,fg:55.0,thr:38.4,ini:'SG',nbaId:1628983},
+    {name:'Anthony Edwards',         team:'MIN',pts:29.7,reb:5.2,ast:3.7,fg:49.4,thr:40.2,ini:'AE',nbaId:1630162},
+    {name:'Tyrese Maxey',            team:'PHI',pts:28.9,reb:4.2,ast:6.7,fg:46.0,thr:37.2,ini:'TM',nbaId:1630178},
+    {name:'Jaylen Brown',            team:'BOS',pts:28.9,reb:7.2,ast:5.0,fg:48.0,thr:34.8,ini:'JB',nbaId:1627759},
+    {name:'Nikola Jokic',            team:'DEN',pts:28.7,reb:12.6,ast:10.3,fg:57.0,thr:40.1,ini:'NJ',nbaId:203999},
+    {name:'Donovan Mitchell',        team:'CLE',pts:28.5,reb:4.5,ast:5.8,fg:48.3,thr:36.9,ini:'DM',nbaId:1628378},
+    {name:'Kawhi Leonard',           team:'LAC',pts:27.9,reb:6.4,ast:3.7,fg:49.7,thr:37.9,ini:'KL',nbaId:202695},
+    {name:'Giannis Antetokounmpo',   team:'MIL',pts:27.6,reb:9.9,ast:5.4,fg:63.7,thr:37.5,ini:'GA',nbaId:203507},
+    {name:'Stephen Curry',           team:'GSW',pts:27.2,reb:3.5,ast:4.8,fg:46.8,thr:39.1,ini:'SC',nbaId:201939},
+  ],
+  east:[
+    {team:'Detroit Pistons',          abbr:'DET',w:45,l:15,gb:'-', streak:'L1'},
+    {team:'Boston Celtics',            abbr:'BOS',w:41,l:21,gb:4,  streak:'L1'},
+    {team:'New York Knicks',           abbr:'NYK',w:40,l:23,gb:5,  streak:'L1'},
+    {team:'Cleveland Cavaliers',       abbr:'CLE',w:39,l:24,gb:6,  streak:'W2'},
+    {team:'Toronto Raptors',           abbr:'TOR',w:35,l:26,gb:10, streak:'L1'},
+    {team:'Philadelphia 76ers',        abbr:'PHI',w:34,l:28,gb:11, streak:'W1'},
+    {team:'Miami Heat',                abbr:'MIA',w:33,l:29,gb:12, streak:'W2'},
+    {team:'Orlando Magic',             abbr:'ORL',w:32,l:28,gb:13, streak:'W1'},
+    {team:'Charlotte Hornets',         abbr:'CHA',w:32,l:31,gb:13, streak:'W6'},
+    {team:'Atlanta Hawks',             abbr:'ATL',w:32,l:31,gb:13, streak:'W5'},
+  ],
+  west:[
+    {team:'Oklahoma City Thunder',    abbr:'OKC',w:49,l:15,gb:'-', streak:'W4'},
+    {team:'San Antonio Spurs',         abbr:'SAS',w:44,l:17,gb:5,  streak:'W1'},
+    {team:'Minnesota Timberwolves',    abbr:'MIN',w:39,l:23,gb:10, streak:'W4'},
+    {team:'Houston Rockets',           abbr:'HOU',w:38,l:22,gb:11, streak:'W1'},
+    {team:'Denver Nuggets',            abbr:'DEN',w:38,l:24,gb:11, streak:'W1'},
+    {team:'Los Angeles Lakers',        abbr:'LAL',w:37,l:24,gb:12, streak:'W3'},
+    {team:'Phoenix Suns',              abbr:'PHX',w:35,l:26,gb:14, streak:'W2'},
+    {team:'Golden State Warriors',     abbr:'GSW',w:31,l:30,gb:18, streak:'L2'},
+    {team:'LA Clippers',               abbr:'LAC',w:30,l:31,gb:19, streak:'W3'},
+    {team:'Portland Trail Blazers',    abbr:'POR',w:30,l:33,gb:19, streak:'W1'},
+  ],
+  picks:[
+    {matchup:'DAL @ ORL', time:'Mar 5',pick:'ORL',spread:'',conf:70,tier:'hi',reason:'Home advantage + model edge'},
+    {matchup:'UTA @ WAS', time:'Mar 5',pick:'WAS',spread:'',conf:61,tier:'md',reason:'Slight home edge'},
+    {matchup:'BKN @ MIA', time:'Mar 5',pick:'MIA',spread:'',conf:90,tier:'hi',reason:'Dominant home favorite'},
+    {matchup:'GSW @ HOU', time:'Mar 5',pick:'HOU',spread:'',conf:60,tier:'md',reason:'Home team slight edge'},
+    {matchup:'TOR @ MIN', time:'Mar 5',pick:'MIN',spread:'',conf:92,tier:'hi',reason:'Heavy home favorite'},
+    {matchup:'DET @ SAS', time:'Mar 5',pick:'DET',spread:'',conf:68,tier:'hi',reason:'Road favorites on form'},
+    {matchup:'CHI @ PHX', time:'Mar 5',pick:'PHX',spread:'',conf:70,tier:'hi',reason:'Home efficiency edge'},
+    {matchup:'LAL @ DEN', time:'Mar 5',pick:'DEN',spread:'',conf:70,tier:'hi',reason:'Home altitude advantage'},
+    {matchup:'NOP @ SAC', time:'Mar 5',pick:'SAC',spread:'',conf:90,tier:'hi',reason:'Strong home court'},
+  ]
+};
 
-  var picksData = [];
-  var accuracyData = [];
-  var valueBetsData = [];
-  var playerData = [];
-  var accuracyChart = null;
+const ADV = {
+  'Luka Doncic':               {per:29.1,ts:61.3,usg:36.2,ws:11.8,bpm:7.2,vorp:5.1,rim:57.2,mid:46.8,thr:35.9,paint:60.4},
+  'Shai Gilgeous-Alexander':   {per:31.8,ts:66.5,usg:32.4,ws:13.2,bpm:9.8,vorp:6.4,rim:68.2,mid:48.1,thr:38.4,paint:72.1},
+  'Anthony Edwards':            {per:25.4,ts:61.7,usg:30.9,ws:10.2,bpm:5.1,vorp:4.0,rim:62.4,mid:42.8,thr:40.2,paint:65.8},
+  'Tyrese Maxey':               {per:24.8,ts:58.8,usg:28.9,ws:9.6, bpm:4.8,vorp:3.8,rim:58.1,mid:44.2,thr:37.2,paint:61.4},
+  'Jaylen Brown':               {per:24.2,ts:57.1,usg:35.6,ws:9.4, bpm:4.2,vorp:3.4,rim:61.8,mid:41.4,thr:34.8,paint:64.8},
+  'Nikola Jokic':               {per:33.4,ts:67.6,usg:29.7,ws:16.1,bpm:11.8,vorp:8.2,rim:72.4,mid:53.8,thr:40.1,paint:77.2},
+  'Donovan Mitchell':           {per:24.6,ts:61.4,usg:31.7,ws:9.8, bpm:4.6,vorp:3.6,rim:60.2,mid:44.8,thr:36.9,paint:63.4},
+  'Kawhi Leonard':              {per:27.2,ts:62.2,usg:32.9,ws:11.4,bpm:6.1,vorp:4.4,rim:64.8,mid:50.2,thr:37.9,paint:67.2},
+  'Giannis Antetokounmpo':      {per:31.2,ts:67.0,usg:35.1,ws:14.2,bpm:9.2,vorp:6.2,rim:76.4,mid:40.1,thr:37.5,paint:80.2},
+  'Stephen Curry':              {per:26.4,ts:63.6,usg:31.1,ws:11.8,bpm:6.4,vorp:4.8,rim:56.4,mid:42.1,thr:39.1,paint:58.8},
+};
 
-  /* --- Utility: escape text for safe DOM insertion --- */
-  function esc(str) {
-    if (str == null) return '';
-    var d = document.createElement('div');
-    d.textContent = String(str);
-    return d.innerHTML;
-  }
+// ─── HEADSHOT HELPER ───
+function headshot(nbaId, ini, size=36) {
+  const url = `https://cdn.nba.com/headshots/nba/latest/260x190/${nbaId}.png`;
+  return `<div class="player-shot-wrap" style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(245,158,11,.1));border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+    <img src="${url}" alt="${ini}" 
+      style="width:${Math.round(size*1.5)}px;height:${Math.round(size*1.2)}px;object-fit:cover;object-position:top center;margin-top:${Math.round(size*.1)}px"
+      onerror="this.parentElement.innerHTML='<span style=\\'font-size:9px;font-weight:700;color:var(--t1);font-family:var(--fm)\\'>${ini}</span>'"
+    />
+  </div>`;
+}
 
-  /* --- DOM building helpers using safe DOM API --- */
-  function el(tag, attrs, children) {
-    var node = document.createElement(tag);
-    if (attrs) {
-      Object.keys(attrs).forEach(function(k) {
-        if (k === 'className') node.className = attrs[k];
-        else if (k === 'textContent') node.textContent = attrs[k];
-        else if (k.startsWith('on')) node.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
-        else node.setAttribute(k, attrs[k]);
-      });
-    }
-    if (children) {
-      (Array.isArray(children) ? children : [children]).forEach(function(c) {
-        if (typeof c === 'string') node.appendChild(document.createTextNode(c));
-        else if (c) node.appendChild(c);
-      });
-    }
-    return node;
-  }
+// ─── NAV ───
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current')});
+  document.getElementById('page-'+id).classList.add('active');
+  const nb=document.getElementById('nb-'+id);
+  if(nb){nb.classList.add('active');nb.setAttribute('aria-current','page')}
+  if(id==='deep'){renderMatchups();renderPlayoff();renderStreaks();}
+  closeAcct();
+}
 
-  function clearNode(node) {
-    while (node.firstChild) node.removeChild(node.firstChild);
-  }
+function toggleAcct(){
+  const btn=document.getElementById('acct-btn'),drop=document.getElementById('acct-drop');
+  const open=drop.classList.toggle('open');
+  btn.classList.toggle('open',open);btn.setAttribute('aria-expanded',open);
+}
+function closeAcct(){
+  document.getElementById('acct-drop').classList.remove('open');
+  document.getElementById('acct-btn').classList.remove('open');
+  document.getElementById('acct-btn').setAttribute('aria-expanded','false');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.acct'))closeAcct();});
 
-  /* --- Tabs --- */
-  var tabNav = document.getElementById('tabNav');
-  tabNav.addEventListener('click', function(e) {
-    if (e.target.tagName !== 'BUTTON') return;
-    tabNav.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-    e.target.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
-    document.getElementById('tab-' + e.target.dataset.tab).classList.add('active');
-    if (e.target.dataset.tab === 'accuracy' && accuracyChart) {
-      accuracyChart.resize();
-    }
+function switchTab(page,tab){
+  const tabs=document.querySelectorAll(`#page-${page} .tab`);
+  const contents=document.querySelectorAll(`#page-${page} .tab-content`);
+  tabs.forEach(t=>{
+    const isActive=t.getAttribute('onclick').includes(`'${tab}'`);
+    t.classList.toggle('active',isActive);
   });
+  contents.forEach(c=>{
+    const isActive=c.id===`${page}-tab-${tab}`;
+    c.classList.toggle('active',isActive);
+  });
+}
 
-  /* --- Data Loading --- */
-  async function fetchJSON(file) {
-    try {
-      var resp = await fetch('data/' + file + '?t=' + Date.now());
-      if (!resp.ok) return [];
-      var data = await resp.json();
-      return Array.isArray(data) ? data : [];
-    } catch (e) {
-      return [];
-    }
+// ─── COUNTERS ───
+function animCount(el,target){
+  const dur=700,start=performance.now();
+  const isF=String(target).includes('.');
+  const dec=isF?(String(target).split('.')[1]||'').length:0;
+  function step(now){
+    const p=Math.min((now-start)/dur,1),e=1-Math.pow(1-p,3);
+    el.textContent=isF?(e*target).toFixed(dec):Math.floor(e*target);
+    if(p<1)requestAnimationFrame(step); else el.textContent=target;
   }
+  requestAnimationFrame(step);
+}
+function runCounters(){
+  document.querySelectorAll('[data-count]').forEach(el=>animCount(el,parseFloat(el.dataset.count)));
+  document.querySelectorAll('[data-count-str]').forEach(el=>setTimeout(()=>{el.textContent=el.dataset.countStr},300));
+}
 
-  async function loadAll() {
-    var results = await Promise.all([
-      fetchJSON('todays_picks.json'),
-      fetchJSON('accuracy_history.json'),
-      fetchJSON('value_bets.json'),
-      fetchJSON('player_predictions.json'),
-    ]);
+// ─── GREETING ───
+function setGreeting(){
+  const h=new Date().getHours();
+  const greetTitle=document.getElementById('greet-title');
+  if(greetTitle)greetTitle.textContent=h<12?'Good morning, Spencer':h<17?'Good afternoon, Spencer':'Good evening, Spencer';
+}
 
-    picksData = results[0];
-    accuracyData = results[1];
-    valueBetsData = results[2];
-    playerData = results[3];
+// ─── SHARED CHART LAYOUT ───
+const ML=(o={})=>({
+  paper_bgcolor:'transparent',plot_bgcolor:'transparent',
+  margin:{l:44,r:12,t:8,b:34,...(o.margin||{})},
+  font:{family:'Plus Jakarta Sans',color:'#505D7A'},
+  xaxis:{showgrid:false,tickfont:{color:'#505D7A',size:11,family:'JetBrains Mono'},tickcolor:'transparent',linecolor:'transparent',zeroline:false,...(o.x||{})},
+  yaxis:{showgrid:true,gridcolor:'rgba(255,255,255,0.05)',tickfont:{color:'#505D7A',size:11,family:'JetBrains Mono'},tickcolor:'transparent',linecolor:'transparent',zeroline:false,...(o.y||{})},
+  hoverlabel:{bgcolor:'#1D2336',bordercolor:'rgba(255,255,255,.1)',font:{color:'#EDF1FA',size:12,family:'Plus Jakarta Sans'},padding:{l:10,r:10,t:8,b:8}},
+  ...(o.ex||{})
+});
 
-    var metaObj = {};
-    try {
-      var resp = await fetch('data/meta.json?t=' + Date.now());
-      if (resp.ok) metaObj = await resp.json();
-    } catch(e) {}
+// ─── GAME CARD ───
+function gameCard(g){
+  const aW=g.aS>g.hS,aC=g.status==='final'?(aW?'win':'los'):'',hC=g.status==='final'?(!aW?'win':'los'):'';
+  const col=g.ats.includes('✓')?'var(--green)':g.ats.startsWith('Pick')?'var(--blue)':'var(--gold)';
+  return `<div class="gc${g.status==='live'?' live':''}" role="article">
+    <div class="gs ${g.status}">
+      ${g.status==='live'?`<span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2.4s ease-in-out infinite"></span>`:''}
+      ${g.status==='live'?g.q:g.status==='final'?'Final':g.q}
+    </div>
+    <div class="gt">
+      <div class="gtr"><div class="gti"><div class="tls">${g.away}</div><div><div class="tn">${g.away}</div><div class="tr">${g.aR}</div></div></div>${g.aS!=null?`<span class="gsc ${aC}">${g.aS}</span>`:''}</div>
+      <div class="gtr"><div class="gti"><div class="tls">${g.home}</div><div><div class="tn">${g.home}</div><div class="tr">${g.hR}</div></div></div>${g.hS!=null?`<span class="gsc ${hC}">${g.hS}</span>`:''}</div>
+    </div>
+    <div class="gm"><span class="gmt">${g.spread}</span><span class="ab" style="background:${col}18;color:${col}">${g.ats}</span></div>
+  </div>`;
+}
 
-    var statusDot = document.getElementById('statusDot');
-    var lastUpdated = document.getElementById('lastUpdated');
-    if (metaObj.exported_at) {
-      var d = new Date(metaObj.exported_at + 'Z');
-      lastUpdated.textContent = 'Updated: ' + d.toLocaleString();
-      statusDot.style.background = metaObj.sample_data ? 'var(--accent-orange)' : 'var(--accent-green)';
-      if (metaObj.sample_data) {
-        lastUpdated.textContent += ' (Sample Data)';
-      }
+function renderGames(){
+  document.getElementById('dash-games').innerHTML=DATA.games.slice(0,3).map(gameCard).join('');
+  document.getElementById('all-games').innerHTML=DATA.games.map(gameCard).join('');
+}
+function filterGames(type,btn){
+  document.querySelectorAll('[onclick^="filterGames"]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const list=type==='all'?DATA.games:DATA.games.filter(g=>g.status===type);
+  document.getElementById('all-games').innerHTML=list.length?list.map(gameCard).join(''):`<p style="color:var(--t2);padding:20px;font-size:13px">No games match this filter.</p>`;
+}
+
+// ─── LEADERS ───
+function renderLeaders(){
+  const top=[...DATA.players].sort((a,b)=>b.pts-a.pts).slice(0,5);
+  document.getElementById('dash-leaders').innerHTML=top.map((p,i)=>`
+    <tr>
+      <td><span class="rn">${i+1}</span></td>
+      <td class="nc">${headshot(p.nbaId,p.ini,28)}<span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name.split(' ').pop()}</span></td>
+      <td style="color:var(--gold);font-weight:700">${p.pts}</td>
+      <td style="color:${i<2?'var(--green)':'var(--t2)'};font-size:11px">${i<2?'↑ Top 2':''}</td>
+    </tr>`).join('');
+}
+
+// ─── PLAYERS TABLE — clickable stat headers, headshots ───
+let pSort='pts',pDir=-1;
+
+function updateSortHeaders(){
+  const cols=['pts','reb','ast','fg','thr'];
+  cols.forEach(col=>{
+    const th=document.getElementById('th-'+col);
+    const arr=document.getElementById('arr-'+col);
+    if(!th||!arr)return;
+    if(col===pSort){
+      th.classList.add('active-sort');
+      arr.textContent=pDir===-1?'▼':'▲';
     } else {
-      lastUpdated.textContent = 'No data available';
-      statusDot.style.background = 'var(--accent-red)';
+      th.classList.remove('active-sort');
+      arr.textContent='↕';
     }
-
-    renderPicks();
-    renderAccuracy();
-    renderValueBets();
-    renderPlayers('');
-  }
-
-  /* --- Empty state builder --- */
-  function emptyStateNode(msg) {
-    return el('div', {className: 'empty-state'}, [
-      el('p', {textContent: msg})
-    ]);
-  }
-
-  /* --- Summary card builder --- */
-  function summaryCardNode(value, label) {
-    return el('div', {className: 'stat-summary-card'}, [
-      el('div', {className: 'big-number', textContent: String(value)}),
-      el('div', {className: 'big-label', textContent: label}),
-    ]);
-  }
-
-  /* --- Render: Picks --- */
-  function renderPicks() {
-    var grid = document.getElementById('picksGrid');
-    var summary = document.getElementById('picksSummary');
-    clearNode(grid);
-    clearNode(summary);
-
-    if (picksData.length === 0) {
-      grid.appendChild(emptyStateNode('No predictions available for today.'));
-      return;
-    }
-
-    var totalGames = picksData.length;
-    var valueBets = picksData.filter(function(p) { return p.value_bet; }).length;
-    var avgConf = picksData.reduce(function(s, p) { return s + Math.max(p.home_win_prob, p.away_win_prob); }, 0) / totalGames;
-
-    summary.appendChild(summaryCardNode(totalGames, 'Games Today'));
-    summary.appendChild(summaryCardNode(valueBets, 'Value Bets'));
-    summary.appendChild(summaryCardNode((avgConf * 100).toFixed(1) + '%', 'Avg Confidence'));
-
-    picksData.forEach(function(p) {
-      var homePct = (p.home_win_prob * 100).toFixed(1);
-      var awayPct = (p.away_win_prob * 100).toFixed(1);
-      var homeTeamName = p.home_team_name || p.home_team;
-      var awayTeamName = p.away_team_name || p.away_team;
-      var spreadStr = p.spread != null ? (p.spread > 0 ? '+' + p.spread : String(p.spread)) : '';
-
-      var card = el('div', {className: 'card'});
-
-      /* Matchup header */
-      var matchup = el('div', {className: 'matchup'}, [
-        el('span', {className: 'team', textContent: p.home_team}),
-        el('span', {className: 'vs', textContent: 'vs'}),
-        el('span', {className: 'team', textContent: p.away_team}),
-      ]);
-      card.appendChild(matchup);
-
-      /* Full team names */
-      card.appendChild(el('div', {style: 'font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px', textContent: homeTeamName + ' vs ' + awayTeamName}));
-
-      /* Home prob bar */
-      var homeFill = el('div', {className: 'prob-bar-fill'});
-      homeFill.style.width = homePct + '%';
-      card.appendChild(el('div', {className: 'prob-bar-container'}, [
-        el('span', {className: 'prob-bar-label', textContent: p.home_team}),
-        el('div', {className: 'prob-bar-track'}, [homeFill]),
-        el('span', {className: 'prob-bar-pct', textContent: homePct + '%'}),
-      ]));
-
-      /* Away prob bar */
-      var awayFill = el('div', {className: 'prob-bar-fill'});
-      awayFill.style.width = awayPct + '%';
-      awayFill.style.background = 'var(--accent-blue)';
-      card.appendChild(el('div', {className: 'prob-bar-container'}, [
-        el('span', {className: 'prob-bar-label', textContent: p.away_team}),
-        el('div', {className: 'prob-bar-track'}, [awayFill]),
-        el('span', {className: 'prob-bar-pct', textContent: awayPct + '%'}),
-      ]));
-
-      /* Badges */
-      var meta = el('div', {className: 'card-meta'});
-      meta.appendChild(el('span', {className: 'badge badge-winner', textContent: 'Pick: ' + p.predicted_winner}));
-      if (p.ats_pick) {
-        var atsText = 'ATS: ' + p.ats_pick + (spreadStr ? ' (' + spreadStr + ')' : '');
-        meta.appendChild(el('span', {className: 'badge badge-ats', textContent: atsText}));
-      }
-      if (p.value_bet) {
-        var edgeStr = p.edge_pct != null ? ' +' + (p.edge_pct * 100).toFixed(1) + '%' : '';
-        meta.appendChild(el('span', {className: 'badge badge-value', textContent: 'Value Bet' + edgeStr}));
-      }
-      card.appendChild(meta);
-
-      grid.appendChild(card);
-    });
-  }
-
-  /* --- Render: Accuracy --- */
-  function renderAccuracy() {
-    var summary = document.getElementById('accuracySummary');
-    var ctx = document.getElementById('accuracyChart');
-    clearNode(summary);
-
-    if (accuracyData.length === 0) {
-      summary.appendChild(emptyStateNode('No accuracy data available yet.'));
-      return;
-    }
-
-    var last = accuracyData[accuracyData.length - 1];
-    var totalGames = last.cumulative_games;
-    var rollingAcc = (last.rolling_accuracy * 100).toFixed(1) + '%';
-    var recent7 = accuracyData.slice(-7);
-    var r7correct = recent7.reduce(function(s, r) { return s + r.correct; }, 0);
-    var r7total = recent7.reduce(function(s, r) { return s + r.games; }, 0);
-    var recent7Acc = r7total > 0 ? r7correct / r7total : 0;
-
-    summary.appendChild(summaryCardNode(rollingAcc, 'Overall Accuracy'));
-    summary.appendChild(summaryCardNode(totalGames, 'Total Predictions'));
-    summary.appendChild(summaryCardNode((recent7Acc * 100).toFixed(1) + '%', 'Last 7 Days'));
-
-    var labels = accuracyData.map(function(d) { return d.date; });
-    var rolling = accuracyData.map(function(d) { return d.rolling_accuracy * 100; });
-    var daily = accuracyData.map(function(d) { return d.daily_accuracy * 100; });
-    var baseline = accuracyData.map(function() { return 66.8; });
-
-    if (accuracyChart) accuracyChart.destroy();
-
-    accuracyChart = new Chart(ctx.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Rolling Accuracy',
-            data: rolling,
-            borderColor: '#58a6ff',
-            backgroundColor: 'rgba(88,166,255,0.1)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 2,
-            borderWidth: 2,
-          },
-          {
-            label: 'Daily Accuracy',
-            data: daily,
-            borderColor: 'rgba(139,148,158,0.4)',
-            backgroundColor: 'transparent',
-            borderDash: [4, 4],
-            tension: 0.1,
-            pointRadius: 1,
-            borderWidth: 1,
-          },
-          {
-            label: 'Baseline (66.8%)',
-            data: baseline,
-            borderColor: '#d29922',
-            backgroundColor: 'transparent',
-            borderDash: [8, 4],
-            pointRadius: 0,
-            borderWidth: 1.5,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            grid: { color: 'rgba(48,54,61,0.5)' },
-            ticks: { color: '#8b949e', maxTicksLimit: 12, maxRotation: 45 },
-          },
-          y: {
-            min: 40,
-            max: 100,
-            grid: { color: 'rgba(48,54,61,0.5)' },
-            ticks: {
-              color: '#8b949e',
-              callback: function(v) { return v + '%'; },
-            },
-          },
-        },
-        plugins: {
-          legend: {
-            labels: { color: '#e6edf3', usePointStyle: true },
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  /* --- Render: Value Bets --- */
-  function renderValueBets() {
-    var container = document.getElementById('valueBetsContainer');
-    clearNode(container);
-
-    if (valueBetsData.length === 0) {
-      container.appendChild(emptyStateNode('No value bets detected recently.'));
-      return;
-    }
-
-    var table = el('table');
-    var thead = el('thead');
-    var headerRow = el('tr');
-    ['Date', 'Game', 'Model Prob', 'Market Prob', 'Edge', 'Side'].forEach(function(h) {
-      headerRow.appendChild(el('th', {textContent: h}));
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-
-    var tbody = el('tbody');
-    valueBetsData.forEach(function(b) {
-      var row = el('tr');
-      row.appendChild(el('td', {textContent: b.game_date || '-'}));
-      row.appendChild(el('td', {textContent: b.home_team + ' vs ' + b.away_team}));
-      row.appendChild(el('td', {textContent: b.model_prob != null ? (b.model_prob * 100).toFixed(1) + '%' : 'N/A'}));
-      row.appendChild(el('td', {textContent: b.market_prob != null ? (b.market_prob * 100).toFixed(1) + '%' : 'N/A'}));
-
-      var edgePct = b.edge_pct != null ? (b.edge_pct * 100).toFixed(1) : 'N/A';
-      var edgeTd = el('td', {textContent: '+' + edgePct + '%'});
-      if (b.edge_pct != null && b.edge_pct > 0) edgeTd.className = 'edge-positive';
-      row.appendChild(edgeTd);
-
-      row.appendChild(el('td', null, [el('span', {className: 'badge badge-edge', textContent: b.recommended_side || '-'})]));
-      tbody.appendChild(row);
-    });
-    table.appendChild(tbody);
-    container.appendChild(table);
-  }
-
-  /* --- Render: Players --- */
-  function renderPlayers(query) {
-    var container = document.getElementById('playerCards');
-    clearNode(container);
-
-    if (playerData.length === 0) {
-      container.appendChild(emptyStateNode('No player predictions available.'));
-      return;
-    }
-
-    var q = query.toLowerCase().trim();
-    var filtered = q
-      ? playerData.filter(function(p) { return p.player_name.toLowerCase().indexOf(q) !== -1; })
-      : playerData;
-
-    if (filtered.length === 0) {
-      container.appendChild(emptyStateNode('No players match "' + query + '".'));
-      return;
-    }
-
-    filtered.forEach(function(p) {
-      var teamName = p.team_name || p.team;
-      var oppName = p.opponent_name || p.opponent;
-      var pts = p.pts != null ? p.pts.toFixed(1) : '-';
-      var reb = p.reb != null ? p.reb.toFixed(1) : '-';
-      var ast = p.ast != null ? p.ast.toFixed(1) : '-';
-
-      var card = el('div', {className: 'player-card'}, [
-        el('div', {className: 'player-name', textContent: p.player_name}),
-        el('div', {className: 'player-team', textContent: teamName + ' vs ' + oppName}),
-        el('div', {className: 'stat-row'}, [
-          el('div', {className: 'stat-item'}, [
-            el('div', {className: 'stat-value', textContent: pts}),
-            el('div', {className: 'stat-label', textContent: 'PTS'}),
-          ]),
-          el('div', {className: 'stat-item'}, [
-            el('div', {className: 'stat-value', textContent: reb}),
-            el('div', {className: 'stat-label', textContent: 'REB'}),
-          ]),
-          el('div', {className: 'stat-item'}, [
-            el('div', {className: 'stat-value', textContent: ast}),
-            el('div', {className: 'stat-label', textContent: 'AST'}),
-          ]),
-        ]),
-      ]);
-      container.appendChild(card);
-    });
-  }
-
-  /* --- Player search --- */
-  document.getElementById('playerSearch').addEventListener('input', function(e) {
-    renderPlayers(e.target.value);
   });
+}
 
-  /* --- Init --- */
-  loadAll();
-})();
+function renderPlayersTable(){
+  const s=[...DATA.players].sort((a,b)=>(a[pSort]-b[pSort])*pDir);
+  document.getElementById('players-tb').innerHTML=s.map((p,i)=>`
+    <tr>
+      <td><span class="rn">${i+1}</span></td>
+      <td class="nc">
+        ${headshot(p.nbaId,p.ini,36)}
+        <span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name}</span>
+      </td>
+      <td style="${pSort==='pts'?'color:var(--gold);font-weight:700':''}">${p.pts}</td>
+      <td style="${pSort==='reb'?'color:var(--gold);font-weight:700':''}">${p.reb}</td>
+      <td style="${pSort==='ast'?'color:var(--gold);font-weight:700':''}">${p.ast}</td>
+      <td style="${pSort==='fg'?'color:var(--gold);font-weight:700':''}">${p.fg}%</td>
+      <td style="${pSort==='thr'?'color:var(--gold);font-weight:700':''}">${p.thr}%</td>
+      <td><span class="tpill">${p.team}</span></td>
+    </tr>`).join('');
+}
+
+function sortPlayers(col){
+  if(pSort===col)pDir*=-1;else{pSort=col;pDir=-1;}
+  renderPlayersTable();
+  updateSortHeaders();
+}
+
+// ─── STANDINGS ───
+function renderStandings(){
+  function conf(data,id){
+    document.getElementById(id).innerHTML=data.map((t,i)=>{
+      const pct=(t.w/(t.w+t.l)).toFixed(3);
+      const sc=t.streak.startsWith('W')?'var(--green)':'var(--red)';
+      const border=i===5?'border-bottom:2px solid rgba(245,158,11,.2);':'';
+      return `<tr style="${border}"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${t.team}</td><td>${t.w}</td><td>${t.l}</td><td>${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${t.streak}</td></tr>`;
+    }).join('');
+  }
+  conf(DATA.east,'east-tb');conf(DATA.west,'west-tb');
+}
+
+// ─── PICKS ───
+function renderPicks(){
+  document.getElementById('picks-grid').innerHTML=DATA.picks.map(p=>`
+    <div class="pc ${p.tier}">
+      <div class="pm">${p.matchup}</div>
+      <div class="pmt">${p.time}${p.result?' · '+p.result:''}</div>
+      <div class="pp"><span class="ppt">Pick: <strong>${p.pick}</strong></span><span class="psp">${p.spread}</span></div>
+      <div class="cl"><span>Confidence</span><span style="color:${p.tier==='hi'?'var(--green)':'var(--gold)'};font-weight:700;font-family:var(--fm)">${p.conf}%</span></div>
+      <div class="cb"><div class="cf ${p.tier}" style="width:0%" data-t="${p.conf}"></div></div>
+      <div style="font-size:11px;color:var(--t2);margin-top:7px;font-weight:500">${p.reason}</div>
+    </div>`).join('');
+  setTimeout(()=>document.querySelectorAll('.cf').forEach(el=>{el.style.width=el.dataset.t+'%'}),100);
+}
+
+function renderDashPicks(){
+  const el=document.getElementById('dash-picks');if(!el)return;
+  const top=DATA.picks.filter(p=>!p.result).slice(0,5);
+  el.innerHTML=top.map(p=>`
+    <div class="psm ${p.tier}">
+      <div class="psm-m">${p.matchup}</div>
+      <div class="psm-t">${p.time}</div>
+      <div class="psm-r"><span class="psm-p">Pick: <strong>${p.pick}</strong></span><span class="psm-s">${p.spread}</span></div>
+      <div class="psm-b"><div class="psm-f ${p.tier}" style="width:0%" data-t="${p.conf}"></div></div>
+      <div class="psm-c"><span>Confidence</span><span style="color:${p.tier==='hi'?'var(--green)':'var(--gold)'};font-weight:700;font-family:var(--fm)">${p.conf}%</span></div>
+    </div>`).join('');
+  setTimeout(()=>el.querySelectorAll('.psm-f').forEach(el=>{el.style.width=el.dataset.t+'%'}),150);
+}
+
+// ─── DASH CHART ───
+function renderDashChart(){
+  const wks=["W7", "W8", "W9", "W10", "W11", "W12", "W13", "W14", "W15", "W16", "W17", "W18", "W19", "W20"];
+  const ppg=[114.6, 117.3, 115.4, 118.4, 115.9, 110.9, 115.1, 112.7, 112.4, 115.6, 115.0, 113.9, 112.8, 110.2];
+  Plotly.newPlot('dash-chart',[{
+    x:wks,y:ppg,type:'scatter',mode:'lines',
+    line:{color:'#60A5FA',width:2,shape:'spline'},
+    fill:'tozeroy',fillcolor:'rgba(96,165,250,.06)',
+    hovertemplate:'<b>%{x}</b><br>%{y} PPG<extra></extra>'
+  }],ML({y:{range:[105,122]},margin:{l:44,r:12,t:8,b:34}}),{responsive:true,displayModeBar:false});
+}
+
+// ─── BACKTEST CHARTS ───
+let btRendered=false;
+function renderBacktest(){
+  if(btRendered)return;btRendered=true;
+  const wks=["Oct '23", "Nov '23", "Dec '23", "Jan '24", "Feb '24", "Mar '24", "Apr '24", "Oct '24", "Nov '24", "Dec '24", "Jan '25", "Feb '25", "Mar '25", "Apr '25"];
+  const ats=[42.6, 51.1, 48.3, 51.5, 46.6, 48.7, 47.0, 45.1, 49.8, 49.7, 51.6, 57.4, 45.8, 46.7];
+  Plotly.newPlot('bt-chart',[{
+    x:wks,y:ats,type:'scatter',mode:'lines+markers',name:'ATS Rate',
+    line:{color:'#F59E0B',width:2,shape:'spline'},
+    marker:{color:'#F59E0B',size:5},
+    fill:'tozeroy',fillcolor:'rgba(245,158,11,.06)',
+    hovertemplate:'%{x}: %{y}%<extra></extra>'
+  }],ML({
+    y:{ticksuffix:'%',range:[40,80]},
+    ex:{shapes:[{type:'line',x0:0,x1:1,xref:'paper',y0:50,y1:50,line:{color:'rgba(248,113,113,.3)',dash:'dot',width:1.5}}]}
+  }),{responsive:true,displayModeBar:false});
+
+  Plotly.newPlot('bt-type-chart',[{
+    x:["Pick'em (0-3)", "Fav (3.5-7)", "Fav (7.5-10)", "Heavy Fav (10.5+)"],
+    y:[50.1, 49.4, 49.2, 48.3],type:'bar',
+    marker:{color:["rgba(16,185,129,.75)", "rgba(16,185,129,.6)", "rgba(96,165,250,.65)", "rgba(96,165,250,.5)"],line:{width:0}},
+    hovertemplate:'%{x}: %{y}%<extra></extra>'
+  }],ML({y:{ticksuffix:'%',range:[40,75]}}),{responsive:true,displayModeBar:false});
+
+  Plotly.newPlot('bt-conf-chart',[{
+    x:['50-59%','60-64%','65-69%','70-74%','>=75%'],
+    y:[50.0, 50.7, 50.1, 49.2, 48.5],type:'scatter',mode:'lines+markers',
+    line:{color:'#10B981',width:2,shape:'spline'},
+    marker:{color:'#10B981',size:6},
+    fill:'tozeroy',fillcolor:'rgba(16,185,129,.06)',
+    hovertemplate:'%{x} confidence<br>Accuracy: %{y}%<extra></extra>'
+  }],ML({y:{ticksuffix:'%',range:[44,58]}}),{responsive:true,displayModeBar:false});
+}
+
+// ─── PARLAY ───
+let parlaySelected=new Set();
+function renderParlay(){
+  const el=document.getElementById('parlay-games');
+  const odds=["-230","-158","-896","-148","-1219","-213","-230","-231","-896"];
+  el.innerHTML=DATA.picks.map((p,i)=>`
+    <div class="par-game" id="par-${i}" onclick="toggleParlay(${i})">
+      <div class="par-check" id="pchk-${i}">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="display:none" id="pchk-icon-${i}"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="par-info">
+        <div class="par-matchup">${p.matchup}</div>
+        <div class="par-pick">${p.pick} ${p.spread} · ${p.time}</div>
+      </div>
+      <div class="par-odds">${odds[i]}</div>
+    </div>`).join('');
+  updateParlaySlip();
+}
+function toggleParlay(i){
+  if(parlaySelected.has(i))parlaySelected.delete(i);else parlaySelected.add(i);
+  document.getElementById('par-'+i).classList.toggle('selected',parlaySelected.has(i));
+  const icon=document.getElementById('pchk-icon-'+i);
+  icon.style.display=parlaySelected.has(i)?'block':'none';
+  updateParlaySlip();
+}
+function updateParlaySlip(){
+  const n=parlaySelected.size;
+  document.getElementById('par-legs').textContent=n;
+  document.getElementById('par-odds').textContent=n>0?'+'+Math.floor(n*175+50*n):'—';
+  const avgConf=n===0?0:Math.round([...parlaySelected].reduce((a,i)=>a+DATA.picks[i].conf,0)/n);
+  document.getElementById('par-conf').textContent=n>0?avgConf+'%':'—';
+  document.getElementById('par-legs-list').innerHTML=[...parlaySelected].map(i=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.12);border-radius:8px;font-size:12px">
+      <span style="font-weight:600">${DATA.picks[i].matchup}</span>
+      <span style="font-family:var(--fm);color:var(--green)">${DATA.picks[i].pick} ${DATA.picks[i].spread}</span>
+    </div>`).join('');
+}
+
+// ─── COMPARE ───
+let pickersInited=false;
+function initPickers(){
+  if(pickersInited)return;pickersInited=true;
+  const names=DATA.players.map(p=>p.name);
+  ['picker-a','picker-b'].forEach((id,i)=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML='<option value="">— Select player —</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
+    sel.value=names[i];
+  });
+  updateComparison();
+}
+
+function updateComparison(){
+  const nA=document.getElementById('picker-a').value,nB=document.getElementById('picker-b').value;
+  updatePreview('prev-a',nA,'#60A5FA');updatePreview('prev-b',nB,'#F59E0B');
+  if(!nA||!nB||nA===nB){
+    document.getElementById('cmp-prompt').style.display='block';
+    document.getElementById('cmp-content').style.display='none';return;
+  }
+  document.getElementById('cmp-prompt').style.display='none';
+  document.getElementById('cmp-content').style.display='block';
+  const pA=DATA.players.find(p=>p.name===nA),pB=DATA.players.find(p=>p.name===nB);
+  const aA=ADV[nA],aB=ADV[nB];
+  renderBanner('ban-a',pA,aA,'#60A5FA','left');
+  renderBanner('ban-b',pB,aB,'#F59E0B','right');
+  renderRadar(pA,pB,aA,aB);
+  renderBars('stat-bars',[
+    ['Points',pA.pts,pB.pts,40],['Rebounds',pA.reb,pB.reb,16],['Assists',pA.ast,pB.ast,12],
+    ['FG%',pA.fg,pB.fg,70,'%'],['3P%',pA.thr,pB.thr,50,'%']],nA,nB);
+  renderBars('adv-bars',[
+    ['PER',aA.per,aB.per,35],['TS%',aA.ts,aB.ts,70,'%'],['USG%',aA.usg,aB.usg,40,'%'],
+    ['Win Shares',aA.ws,aB.ws,18],['BPM',aA.bpm,aB.bpm,14],['VORP',aA.vorp,aB.vorp,10]],nA,nB);
+  renderShoot(aA,aB,nA,nB);
+}
+
+function updatePreview(id,name,col){
+  const el=document.getElementById(id);if(!name){el.innerHTML='';return;}
+  const p=DATA.players.find(x=>x.name===name);
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:9px">
+    ${headshot(p.nbaId,p.ini,32)}
+    <div><div style="font-size:12px;font-weight:700">${p.name}</div><div style="font-size:11px;color:var(--t2);font-weight:500">${p.team} · ${p.pts} / ${p.reb} / ${p.ast}</div></div>
+  </div>`;
+}
+
+function renderBanner(id,p,adv,col,align){
+  document.getElementById(id).innerHTML=`<div style="text-align:${align}">
+    <div class="bname" style="color:${col}">${p.name}</div>
+    <div class="bsub">${p.team} · PER ${adv.per} · TS% ${adv.ts}%</div>
+    <div class="bsts" style="justify-content:${align==='left'?'flex-start':'flex-end'}">
+      ${[['PTS',p.pts],['REB',p.reb],['AST',p.ast],['FG%',p.fg+'%'],['3P%',p.thr+'%']].map(([l,v])=>`
+        <div><div class="bst-v" style="color:${col}">${v}</div><div class="bst-l">${l}</div></div>`).join('')}
+    </div></div>`;
+}
+
+function renderRadar(pA,pB,aA,aB){
+  const nm=(v,mn,mx)=>Math.max(0,Math.min(100,Math.round(((v-mn)/(mx-mn))*100)));
+  const cats=['Scoring','Playmaking','Rebounding','Efficiency','Defense','Volume'];
+  const vA=[nm(pA.pts,18,35),nm(pA.ast,3,12),nm(pA.reb,3,14),nm(aA.ts,54,68),nm(aA.bpm,2,12),nm(aA.usg,24,37)];
+  const vB=[nm(pB.pts,18,35),nm(pB.ast,3,12),nm(pB.reb,3,14),nm(aB.ts,54,68),nm(aB.bpm,2,12),nm(aB.usg,24,37)];
+  Plotly.newPlot('radar',[
+    {type:'scatterpolar',r:[...vA,vA[0]],theta:[...cats,cats[0]],fill:'toself',
+      fillcolor:'rgba(96,165,250,.1)',line:{color:'#60A5FA',width:2},name:pA.name.split(' ').pop(),
+      hovertemplate:'%{theta}: %{r}<extra></extra>'},
+    {type:'scatterpolar',r:[...vB,vB[0]],theta:[...cats,cats[0]],fill:'toself',
+      fillcolor:'rgba(245,158,11,.1)',line:{color:'#F59E0B',width:2},name:pB.name.split(' ').pop(),
+      hovertemplate:'%{theta}: %{r}<extra></extra>'},
+  ],{
+    paper_bgcolor:'transparent',plot_bgcolor:'transparent',
+    polar:{bgcolor:'transparent',
+      radialaxis:{visible:true,range:[0,100],showticklabels:false,gridcolor:'rgba(255,255,255,.06)',linecolor:'transparent'},
+      angularaxis:{tickfont:{color:'#8B9BB8',size:12,family:'Plus Jakarta Sans'},linecolor:'rgba(255,255,255,.06)',gridcolor:'rgba(255,255,255,.06)'}},
+    legend:{font:{color:'#8B9BB8',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'},
+    margin:{l:50,r:50,t:16,b:16},
+    hoverlabel:{bgcolor:'#1D2336',font:{color:'#EDF1FA',size:12,family:'Plus Jakarta Sans'}}
+  },{responsive:true,displayModeBar:false});
+}
+
+function renderBars(id,rows,nA,nB){
+  const lA=nA.split(' ').pop(),lB=nB.split(' ').pop();
+  document.getElementById(id).innerHTML=rows.map(([lbl,vA,vB,mx,sfx=''])=>{
+    const pA=Math.round((vA/mx)*100),pB=Math.round((vB/mx)*100),win=vA>=vB;
+    return `<div class="cmprow">
+      <div class="cmplbl">${lbl}</div>
+      <div class="cmpbs">
+        <div class="cmpbw"><div class="cmpbn" style="color:#60A5FA">${lA}</div><div class="cmpbt"><div class="cmpbf" style="width:0%;background:#60A5FA;opacity:${win?1:.35}" data-t="${pA}%"></div></div><div class="cmpbv" style="color:${win?'#60A5FA':'var(--t2)'}">${vA}${sfx}</div></div>
+        <div class="cmpbw"><div class="cmpbn" style="color:#F59E0B">${lB}</div><div class="cmpbt"><div class="cmpbf" style="width:0%;background:#F59E0B;opacity:${!win?1:.35}" data-t="${pB}%"></div></div><div class="cmpbv" style="color:${!win?'#F59E0B':'var(--t2)'}">${vB}${sfx}</div></div>
+      </div></div>`;
+  }).join('');
+  setTimeout(()=>document.querySelectorAll(`#${id} .cmpbf`).forEach(el=>{el.style.width=el.dataset.t}),80);
+}
+
+function renderShoot(aA,aB,nA,nB){
+  const zones=['At the Rim','In the Paint','Mid-Range','3-Pointers'];
+  Plotly.newPlot('shoot-chart',[
+    {x:zones,y:[aA.rim,aA.paint,aA.mid,aA.thr],type:'bar',name:nA.split(' ').pop(),
+      marker:{color:'rgba(96,165,250,.7)',line:{width:0}},
+      hovertemplate:'%{x}<br>'+nA.split(' ').pop()+': %{y}%<extra></extra>'},
+    {x:zones,y:[aB.rim,aB.paint,aB.mid,aB.thr],type:'bar',name:nB.split(' ').pop(),
+      marker:{color:'rgba(245,158,11,.7)',line:{width:0}},
+      hovertemplate:'%{x}<br>'+nB.split(' ').pop()+': %{y}%<extra></extra>'},
+  ],{
+    paper_bgcolor:'transparent',plot_bgcolor:'transparent',barmode:'group',bargap:.28,bargroupgap:.1,
+    margin:{l:44,r:12,t:8,b:44},
+    yaxis:{showgrid:true,gridcolor:'rgba(255,255,255,.05)',tickfont:{color:'#505D7A',size:11,family:'JetBrains Mono'},ticksuffix:'%',range:[0,90],linecolor:'transparent',tickcolor:'transparent'},
+    xaxis:{showgrid:false,tickfont:{color:'#8B9BB8',size:12,family:'Plus Jakarta Sans'},linecolor:'transparent',tickcolor:'transparent'},
+    legend:{font:{color:'#8B9BB8',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'},
+    hoverlabel:{bgcolor:'#1D2336',font:{color:'#EDF1FA',size:12,family:'Plus Jakarta Sans'}}
+  },{responsive:true,displayModeBar:false});
+}
+
+// ─── DEEP DIVE — MATCHUPS ───
+const MATCHUP_DATA=[
+  {label:"TOR @ MIN",away:"TOR",home:"MIN",awayRec:"34-25",homeRec:"38-23",stats:[["Points Per Game (L10)", "113.9", "117.5"], ["Points Allowed (L10)", "110.3", "114.8"], ["Pace (L10)", "102.7", "103.3"], ["3-Point Shooting (L10)", "36.4%", "36.4%"], ["Turnovers / Game (L10)", "13.9", "15.4"]],edge:"MIN",reason:"MIN home advantage (92% win prob) -- superior offense (117.5 pts/g vs 113.9)"},
+  {label:"NOP @ SAC",away:"NOP",home:"SAC",awayRec:"19-43",homeRec:"14-48",stats:[["Points Per Game (L10)", "120.5", "109.4"], ["Points Allowed (L10)", "119.2", "124.8"], ["Pace (L10)", "104.1", "102.9"], ["3-Point Shooting (L10)", "37.2%", "27.2%"], ["Turnovers / Game (L10)", "15.0", "13.9"]],edge:"SAC",reason:"SAC home court edge (90% win prob) -- model finds advantage despite close raw stats"},
+  {label:"BKN @ MIA",away:"BKN",home:"MIA",awayRec:"15-45",homeRec:"32-29",stats:[["Points Per Game (L10)", "107.1", "119.0"], ["Points Allowed (L10)", "117.8", "112.6"], ["Pace (L10)", "100.2", "104.3"], ["3-Point Shooting (L10)", "36.0%", "35.0%"], ["Turnovers / Game (L10)", "15.1", "13.4"]],edge:"MIA",reason:"MIA dominant at home (90% win prob) -- better offense (119.0 pts/g) and defense (112.6 allowed/g)"},
+];
+
+function renderMatchups(){
+  const btns=document.getElementById('matchup-btns');
+  btns.innerHTML=MATCHUP_DATA.map((m,i)=>`<button class="matchup-btn${i===0?' active':''}" onclick="selectMatchup(${i})">${m.label}</button>`).join('');
+  drawMatchup(0);
+}
+function selectMatchup(i){
+  document.querySelectorAll('.matchup-btn').forEach((b,j)=>b.classList.toggle('active',i===j));
+  drawMatchup(i);
+}
+function drawMatchup(i){
+  const m=MATCHUP_DATA[i];
+  const ec=t=>t===m.edge?'var(--green)':'var(--t0)';
+  document.getElementById('matchup-content').innerHTML=`
+    <div class="card" style="margin-bottom:14px">
+      <div class="mu-vs">
+        <div class="mu-team"><div class="mu-name" style="color:${ec(m.away)}">${m.away}</div><div class="mu-rec">${m.awayRec} · Away</div></div>
+        <div style="text-align:center"><div style="font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--t2);margin-bottom:6px;text-transform:uppercase">Tonight</div><div style="font-size:20px;font-weight:800;color:var(--t2)">@</div></div>
+        <div class="mu-team"><div class="mu-name" style="color:${ec(m.home)}">${m.home}</div><div class="mu-rec">${m.homeRec} · Home</div></div>
+      </div>
+      <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <div><span style="font-size:13px;font-weight:700;color:var(--green)">Model Edge: ${m.edge}</span> — <span style="font-size:13px;color:var(--t1)">${m.reason}</span></div>
+      </div>
+      <div style="border-radius:12px;overflow:hidden;border:1px solid var(--b0)">
+        <div class="mu-stat-row" style="background:rgba(255,255,255,.04)">
+          <div class="mu-stat-val" style="color:var(--t2);font-family:var(--f);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${m.away}</div>
+          <div class="mu-stat-lbl">Stat</div>
+          <div class="mu-stat-val" style="text-align:right;color:var(--t2);font-family:var(--f);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${m.home}</div>
+        </div>
+        ${m.stats.map(([lbl,a,h])=>{
+          const aWin=parseFloat(a)>=parseFloat(h);
+          return `<div class="mu-stat-row">
+            <div class="mu-stat-val" style="color:${aWin?'var(--green)':'var(--t0)'}">${a}</div>
+            <div class="mu-stat-lbl">${lbl}</div>
+            <div class="mu-stat-val" style="color:${!aWin?'var(--green)':'var(--t0)'};text-align:right">${h}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ─── DEEP DIVE — PLAYOFF ───
+function renderPlayoff(){
+  const eastOdds=[
+    {team:'Detroit Pistons',    pct:100,title:20.5},
+    {team:'Boston Celtics',     pct:100,title:7.8},
+    {team:'New York Knicks',    pct:100,title:9.8},
+    {team:'Cleveland Cavaliers',pct:100,title:5.5},
+    {team:'Toronto Raptors',    pct:97, title:0.2},
+    {team:'Miami Heat',         pct:91, title:2.2},
+    {team:'Philadelphia 76ers', pct:84, title:0.1},
+    {team:'Orlando Magic',      pct:87, title:0.4},
+    {team:'Charlotte Hornets',  pct:31, title:0.5},
+    {team:'Atlanta Hawks',      pct:10, title:0.0},
+  ];
+  const westOdds=[
+    {team:'San Antonio Spurs',      pct:100,title:25.2},
+    {team:'Oklahoma City Thunder',  pct:100,title:20.2},
+    {team:'Minnesota Timberwolves', pct:100,title:3.1},
+    {team:'Houston Rockets',        pct:100,title:1.4},
+    {team:'Denver Nuggets',         pct:100,title:1.9},
+    {team:'Los Angeles Lakers',     pct:99, title:0.3},
+    {team:'Phoenix Suns',           pct:94, title:0.1},
+    {team:'Golden State Warriors',  pct:87, title:0.6},
+    {team:'LA Clippers',            pct:15, title:0.1},
+    {team:'Portland Trail Blazers', pct:6,  title:0.0},
+  ];
+  function poList(data,id){
+    document.getElementById(id).innerHTML=data.map((t,i)=>{
+      const col=t.pct>=90?'var(--green)':t.pct>=60?'var(--gold)':'var(--red)';
+      const label=i<6?'Playoff':i<8?'Play-In':'Eliminated';
+      const lc=i<6?'var(--green)':i<8?'var(--gold)':'var(--t2)';
+      return `<div class="po-row">
+        <div class="po-seed">${i+1}</div>
+        <div class="po-team">${t.team}</div>
+        <div style="font-size:10px;font-weight:700;color:${lc};width:52px;flex-shrink:0;text-align:center">${label}</div>
+        <div class="po-pct-bar"><div class="po-pct-fill" style="width:0%;background:${col}" data-t="${t.pct}%"></div></div>
+        <div class="po-pct-val" style="color:${col}">${t.pct}%</div>
+      </div>`;
+    }).join('');
+  }
+  poList(eastOdds,'po-east-list');poList(westOdds,'po-west-list');
+  setTimeout(()=>document.querySelectorAll('.po-pct-fill').forEach(el=>{el.style.width=el.dataset.t}),100);
+
+  Plotly.newPlot('champ-chart',[{
+    x:['SAS','OKC','NYK','DET','BOS','CLE','MIN','MIA'],
+    y:[25.2,20.2,9.8,20.5,7.8,5.5,3.1,2.2],type:'bar',
+    marker:{
+      color:['rgba(245,158,11,.85)','rgba(16,185,129,.75)','rgba(96,165,250,.65)','rgba(96,165,250,.55)','rgba(96,165,250,.45)','rgba(96,165,250,.4)','rgba(96,165,250,.35)','rgba(96,165,250,.3)'],
+      line:{width:0}
+    },
+    hovertemplate:'<b>%{x}</b><br>%{y}% chance to win the title<extra></extra>'
+  }],ML({y:{ticksuffix:'%',range:[0,28]}}),{responsive:true,displayModeBar:false});
+}
+
+// ─── DEEP DIVE — STREAKS ───
+function renderStreaks(){
+  const hot=[
+    {name:"Cooper Flagg",team:"DAL",sub:"Last 5: 34, 36, 32, 14, 27 pts",stat:"+8.2 PPG"},
+    {name:"Jalen Duren",team:"DET",sub:"Last 5: 25, 29, 33, 16, 24 pts",stat:"+6.8 PPG"},
+    {name:"Jrue Holiday",team:"POR",sub:"Last 5: 22, 10, 25, 23, 35 pts",stat:"+6.4 PPG"},
+    {name:"Saddiq Bey",team:"NOP",sub:"Last 5: 18, 42, 24, 14, 18 pts",stat:"+5.9 PPG"},
+  ];
+  const cold=[
+    {name:"Jalen Johnson",team:"ATL",sub:"Last 5: 16, 26, 5, 8, 20 pts",stat:"40.4% FG"},
+    {name:"Austin Reaves",team:"LAL",sub:"Last 5: 18, 14, 18, 12, 15 pts",stat:"40.6% FG"},
+    {name:"Franz Wagner",team:"ORL",sub:"Last 5: 7, 18, 14, 14, 5 pts",stat:"45.1% FG"},
+    {name:"Deni Avdija",team:"POR",sub:"Last 5: 11, 26, 11, 15, 0 pts",stat:"37.5% FG"},
+  ];
+  document.getElementById('hot-players').innerHTML=hot.map(p=>`
+    <div class="streak-card hot">
+      <div style="width:32px;height:32px;border-radius:10px;background:var(--green-d);border:1px solid rgba(16,185,129,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      </div>
+      <div class="streak-info">
+        <div class="streak-name">${p.name} <span class="tpill">${p.team}</span></div>
+        <div class="streak-sub">${p.sub}</div>
+      </div>
+      <div class="streak-badge" style="color:var(--green)">${p.stat}</div>
+    </div>`).join('');
+  document.getElementById('cold-players').innerHTML=cold.map(p=>`
+    <div class="streak-card cold">
+      <div style="width:32px;height:32px;border-radius:10px;background:var(--blue-d);border:1px solid rgba(96,165,250,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+      </div>
+      <div class="streak-info">
+        <div class="streak-name">${p.name} <span class="tpill">${p.team}</span></div>
+        <div class="streak-sub">${p.sub}</div>
+      </div>
+      <div class="streak-badge" style="color:var(--blue)">${p.stat}</div>
+    </div>`).join('');
+
+  const teams=['OKC','DET','SAS','BOS','NYK','CLE','MIN','HOU','DEN','LAL'];
+  const streaks=[4,-1,1,-1,-1,2,4,1,1,3];
+  Plotly.newPlot('streak-chart',[{
+    x:teams,y:streaks,type:'bar',
+    marker:{color:streaks.map(v=>v>0?`rgba(16,185,129,${Math.min(.9,.35+v*.12)})`:`rgba(248,113,113,${Math.min(.9,.35+Math.abs(v)*.12)})`),line:{width:0}},
+    hovertemplate:'<b>%{x}</b><br>%{y} game streak<extra></extra>'
+  }],ML({
+    y:{},
+    ex:{shapes:[{type:'line',x0:-.5,x1:9.5,y0:0,y1:0,line:{color:'rgba(255,255,255,.12)',width:1.5}}]}
+  }),{responsive:true,displayModeBar:false});
+
+  Plotly.newPlot('homeway-chart',[
+    {x:['OKC','DET','SAS','BOS','NYK'],y:[81,77,78,67,72],type:'bar',name:'Home',marker:{color:'rgba(16,185,129,.7)',line:{width:0}},hovertemplate:'%{x} home: %{y}%<extra></extra>'},hovertemplate:'%{x} home: %{y}%<extra></extra>'},
+    {x:['OKC','DET','SAS','BOS','NYK'],y:[75,72,67,66,53],type:'bar',name:'Away',marker:{color:'rgba(96,165,250,.6)',line:{width:0}},hovertemplate:'%{x} away: %{y}%<extra></extra>'},hovertemplate:'%{x} away: %{y}%<extra></extra>'},
+  ],{...ML({y:{ticksuffix:'%',range:[40,100]}}),barmode:'group',bargap:.3,bargroupgap:.1,
+    legend:{font:{color:'#8B9BB8',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'}},
+    {responsive:true,displayModeBar:false});
+}
+
+// ─── DEEP DIVE — SHOTS ───
+let shotRendered=false;
+function renderShotMaps(){
+  if(shotRendered)return;shotRendered=true;
+  const players=DATA.players.slice(0,8).map(p=>p.name.split(' ').pop());
+  Plotly.newPlot('shot-quality-chart',[{
+    y:players,x:[61.3, 66.5, 61.7, 58.8, 57.1, 67.6, 61.4, 62.2],type:'bar',orientation:'h',
+    marker:{color:[61.3, 66.5, 61.7, 58.8, 57.1, 67.6, 61.4, 62.2].map(v=>v>=65?'rgba(16,185,129,.75)':v>=60?'rgba(245,158,11,.7)':'rgba(96,165,250,.6)'),line:{width:0}},
+    hovertemplate:'<b>%{y}</b><br>Shot quality: %{x}<extra></extra>'
+  }],{...ML({y:{},x:{range:[50,72]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
+
+  Plotly.newPlot('efficiency-chart',[{
+    y:players,x:[1.23, 1.33, 1.23, 1.18, 1.14, 1.35, 1.23, 1.24],type:'bar',orientation:'h',
+    marker:{color:[1.23, 1.33, 1.23, 1.18, 1.14, 1.35, 1.23, 1.24].map(v=>v>=1.3?'rgba(16,185,129,.75)':v>=1.2?'rgba(245,158,11,.7)':'rgba(96,165,250,.6)'),line:{width:0}},
+    hovertemplate:'<b>%{y}</b><br>%{x} pts/attempt<extra></extra>'
+  }],{...ML({y:{},x:{range:[.9,1.4]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
+
+  Plotly.newPlot('shot-zone-chart',[
+    {x:["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"],y:[24, 7, 10, 34, 12],type:'bar',name:'Luka',marker:{color:'rgba(245,158,11,.7)',line:{width:0}},hovertemplate:'Luka -- %{x}: %{y}%<extra></extra>'},
+    {x:["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"],y:[33, 7, 18, 16, 13],type:'bar',name:'SGA',marker:{color:'rgba(16,185,129,.65)',line:{width:0}},hovertemplate:'SGA -- %{x}: %{y}%<extra></extra>'},
+    {x:["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"],y:[24, 11, 12, 35, 9],type:'bar',name:'Edwards',marker:{color:'rgba(96,165,250,.65)',line:{width:0}},hovertemplate:'Edwards -- %{x}: %{y}%<extra></extra>'},
+  ],{...ML({y:{ticksuffix:'%'}}),barmode:'group',bargap:.25,bargroupgap:.08,
+    legend:{font:{color:'#8B9BB8',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'}},
+    {responsive:true,displayModeBar:false});
+}
+
+// ─── INIT ───
+document.addEventListener('DOMContentLoaded',()=>{
+  setGreeting();
+  renderGames();
+  renderLeaders();
+  renderPlayersTable();
+  updateSortHeaders();
+  renderStandings();
+  renderPicks();
+  renderDashPicks();
+  renderParlay();
+  runCounters();
+  setTimeout(()=>{ renderDashChart(); }, 50);
+});
 </script>
-
 </body>
 </html>

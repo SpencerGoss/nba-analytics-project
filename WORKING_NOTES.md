@@ -86,3 +86,17 @@
 
 [2026-03-06] [lightgbm] INSIGHT: LightGBM added as guarded candidate in game_outcome_model.py; gradient_boosting still selected (67.1% acc, AUC 0.7406). LightGBM competed but did not win in v2.1.
 [2026-03-06] [lightgbm] WHY: Guarded import `try: from lightgbm import LGBMClassifier; _LGBM_AVAILABLE=True except ImportError: _LGBM_AVAILABLE=False`. LightGBM is available for Optuna HPO in Phase 2. Install: `lightgbm>=4.0.0` in requirements.txt.
+
+### [dashboard]
+
+[2026-03-06] [dashboard] INSIGHT: build_dashboard.py reads nba1.html (template) and applies regex replacements sequentially; new sections must match the post-replacement state of html, not the original template.
+[2026-03-06] [dashboard] WHY: Each section sees html after all previous sections; e.g. "66.2%" must be matched (not "68.9%") because section 11 already replaced it.
+
+[2026-03-06] [dashboard] INSIGHT: player_game_logs.csv uses season_id=22025 for the 202526 season (not 202526); all other CSVs use integer season=202526.
+[2026-03-06] [dashboard] WHY: nba_api returns "22025" format for season_id (2-digit prefix + year start); affects hot/cold player filtering — filter by `season_id == 22025` not `season == 202526`.
+
+[2026-03-06] [dashboard] INSIGHT: ATS cover rates are ~48-51% across all implied-prob buckets and spread sizes — no meaningful edge from raw market signals; the model's 54.9% edge comes from multi-feature ML, not simple spread/prob heuristics.
+[2026-03-06] [dashboard] WHY: Calibration chart should use y-axis range [44,58] not [40,85]; shows honest flat line rather than misleading upward slope. "When sure it wins more" is false for raw implied_prob — change tile sub-text accordingly.
+
+[2026-03-06] [dashboard] INSIGHT: Parlay odds `+${odds[i]}` template literal must become `${odds[i]}` when odds array contains signed strings like "-230" (not plain ints).
+[2026-03-06] [dashboard] WHY: Model-derived odds can be negative (favorites); converting prob to American: fav = -round(100*p/(1-p)), dog = +round(100*(1-p)/p).
