@@ -836,6 +836,28 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 .tp-title{font-size:22px;font-weight:800;letter-spacing:-.5px;}
 .tp-desc{color:var(--t1);font-size:14px;line-height:1.7;max-width:400px;}
 
+/* ── PROPS TAB ── */
+.props-stat-btn{padding:5px 14px;border-radius:20px;border:1px solid var(--b1);background:transparent;color:var(--t1);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;transition:background 140ms,color 140ms,border-color 140ms;}
+.props-stat-btn:hover{background:var(--b0);color:var(--t0);}
+.props-stat-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+.prop-card{background:var(--card-bg,var(--card));border:1px solid var(--b1);border-radius:12px;padding:16px 18px;margin-bottom:12px;}
+.prop-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.prop-player-name{font-size:15px;font-weight:700;color:var(--t0);}
+.prop-player-name.is-injured{text-decoration:line-through;color:var(--t2);}
+.prop-team-chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--b0);color:var(--t1);}
+.prop-out-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;background:rgba(255,70,70,.15);color:#ff4646;border:1px solid rgba(255,70,70,.3);}
+.prop-opp{font-size:12px;color:var(--t2);margin-left:auto;}
+.prop-stats-row{display:flex;flex-wrap:wrap;gap:10px;}
+.prop-stat-block{flex:1;min-width:120px;background:var(--b0);border-radius:10px;padding:10px 12px;}
+.prop-stat-label{font-size:10px;font-weight:700;color:var(--t2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
+.prop-stat-proj{font-size:18px;font-weight:800;color:var(--t0);line-height:1;}
+.prop-stat-proj-sub{font-size:11px;color:var(--t2);margin-top:2px;}
+.prop-book-line{font-size:12px;color:var(--t1);margin-top:4px;}
+.prop-value-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;background:rgba(52,199,89,.15);color:var(--green,#34c759);border:1px solid rgba(52,199,89,.3);margin-top:4px;}
+.prop-last5{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.prop-last5-pill{font-size:10px;font-weight:600;padding:2px 6px;border-radius:6px;background:var(--b1);color:var(--t1);}
+.props-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;gap:8px;color:var(--t2);font-size:14px;}
+
 /* ── BETTING SECTION PAGES ── */
 .bet-page{display:none;animation:fu 200ms cubic-bezier(.16,1,.3,1);}
 .bet-page.active{display:block;}
@@ -1411,7 +1433,19 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 <!-- PROPS (betting tab) -->
 <section id="page-bet-props" class="page">
   <div class="ph"><h1 class="pt">Props</h1><p class="pd">Player prop analysis and model projections</p></div>
-  <div class="tab-placeholder"><div class="tp-icon">&#127936;</div><div class="tp-title">Player Props</div><div class="tp-desc">Player prop projections, over/under analysis, and correlation tools coming soon.</div></div>
+  <!-- filter bar -->
+  <div id="props-filter-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px">
+    <button class="props-stat-btn active" data-stat="ALL" onclick="setPropsFilter('ALL',this)">All</button>
+    <button class="props-stat-btn" data-stat="PTS" onclick="setPropsFilter('PTS',this)">PTS</button>
+    <button class="props-stat-btn" data-stat="REB" onclick="setPropsFilter('REB',this)">REB</button>
+    <button class="props-stat-btn" data-stat="AST" onclick="setPropsFilter('AST',this)">AST</button>
+    <button class="props-stat-btn" data-stat="3PM" onclick="setPropsFilter('3PM',this)">3PM</button>
+    <button class="props-stat-btn" data-stat="STL" onclick="setPropsFilter('STL',this)">STL</button>
+    <button class="props-stat-btn" data-stat="BLK" onclick="setPropsFilter('BLK',this)">BLK</button>
+    <input id="props-search" type="search" placeholder="Search player…" oninput="renderProps()" style="margin-left:auto;padding:7px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card-bg,var(--card));color:var(--t0);font-family:var(--f);font-size:13px;outline:none;min-width:180px"/>
+  </div>
+  <!-- cards container -->
+  <div id="props-grid"></div>
 </section>
 
 <!-- SHARP MONEY (betting tab) -->
@@ -2268,6 +2302,7 @@ function _activateBettingTab(tabId, pillEl){
   if(tabId==='performance')renderBacktest();
   if(tabId==='valuebets')renderValueBets();
   if(tabId==='sharp')renderSharpMoney();
+  if(tabId==='props')renderProps();
 }
 
 let _btDropOpen=false;
@@ -2967,6 +3002,86 @@ function renderShoot(aA,aB,nA,nB){
   },{responsive:true,displayModeBar:false});
 }
 
+// ─── PLAYER PROPS ───
+let _propsStatFilter='ALL';
+
+function setPropsFilter(stat, btnEl){
+  _propsStatFilter=stat;
+  document.querySelectorAll('.props-stat-btn').forEach(b=>b.classList.remove('active'));
+  if(btnEl)btnEl.classList.add('active');
+  else{
+    const b=document.querySelector('.props-stat-btn[data-stat="'+stat+'"]');
+    if(b)b.classList.add('active');
+  }
+  renderProps();
+}
+
+function renderProps(){
+  const grid=document.getElementById('props-grid');
+  if(!grid)return;
+  const all=window.PLAYER_PROPS||[];
+  if(!all.length){
+    grid.innerHTML='<div class="props-empty"><div style="font-size:32px;opacity:.5">&#127936;</div><div>No prop data — run update.py to refresh</div></div>';
+    return;
+  }
+  const query=(document.getElementById('props-search')||{value:''}).value.trim().toLowerCase();
+  const stat=_propsStatFilter||'ALL';
+  // Filter players by search
+  const players=all.filter(p=>!query||p.player_name.toLowerCase().includes(query)||p.team.toLowerCase().includes(query)||p.opponent.toLowerCase().includes(query));
+  if(!players.length){
+    grid.innerHTML='<div class="props-empty"><div>No players match your search.</div></div>';
+    return;
+  }
+  const statColor={PTS:'var(--blue)',REB:'var(--gold)',AST:'var(--green,#34c759)','3PM':'#b97aff',STL:'#ff9f40',BLK:'#ff6b6b'};
+  let html='';
+  players.forEach(player=>{
+    const injured=player.is_injured;
+    const propsToShow=stat==='ALL'?player.props:player.props.filter(pr=>pr.stat===stat);
+    if(!propsToShow.length)return;
+    html+='<div class="prop-card">';
+    // Header
+    html+='<div class="prop-card-header">';
+    html+='<span class="prop-player-name'+(injured?' is-injured':'')+'">'+esc(player.player_name)+'</span>';
+    html+='<span class="prop-team-chip">'+esc(player.team)+'</span>';
+    if(injured)html+='<span class="prop-out-badge">OUT</span>';
+    html+='<span class="prop-opp">vs '+esc(player.opponent)+'</span>';
+    html+='</div>';
+    // Stat blocks
+    html+='<div class="prop-stats-row">';
+    propsToShow.forEach(pr=>{
+      const color=statColor[pr.stat]||'var(--t0)';
+      html+='<div class="prop-stat-block">';
+      html+='<div class="prop-stat-label" style="color:'+color+'">'+esc(pr.stat)+'</div>';
+      const proj=pr.model_projection!=null?pr.model_projection.toFixed(1):'--';
+      html+='<div class="prop-stat-proj">'+proj+'</div>';
+      html+='<div class="prop-stat-proj-sub">Model proj</div>';
+      if(pr.book_line!=null){
+        const sign=pr.recommendation==='OVER'?'O':'U';
+        html+='<div class="prop-book-line">Book: '+pr.book_line+' &middot; <strong>'+sign+'</strong></div>';
+      }
+      if(pr.value)html+='<div class="prop-value-badge">VALUE</div>';
+      // Last 5 sparkline pills
+      if(pr.last5&&pr.last5.length){
+        html+='<div class="prop-last5">';
+        pr.last5.forEach(v=>{
+          const val=v!=null?v.toFixed(0):'?';
+          const hi=pr.model_projection!=null&&v!=null&&v>=pr.model_projection;
+          html+='<span class="prop-last5-pill" style="'+(hi?'background:rgba(52,199,89,.18);color:var(--green,#34c759)':'')+'">'+val+'</span>';
+        });
+        html+='</div>';
+      }
+      html+='</div>'; // end prop-stat-block
+    });
+    html+='</div>'; // end prop-stats-row
+    html+='</div>'; // end prop-card
+  });
+  if(!html){
+    grid.innerHTML='<div class="props-empty"><div>No '+esc(stat)+' props available.</div></div>';
+    return;
+  }
+  grid.innerHTML=html;
+}
+
 // ─── SHARP MONEY / LINE MOVEMENT ───
 function renderSharpMoney(){
   const container=document.getElementById('sharp-money-container');
@@ -3562,7 +3677,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -3576,6 +3691,7 @@ async function loadDashboardData(){
       fetch('data/matchup_analysis.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/performance.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch('data/line_movement.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/player_props.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
     ]);
     // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
     if(playerJson&&playerJson.players&&playerJson.players.length){
@@ -3700,6 +3816,9 @@ async function loadDashboardData(){
     // ── Wire line_movement.json -> Sharp Money tab ──
     window.LINE_MOVEMENT=lineMovJson;
     renderSharpMoney();
+    // ── Wire player_props.json -> Props tab ──
+    window.PLAYER_PROPS=Array.isArray(propsJson)?propsJson:[];
+    renderProps();
     updateCLVSummary();
     if(meta.exported_at){
       const d=new Date(meta.exported_at);
