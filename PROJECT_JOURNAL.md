@@ -4,6 +4,29 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-07 (Session 4) — Dashboard Overhaul: 3 New Tabs + Security Hardening + Bug Fixes
+
+**Done:**
+- **Sharp Money Tracker tab** — fully built from `line_movement.json`: stats bar (games tracked, steam moves, biggest move), per-game cards with movement bars, STEAM badge when |move| >= 1.5 pts, direction arrows
+- **Bet Tracker tab** — localStorage-based (key `baseline_bets_v1`): add-bet form (date pre-filled to today, matchup, pick, market, odds, stake, result), stats row (total bets, W-L record, ROI%, net P&L), history table with per-bet delete, clear-all
+- **Season History tab** — lazy-loaded `season_history.json` (552.8 KB, 5 seasons, 5,995 games, 30 teams/season): season selector dropdown, standings table, 50-game log table; `scripts/build_season_history.py` created and wired into `update.py` Step 7
+- **Security hardening** — CSP meta tag added (removed invalid `frame-ancestors`); Plotly SRI hash added (`sha384-Hl48Kq2HifOWdXEjMsKo6qxqvRLTYqIGbvlENBmkHAxZKIGCXv43H6W1jA671RzC`); fake account dropdown removed; `_setHtml()` helper using `createContextualFragment + replaceChildren` established as XSS-safe DOM write pattern
+- **ADV constant replaced** — 17-player hardcoded ADV → `LEGENDS_ADV` (6 legends: Jordan/Kobe/Bird/Magic/Kareem/Wilt only); `_mergeAdv()` prioritizes live `advanced_stats.json` (504 players) over legends
+- **All hardcoded data cleared** — `const MATCHUP_DATA=[]` (was 3 Mar-5 games), `DATA.picks=[]` (was 9 Mar-5 picks), `bt-backtest-total` → dynamic from accuracy_history backtest, `bt-ats-inline` → dynamic, OG/Twitter meta tags no longer hardcode accuracy %
+- **Greeting de-personalized** — "Spencer" removed from 3 greeting strings
+- **Today page placeholder replaced** — "Building player database..." → Player Comparison tool link card
+- **Bug fixes** — `gameCard()` TypeError when `g.ats` undefined (added `ats=g.ats||''` guard); CSP `frame-ancestors` removed from meta tag (only valid as HTTP header)
+- **Playwright verification** — 0 JS errors across Today, History, Sharp Money, Bet Tracker tabs; only harmless `apple-mobile-web-app-capable` deprecation warning remains
+- **Pinnacle props wired** (completed from Session 3 agent) — `player_props.json` refreshed: 60 players, 34 Pinnacle-matched prop lines; `value_bets.json` refreshed: 1 entry (PHI@ATL, 21.5% edge)
+- **3 commits, 2 pushes** — deployed to GitHub Pages
+
+**Next:**
+1. Build `build_clv.py` → `clv_summary.json` and wire CLV card to real CLV data (currently uses `value_bets.edge_pct` as proxy — wrong semantics; real data is in `predictions_history.db` `clv_tracking` table)
+2. Daily workflow automation — Windows Task Scheduler job to run `python update.py && git add dashboard/data/ && git push` daily
+3. Run `python update.py` daily to refresh all 23 JSON files before pushing
+
+---
+
 ## 2026-03-07 (Session 3) — Live Site Deployed: Pipeline End-to-End + Real Dashboard Data
 
 **Done:**

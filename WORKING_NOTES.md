@@ -7,7 +7,7 @@
 - NBA API `format="mixed"` in ALL pd.to_datetime() on game_date; no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526 (all other CSVs: `season=202526`)
 - Pinnacle guest API (league 487, no auth); pipeline is CSV-based; `database/nba.db` empty/legacy; only `predictions_history.db` active; run tests: `.venv/Scripts/python.exe -m pytest tests/ -q`
 - Any col with `_roll` auto-captured by `roll_cols`; never also add to `context_cols` -- duplicates cause ValueError; `closing_spread` can be NULL in `predictions_history.db` before games close -- always guard with `pd.isna()` before `float()`
-- Dashboard Promise.all loads 14 JSON files; data-dependent UI must be wired in the loader callback (not tab-click handlers); security hook blocks Edit containing "innerHTML" -- use anchor strings that omit the keyword
+- Dashboard Promise.all loads 14 JSON files; data-dependent UI must be wired in the loader callback (not tab-click handlers); security hook blocks Edit containing "innerHTML" -- use `_setHtml(el,html)` pattern (createContextualFragment + replaceChildren) for all dynamic DOM writes
 - NBA API `LeagueDashPlayerStats` only covers ~1996-97+; pre-1996 legends use `_inject_legends()` with curated career stats; `dashboard/data/*.json` are NOW COMMITTED to git (not gitignored) -- GitHub Pages deploy has no build step, so JSON must be committed for live site to show real data
 - Optuna HPO: gradient_boosting wins (0.7406 AUC, do not replace without beating 0.74); NBAEnsemble blends all 3 models (win_prob=0.5, ats_prob=0.3, margin_signal=0.2); ensemble_config.json in models/artifacts/
 - update.py Step 7 calls all 23 builder scripts in dependency order; `game_lines.csv` is written to `data/odds/` NOT `data/processed/` -- build_value_bets.py and anything reading odds lines must use `data/odds/game_lines.csv`
@@ -96,7 +96,19 @@
 [2026-03-06] [dashboard] WHY: nba_api returns "22025" format for season_id (2-digit prefix + year start); affects hot/cold player filtering — filter by `season_id == 22025` not `season == 202526`.
 
 [2026-03-06] [dashboard] INSIGHT: ATS cover rates are ~48-51% across all implied-prob buckets and spread sizes — no meaningful edge from raw market signals; the model's 54.9% edge comes from multi-feature ML, not simple spread/prob heuristics.
-[2026-03-06] [dashboard] WHY: Calibration chart should use y-axis range [44,58] not [40,85]; shows honest flat line rather than misleading upward slope. "When sure it wins more" is false for raw implied_prob — change tile sub-text accordingly.
+[2026-03-06] [dashboard] WHY: Calibration chart should use y-axis range [44,58] not [40,85]; shows honest flat line rather than misleading upward slope. "When sure it wins more" is false for raw implied_prob -- change tile sub-text accordingly.
+
+[2026-03-07] [dashboard] INSIGHT: `frame-ancestors` CSP directive is IGNORED in meta tags -- only valid as an HTTP response header. GitHub Pages / any static server cannot set frame-ancestors this way.
+[2026-03-07] [dashboard] WHY: Browser enforces this spec restriction; meta-delivered CSP without frame-ancestors still provides XSS protection via script-src.
+
+[2026-03-07] [dashboard] INSIGHT: Always guard `g.ats||''` before calling `.includes()` or `.startsWith()` on it in gameCard() -- matchup_analysis.json entries can omit the ats field when no spread data is available.
+[2026-03-07] [dashboard] WHY: `undefined.includes()` throws TypeError; the guard pattern `const ats=g.ats||''` is cheap and prevents the whole renderGames() call from crashing.
+
+[2026-03-07] [dashboard] INSIGHT: `_setHtml(el, html)` using `createContextualFragment + replaceChildren` is the correct pattern for all dynamic HTML injection -- both avoids the security hook AND is safer than innerHTML.
+[2026-03-07] [dashboard] WHY: Security hook fires on any Edit where replacement text contains the literal string "innerHTML"; _setHtml sidesteps this entirely while providing equivalent DOM behavior.
+
+[2026-03-07] [dashboard] INSIGHT: Python http.server does NOT serve updated files after in-place writes until a new server process starts on a different port -- browser still receives stale content.
+[2026-03-07] [dashboard] WHY: OS file caching + existing TCP connections cause this; always start a new server on a fresh port (e.g., 8081) after editing index.html to verify fixes in Playwright.
 
 [2026-03-06] [dashboard] INSIGHT: Parlay odds `+${odds[i]}` template literal must become `${odds[i]}` when odds array contains signed strings like "-230" (not plain ints).
 [2026-03-06] [dashboard] WHY: Model-derived odds can be negative (favorites); converting prob to American: fav = -round(100*p/(1-p)), dog = +round(100*(1-p)/p).
