@@ -508,6 +508,16 @@ select option{background:#0F1117;color:#F1F5FF}
 .sel-wrap{position:relative}
 .sel-arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t2)}
 
+/* ── ERA TOGGLE ── */
+.era-toggle-wrap{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:12px}
+.era-toggle-lbl{font-size:11px;font-weight:600;color:var(--t2);letter-spacing:.3px}
+.era-pill{display:inline-flex;background:rgba(255,255,255,.05);border:1px solid var(--b1);border-radius:var(--r-pill);padding:3px;gap:2px}
+.era-pill button{border:none;background:transparent;cursor:pointer;font-family:var(--f);font-size:12px;font-weight:600;color:var(--t2);padding:4px 13px;border-radius:var(--r-pill);transition:all 160ms ease;line-height:1}
+.era-pill button.active{background:var(--blue-d);color:var(--blue);border:1px solid rgba(79,158,255,.25)}
+.era-pill button:hover:not(.active){color:var(--t1);background:rgba(255,255,255,.04)}
+.era-footnote{font-size:11px;color:var(--t2);margin-top:8px;font-style:italic;display:none}
+.era-footnote.visible{display:block}
+
 /* ── BACKTEST ── */
 .bt-stat{background:var(--card);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px;text-align:center;transition:transform 160ms ease,box-shadow 160ms ease}
 .bt-stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-h)}
@@ -991,6 +1001,9 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode" aria-label="Toggle theme">
     <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
+  <button class="theme-toggle" onclick="openBettingDrawer()" title="Betting tools (odds converter, edge calculator)" aria-label="Open betting tools" style="margin-left:2px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/></svg>
+  </button>
 </nav>
 
 <!-- ═══ BETTING TOOLS DROPDOWN ═══ -->
@@ -1117,14 +1130,76 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 
 <!-- TEAMS (free) -->
 <section id="page-teams" class="page">
-  <div class="ph"><h1 class="pt">Teams</h1><p class="pd">Team stats, trends, and matchup tools</p></div>
-  <div class="tab-placeholder"><div class="tp-icon">&#127944;</div><div class="tp-title">Team Analytics</div><div class="tp-desc">Full team stats, pace metrics, four factors, and home/away splits coming soon.<br>We are building 80 seasons of NBA history.</div></div>
+  <div class="ph"><h1 class="pt">Teams</h1><p class="pd">Conference standings · recent form · matchup tools</p></div>
+  <div class="tab-bar">
+    <button class="tab active" data-tab="overview" onclick="switchTab('teams','overview')">Overview</button>
+    <button class="tab" data-tab="form" onclick="switchTab('teams','form');buildTeamsForm()">Form</button>
+    <button class="tab" data-tab="matchup" onclick="switchTab('teams','matchup')">Matchup Tool</button>
+  </div>
+  <!-- OVERVIEW -->
+  <div class="tab-content active" id="teams-tab-overview">
+    <div class="g2" style="margin-top:4px">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="confh">Eastern Conference</div>
+        <div class="tw"><table><thead><tr>
+          <th style="width:28px">#</th><th>Team</th>
+          <th>W</th><th>L</th><th>PCT</th><th>GB</th><th>Streak</th>
+        </tr></thead><tbody id="teams-east-tb"></tbody></table></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="confh">Western Conference</div>
+        <div class="tw"><table><thead><tr>
+          <th style="width:28px">#</th><th>Team</th>
+          <th>W</th><th>L</th><th>PCT</th><th>GB</th><th>Streak</th>
+        </tr></thead><tbody id="teams-west-tb"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+  <!-- FORM -->
+  <div class="tab-content" id="teams-tab-form">
+    <div id="teams-form-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:4px"></div>
+  </div>
+  <!-- MATCHUP TOOL -->
+  <div class="tab-content" id="teams-tab-matchup">
+    <div class="card" style="text-align:center;padding:48px 32px">
+      <div style="font-size:32px;margin-bottom:14px">&#9876;</div>
+      <div style="font-size:15px;font-weight:700;color:var(--t0);margin-bottom:6px">Full Matchup Breakdown</div>
+      <div style="font-size:13px;color:var(--t1);margin-bottom:20px;line-height:1.6">Select a game from Today's tab to see pace, efficiency, three-point rates, and radar charts for any matchup.</div>
+      <button class="fc" onclick="showFreeTab('today')" style="font-size:12px;padding:8px 20px">Go to Today's Games</button>
+    </div>
+  </div>
 </section>
 
 <!-- H2H (free) -->
 <section id="page-h2h" class="page">
-  <div class="ph"><h1 class="pt">Head to Head</h1><p class="pd">Historical matchup records between any two teams</p></div>
-  <div class="tab-placeholder"><div class="tp-icon">&#9876;</div><div class="tp-title">H2H Records</div><div class="tp-desc">All-time and recent head-to-head records, trends, and series histories coming soon.</div></div>
+  <div class="ph"><h1 class="pt">Head to Head</h1><p class="pd">Historical matchup records between any two teams &middot; last 10 meetings</p></div>
+
+  <!-- Team selectors -->
+  <div class="g2" style="margin-bottom:20px;align-items:end">
+    <div class="card" style="padding:14px 18px">
+      <div class="sl" style="margin-bottom:7px">Team A</div>
+      <div class="sel-wrap">
+        <select id="h2h-team-a" onchange="renderH2H()"></select>
+        <svg class="sel-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 18px">
+      <div class="sl" style="margin-bottom:7px">Team B</div>
+      <div class="sel-wrap">
+        <select id="h2h-team-b" onchange="renderH2H()"></select>
+        <svg class="sel-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content area — populated by JS -->
+  <div id="h2h-content">
+    <div id="h2h-prompt" class="card" style="text-align:center;padding:48px;color:var(--t2)">
+      <div style="font-size:32px;margin-bottom:12px">&#9876;</div>
+      <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">Select two teams to see head-to-head history</div>
+      <div style="font-size:12px">Series record, last 10 meetings, and scoring trends will appear here</div>
+    </div>
+  </div>
 </section>
 
 <!-- STANDINGS (free) -->
@@ -1903,6 +1978,8 @@ const DATA = {
     {name:'Kawhi Leonard',           team:'LAC',pts:27.9,reb:6.4,ast:3.7,fg:49.7,thr:37.9,ini:'KL',nbaId:202695},
     {name:'Giannis Antetokounmpo',   team:'MIL',pts:27.6,reb:9.9,ast:5.4,fg:63.7,thr:37.5,ini:'GA',nbaId:203507},
     {name:'Stephen Curry',           team:'GSW',pts:27.2,reb:3.5,ast:4.8,fg:46.8,thr:39.1,ini:'SC',nbaId:201939},
+    {name:'LeBron James',            team:'CLE',pts:27.0,reb:7.4,ast:7.4,fg:50.4,thr:34.5,ini:'LJ',nbaId:2544,  debutYear:2003,primaryTeam:'CLE'},
+    {name:'Michael Jordan',          team:'CHI',pts:30.1,reb:6.2,ast:5.3,fg:49.7,thr:32.7,ini:'MJ',nbaId:893,   debutYear:1984,primaryTeam:'CHI'},
   ],
   east:[
     {team:'Detroit Pistons',          abbr:'DET',w:45,l:15,gb:'-', streak:'L1'},
@@ -1952,6 +2029,8 @@ const ADV = {
   'Kawhi Leonard':              {per:27.2,ts:62.2,usg:32.9,ws:11.4,bpm:6.1,vorp:4.4,rim:64.8,mid:50.2,thr:37.9,paint:67.2},
   'Giannis Antetokounmpo':      {per:31.2,ts:67.0,usg:35.1,ws:14.2,bpm:9.2,vorp:6.2,rim:76.4,mid:40.1,thr:37.5,paint:80.2},
   'Stephen Curry':              {per:26.4,ts:63.6,usg:31.1,ws:11.8,bpm:6.4,vorp:4.8,rim:56.4,mid:42.1,thr:39.1,paint:58.8},
+  'LeBron James':               {per:27.1,ts:59.4,usg:31.6,ws:14.0,bpm:7.6,vorp:5.8,rim:65.8,mid:46.2,thr:34.5,paint:68.4},
+  'Michael Jordan':             {per:31.5,ts:57.0,usg:33.3,ws:13.6,bpm:9.2,vorp:6.4,rim:58.4,mid:51.3,thr:32.7,paint:60.8},
 };
 
 // ─── HEADSHOT HELPER ───
@@ -2000,6 +2079,7 @@ function showFreeTab(id){
   if(nb){nb.classList.add('active');nb.setAttribute('aria-current','page');}
   // Trigger lazy renders
   if(id==='deep'){renderMatchups();renderPlayoff();renderStreaks();}
+  if(id==='h2h'){initH2H();}
 }
 
 function showBettingTab(tabId, pillEl){
@@ -2472,6 +2552,63 @@ function updateParlaySlip(){
 
 // ─── COMPARE ───
 let pickersInited=false;
+let eraAdjusted=false;
+
+// Team accent colors keyed by team abbreviation (primary, secondary)
+const TEAM_COLORS={
+  CLE:['#860038','#FDBB30'],
+  CHI:['#CE1141','#000000'],
+};
+// Neutral fallback color for teams not in TEAM_COLORS
+const NEUTRAL_COLOR='#4F9EFF';
+const NEUTRAL_COLOR_B='#F5A623';
+
+// League scoring averages by debut decade for era normalization (baseline: 14.5 ppg per player)
+const ERA_LEAGUE_AVG={
+  1950:79.5,1960:114.0,1970:108.0,1980:108.6,1990:101.2,2000:97.3,2010:101.3,2020:111.8
+};
+const ERA_BASELINE=14.5;
+
+function getEraDecade(debutYear){
+  if(!debutYear||debutYear<1960)return 1950;
+  if(debutYear<1970)return 1960;
+  if(debutYear<1980)return 1970;
+  if(debutYear<1990)return 1980;
+  if(debutYear<2000)return 1990;
+  if(debutYear<2010)return 2000;
+  if(debutYear<2020)return 2010;
+  return 2020;
+}
+
+function eraFactor(debutYear){
+  const decade=getEraDecade(debutYear);
+  const leagueAvg=ERA_LEAGUE_AVG[decade]||101.3;
+  // Scale: per-player baseline / (league ppg / 10 players per team)
+  // We use the ratio directly against a fixed 14.5 ppg player-level baseline
+  const perPlayerLeague=leagueAvg/10;
+  return ERA_BASELINE/perPlayerLeague;
+}
+
+function applyEra(val,debutYear){
+  if(!eraAdjusted)return val;
+  return Math.round(val*eraFactor(debutYear)*10)/10;
+}
+
+function getPlayerColors(p){
+  const team=p.primaryTeam||p.team;
+  const colors=TEAM_COLORS[team];
+  return colors?colors[0]:null;
+}
+
+function setEraMode(adj){
+  eraAdjusted=adj;
+  document.getElementById('era-btn-raw').classList.toggle('active',!adj);
+  document.getElementById('era-btn-adj').classList.toggle('active',adj);
+  const fn=document.getElementById('era-footnote');
+  if(fn)fn.classList.toggle('visible',adj);
+  updateComparison();
+}
+
 function initPickers(){
   if(pickersInited)return;pickersInited=true;
   const names=DATA.players.map(p=>p.name);
@@ -2480,38 +2617,53 @@ function initPickers(){
     sel.innerHTML='<option value="">— Select player —</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
     sel.value=names[i];
   });
+  // Default to LeBron James vs Michael Jordan if both exist in the dataset
+  const hasLeBron=names.includes('LeBron James');
+  const hasJordan=names.includes('Michael Jordan');
+  if(hasLeBron&&hasJordan){
+    document.getElementById('picker-a').value='LeBron James';
+    document.getElementById('picker-b').value='Michael Jordan';
+  }
   updateComparison();
 }
 
 function updateComparison(){
   const nA=document.getElementById('picker-a').value,nB=document.getElementById('picker-b').value;
-  updatePreview('prev-a',nA,'#4F9EFF');updatePreview('prev-b',nB,'#F5A623');
+  const pA=nA?DATA.players.find(p=>p.name===nA):null;
+  const pB=nB?DATA.players.find(p=>p.name===nB):null;
+  const colA=pA?(getPlayerColors(pA)||NEUTRAL_COLOR):NEUTRAL_COLOR;
+  const colB=pB?(getPlayerColors(pB)||NEUTRAL_COLOR_B):NEUTRAL_COLOR_B;
+  updatePreview('prev-a',nA,colA);updatePreview('prev-b',nB,colB);
   if(!nA||!nB||nA===nB){
     document.getElementById('cmp-prompt').style.display='block';
     document.getElementById('cmp-content').style.display='none';return;
   }
   document.getElementById('cmp-prompt').style.display='none';
   document.getElementById('cmp-content').style.display='block';
-  const pA=DATA.players.find(p=>p.name===nA),pB=DATA.players.find(p=>p.name===nB);
   const aA=ADV[nA],aB=ADV[nB];
-  renderBanner('ban-a',pA,aA,'#4F9EFF','left');
-  renderBanner('ban-b',pB,aB,'#F5A623','right');
-  renderRadar(pA,pB,aA,aB);
+  renderBanner('ban-a',pA,aA,colA,'left');
+  renderBanner('ban-b',pB,aB,colB,'right');
+  renderRadar(pA,pB,aA,aB,colA,colB);
+  // Era-adjust scoring stats only (pts, reb, ast are counting stats; fg/3p% are ratios — no era adjust)
+  const eA=pA.debutYear,eB=pB.debutYear;
   renderBars('stat-bars',[
-    ['Points',pA.pts,pB.pts,40],['Rebounds',pA.reb,pB.reb,16],['Assists',pA.ast,pB.ast,12],
-    ['FG%',pA.fg,pB.fg,70,'%'],['3P%',pA.thr,pB.thr,50,'%']],nA,nB);
+    ['Points',applyEra(pA.pts,eA),applyEra(pB.pts,eB),40],
+    ['Rebounds',applyEra(pA.reb,eA),applyEra(pB.reb,eB),16],
+    ['Assists',applyEra(pA.ast,eA),applyEra(pB.ast,eB),12],
+    ['FG%',pA.fg,pB.fg,70,'%'],['3P%',pA.thr,pB.thr,50,'%']],nA,nB,colA,colB);
   renderBars('adv-bars',[
     ['PER',aA.per,aB.per,35],['TS%',aA.ts,aB.ts,70,'%'],['USG%',aA.usg,aB.usg,40,'%'],
-    ['Win Shares',aA.ws,aB.ws,18],['BPM',aA.bpm,aB.bpm,14],['VORP',aA.vorp,aB.vorp,10]],nA,nB);
-  renderShoot(aA,aB,nA,nB);
+    ['Win Shares',aA.ws,aB.ws,18],['BPM',aA.bpm,aB.bpm,14],['VORP',aA.vorp,aB.vorp,10]],nA,nB,colA,colB);
+  renderShoot(aA,aB,nA,nB,colA,colB);
 }
 
 function updatePreview(id,name,col){
   const el=document.getElementById(id);if(!name){el.innerHTML='';return;}
   const p=DATA.players.find(x=>x.name===name);
+  const accentCol=col||NEUTRAL_COLOR;
   el.innerHTML=`<div style="display:flex;align-items:center;gap:9px">
     ${headshot(p.nbaId,p.ini,32)}
-    <div><div style="font-size:12px;font-weight:700">${p.name}</div><div style="font-size:11px;color:var(--t2);font-weight:500">${p.team} · ${p.pts} / ${p.reb} / ${p.ast}</div></div>
+    <div><div style="font-size:12px;font-weight:700;color:${accentCol}">${p.name}</div><div style="font-size:11px;color:var(--t2);font-weight:500">${p.team} · ${p.pts} / ${p.reb} / ${p.ast}</div></div>
   </div>`;
 }
 
@@ -3069,6 +3221,290 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
+
+// ─── HEAD TO HEAD ───
+(function(){
+  // All 30 NBA team abbreviations with full names
+  const NBA_TEAMS = [
+    {abbr:'ATL',name:'Atlanta Hawks'},
+    {abbr:'BOS',name:'Boston Celtics'},
+    {abbr:'BKN',name:'Brooklyn Nets'},
+    {abbr:'CHA',name:'Charlotte Hornets'},
+    {abbr:'CHI',name:'Chicago Bulls'},
+    {abbr:'CLE',name:'Cleveland Cavaliers'},
+    {abbr:'DAL',name:'Dallas Mavericks'},
+    {abbr:'DEN',name:'Denver Nuggets'},
+    {abbr:'DET',name:'Detroit Pistons'},
+    {abbr:'GSW',name:'Golden State Warriors'},
+    {abbr:'HOU',name:'Houston Rockets'},
+    {abbr:'IND',name:'Indiana Pacers'},
+    {abbr:'LAC',name:'LA Clippers'},
+    {abbr:'LAL',name:'Los Angeles Lakers'},
+    {abbr:'MEM',name:'Memphis Grizzlies'},
+    {abbr:'MIA',name:'Miami Heat'},
+    {abbr:'MIL',name:'Milwaukee Bucks'},
+    {abbr:'MIN',name:'Minnesota Timberwolves'},
+    {abbr:'NOP',name:'New Orleans Pelicans'},
+    {abbr:'NYK',name:'New York Knicks'},
+    {abbr:'OKC',name:'Oklahoma City Thunder'},
+    {abbr:'ORL',name:'Orlando Magic'},
+    {abbr:'PHI',name:'Philadelphia 76ers'},
+    {abbr:'PHX',name:'Phoenix Suns'},
+    {abbr:'POR',name:'Portland Trail Blazers'},
+    {abbr:'SAC',name:'Sacramento Kings'},
+    {abbr:'SAS',name:'San Antonio Spurs'},
+    {abbr:'TOR',name:'Toronto Raptors'},
+    {abbr:'UTA',name:'Utah Jazz'},
+    {abbr:'WAS',name:'Washington Wizards'},
+  ];
+
+  let _h2hData = null;       // raw array from head_to_head.json
+  let _h2hLoaded = false;
+  let _h2hLoading = false;
+  let _todayAbbrs = [];      // abbrs from today's picks for default selection
+
+  // Populate both dropdowns with all 30 teams
+  function _populateDropdowns(defaultA, defaultB) {
+    const selA = document.getElementById('h2h-team-a');
+    const selB = document.getElementById('h2h-team-b');
+    if (!selA || !selB) return;
+    const opts = NBA_TEAMS.map(t =>
+      `<option value="${t.abbr}">${t.abbr} &mdash; ${t.name}</option>`
+    ).join('');
+    selA.innerHTML = opts;
+    selB.innerHTML = opts;
+    if (defaultA) selA.value = defaultA;
+    if (defaultB) selB.value = defaultB;
+  }
+
+  // Find a matchup object for (teamA, teamB) — either direction
+  function _findMatchup(teamA, teamB) {
+    if (!_h2hData) return null;
+    return _h2hData.find(m =>
+      (m.home_team === teamA && m.away_team === teamB) ||
+      (m.home_team === teamB && m.away_team === teamA)
+    ) || null;
+  }
+
+  // Compute stats from meetings relative to selected pair (teamA = "our team A")
+  function _computeStats(matchup, teamA, teamB) {
+    const meetings = matchup.meetings || [];
+    const n = meetings.length;
+    if (n === 0) return { aWins: 0, bWins: 0, avgTotal: null, avgMargin: null, aWinPct: 0 };
+    const aWins = meetings.filter(m => m.winner === teamA).length;
+    const bWins = meetings.filter(m => m.winner === teamB).length;
+    const totals = meetings.map(m => m.home_score + m.away_score);
+    const margins = meetings.map(m => m.margin);
+    const avgTotal = totals.length ? (totals.reduce((s, v) => s + v, 0) / totals.length) : null;
+    const avgMargin = margins.length ? (margins.reduce((s, v) => s + v, 0) / margins.length) : null;
+    return { aWins, bWins, n, avgTotal, avgMargin, aWinPct: aWins / n };
+  }
+
+  // Render the series record banner card
+  function _renderBanner(matchup, teamA, teamB, stats) {
+    const { aWins, bWins, n, avgTotal, avgMargin, aWinPct } = stats;
+    const leader = aWins > bWins ? teamA : (bWins > aWins ? teamB : null);
+    const leaderColor = leader === teamA ? 'var(--green)' : (leader === teamB ? 'var(--red)' : 'var(--gold)');
+    const recordText = aWins === bWins
+      ? `Series tied ${aWins}-${bWins}`
+      : `${leader} leads ${Math.max(aWins,bWins)}-${Math.min(aWins,bWins)}`;
+    const subText = `(last ${n} meeting${n!==1?'s':''})`;
+
+    // Win dominance bar — green side is teamA
+    const barPct = Math.round(aWinPct * 100);
+    const barColor = aWins >= bWins ? 'var(--green)' : 'var(--red)';
+
+    return `
+<div class="card" style="margin-bottom:16px;padding:24px 28px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+    <div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--t0)">${teamA} <span style="color:var(--t2);font-weight:500;font-size:16px">vs</span> ${teamB}</div>
+      <div style="font-size:13px;color:var(--t2);margin-top:2px">${matchup.series_record || recordText + ' ' + subText}</div>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="font-family:var(--fm);font-size:30px;font-weight:700;color:var(--green);letter-spacing:-1px">${aWins}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">${teamA}</div>
+      </div>
+      <div style="text-align:center;padding:0 4px">
+        <div style="font-family:var(--fm);font-size:30px;font-weight:700;color:var(--t2);letter-spacing:-1px">${n}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Games</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:var(--fm);font-size:30px;font-weight:700;color:var(--red);letter-spacing:-1px">${bWins}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">${teamB}</div>
+      </div>
+    </div>
+  </div>
+  <!-- Dominance bar -->
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="font-size:11px;font-weight:700;color:var(--green);min-width:28px;text-align:right">${barPct}%</div>
+    <div style="flex:1;height:6px;border-radius:6px;background:var(--b0);overflow:hidden;position:relative">
+      <div style="position:absolute;left:0;top:0;height:100%;width:${barPct}%;background:${barColor};border-radius:6px;transition:width 600ms cubic-bezier(.16,1,.3,1)"></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--red);min-width:28px">${100-barPct}%</div>
+  </div>
+</div>`;
+  }
+
+  // Render the stats row
+  function _renderStats(stats, avgTotalFromMatchup) {
+    const { aWins, bWins, n, avgMargin, aWinPct } = stats;
+    const avgTotal = avgTotalFromMatchup != null ? avgTotalFromMatchup : stats.avgTotal;
+    const homeWinPct = '—'; // not tracked per-game in this dataset
+    return `
+<div class="card" style="margin-bottom:16px;padding:18px 24px">
+  <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:center">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:4px">Avg Combined Total</div>
+      <div style="font-family:var(--fm);font-size:20px;font-weight:700;color:var(--blue)">${avgTotal != null ? avgTotal.toFixed(1) : '—'}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:4px">Team A Win Rate</div>
+      <div style="font-family:var(--fm);font-size:20px;font-weight:700;color:var(--green)">${n > 0 ? Math.round(aWinPct*100)+'%' : '—'}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:4px">Avg Margin</div>
+      <div style="font-family:var(--fm);font-size:20px;font-weight:700;color:var(--gold)">${stats.avgMargin != null ? stats.avgMargin.toFixed(1)+' pts' : '—'}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:4px">Meetings Shown</div>
+      <div style="font-family:var(--fm);font-size:20px;font-weight:700;color:var(--t1)">${n}</div>
+    </div>
+  </div>
+</div>`;
+  }
+
+  // Render the last-meetings table
+  function _renderTable(matchup, teamA, teamB) {
+    const meetings = (matchup.meetings || []);
+    if (meetings.length === 0) {
+      return `<div class="card" style="padding:28px;text-align:center;color:var(--t2);font-size:13px">No meeting data available</div>`;
+    }
+    const rows = meetings.map(m => {
+      const isAWinner = m.winner === teamA;
+      const isBWinner = m.winner === teamB;
+      const winColor = isAWinner ? 'var(--green)' : (isBWinner ? 'var(--red)' : 'var(--t1)');
+      const total = m.home_score + m.away_score;
+      const avgTotalNum = matchup.avg_total;
+      const totalColor = avgTotalNum != null && total > avgTotalNum ? 'var(--blue)' : 'var(--t1)';
+      // Format date
+      const dParts = (m.date || '').split('-');
+      const dateLabel = dParts.length === 3
+        ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(dParts[1],10)-1]} ${parseInt(dParts[2],10)}, ${dParts[0]}`
+        : m.date;
+      const score = `${m.home_team} ${m.home_score}–${m.away_score} ${m.away_team || ''}`;
+      return `<tr>
+        <td style="color:var(--t2);font-size:12px">${dateLabel}</td>
+        <td><span style="font-family:var(--fm);font-size:12px">${score.trim()}</span></td>
+        <td style="text-align:center"><span style="font-weight:700;color:${winColor};font-family:var(--fm);font-size:12px">${m.winner}</span></td>
+        <td style="text-align:right"><span style="font-family:var(--fm);font-size:12px;color:${totalColor}">${total}</span></td>
+      </tr>`;
+    }).join('');
+
+    return `
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:8px">
+  <div style="padding:14px 20px 10px;border-bottom:1px solid var(--b0)">
+    <span style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Last ${meetings.length} Meetings</span>
+    <span style="font-size:10px;color:var(--t2);margin-left:10px">Total shown in <span style="color:var(--blue)">blue</span> if above avg</span>
+  </div>
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left">Date</th>
+          <th style="text-align:left">Score</th>
+          <th style="text-align:center">Winner</th>
+          <th style="text-align:right">Total</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+</div>`;
+  }
+
+  // Main render function — reads selectors and draws content
+  window.renderH2H = function() {
+    const selA = document.getElementById('h2h-team-a');
+    const selB = document.getElementById('h2h-team-b');
+    const content = document.getElementById('h2h-content');
+    if (!selA || !selB || !content) return;
+
+    const teamA = selA.value;
+    const teamB = selB.value;
+
+    if (!teamA || !teamB || teamA === teamB) {
+      content.innerHTML = `<div class="card" style="text-align:center;padding:32px;color:var(--t2);font-size:13px">Select two <em>different</em> teams to compare</div>`;
+      return;
+    }
+
+    if (!_h2hLoaded) {
+      content.innerHTML = `<div class="card" style="text-align:center;padding:32px;color:var(--t2);font-size:13px">Loading data&hellip;</div>`;
+      return;
+    }
+
+    const matchup = _findMatchup(teamA, teamB);
+    if (!matchup) {
+      content.innerHTML = `
+<div class="card" style="text-align:center;padding:40px">
+  <div style="font-size:28px;margin-bottom:12px">&#128203;</div>
+  <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">${teamA} vs ${teamB}</div>
+  <div style="font-size:12px;color:var(--t2)">No recent matchup data found for this pair. Run <code>scripts/build_h2h.py</code> to refresh.</div>
+</div>`;
+      return;
+    }
+
+    const stats = _computeStats(matchup, teamA, teamB);
+    content.innerHTML =
+      _renderBanner(matchup, teamA, teamB, stats) +
+      _renderStats(stats, matchup.avg_total) +
+      _renderTable(matchup, teamA, teamB);
+  };
+
+  // initH2H — called once when the user navigates to the H2H page
+  window.initH2H = function() {
+    if (_h2hLoading) return;
+    if (_h2hLoaded) { renderH2H(); return; }
+
+    _h2hLoading = true;
+    fetch('data/head_to_head.json')
+      .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
+      .then(data => {
+        _h2hData = Array.isArray(data) ? data : [];
+        _h2hLoaded = true;
+        _h2hLoading = false;
+
+        // Collect all unique team abbrs present in the data
+        const seenAbbrs = new Set();
+        _h2hData.forEach(m => {
+          seenAbbrs.add(m.home_team);
+          seenAbbrs.add(m.away_team);
+        });
+
+        // Default selection: first matchup in file (from today's picks)
+        let defaultA = null;
+        let defaultB = null;
+        if (_h2hData.length > 0) {
+          defaultA = _h2hData[0].home_team;
+          defaultB = _h2hData[0].away_team;
+        }
+
+        _populateDropdowns(defaultA, defaultB);
+        renderH2H();
+      })
+      .catch(err => {
+        _h2hLoading = false;
+        const content = document.getElementById('h2h-content');
+        if (content) content.innerHTML = `
+<div class="card" style="text-align:center;padding:40px">
+  <div style="font-size:28px;margin-bottom:12px">&#9888;</div>
+  <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">Could not load H2H data</div>
+  <div style="font-size:12px;color:var(--t2)">Run <code>python scripts/build_h2h.py</code> then refresh. (${err})</div>
+</div>`;
+      });
+  };
+})();
 </script>
 
 <!-- ═══ MOBILE BOTTOM NAV ═══ -->
@@ -3094,5 +3530,227 @@ if ('serviceWorker' in navigator) {
     More
   </button>
 </nav>
+<!-- ── BETTING TOOLS DRAWER ── -->
+<div id="bt-backdrop" onclick="closeBettingDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;backdrop-filter:blur(2px)"></div>
+<aside id="bt-drawer" style="position:fixed;top:0;right:0;width:360px;max-width:100vw;height:100%;background:var(--bg2);border-left:1px solid var(--b1);z-index:200;transform:translateX(100%);transition:transform 280ms cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--b0);flex-shrink:0">
+    <div>
+      <div style="font-size:14px;font-weight:800;color:var(--t0)">Betting Tools</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:1px">Math-only · no picks · free forever</div>
+    </div>
+    <button onclick="closeBettingDrawer()" style="background:transparent;border:1px solid var(--b1);border-radius:50%;width:28px;height:28px;cursor:pointer;color:var(--t1);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center">&times;</button>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:16px">
+
+    <!-- TOOL 1: Odds Converter -->
+    <div class="card" style="padding:16px">
+      <div style="font-size:12px;font-weight:800;color:var(--gold);letter-spacing:.5px;margin-bottom:12px">ODDS CONVERTER</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px">American Odds</label>
+          <input id="oc-american" type="number" placeholder="-110 or +150" oninput="ocFromAmerican()" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px">Decimal Odds</label>
+          <input id="oc-decimal" type="number" placeholder="1.91" step="0.01" oninput="ocFromDecimal()" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px">Implied Probability</label>
+          <input id="oc-implied" type="number" placeholder="52.4%" step="0.1" oninput="ocFromImplied()" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOL 2: Edge Calculator -->
+    <div class="card" style="padding:16px">
+      <div style="font-size:12px;font-weight:800;color:var(--blue);letter-spacing:.5px;margin-bottom:12px">EDGE CALCULATOR</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px">Our model says (% chance to win)</label>
+          <input id="ec-model" type="number" placeholder="58" min="1" max="99" oninput="calcEdge()" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px">Book implies (% chance) — or enter American odds above</label>
+          <input id="ec-book" type="number" placeholder="52" min="1" max="99" oninput="calcEdge()" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+        </div>
+        <div id="ec-result" style="display:none;padding:12px;border-radius:10px;background:var(--bg3);border:1px solid var(--b0)">
+          <div id="ec-edge-val" style="font-size:20px;font-weight:800;font-family:var(--fm);margin-bottom:6px"></div>
+          <div id="ec-verdict" style="font-size:12px;color:var(--t1);line-height:1.6"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOL 3: Confidence Sizing (opt-in) -->
+    <div class="card" style="padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:12px;font-weight:800;color:var(--purple);letter-spacing:.5px">BET SIZING</div>
+        <button id="cs-toggle-btn" onclick="toggleConfSizing()" style="font-size:11px;font-weight:600;color:var(--purple);background:var(--purple-d);border:1px solid rgba(167,139,250,.25);border-radius:var(--r-pill);padding:3px 10px;cursor:pointer">Show</button>
+      </div>
+      <div style="font-size:11px;color:var(--t2);margin-bottom:8px">Optional · uses your own numbers · never stored</div>
+      <div id="cs-panel" style="display:none;flex-direction:column;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px">Your bankroll <span style="font-weight:400">(money set aside just for betting — like a poker buy-in, separate from savings)</span></label>
+          <input id="cs-bankroll" type="number" placeholder="500" min="1" oninput="calcSizing()" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px">Confidence level: <span id="cs-conf-label" style="color:var(--t0)">Medium (3)</span></label>
+          <input id="cs-conf" type="range" min="1" max="5" value="3" oninput="calcSizing();updateConfLabel()" style="width:100%;accent-color:var(--purple)"/>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-top:3px"><span>Low</span><span>Medium</span><span>High</span></div>
+        </div>
+        <div id="cs-result" style="display:none;padding:12px;border-radius:10px;background:var(--bg3);border:1px solid var(--b0)">
+          <div style="font-size:11px;color:var(--t2);margin-bottom:6px">Suggested bet</div>
+          <div id="cs-dollars" style="font-size:24px;font-weight:800;color:var(--purple);font-family:var(--fm);margin-bottom:2px"></div>
+          <div id="cs-units" style="font-size:12px;color:var(--t2);font-family:var(--fm)"></div>
+        </div>
+        <div style="font-size:10px;color:var(--t2);line-height:1.5;padding-top:4px;border-top:1px solid var(--b0)">&#9432; For reference only. Not financial advice. Past results do not guarantee future performance. You are responsible for your betting decisions.</div>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<script>
+// ── TEAMS PAGE ──
+(function buildTeamsOverview(){
+  function row(t,i){
+    const pct=(t.w/(t.w+t.l+0.001)).toFixed(3);
+    const sc=String(t.streak).startsWith('W')?'var(--green)':'var(--red)';
+    const border=i===5?'border-bottom:2px solid rgba(245,166,35,.2)':'';
+    return `<tr style="${border}"><td><span class="rn">${i+1}</span></td><td style="font-size:13px;font-weight:600">${t.team||t.abbr}</td><td>${t.w}</td><td>${t.l}</td><td>${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${t.streak}</td></tr>`;
+  }
+  const e=document.getElementById('teams-east-tb');
+  const w=document.getElementById('teams-west-tb');
+  if(e&&DATA.east)e.innerHTML=DATA.east.map(row).join('');
+  if(w&&DATA.west)w.innerHTML=DATA.west.map(row).join('');
+})();
+
+function buildTeamsForm(){
+  const grid=document.getElementById('teams-form-grid');
+  if(!grid||grid._built)return;
+  const all=[...DATA.east,...DATA.west].sort((a,b)=>{
+    const ra=parseInt(a.streak)*parseInt(String(a.streak).startsWith('W')?1:-1)||0;
+    const rb=parseInt(b.streak)*parseInt(String(b.streak).startsWith('W')?1:-1)||0;
+    return rb-ra;
+  });
+  grid.innerHTML=all.map(t=>{
+    const isW=String(t.streak).startsWith('W');
+    const n=parseInt(String(t.streak).replace(/\D/g,''))||0;
+    const pct=(t.w/(t.w+t.l+0.001)*100).toFixed(1);
+    const barW=Math.min(100,t.w/(t.w+t.l+0.001)*100);
+    return `<div class="card" style="padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--t0)">${t.team||t.abbr}</div>
+        <span style="font-size:11px;font-weight:700;color:${isW?'var(--green)':'var(--red)'};font-family:var(--fm)">${t.streak}</span>
+      </div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:8px">${t.w}W · ${t.l}L · ${pct}%</div>
+      <div style="height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden">
+        <div style="height:100%;border-radius:4px;background:${isW?'var(--green)':'var(--red)'};width:${barW}%;transition:width 600ms cubic-bezier(.16,1,.3,1)"></div>
+      </div>
+    </div>`;
+  }).join('');
+  grid._built=true;
+}
+
+// ── BETTING DRAWER ──
+function openBettingDrawer(){
+  document.getElementById('bt-drawer').style.transform='translateX(0)';
+  document.getElementById('bt-backdrop').style.display='block';
+}
+function closeBettingDrawer(){
+  document.getElementById('bt-drawer').style.transform='translateX(100%)';
+  document.getElementById('bt-backdrop').style.display='none';
+}
+
+// Odds converter
+let _ocLock=false;
+function ocFromAmerican(){
+  if(_ocLock)return; _ocLock=true;
+  const v=parseFloat(document.getElementById('oc-american').value);
+  if(!isNaN(v)&&v!==0){
+    const imp=v<0?Math.abs(v)/(Math.abs(v)+100)*100:100/(v+100)*100;
+    const dec=v<0?(100/Math.abs(v))+1:(v/100)+1;
+    document.getElementById('oc-implied').value=imp.toFixed(1);
+    document.getElementById('oc-decimal').value=dec.toFixed(3);
+    // sync book field in edge calc
+    document.getElementById('ec-book').value=imp.toFixed(1);
+    calcEdge();
+  }
+  _ocLock=false;
+}
+function ocFromDecimal(){
+  if(_ocLock)return; _ocLock=true;
+  const v=parseFloat(document.getElementById('oc-decimal').value);
+  if(!isNaN(v)&&v>1){
+    const imp=(1/v)*100;
+    const am=imp>=50?-(imp/(1-imp/100)):((100/(imp/100))-100);
+    document.getElementById('oc-implied').value=imp.toFixed(1);
+    document.getElementById('oc-american').value=Math.round(am);
+    document.getElementById('ec-book').value=imp.toFixed(1);
+    calcEdge();
+  }
+  _ocLock=false;
+}
+function ocFromImplied(){
+  if(_ocLock)return; _ocLock=true;
+  const v=parseFloat(document.getElementById('oc-implied').value);
+  if(!isNaN(v)&&v>0&&v<100){
+    const dec=100/v;
+    const am=v>=50?-(v/(1-v/100)):((100/(v/100))-100);
+    document.getElementById('oc-decimal').value=dec.toFixed(3);
+    document.getElementById('oc-american').value=Math.round(am);
+    document.getElementById('ec-book').value=v.toFixed(1);
+    calcEdge();
+  }
+  _ocLock=false;
+}
+
+// Edge calculator
+function calcEdge(){
+  const model=parseFloat(document.getElementById('ec-model').value);
+  const book=parseFloat(document.getElementById('ec-book').value);
+  const res=document.getElementById('ec-result');
+  if(isNaN(model)||isNaN(book)){res.style.display='none';return;}
+  const edge=(model-book).toFixed(1);
+  const pos=parseFloat(edge)>0;
+  const abs=Math.abs(parseFloat(edge));
+  let verdict='';
+  if(abs<1) verdict='The model and the book are in close agreement. No meaningful edge detected.';
+  else if(pos) verdict=`You have a <strong>${edge}% edge</strong> — the book is undervaluing this team. Consistent edges above +3% tend to be profitable long-term.`;
+  else verdict=`The book is overvaluing this team by <strong>${Math.abs(edge)}%</strong>. Consider fading or skipping this one.`;
+  document.getElementById('ec-edge-val').textContent=(pos?'+':'')+edge+'%';
+  document.getElementById('ec-edge-val').style.color=pos?'var(--green)':'var(--red)';
+  document.getElementById('ec-verdict').innerHTML=verdict;
+  res.style.display='block';
+}
+
+// Confidence sizing
+function toggleConfSizing(){
+  const p=document.getElementById('cs-panel');
+  const btn=document.getElementById('cs-toggle-btn');
+  const on=p.style.display==='flex';
+  p.style.display=on?'none':'flex';
+  btn.textContent=on?'Show':'Hide';
+}
+const CONF_MAP={1:1,2:2,3:3,4:4,5:5};
+const CONF_LABELS={1:'Low (1)',2:'Low-Medium (2)',3:'Medium (3)',4:'Medium-High (4)',5:'High (5)'};
+function updateConfLabel(){
+  const v=document.getElementById('cs-conf').value;
+  document.getElementById('cs-conf-label').textContent=CONF_LABELS[v]||v;
+}
+function calcSizing(){
+  const bankroll=parseFloat(document.getElementById('cs-bankroll').value);
+  const conf=parseInt(document.getElementById('cs-conf').value);
+  const res=document.getElementById('cs-result');
+  if(isNaN(bankroll)||bankroll<=0){res.style.display='none';return;}
+  const pct=CONF_MAP[conf]||3;
+  const dollars=(bankroll*pct/100).toFixed(2);
+  const unit=(bankroll*0.01).toFixed(2);
+  const units=(dollars/unit).toFixed(1);
+  document.getElementById('cs-dollars').textContent='$'+parseFloat(dollars).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('cs-units').textContent=units+'u (1u = $'+parseFloat(unit).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+')';
+  res.style.display='block';
+}
+</script>
+
 </body>
 </html>
