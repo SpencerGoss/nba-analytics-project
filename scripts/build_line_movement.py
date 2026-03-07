@@ -174,6 +174,8 @@ def build_line_movement(
                     continue
                 seen.add(key)
 
+                if pd.isna(row["opening_spread"]) or pd.isna(row["closing_spread"]):
+                    continue
                 opening = float(row["opening_spread"])
                 closing = float(row["closing_spread"])
                 movement = round(closing - opening, 2)
@@ -206,6 +208,8 @@ def build_line_movement(
                     continue
                 seen.add(key)
 
+                if pd.isna(row["opening_spread"]) or pd.isna(row["closing_spread"]):
+                    continue
                 opening = float(row["opening_spread"])
                 closing = float(row["closing_spread"])
                 movement = round(closing - opening, 2)
