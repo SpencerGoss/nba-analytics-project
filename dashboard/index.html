@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://cdn.nba.com; connect-src 'self'; frame-ancestors 'none'"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://cdn.nba.com; connect-src 'self'"/>
 <title>Baseline Analytics</title>
 <meta name="description" content="Baseline Analytics — data-driven NBA game outcome and ATS predictions powered by machine learning."/>
 <link rel="manifest" href="manifest.json"/>
@@ -2491,7 +2491,8 @@ function buildTodayGamesStrip(picks){
 // ─── GAME CARD ───
 function gameCard(g){
   const aW=g.aS>g.hS,aC=g.status==='final'?(aW?'win':'los'):'',hC=g.status==='final'?(!aW?'win':'los'):'';
-  const col=g.ats.includes('✓')?'var(--green)':g.ats.startsWith('Pick')?'var(--blue)':'var(--gold)';
+  const ats=g.ats||'';
+  const col=ats.includes('✓')?'var(--green)':ats.startsWith('Pick')?'var(--blue)':'var(--gold)';
   const awayLogoUrl=teamLogoUrl(g.away);const homeLogoUrl=teamLogoUrl(g.home);
   const tlsA=awayLogoUrl
     ?`<div class="tls" style="background:transparent;border-color:var(--b0)"><img src="${awayLogoUrl}" width="20" height="20" alt="${esc(g.away)}" style="object-fit:contain" onerror="this.parentElement.textContent='${esc(g.away)}'"/></div>`
@@ -2508,7 +2509,7 @@ function gameCard(g){
       <div class="gtr"><div class="gti">${tlsA}<div><div class="tn">${esc(g.away)}</div><div class="tr">${esc(g.aR)}</div></div></div>${g.aS!=null?`<span class="gsc ${aC}">${g.aS}</span>`:''}</div>
       <div class="gtr"><div class="gti">${tlsH}<div><div class="tn">${esc(g.home)}</div><div class="tr">${esc(g.hR)}</div></div></div>${g.hS!=null?`<span class="gsc ${hC}">${g.hS}</span>`:''}</div>
     </div>
-    <div class="gm"><span class="gmt">${esc(g.spread)}</span><span class="ab" style="background:${col}18;color:${col}">${esc(g.ats)}</span></div>
+    <div class="gm"><span class="gmt">${esc(g.spread)}</span><span class="ab" style="background:${col}18;color:${col}">${esc(ats)}</span></div>
   </div>`;
 }
 
