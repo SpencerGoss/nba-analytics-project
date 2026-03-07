@@ -1100,6 +1100,11 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     <button class="tab" data-tab="compare" onclick="switchTab('players','compare'); initPickers()">Compare</button>
   </div>
   <div class="tab-content active" id="players-tab-stats">
+    <div class="fb" style="margin-bottom:12px">
+      <button class="fc active" id="pfilt-current" onclick="setPlayerFilter('current',this)">Current Season</button>
+      <button class="fc" id="pfilt-legends" onclick="setPlayerFilter('legends',this)">All-Time Legends</button>
+      <button class="fc" id="pfilt-all" onclick="setPlayerFilter('all',this)">All Players</button>
+    </div>
     <div class="card"><div class="tw"><table><thead><tr>
       <th style="width:32px">#</th><th>Player</th>
       <th class="stat-th active-sort" id="th-pts" onclick="sortPlayers('pts')">PTS <span class="sort-arrow" id="arr-pts">&#9660;</span></th>
@@ -1205,12 +1210,18 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 
 <!-- STANDINGS (free) -->
 <section id="page-standings" class="page">
-  <div class="ph"><h1 class="pt">Standings</h1><p class="pd">Live scores, results, and conference rankings</p></div>
+  <div class="ph"><h1 class="pt">Standings</h1><p class="pd">Conference standings and today's game scores</p></div>
   <div class="tab-bar">
-    <button class="tab active" data-tab="scores" onclick="switchTab('standings','scores')">Scores</button>
-    <button class="tab" data-tab="conf" onclick="switchTab('standings','conf')">Conference</button>
+    <button class="tab active" data-tab="conf" onclick="switchTab('standings','conf')">Standings</button>
+    <button class="tab" data-tab="scores" onclick="switchTab('standings','scores')">Today's Games</button>
   </div>
-  <div class="tab-content active" id="standings-tab-scores">
+  <div class="tab-content active" id="standings-tab-conf">
+    <div class="g2" style="margin-top:4px">
+      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Eastern Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">&#8597;</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div></div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Western Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">&#8597;</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="tab-content" id="standings-tab-scores">
     <div class="fb">
       <button class="fc active" onclick="filterGames('all',this)">All</button>
       <button class="fc" onclick="filterGames('live',this)">Live</button>
@@ -1218,12 +1229,6 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
       <button class="fc" onclick="filterGames('upcoming',this)">Upcoming</button>
     </div>
     <div class="gg" id="all-games"></div>
-  </div>
-  <div class="tab-content" id="standings-tab-conf">
-    <div class="g2" style="margin-top:4px">
-      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Eastern Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">&#8597;</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div></div>
-      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Western Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">&#8597;</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div></div>
-    </div>
   </div>
   <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Standings through Mar 5, 2026 &#183; Source: nba_api</p>
 </section>
@@ -2073,8 +2078,14 @@ const DATA = {
     {name:'Kawhi Leonard',           team:'LAC',pts:27.9,reb:6.4,ast:3.7,fg:49.7,thr:37.9,ini:'KL',nbaId:202695},
     {name:'Giannis Antetokounmpo',   team:'MIL',pts:27.6,reb:9.9,ast:5.4,fg:63.7,thr:37.5,ini:'GA',nbaId:203507},
     {name:'Stephen Curry',           team:'GSW',pts:27.2,reb:3.5,ast:4.8,fg:46.8,thr:39.1,ini:'SC',nbaId:201939},
-    {name:'LeBron James',            team:'CLE',pts:27.0,reb:7.4,ast:7.4,fg:50.4,thr:34.5,ini:'LJ',nbaId:2544,  debutYear:2003,primaryTeam:'CLE'},
-    {name:'Michael Jordan',          team:'CHI',pts:30.1,reb:6.2,ast:5.3,fg:49.7,thr:32.7,ini:'MJ',nbaId:893,   debutYear:1984,primaryTeam:'CHI'},
+    {name:'LeBron James',            team:'LAL',pts:27.0,reb:7.4,ast:7.4,fg:50.4,thr:34.5,ini:'LJ',nbaId:2544,  debutYear:2003,primaryTeam:'LAL'},
+    // ── All-Time Legends (retired) ──────────────────────────────────────────────
+    {name:'Michael Jordan',          team:'CHI',pts:30.1,reb:6.2,ast:5.3,fg:49.7,thr:32.7,ini:'MJ',nbaId:893,   debutYear:1984,primaryTeam:'CHI', retired:true},
+    {name:'Kobe Bryant',             team:'LAL',pts:25.0,reb:5.2,ast:4.7,fg:44.7,thr:32.9,ini:'KB',nbaId:977,   debutYear:1996,primaryTeam:'LAL', retired:true},
+    {name:'Larry Bird',              team:'BOS',pts:24.3,reb:10.0,ast:6.3,fg:49.6,thr:37.6,ini:'LB',nbaId:null, debutYear:1979,primaryTeam:'BOS', retired:true},
+    {name:'Magic Johnson',           team:'LAL',pts:19.5,reb:7.2,ast:11.2,fg:52.0,thr:30.3,ini:'MgJ',nbaId:null,debutYear:1979,primaryTeam:'LAL', retired:true},
+    {name:'Kareem Abdul-Jabbar',     team:'LAL',pts:24.6,reb:11.2,ast:3.6,fg:55.9,thr:6.0, ini:'KA',nbaId:null, debutYear:1969,primaryTeam:'LAL', retired:true},
+    {name:'Wilt Chamberlain',        team:'PHI',pts:30.1,reb:22.9,ast:4.4,fg:54.0,thr:0.0,  ini:'WC',nbaId:null, debutYear:1959,primaryTeam:'PHI', retired:true},
   ],
   east:[
     {team:'Detroit Pistons',          abbr:'DET',w:45,l:15,gb:'-', streak:'L1'},
@@ -2126,6 +2137,11 @@ const ADV = {
   'Stephen Curry':              {per:26.4,ts:63.6,usg:31.1,ws:11.8,bpm:6.4,vorp:4.8,rim:56.4,mid:42.1,thr:39.1,paint:58.8},
   'LeBron James':               {per:27.1,ts:59.4,usg:31.6,ws:14.0,bpm:7.6,vorp:5.8,rim:65.8,mid:46.2,thr:34.5,paint:68.4},
   'Michael Jordan':             {per:31.5,ts:57.0,usg:33.3,ws:13.6,bpm:9.2,vorp:6.4,rim:58.4,mid:51.3,thr:32.7,paint:60.8},
+  'Kobe Bryant':                {per:22.9,ts:55.1,usg:32.8,ws:11.2,bpm:4.7,vorp:3.6,rim:55.2,mid:48.4,thr:32.9,paint:57.4},
+  'Larry Bird':                 {per:23.1,ts:57.9,usg:28.4,ws:12.4,bpm:7.4,vorp:5.2,rim:52.8,mid:50.1,thr:37.6,paint:54.6},
+  'Magic Johnson':              {per:24.1,ts:58.4,usg:27.2,ws:12.8,bpm:7.6,vorp:5.8,rim:56.4,mid:44.2,thr:30.3,paint:60.2},
+  'Kareem Abdul-Jabbar':        {per:24.6,ts:58.9,usg:30.1,ws:17.4,bpm:7.8,vorp:6.4,rim:68.2,mid:46.8,thr:6.0, paint:72.4},
+  'Wilt Chamberlain':           {per:31.8,ts:58.0,usg:38.2,ws:21.2,bpm:10.4,vorp:8.4,rim:74.2,mid:50.2,thr:0.0, paint:78.6},
 };
 
 // ─── HEADSHOT HELPER ───
@@ -2440,14 +2456,29 @@ function updateSortHeaders(){
   });
 }
 
+let pFilter='current'; // 'current' | 'legends' | 'all'
+
+function setPlayerFilter(mode,btn){
+  pFilter=mode;
+  document.querySelectorAll('#pfilt-current,#pfilt-legends,#pfilt-all').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderPlayersTable();
+}
+
 function renderPlayersTable(){
-  const s=[...DATA.players].sort((a,b)=>(a[pSort]-b[pSort])*pDir);
+  let pool=DATA.players;
+  if(pFilter==='current')pool=DATA.players.filter(p=>!p.retired);
+  else if(pFilter==='legends')pool=DATA.players.filter(p=>p.retired);
+  const s=[...pool].sort((a,b)=>(a[pSort]-b[pSort])*pDir);
   document.getElementById('players-tb').innerHTML=s.map((p,i)=>`
     <tr>
       <td><span class="rn">${i+1}</span></td>
       <td class="nc">
         ${headshot(p.nbaId,p.ini,36)}
-        <span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name}</span>
+        <div>
+          <span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name}</span>
+          ${p.retired?'<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--purple);margin-left:6px;vertical-align:middle">Legend</span>':''}
+        </div>
       </td>
       <td style="${pSort==='pts'?'color:var(--gold);font-weight:700':''}">${p.pts}</td>
       <td style="${pSort==='reb'?'color:var(--gold);font-weight:700':''}">${p.reb}</td>
@@ -2711,19 +2742,20 @@ function setEraMode(adj){
 
 function initPickers(){
   if(pickersInited)return;pickersInited=true;
-  const names=DATA.players.map(p=>p.name);
-  ['picker-a','picker-b'].forEach((id,i)=>{
+  const current=DATA.players.filter(p=>!p.retired);
+  const legends=DATA.players.filter(p=>p.retired);
+  const mkOpts=arr=>arr.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  ['picker-a','picker-b'].forEach(id=>{
     const sel=document.getElementById(id);
-    sel.innerHTML='<option value="">— Select player —</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
-    sel.value=names[i];
+    sel.innerHTML=
+      '<option value="">— Select player —</option>'+
+      '<optgroup label="Current Season">'+mkOpts(current)+'</optgroup>'+
+      '<optgroup label="All-Time Legends">'+mkOpts(legends)+'</optgroup>';
   });
-  // Default to LeBron James vs Michael Jordan if both exist in the dataset
-  const hasLeBron=names.includes('LeBron James');
-  const hasJordan=names.includes('Michael Jordan');
-  if(hasLeBron&&hasJordan){
-    document.getElementById('picker-a').value='LeBron James';
-    document.getElementById('picker-b').value='Michael Jordan';
-  }
+  // Default: LeBron vs Michael Jordan
+  const names=DATA.players.map(p=>p.name);
+  if(names.includes('LeBron James'))document.getElementById('picker-a').value='LeBron James';
+  if(names.includes('Michael Jordan'))document.getElementById('picker-b').value='Michael Jordan';
   updateComparison();
 }
 
