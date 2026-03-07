@@ -425,6 +425,104 @@ def build_player_index(player_records: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Legend overrides — pre-1996 stars not fully covered by NBA API
+# Stats: Basketball Reference career regular-season averages (per game).
+# These records REPLACE any partial API-sourced record for the same player.
+# ---------------------------------------------------------------------------
+
+_LEGENDS: list[dict] = [
+    {
+        "player_id": -1, "player_name": "Michael Jordan",
+        "seasons_span": "1984-2003", "career_gp": 1072,
+        "career_avgs": {"pts": 30.1, "reb": 6.2, "ast": 5.3, "stl": 2.35, "blk": 0.83,
+                        "pts_normalized": None},
+        "best_season": {"season_str": "1986-87", "pts": 37.1, "reb": 5.2, "ast": 4.6},
+        "ts_pct": 0.570, "fg_pct": 0.497, "fg3_pct": 0.327, "ft_pct": 0.835,
+        "seasons": [
+            {"season_str": "1984-85", "pts": 28.2, "reb": 6.5, "ast": 5.9},
+            {"season_str": "1986-87", "pts": 37.1, "reb": 5.2, "ast": 4.6},
+            {"season_str": "1987-88", "pts": 35.0, "reb": 5.5, "ast": 5.9},
+            {"season_str": "1990-91", "pts": 31.5, "reb": 6.0, "ast": 5.5},
+            {"season_str": "1995-96", "pts": 30.4, "reb": 6.6, "ast": 4.3},
+            {"season_str": "1996-97", "pts": 29.6, "reb": 5.9, "ast": 4.3},
+            {"season_str": "1997-98", "pts": 28.7, "reb": 5.8, "ast": 3.5},
+            {"season_str": "2001-02", "pts": 22.9, "reb": 5.7, "ast": 5.2},
+            {"season_str": "2002-03", "pts": 20.0, "reb": 6.1, "ast": 3.8},
+        ],
+        "_legend": True, "_note": "Career stats from Basketball Reference. NBA API only covers 1996-2003.",
+    },
+    {
+        "player_id": -2, "player_name": "Larry Bird",
+        "seasons_span": "1979-1992", "career_gp": 897,
+        "career_avgs": {"pts": 24.3, "reb": 10.0, "ast": 6.3, "stl": 1.74, "blk": 0.84,
+                        "pts_normalized": None},
+        "best_season": {"season_str": "1987-88", "pts": 29.9, "reb": 9.3, "ast": 6.1},
+        "ts_pct": 0.584, "fg_pct": 0.496, "fg3_pct": 0.376, "ft_pct": 0.886,
+        "seasons": [],
+        "_legend": True, "_note": "Career stats from Basketball Reference.",
+    },
+    {
+        "player_id": -3, "player_name": "Magic Johnson",
+        "seasons_span": "1979-1996", "career_gp": 906,
+        "career_avgs": {"pts": 19.5, "reb": 7.2, "ast": 11.2, "stl": 1.90, "blk": 0.37,
+                        "pts_normalized": None},
+        "best_season": {"season_str": "1988-89", "pts": 22.5, "reb": 7.9, "ast": 12.8},
+        "ts_pct": 0.584, "fg_pct": 0.520, "fg3_pct": 0.303, "ft_pct": 0.848,
+        "seasons": [],
+        "_legend": True, "_note": "Career stats from Basketball Reference.",
+    },
+    {
+        "player_id": -4, "player_name": "Kareem Abdul-Jabbar",
+        "seasons_span": "1969-1989", "career_gp": 1560,
+        "career_avgs": {"pts": 24.6, "reb": 11.2, "ast": 3.6, "stl": 0.94, "blk": 2.60,
+                        "pts_normalized": None},
+        "best_season": {"season_str": "1971-72", "pts": 34.8, "reb": 16.6, "ast": 4.6},
+        "ts_pct": 0.579, "fg_pct": 0.559, "fg3_pct": 0.056, "ft_pct": 0.721,
+        "seasons": [],
+        "_legend": True, "_note": "Career stats from Basketball Reference.",
+    },
+    {
+        "player_id": -5, "player_name": "Kobe Bryant",
+        "seasons_span": "1996-2016", "career_gp": 1346,
+        "career_avgs": {"pts": 25.0, "reb": 5.2, "ast": 4.7, "stl": 1.38, "blk": 0.52,
+                        "pts_normalized": None},
+        "best_season": {"season_str": "2005-06", "pts": 35.4, "reb": 5.3, "ast": 4.5},
+        "ts_pct": 0.551, "fg_pct": 0.447, "fg3_pct": 0.329, "ft_pct": 0.837,
+        "seasons": [],
+        "_legend": True, "_note": "Career stats from Basketball Reference.",
+    },
+    {
+        "player_id": -6, "player_name": "Wilt Chamberlain",
+        "seasons_span": "1959-1973", "career_gp": 1045,
+        "career_avgs": {"pts": 30.1, "reb": 22.9, "ast": 4.4, "stl": None, "blk": None,
+                        "pts_normalized": None},
+        "best_season": {"season_str": "1961-62", "pts": 50.4, "reb": 25.7, "ast": 2.4},
+        "ts_pct": 0.541, "fg_pct": 0.540, "fg3_pct": None, "ft_pct": 0.511,
+        "seasons": [],
+        "_legend": True, "_note": "Career stats from Basketball Reference.",
+    },
+]
+
+
+def _inject_legends(player_records: list[dict]) -> list[dict]:
+    """Replace partial API records with curated legend stats; append if not present."""
+    existing_names = {r["player_name"] for r in player_records}
+    result = []
+    replaced = set()
+    for rec in player_records:
+        # Drop partial API record if a legend override exists
+        leg = next((l for l in _LEGENDS if l["player_name"] == rec["player_name"]), None)
+        if leg:
+            replaced.add(leg["player_name"])
+        else:
+            result.append(rec)
+    # Add all legends (replaced or new)
+    for leg in _LEGENDS:
+        result.append(dict(leg))
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -464,6 +562,11 @@ def run(min_seasons: int = DEFAULT_MIN_SEASONS,
     player_index = build_player_index(player_records)
 
     print(f"  {len(player_records):,} eligible players")
+
+    # Inject curated legend overrides for pre-1996 players missing from NBA API.
+    # Stats sourced from Basketball Reference career regular-season averages.
+    player_records = _inject_legends(player_records)
+    print(f"  {len(player_records):,} players after legend injection")
 
     # Write comparison JSON
     comparison = {

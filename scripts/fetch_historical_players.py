@@ -189,7 +189,7 @@ def fetch_players(seasons: list[str]) -> None:
 
         # Flush every 10 seasons to avoid losing progress on network error
         if len(frames) >= 10:
-            _append_frames(frames, PLAYERS_CSV, first_write and i <= len(frames))
+            _append_frames(frames, PLAYERS_CSV, first_write)
             first_write = False
             frames = []
 

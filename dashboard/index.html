@@ -988,6 +988,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <button class="nb" onclick="showFreeTab('teams')" id="nb-teams">Teams</button>
   <button class="nb" onclick="showFreeTab('h2h')" id="nb-h2h">H2H</button>
   <button class="nb" onclick="showFreeTab('standings')" id="nb-standings">Standings</button>
+  <button class="nb" onclick="showFreeTab('injuries')" id="nb-injuries">Injuries</button>
   <button class="nb" onclick="showFreeTab('rankings')" id="nb-rankings">Rankings</button>
   <button class="nb" onclick="showFreeTab('history')" id="nb-history">History</button>
   <div class="nav-divider"></div>
@@ -1227,10 +1228,90 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Standings through Mar 5, 2026 &#183; Source: nba_api</p>
 </section>
 
+<!-- INJURIES (free) -->
+<section id="page-injuries" class="page">
+  <div class="ph">
+    <h1 class="pt">Injury Report</h1>
+    <p class="pd">Players marked OUT in the last 3 game dates &middot; Impact rated by season scoring average</p>
+  </div>
+  <div id="injuries-content">
+    <div style="color:var(--t2);font-size:13px;padding:40px 0;text-align:center">Loading injury data&hellip;</div>
+  </div>
+  <p class="lu" id="injuries-updated"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Injury data updated daily &middot; Source: nba_api player logs</p>
+</section>
+
 <!-- RANKINGS (free) -->
 <section id="page-rankings" class="page">
-  <div class="ph"><h1 class="pt">Rankings</h1><p class="pd">Power rankings, adjusted ratings, and SRS</p></div>
-  <div class="tab-placeholder"><div class="tp-icon">&#128200;</div><div class="tp-title">Power Rankings</div><div class="tp-desc">Adjusted efficiency ratings, SRS, and model-derived power rankings coming soon.</div></div>
+  <div class="ph"><h1 class="pt">Rankings</h1><p class="pd">Composite power rankings built from net rating, Pythagorean win%, and recent form</p></div>
+
+  <!-- Hero row -->
+  <div id="rk-hero" class="card" style="display:none;margin-bottom:20px;padding:20px 24px;background:linear-gradient(135deg,rgba(0,200,150,.08),rgba(79,158,255,.06));border:1px solid rgba(0,200,150,.18)">
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px 24px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green);flex-shrink:0">#1 Team</div>
+      <div id="rk-hero-name" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--t0)">—</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-left:auto">
+        <div style="text-align:center">
+          <div id="rk-hero-score" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--green);letter-spacing:-1px">—</div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Score</div>
+        </div>
+        <div style="text-align:center">
+          <div id="rk-hero-net" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--blue);letter-spacing:-1px">—</div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Net Rtg</div>
+        </div>
+        <div style="text-align:center">
+          <div id="rk-hero-l10" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--gold);letter-spacing:-1px">—</div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Last 10</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)">Score Formula</div>
+    <div style="font-size:11px;color:var(--t1);background:var(--card);border:1px solid var(--b0);border-radius:8px;padding:4px 10px">
+      Net Rtg L10 <span style="color:var(--green);font-weight:700">40%</span>
+      &nbsp;+&nbsp; Net Rtg Season <span style="color:var(--blue);font-weight:700">20%</span>
+      &nbsp;+&nbsp; Pythagorean Win% <span style="color:var(--gold);font-weight:700">25%</span>
+      &nbsp;+&nbsp; Form Win% <span style="color:var(--purple);font-weight:700">15%</span>
+      &nbsp;&rarr; normalised 0–100
+    </div>
+  </div>
+
+  <!-- Rankings table -->
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
+    <div id="rk-table-wrap" style="overflow-x:auto">
+      <div id="rk-loading" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:10px;color:var(--t2);font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        Loading power rankings…
+      </div>
+      <table id="rk-table" style="display:none;width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--b0)">
+            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">#</th>
+            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Team</th>
+            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap;min-width:140px">Score</th>
+            <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Net Rtg</th>
+            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Last 10</th>
+            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Trend</th>
+            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">vs Last Wk</th>
+          </tr>
+        </thead>
+        <tbody id="rk-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Divergence callout -->
+  <div id="rk-divergence" style="display:none;margin-bottom:20px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Model Divergence — Teams the model rates differently than their record</div>
+    <div id="rk-divergence-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+  </div>
+
+  <p id="rk-updated" class="lu" style="display:none">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Power rankings · Source: team_game_features.csv
+  </p>
 </section>
 
 <!-- HISTORY (free) -->
@@ -1294,7 +1375,21 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
       <div><div style="font-size:13px;font-weight:700;margin-bottom:3px;color:var(--t0)">What is a Value Bet?</div><div style="font-size:12px;color:var(--t1);line-height:1.65">A value bet occurs when our model's probability is significantly higher than the market implied probability. Edge % = model prob minus market prob.</div></div>
     </div>
   </div>
-  <div class="card"><div class="sh"><div><div class="st">Recent Value Bets</div><div class="ss">Games where model probability exceeds market implied by &gt;5%</div></div><span class="badge g" id="vb-total-badge">Loading...</span></div><div class="tw"><table><thead><tr><th>Date</th><th>Matchup</th><th>Pick</th><th>Model</th><th>Market</th><th>Edge</th></tr></thead><tbody id="value-bets-tb"><tr><td colspan="6" style="text-align:center;color:var(--t2);padding:28px;font-size:13px">Loading value bet data...</td></tr></tbody></table></div></div>
+  <!-- VB CARDS — one per value bet, populated by renderValueBets() -->
+  <div id="vb-cards" style="display:flex;flex-direction:column;gap:14px;margin-bottom:28px"></div>
+  <!-- COMPACT ALL-BETS TABLE -->
+  <div class="card">
+    <div class="sh">
+      <div><div class="st">All Value Bets</div><div class="ss">Full list — model edge &gt;5% vs market</div></div>
+      <span class="badge g" id="vb-total-badge">Loading...</span>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Date</th><th>Matchup</th><th>Pick</th><th>Model</th><th>Market</th><th>Edge</th></tr></thead>
+        <tbody id="value-bets-tb"><tr><td colspan="6" style="text-align:center;color:var(--t2);padding:28px;font-size:13px">Loading value bet data...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
   <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Model v2.2 &#183; Value bets updated daily</p>
 </section>
 
@@ -1524,7 +1619,7 @@ const MOB_NAV_MAP = {
   'mbn-players':   'players',
   'mbn-standings': 'games',
   'mbn-picks':     'model',
-  'mbn-more':      'deep',
+  'mbn-injuries':  'injuries',
 };
 
 function syncMobNav(activeId) {
@@ -2050,7 +2145,7 @@ function headshot(nbaId, ini, size=36) {
 // ─── NAV ───
 
 // All page IDs that map to free tabs
-const FREE_TABS = ['today','players','teams','h2h','standings','rankings','history','deep'];
+const FREE_TABS = ['today','players','teams','h2h','standings','injuries','rankings','history','deep'];
 // Betting tab ids
 const BET_TABS  = ['picks','valuebets','props','sharp','performance','tracker'];
 
@@ -2080,6 +2175,11 @@ function showFreeTab(id){
   // Trigger lazy renders
   if(id==='deep'){renderMatchups();renderPlayoff();renderStreaks();}
   if(id==='h2h'){initH2H();}
+  if(id==='rankings'){initRankings();}
+  if(id==='injuries'){initInjuries();}
+  // Sync mobile nav
+  const mobNavIds={today:'mbn-today',players:'mbn-players',standings:'mbn-standings',injuries:'mbn-injuries'};
+  if(typeof syncMobNav==='function'&&mobNavIds[id])syncMobNav(mobNavIds[id]);
 }
 
 function showBettingTab(tabId, pillEl){
@@ -2934,8 +3034,10 @@ let vbRendered=false;
 function renderValueBets(){
   if(vbRendered)return;vbRendered=true;
   const vb=window.VALUE_BETS||[];
+  const explainers=window._VB_EXPLAINERS||[];
   const tb=document.getElementById('value-bets-tb');
   const badge=document.getElementById('vb-total-badge');
+  const cards=document.getElementById('vb-cards');
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   if(!vb.length){
     if(tb){const r=tb.insertRow();const c=r.insertCell();c.colSpan=6;c.style.cssText='text-align:center;color:var(--t2);padding:28px;font-size:13px';c.textContent='No value bet data — run update.py to fetch.';}
@@ -2947,6 +3049,91 @@ function renderValueBets(){
   const avgConf=(vb.reduce((a,b)=>a+b.model_prob,0)/vb.length*100).toFixed(1);
   set('vb-avg-edge',avgEdge+'%');set('vb-count',vb.length);set('vb-best-edge',bestEdge+'%');set('vb-avg-conf',avgConf+'%');
   if(badge){badge.textContent=vb.length+' bets';badge.className='badge g';}
+
+  // ── Build rich bet cards ──
+  if(cards){
+    cards.textContent='';
+    vb.forEach(b=>{
+      const edge=(b.edge_pct*100).toFixed(1);
+      const mp=(b.model_prob*100).toFixed(1);
+      const mkp=(b.market_prob*100).toFixed(1);
+      const ecls=b.edge_pct>=0.1?'hi':'md';
+      const confLabel=b.edge_pct>=0.1?'HIGH':'MED';
+      const marketType='ML';
+      const ex=explainers.find(e=>e.home_team===b.home_team&&e.away_team===b.away_team)||null;
+
+      const awayLogoUrl=teamLogoUrl(b.away_team);
+      const homeLogoUrl=teamLogoUrl(b.home_team);
+      const awLogoTag=awayLogoUrl?`<img src="${awayLogoUrl}" width="18" height="18" alt="${esc(b.away_team)}" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
+      const hmLogoTag=homeLogoUrl?`<img src="${homeLogoUrl}" width="18" height="18" alt="${esc(b.home_team)}" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
+
+      const d=new Date(b.game_date);
+      const ds=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+      // Bullets from explainers
+      let bulletsHtml='';
+      if(ex&&ex.bullets&&ex.bullets.length){
+        bulletsHtml='<div style="display:flex;flex-direction:column;gap:5px;margin-top:12px;padding-top:12px;border-top:1px solid var(--b0)">';
+        ex.bullets.slice(0,3).forEach(bl=>{
+          bulletsHtml+=`<div style="display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--t1);font-weight:500;line-height:1.5">`;
+          bulletsHtml+=`<span style="color:var(--green);font-weight:700;flex-shrink:0;font-size:12px;margin-top:1px">\u2713</span>`;
+          bulletsHtml+=`<span>${esc(bl)}</span></div>`;
+        });
+        bulletsHtml+='</div>';
+      }
+
+      const card=document.createElement('div');
+      card.className='card card-value';
+      card.style.cssText='padding:20px 22px';
+      card.insertAdjacentHTML('beforeend',`
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;margin-bottom:3px;flex-wrap:wrap">
+              ${awLogoTag}${esc(b.away_team)} @ ${hmLogoTag}${esc(b.home_team)}
+            </div>
+            <div style="font-size:11px;color:var(--t2);font-weight:500">${esc(ds)}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+            <span style="padding:3px 9px;border-radius:100px;font-size:10px;font-weight:700;font-family:var(--fm);background:var(--blue-d);color:var(--blue)">${marketType}</span>
+            <span style="padding:3px 9px;border-radius:100px;font-size:10px;font-weight:700;font-family:var(--fm);${ecls==='hi'?'background:var(--green-d);color:var(--green)':'background:var(--gold-d);color:var(--gold)'}">${confLabel}</span>
+            <span style="padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;font-family:var(--fm);background:var(--green-d);color:var(--green);border:1px solid rgba(0,200,150,.25)">BET: ${esc(b.recommended_side||b.home_team)}</span>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;font-weight:700;color:var(--green)">WE SAY</span>
+            <span style="font-family:var(--fm);font-size:11px;font-weight:700;color:var(--green)">${mp}%</span>
+          </div>
+          <div class="edge-bar-wrap" style="margin-bottom:8px">
+            <div class="edge-bar"><div class="edge-bar-fill-model" style="width:${Math.min(100,b.model_prob*100)}%"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;font-weight:700;color:var(--t2)">BOOKS SAY</span>
+            <span style="font-family:var(--fm);font-size:11px;font-weight:600;color:var(--t2)">${mkp}%</span>
+          </div>
+          <div class="edge-bar-wrap">
+            <div class="edge-bar"><div class="edge-bar-fill-market" style="width:${Math.min(100,b.market_prob*100)}%"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:var(--t2)">Edge</span>
+          <span style="font-family:var(--fm);font-size:20px;font-weight:700;color:var(--green);letter-spacing:-.5px">+${edge}%</span>
+          <span style="font-size:11px;color:var(--t2)">model vs market</span>
+        </div>
+        ${bulletsHtml}
+      `);
+      // Share button row
+      if(b.recommended_side&&b.edge_pct!=null){
+        const shareRow=document.createElement('div');
+        shareRow.style.cssText='display:flex;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--b0)';
+        shareRow.appendChild(makeShareBtn(b.home_team,b.away_team,b.edge_pct,b.recommended_side));
+        card.appendChild(shareRow);
+      }
+      cards.appendChild(card);
+    });
+  }
+
+  // ── Compact table ──
   if(tb){
     tb.textContent='';
     vb.forEach(b=>{
@@ -2962,7 +3149,6 @@ function renderValueBets(){
       const vbHmLogo=vbHomeUrl?`<img src="${vbHomeUrl}" width="14" height="14" alt="${esc(b.home_team)}" style="object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display='none'"/>`:'';
       const rowMarkup=`<tr><td style="color:var(--t2);font-family:var(--fm)">${esc(ds)}</td><td style="font-family:var(--f);font-weight:600">${vbAwLogo}${esc(b.away_team)} @ ${vbHmLogo}${esc(b.home_team)}</td><td><span class="badge g">${esc(b.recommended_side)}</span></td><td>${mp}%<div class="vb-prob-bar"><div class="vb-prob-fill" style="width:${fillW}%;background:var(--blue)"></div></div></td><td style="color:var(--t2)">${mkp}%</td><td><span class="vb-edge ${ecls}">+${edge}%</span></td><td></td></tr>`;
       tb.insertAdjacentHTML('beforeend', rowMarkup);
-      // Attach share button to the empty last cell
       const lastRow=tb.lastElementChild;
       if(lastRow){
         const shareCell=lastRow.lastElementChild;
@@ -2972,6 +3158,125 @@ function renderValueBets(){
       }
     });
   }
+}
+
+// ─── INJURIES ───
+let _injuriesLoaded=false;
+let _injuriesLoading=false;
+
+function initInjuries(){
+  if(_injuriesLoading)return;
+  if(_injuriesLoaded)return;
+  _injuriesLoading=true;
+  const container=document.getElementById('injuries-content');
+  fetch('data/injuries.json')
+    .then(r=>r.ok?r.json():Promise.reject('HTTP '+r.status))
+    .then(data=>{
+      _injuriesLoaded=true;
+      _injuriesLoading=false;
+      renderInjuries(Array.isArray(data)?data:[]);
+    })
+    .catch(err=>{
+      _injuriesLoading=false;
+      if(container){
+        container.innerHTML='<div class="data-error"><div class="de-icon">\u26a0</div><div class="de-msg">Could not load injury data</div><div class="de-sub">Run <code>python scripts/build_injuries.py</code> then refresh. ('+String(err)+')</div></div>';
+      }
+    });
+}
+
+function renderInjuries(games){
+  const container=document.getElementById('injuries-content');
+  if(!container)return;
+  if(!games||!games.length){
+    container.innerHTML='<div class="data-error"><div class="de-icon">\u26a0</div><div class="de-msg">No injury data available</div><div class="de-sub">Run update.py or build_injuries.py to generate today\'s report.</div></div>';
+    return;
+  }
+
+  const impactCls={'high':'pill-high','medium':'pill-med','low':'pill-low'};
+  const impactLabel={'high':'HIGH','medium':'MED','low':'LOW'};
+
+  // Summary stat bar
+  let totalHigh=0,totalMed=0,totalPlayers=0;
+  games.forEach(g=>{
+    const all=(g.home_injuries||[]).concat(g.away_injuries||[]);
+    totalPlayers+=all.length;
+    all.forEach(p=>{if(p.impact==='high')totalHigh++;else if(p.impact==='medium')totalMed++;});
+  });
+
+  let html='';
+  html+=`<div class="sgrid" style="margin-bottom:20px">`;
+  html+=`<div class="sc accent-red"><span class="sl">Games Affected</span><span class="sv r" style="font-size:28px">${games.length}</span><div class="schange">Games with injuries</div></div>`;
+  html+=`<div class="sc accent-red"><span class="sl">High-Impact OUT</span><span class="sv r" style="font-size:28px">${totalHigh}</span><div class="schange dn">15+ PPG players out</div></div>`;
+  html+=`<div class="sc accent-gold"><span class="sl">Med-Impact OUT</span><span class="sv o" style="font-size:28px">${totalMed}</span><div class="schange">8-14 PPG players out</div></div>`;
+  html+=`<div class="sc accent-blue"><span class="sl">Total Players OUT</span><span class="sv b" style="font-size:28px">${totalPlayers}</span><div class="schange">All tracked absences</div></div>`;
+  html+='</div>';
+
+  // Per-game cards
+  games.forEach(g=>{
+    const allInj=(g.home_injuries||[]).concat(g.away_injuries||[]);
+    const hasHighImpact=allInj.some(p=>p.impact==='high');
+    const matchupLabel=g.away_team&&g.home_team?esc(g.away_team)+' @ '+esc(g.home_team):(esc(g.home_team)||'Unknown');
+
+    const awayLogoUrl=g.away_team?teamLogoUrl(g.away_team):null;
+    const homeLogoUrl=g.home_team?teamLogoUrl(g.home_team):null;
+    const awLogo=awayLogoUrl?`<img src="${awayLogoUrl}" width="18" height="18" alt="${esc(g.away_team)}" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
+    const hmLogo=homeLogoUrl?`<img src="${homeLogoUrl}" width="18" height="18" alt="${esc(g.home_team)}" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
+
+    html+=`<div class="card" style="margin-bottom:14px${hasHighImpact?';border-color:rgba(255,92,92,.25)':''}">`;
+    html+=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
+    html+=`<div style="display:flex;align-items:center;gap:7px;font-size:15px;font-weight:700">${awLogo}${matchupLabel}${hmLogo}</div>`;
+    if(g.spread_impact_note){
+      html+=`<div style="font-size:11px;color:var(--t2);font-weight:500;max-width:340px">${esc(g.spread_impact_note)}</div>`;
+    }
+    html+='</div>';
+
+    // Two-column layout for home vs away injuries
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">`;
+
+    // Home injuries
+    html+=`<div>`;
+    html+=`<div style="font-size:10px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">${esc(g.home_team||'HOME')}</div>`;
+    if(!g.home_injuries||!g.home_injuries.length){
+      html+=`<div style="font-size:12px;color:var(--t2);font-weight:500;padding:8px 0">No reported injuries</div>`;
+    } else {
+      g.home_injuries.forEach(p=>{
+        const cls=impactCls[p.impact]||'pill-low';
+        const lbl=impactLabel[p.impact]||p.impact.toUpperCase();
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--b0)">`;
+        html+=`<span class="badge ${cls==='pill-high'?'r':cls==='pill-med'?'o':'b'}" style="font-size:9px;padding:1px 6px;flex-shrink:0">${lbl}</span>`;
+        html+=`<div style="flex:1;min-width:0">`;
+        html+=`<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.player)}</div>`;
+        html+=`<div style="font-size:10px;color:var(--t2);font-weight:500">${esc(p.season_avg_pts!=null?p.season_avg_pts+' PPG':p.status||'OUT')}</div>`;
+        html+='</div></div>';
+      });
+    }
+    html+='</div>';
+
+    // Away injuries
+    html+=`<div>`;
+    html+=`<div style="font-size:10px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">${esc(g.away_team||'AWAY')}</div>`;
+    if(!g.away_injuries||!g.away_injuries.length){
+      html+=`<div style="font-size:12px;color:var(--t2);font-weight:500;padding:8px 0">No reported injuries</div>`;
+    } else {
+      g.away_injuries.forEach(p=>{
+        const cls=impactCls[p.impact]||'pill-low';
+        const lbl=impactLabel[p.impact]||p.impact.toUpperCase();
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--b0)">`;
+        html+=`<span class="badge ${cls==='pill-high'?'r':cls==='pill-med'?'o':'b'}" style="font-size:9px;padding:1px 6px;flex-shrink:0">${lbl}</span>`;
+        html+=`<div style="flex:1;min-width:0">`;
+        html+=`<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.player)}</div>`;
+        html+=`<div style="font-size:10px;color:var(--t2);font-weight:500">${esc(p.season_avg_pts!=null?p.season_avg_pts+' PPG':p.status||'OUT')}</div>`;
+        html+='</div></div>';
+      });
+    }
+    html+='</div>';
+
+    html+='</div>'; // close grid
+    html+='</div>'; // close card
+  });
+
+  container.textContent='';
+  container.insertAdjacentHTML('beforeend',html);
 }
 
 // ─── CLV SUMMARY (called from loadDashboardData so it populates regardless of tab order) ───
@@ -3028,6 +3333,7 @@ async function loadDashboardData(){
     window.ACCURACY_DATA=accuracy;
     window.VALUE_BETS=valueBets;
     window.META=meta;
+    window._VB_EXPLAINERS=explainers;
     if(picks.length){
       DATA.picks=picks.map(p=>{
         const conf=Math.round(Math.max(p.home_win_prob||0,p.away_win_prob||0)*100);
@@ -3505,6 +3811,159 @@ if ('serviceWorker' in navigator) {
       });
   };
 })();
+
+// ─── POWER RANKINGS ───────────────────────────────────────────────────────────
+(function () {
+  let _rkLoaded = false;
+  let _rkLoading = false;
+
+  // Inject spin keyframe once
+  (function injectSpinStyle() {
+    if (document.getElementById('rk-spin-style')) return;
+    const s = document.createElement('style');
+    s.id = 'rk-spin-style';
+    s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  })();
+
+  function _trendArrow(trend) {
+    if (trend === 'up')   return '<span style="color:var(--green);font-size:16px;line-height:1" title="Trending up">&#8593;</span>';
+    if (trend === 'down') return '<span style="color:var(--red);font-size:16px;line-height:1" title="Trending down">&#8595;</span>';
+    return '<span style="color:var(--t2);font-size:13px;line-height:1" title="Stable">&#8212;</span>';
+  }
+
+  function _rankDelta(rank, prevRank) {
+    const d = prevRank - rank; // positive = improved (moved up)
+    if (d > 0) return '<span style="color:var(--green);font-size:11px;font-weight:700">+' + d + '</span>';
+    if (d < 0) return '<span style="color:var(--red);font-size:11px;font-weight:700">' + d + '</span>';
+    return '<span style="color:var(--t2);font-size:11px">&#8212;</span>';
+  }
+
+  function _scoreBar(score) {
+    const pct = Math.max(0, Math.min(100, score));
+    const hue = pct >= 65 ? 'var(--green)' : pct >= 45 ? 'var(--gold)' : 'var(--red)';
+    return '<div style="display:flex;align-items:center;gap:8px">'
+      + '<div style="flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden;min-width:80px">'
+      + '<div style="height:100%;width:' + pct + '%;background:' + hue + ';border-radius:5px;transition:width 600ms cubic-bezier(.16,1,.3,1)"></div>'
+      + '</div>'
+      + '<span style="font-family:var(--fm);font-size:12px;font-weight:700;color:var(--t0);min-width:34px;text-align:right">' + score.toFixed(1) + '</span>'
+      + '</div>';
+  }
+
+  function _netRtgColor(v) {
+    if (v > 5)  return 'var(--green)';
+    if (v > 0)  return 'var(--blue)';
+    if (v > -5) return 'var(--gold)';
+    return 'var(--red)';
+  }
+
+  function _renderRankings(data) {
+    const rankings = Array.isArray(data) ? data : (data.rankings || []);
+    if (!rankings.length) return;
+
+    // Hero row
+    const top = rankings[0];
+    const heroEl    = document.getElementById('rk-hero');
+    const heroName  = document.getElementById('rk-hero-name');
+    const heroScore = document.getElementById('rk-hero-score');
+    const heroNet   = document.getElementById('rk-hero-net');
+    const heroL10   = document.getElementById('rk-hero-l10');
+    if (heroEl) {
+      heroEl.style.display = '';
+      if (heroName)  heroName.textContent  = top.team + ' \u00B7 ' + top.team_name;
+      if (heroScore) heroScore.textContent = top.composite_score.toFixed(1);
+      if (heroNet)   heroNet.textContent   = (top.net_rating >= 0 ? '+' : '') + top.net_rating.toFixed(1);
+      if (heroL10)   heroL10.textContent   = top.last10_record;
+    }
+
+    // Table rows
+    const tbody = document.getElementById('rk-tbody');
+    if (tbody) {
+      tbody.innerHTML = rankings.map(function(r, i) {
+        const rowBg   = i % 2 === 0 ? '' : 'background:rgba(255,255,255,.02)';
+        const netColor = _netRtgColor(r.net_rating);
+        const netSign  = r.net_rating >= 0 ? '+' : '';
+        return '<tr style="border-bottom:1px solid var(--b0);' + rowBg + '">'
+          + '<td style="padding:11px 16px;font-family:var(--fm);font-size:13px;font-weight:700;color:var(--t2);text-align:left">' + r.rank + '</td>'
+          + '<td style="padding:11px 16px;text-align:left;white-space:nowrap">'
+          +   '<div style="font-weight:700;color:var(--t0)">' + r.team + '</div>'
+          +   '<div style="font-size:11px;color:var(--t2)">' + r.team_name + '</div>'
+          + '</td>'
+          + '<td style="padding:11px 16px;min-width:140px">' + _scoreBar(r.composite_score) + '</td>'
+          + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + netColor + '">' + netSign + r.net_rating.toFixed(1) + '</td>'
+          + '<td style="padding:11px 16px;text-align:center;font-family:var(--fm);font-size:12px;color:var(--t1)">' + r.last10_record + '</td>'
+          + '<td style="padding:11px 16px;text-align:center">' + _trendArrow(r.trend) + '</td>'
+          + '<td style="padding:11px 16px;text-align:center">' + _rankDelta(r.rank, r.prev_rank) + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+
+    // Divergence callout — teams where |rank - prevRank| >= 4
+    const divergent = rankings.filter(function(r) { return Math.abs(r.rank - r.prev_rank) >= 4; });
+    const divEl   = document.getElementById('rk-divergence');
+    const divList = document.getElementById('rk-divergence-list');
+    if (divEl && divList && divergent.length) {
+      divList.innerHTML = divergent.map(function(r) {
+        const moved    = r.prev_rank - r.rank;
+        const dir      = moved > 0 ? 'rose' : 'fell';
+        const col      = moved > 0 ? 'var(--green)' : 'var(--red)';
+        const arrow    = moved > 0 ? '&#8593;' : '&#8595;';
+        const abs      = Math.abs(moved);
+        const netSign  = r.net_rating >= 0 ? '+' : '';
+        const netColor = _netRtgColor(r.net_rating);
+        return '<div class="card" style="padding:14px 16px;border-left:3px solid ' + col + '">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'
+          +   '<div style="font-weight:700;color:var(--t0)">#' + r.rank + ' ' + r.team + ' <span style="font-size:11px;color:var(--t2);font-weight:400">' + r.team_name + '</span></div>'
+          +   '<span style="color:' + col + ';font-size:13px;font-weight:800">' + arrow + ' ' + abs + ' spots</span>'
+          + '</div>'
+          + '<div style="font-size:12px;color:var(--t2)">'
+          +   'Model rank ' + dir + ' from <strong style="color:var(--t1)">#' + r.prev_rank + '</strong> last week &nbsp;&middot;&nbsp;'
+          +   ' Net Rtg <strong style="color:' + netColor + '">' + netSign + r.net_rating.toFixed(1) + '</strong> &nbsp;&middot;&nbsp;'
+          +   ' Last 10: <strong style="color:var(--t1)">' + r.last10_record + '</strong>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+      divEl.style.display = '';
+    }
+
+    // Updated timestamp
+    const updEl = document.getElementById('rk-updated');
+    if (updEl) {
+      const ts    = data.last_updated || null;
+      const tsStr = ts ? ' \u00B7 Updated ' + new Date(ts).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+      updEl.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Power rankings \u00B7 Source: team_game_features.csv' + tsStr;
+      updEl.style.display = '';
+    }
+
+    // Show table, hide loader
+    const loading = document.getElementById('rk-loading');
+    const table   = document.getElementById('rk-table');
+    if (loading) loading.style.display = 'none';
+    if (table)   table.style.display   = '';
+  }
+
+  window.initRankings = function () {
+    if (_rkLoading) return;
+    if (_rkLoaded)  return;
+    _rkLoading = true;
+    fetch('data/power_rankings.json')
+      .then(function(r) { return r.ok ? r.json() : Promise.reject('HTTP ' + r.status); })
+      .then(function(data) {
+        _rkLoaded  = true;
+        _rkLoading = false;
+        _renderRankings(data);
+      })
+      .catch(function(err) {
+        _rkLoading = false;
+        const loading = document.getElementById('rk-loading');
+        if (loading) loading.innerHTML = '<div style="text-align:center;padding:40px">'
+          + '<div style="font-size:28px;margin-bottom:12px">&#9888;</div>'
+          + '<div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">Could not load rankings data</div>'
+          + '<div style="font-size:12px;color:var(--t2)">Run <code>python scripts/build_power_rankings.py</code> then refresh. (' + err + ')</div>'
+          + '</div>';
+      });
+  };
+})();
 </script>
 
 <!-- ═══ MOBILE BOTTOM NAV ═══ -->
@@ -3525,9 +3984,9 @@ if ('serviceWorker' in navigator) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     Picks
   </button>
-  <button class="mob-nav-item" id="mbn-more" onclick="showTab('more')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-    More
+  <button class="mob-nav-item" id="mbn-injuries" onclick="showFreeTab('injuries')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Injuries
   </button>
 </nav>
 <!-- ── BETTING TOOLS DRAWER ── -->
