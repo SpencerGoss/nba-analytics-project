@@ -1,5 +1,38 @@
 [
   {
+    "home_team": "OKC",
+    "away_team": "GSW",
+    "game_date": "2026-03-08",
+    "opening_spread": -16.0,
+    "current_spread": -16.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -16.0 -- game not yet closed"
+  },
+  {
+    "home_team": "MIL",
+    "away_team": "UTA",
+    "game_date": "2026-03-08",
+    "opening_spread": -12.5,
+    "current_spread": -12.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -12.5 -- game not yet closed"
+  },
+  {
+    "home_team": "MEM",
+    "away_team": "LAC",
+    "game_date": "2026-03-08",
+    "opening_spread": 4.5,
+    "current_spread": 4.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line +4.5 -- game not yet closed"
+  },
+  {
     "home_team": "SAS",
     "away_team": "LAC",
     "game_date": "2026-03-07",
@@ -44,6 +77,17 @@
     "interpretation": "Opening line -9.0 -- game not yet closed"
   },
   {
+    "home_team": "DET",
+    "away_team": "BKN",
+    "game_date": "2026-03-07",
+    "opening_spread": -15.5,
+    "current_spread": -15.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -15.5 -- game not yet closed"
+  },
+  {
     "home_team": "DEN",
     "away_team": "NYK",
     "game_date": "2026-03-07",
@@ -53,5 +97,16 @@
     "direction": "no_movement",
     "classification": "stable",
     "interpretation": "Opening line -3.0 -- game not yet closed"
+  },
+  {
+    "home_team": "ATL",
+    "away_team": "PHI",
+    "game_date": "2026-03-07",
+    "opening_spread": -9.5,
+    "current_spread": -9.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -9.5 -- game not yet closed"
   }
 ]

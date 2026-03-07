@@ -344,6 +344,7 @@ def main() -> None:
             ("build_props", "Player props"),
             # Heavy -- run last
             ("build_player_comparison", "Player comparison"),
+            ("build_season_history", "Season history"),
         ]
 
         for script_name, label in _BUILDERS:

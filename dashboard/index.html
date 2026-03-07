@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://cdn.nba.com; connect-src 'self'; frame-ancestors 'none'"/>
 <title>Baseline Analytics</title>
 <meta name="description" content="Baseline Analytics — data-driven NBA game outcome and ATS predictions powered by machine learning."/>
 <link rel="manifest" href="manifest.json"/>
@@ -13,19 +14,18 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2308090E'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='system-ui,sans-serif' font-weight='900' fill='%2300C896'>B</text></svg>"/>
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2308090E'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='system-ui,sans-serif' font-weight='900' fill='%2300C896'>B</text></svg>"/>
 <meta property="og:title" content="Baseline Analytics — NBA Intelligence"/>
-<meta property="og:description" content="Data-driven NBA analysis. Model accuracy 67.1%. Today's picks, value bets, player comparisons, and more. Free."/>
+<meta property="og:description" content="Data-driven NBA analysis. Today's picks, value bets, player comparisons, and more. Free."/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://spencergoss.github.io/nba-analytics-project/"/>
 <meta property="og:image" content="https://spencergoss.github.io/nba-analytics-project/og-image.svg"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Baseline Analytics — NBA Intelligence"/>
-<meta name="twitter:description" content="67.1% model accuracy. Today's picks vs. the books, value bets, player comparisons. Free NBA analytics."/>
+<meta name="twitter:description" content="Today's NBA picks vs. the books, value bets, player comparisons. Free NBA analytics."/>
 <meta name="twitter:image" content="https://spencergoss.github.io/nba-analytics-project/og-image.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-<!-- SRI hash: run scripts/generate_sri.py to add integrity attribute -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js" crossorigin="anonymous" integrity="sha384-Hl48Kq2HifOWdXEjMsKo6qxqvRLTYqIGbvlENBmkHAxZKIGCXv43H6W1jA671RzC"></script>
 <style>
 :root{
   --bg:       #08090E;
@@ -1057,7 +1057,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 <!-- TODAY (default free tab) -->
 <section id="page-today" class="page active">
   <div class="ph" style="margin-bottom:20px">
-    <h1 class="pt" id="greet-title">Good evening, Spencer</h1>
+    <h1 class="pt" id="greet-title">Good evening</h1>
     <p class="pd" id="greet">Loading today's games...</p>
   </div>
   <section class="today-games-strip">
@@ -1069,12 +1069,11 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <section class="featured-comparison">
     <div class="fc-label">Featured Comparison <span class="fc-badge">NEW</span></div>
     <div class="fc-card card">
-      <div class="fc-placeholder">
-        <div class="fc-placeholder-icon">&#9889;</div>
-        <div class="fc-placeholder-title">Building player database...</div>
-        <div style="font-size:12px;color:var(--t2);font-weight:500">Fetching 80 seasons of NBA history</div>
-        <div class="fc-placeholder-progress"><div class="fc-placeholder-fill"></div></div>
-        <div class="fc-placeholder-sub">1985-86 season loaded &#183; Full player comparison tool coming soon</div>
+      <div class="fc-placeholder" id="fc-featured-cmp">
+        <div class="fc-placeholder-icon">&#128101;</div>
+        <div class="fc-placeholder-title">Player Comparison</div>
+        <div style="font-size:12px;color:var(--t2);font-weight:500">Compare any two players across any era</div>
+        <button onclick="showFreeTab('players')" style="margin-top:8px;padding:8px 20px;border-radius:var(--r-pill);border:1px solid var(--b1);background:transparent;color:var(--t0);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--f)">Open Comparison Tool</button>
       </div>
     </div>
   </section>
@@ -1353,8 +1352,11 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 
 <!-- HISTORY (free) -->
 <section id="page-history" class="page">
-  <div class="ph"><h1 class="pt">History</h1><p class="pd">Historical game results and season archives</p></div>
-  <div class="tab-placeholder"><div class="tp-icon">&#128214;</div><div class="tp-title">Season History</div><div class="tp-desc">Full historical game logs, playoff results, and championship records going back to 1946-47 coming soon.</div></div>
+  <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div><h1 class="pt">Season History</h1><p class="pd">Game results and standings &mdash; last 5 seasons</p></div>
+    <select id="hist-season-sel" onchange="renderSeasonHistory(this.value)" style="background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:7px 12px;color:var(--t0);font-size:13px;font-family:var(--f);outline:none"></select>
+  </div>
+  <div id="hist-body" style="margin-top:4px"></div>
 </section>
 
 <!-- PAID SECTION (beta: free): Betting & Modeling Tools -->
@@ -1460,14 +1462,14 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <div class="card" style="margin-bottom:18px;background:rgba(0,200,150,.04);border-color:rgba(0,200,150,.15)">
     <div style="display:flex;align-items:center;gap:14px">
       <div style="width:40px;height:40px;border-radius:12px;background:var(--green-d);border:1px solid rgba(0,200,150,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-      <div><div style="font-size:13px;font-weight:700;margin-bottom:3px;color:var(--t0)">How we score the model</div><div style="font-size:12px;color:var(--t1);line-height:1.65">Every pick is tracked here. A coin flip wins 50% of the time. Our model runs at <strong style="color:var(--green)">54.9%</strong>.</div></div>
+      <div><div style="font-size:13px;font-weight:700;margin-bottom:3px;color:var(--t0)">How we score the model</div><div style="font-size:12px;color:var(--t1);line-height:1.65">Every pick is tracked here. A coin flip wins 50% of the time. Our model runs at <strong style="color:var(--green)" id="bt-ats-inline">--</strong>.</div></div>
     </div>
   </div>
   <div class="sgrid" style="margin-bottom:22px">
     <div class="bt-stat"><span class="sl">Overall Win Rate</span><span class="bt-val g" id="bt-win-rate">54.9%</span><div class="schange up" style="justify-content:center;font-size:11px">Beats a coin flip by 4.9%</div></div>
     <div class="bt-stat"><span class="sl">Current Streak</span><span class="bt-val o" id="bt-streak">--</span><div class="schange up" style="justify-content:center;font-size:11px" id="bt-best-streak">--</div></div>
     <div class="bt-stat"><span class="sl">Total Predictions</span><span class="bt-val g" id="bt-total-games">--</span><div class="schange" style="justify-content:center;font-size:11px">games tracked this season</div></div>
-    <div class="bt-stat"><span class="sl">Total Picks Made</span><span class="bt-val">18,496</span><div class="schange" style="justify-content:center;font-size:11px">games in backtest</div></div>
+    <div class="bt-stat"><span class="sl">Total Picks Made</span><span class="bt-val" id="bt-backtest-total">--</span><div class="schange" style="justify-content:center;font-size:11px">games in backtest</div></div>
   </div>
   <div class="card" style="margin-bottom:14px">
     <div class="sh"><div><div class="st">Closing Line Value (CLV)</div><div class="ss">Did we get a better line than where the market settled?</div></div><span class="badge g" id="clv-edge-badge">Loading...</span></div>
@@ -1487,8 +1489,66 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 
 <!-- BET TRACKER (betting tab) -->
 <section id="page-bet-tracker" class="page">
-  <div class="ph"><h1 class="pt">Bet Tracker</h1><p class="pd">Track your bets, bankroll, and ROI over time</p></div>
-  <div class="tab-placeholder"><div class="tp-icon">&#128179;</div><div class="tp-title">Bet Tracker</div><div class="tp-desc">Personal bet tracking, bankroll management, and performance analytics coming soon.</div></div>
+  <div class="ph"><h1 class="pt">Bet Tracker</h1><p class="pd">Log your bets and track bankroll performance over time &mdash; stored locally in your browser</p></div>
+  <!-- Stats Row -->
+  <div class="sgrid" id="bt-stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="sc accent-green"><span class="sl">Total Bets</span><span class="sv g" id="btt-total">0</span><span class="schange">logged</span></div>
+    <div class="sc accent-blue"><span class="sl">Record</span><span class="sv b" id="btt-record">0-0</span><span class="schange" id="btt-push-note"></span></div>
+    <div class="sc accent-gold"><span class="sl">ROI</span><span class="sv" id="btt-roi">--</span><span class="schange" id="btt-roi-note"></span></div>
+    <div class="sc"><span class="sl">Net P&amp;L</span><span class="sv" id="btt-pnl">$0</span><span class="schange" id="btt-pnl-note"></span></div>
+  </div>
+  <!-- Add Bet Form -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="sh" style="margin-bottom:16px">
+      <div><div class="st">Log a Bet</div><div class="ss">Fill in the details and click Add</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:14px">
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Date</label>
+        <input id="btf-date" type="date" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Matchup</label>
+        <input id="btf-matchup" type="text" placeholder="e.g. BOS @ NYK" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--f);outline:none"/>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Pick</label>
+        <input id="btf-pick" type="text" placeholder="e.g. BOS -5.5" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--f);outline:none"/>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Market</label>
+        <select id="btf-market" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--f);outline:none">
+          <option value="ATS">ATS (Spread)</option><option value="ML">Moneyline</option><option value="OU">Over/Under</option><option value="PROP">Player Prop</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Odds</label>
+        <input id="btf-odds" type="number" placeholder="-110" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Stake ($)</label>
+        <input id="btf-stake" type="number" placeholder="100" min="0" step="0.01" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none"/>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Result</label>
+        <select id="btf-result" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--f);outline:none">
+          <option value="pending">Pending</option><option value="W">Win</option><option value="L">Loss</option><option value="push">Push</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button onclick="btAddBet()" style="width:100%;padding:9px 16px;border-radius:8px;border:none;background:var(--green);color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--f);transition:opacity 160ms" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">+ Add Bet</button>
+      </div>
+    </div>
+    <div id="btf-error" style="font-size:12px;color:var(--red);display:none;margin-top:4px"></div>
+  </div>
+  <!-- Bet History -->
+  <div class="card" id="bt-history-card">
+    <div class="sh" style="margin-bottom:14px">
+      <div><div class="st">Bet History</div><div class="ss" id="btt-history-sub">No bets logged yet</div></div>
+      <button onclick="btClearAll()" style="font-size:11px;color:var(--red);background:var(--red-d);border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:var(--f);font-weight:600" title="Clear all bets">Clear All</button>
+    </div>
+    <div id="bt-history-list"></div>
+  </div>
 </section>
 
 <!-- DEEP DIVE (preserved) -->
@@ -2120,17 +2180,7 @@ const DATA = {
   players:[], // populated by loadDashboardData() from player_comparison.json
   east:[], // populated by loadDashboardData() from standings.json
   west:[], // populated by loadDashboardData() from standings.json
-  picks:[
-    {matchup:'DAL @ ORL', time:'Mar 5',pick:'ORL',spread:'',conf:70,tier:'hi',reason:'Home advantage + model edge'},
-    {matchup:'UTA @ WAS', time:'Mar 5',pick:'WAS',spread:'',conf:61,tier:'md',reason:'Slight home edge'},
-    {matchup:'BKN @ MIA', time:'Mar 5',pick:'MIA',spread:'',conf:90,tier:'hi',reason:'Dominant home favorite'},
-    {matchup:'GSW @ HOU', time:'Mar 5',pick:'HOU',spread:'',conf:60,tier:'md',reason:'Home team slight edge'},
-    {matchup:'TOR @ MIN', time:'Mar 5',pick:'MIN',spread:'',conf:92,tier:'hi',reason:'Heavy home favorite'},
-    {matchup:'DET @ SAS', time:'Mar 5',pick:'DET',spread:'',conf:68,tier:'hi',reason:'Road favorites on form'},
-    {matchup:'CHI @ PHX', time:'Mar 5',pick:'PHX',spread:'',conf:70,tier:'hi',reason:'Home efficiency edge'},
-    {matchup:'LAL @ DEN', time:'Mar 5',pick:'DEN',spread:'',conf:70,tier:'hi',reason:'Home altitude advantage'},
-    {matchup:'NOP @ SAC', time:'Mar 5',pick:'SAC',spread:'',conf:90,tier:'hi',reason:'Strong home court'},
-  ]
+  picks:[] // populated from todays_picks.json by loadDashboardData()
 };
 
 // ─── HARDCODED LEGENDS — merged into DATA.players after JSON fetch ───
@@ -2178,18 +2228,8 @@ function mapJsonPlayer(p){
   };
 }
 
-const ADV = {
-  'Luka Doncic':               {per:29.1,ts:61.3,usg:36.2,ws:11.8,bpm:7.2,vorp:5.1,rim:57.2,mid:46.8,thr:35.9,paint:60.4},
-  'Shai Gilgeous-Alexander':   {per:31.8,ts:66.5,usg:32.4,ws:13.2,bpm:9.8,vorp:6.4,rim:68.2,mid:48.1,thr:38.4,paint:72.1},
-  'Anthony Edwards':            {per:25.4,ts:61.7,usg:30.9,ws:10.2,bpm:5.1,vorp:4.0,rim:62.4,mid:42.8,thr:40.2,paint:65.8},
-  'Tyrese Maxey':               {per:24.8,ts:58.8,usg:28.9,ws:9.6, bpm:4.8,vorp:3.8,rim:58.1,mid:44.2,thr:37.2,paint:61.4},
-  'Jaylen Brown':               {per:24.2,ts:57.1,usg:35.6,ws:9.4, bpm:4.2,vorp:3.4,rim:61.8,mid:41.4,thr:34.8,paint:64.8},
-  'Nikola Jokic':               {per:33.4,ts:67.6,usg:29.7,ws:16.1,bpm:11.8,vorp:8.2,rim:72.4,mid:53.8,thr:40.1,paint:77.2},
-  'Donovan Mitchell':           {per:24.6,ts:61.4,usg:31.7,ws:9.8, bpm:4.6,vorp:3.6,rim:60.2,mid:44.8,thr:36.9,paint:63.4},
-  'Kawhi Leonard':              {per:27.2,ts:62.2,usg:32.9,ws:11.4,bpm:6.1,vorp:4.4,rim:64.8,mid:50.2,thr:37.9,paint:67.2},
-  'Giannis Antetokounmpo':      {per:31.2,ts:67.0,usg:35.1,ws:14.2,bpm:9.2,vorp:6.2,rim:76.4,mid:40.1,thr:37.5,paint:80.2},
-  'Stephen Curry':              {per:26.4,ts:63.6,usg:31.1,ws:11.8,bpm:6.4,vorp:4.8,rim:56.4,mid:42.1,thr:39.1,paint:58.8},
-  'LeBron James':               {per:27.1,ts:59.4,usg:31.6,ws:14.0,bpm:7.6,vorp:5.8,rim:65.8,mid:46.2,thr:34.5,paint:68.4},
+// Historical legends only — current players come from window.ADVANCED_STATS (advanced_stats.json)
+const LEGENDS_ADV = {
   'Michael Jordan':             {per:31.5,ts:57.0,usg:33.3,ws:13.6,bpm:9.2,vorp:6.4,rim:58.4,mid:51.3,thr:32.7,paint:60.8},
   'Kobe Bryant':                {per:22.9,ts:55.1,usg:32.8,ws:11.2,bpm:4.7,vorp:3.6,rim:55.2,mid:48.4,thr:32.9,paint:57.4},
   'Larry Bird':                 {per:23.1,ts:57.9,usg:28.4,ws:12.4,bpm:7.4,vorp:5.2,rim:52.8,mid:50.1,thr:37.6,paint:54.6},
@@ -2247,6 +2287,7 @@ function showFreeTab(id){
   if(id==='h2h'){initH2H();}
   if(id==='rankings'){initRankings();}
   if(id==='injuries'){initInjuries();}
+  if(id==='history'){initSeasonHistory();}
   // Sync mobile nav
   const mobNavIds={today:'mbn-today',players:'mbn-players',standings:'mbn-standings',injuries:'mbn-injuries'};
   if(typeof syncMobNav==='function'&&mobNavIds[id])syncMobNav(mobNavIds[id]);
@@ -2303,6 +2344,7 @@ function _activateBettingTab(tabId, pillEl){
   if(tabId==='valuebets')renderValueBets();
   if(tabId==='sharp')renderSharpMoney();
   if(tabId==='props')renderProps();
+  if(tabId==='tracker')btRender();
 }
 
 let _btDropOpen=false;
@@ -2373,7 +2415,7 @@ function runCounters(){
 function setGreeting(){
   const h=new Date().getHours();
   const greetTitle=document.getElementById('greet-title');
-  if(greetTitle)greetTitle.textContent=h<12?'Good morning, Spencer':h<17?'Good afternoon, Spencer':'Good evening, Spencer';
+  if(greetTitle)greetTitle.textContent=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
 }
 
 // ─── SHARED CHART LAYOUT ───
@@ -2877,24 +2919,28 @@ function updateComparison(){
   }
   document.getElementById('cmp-prompt').style.display='none';
   document.getElementById('cmp-content').style.display='block';
-  // Merge live advanced stats (all fields) over hardcoded ADV; fall back to ADV then ADV_NULL
+  // Merge: live advanced_stats.json first, then LEGENDS_ADV for historical players, then ADV_NULL
   function _mergeAdv(name){
-    const base=ADV[name]||ADV_NULL;
+    const legend=LEGENDS_ADV[name]||ADV_NULL;
     const live=(window.ADVANCED_STATS&&window.ADVANCED_STATS[name])||{};
-    // off_rtg/def_rtg/net_rtg from advanced_stats.json map to off_rtg/def_rtg/net_rtg fields
-    return Object.assign({},base,{
-      ts:   live.ts!=null?live.ts:base.ts,
-      usg:  live.usg!=null?live.usg:base.usg,
-      // net rating as a proxy for BPM/VORP when not in hardcoded ADV
-      bpm:  base.bpm!=null?base.bpm:(live.net_rtg!=null?live.net_rtg:null),
-      // efg from advanced_stats maps to thr slot if not in hardcoded ADV
-      thr:  base.thr!=null?base.thr:(live.efg!=null?live.efg:null),
-    });
+    return {
+      per:   live.per!=null?live.per:legend.per,
+      ts:    live.ts!=null?live.ts:legend.ts,
+      usg:   live.usg!=null?live.usg:legend.usg,
+      ws:    live.ws!=null?live.ws:legend.ws,
+      // net_rtg from live data as BPM proxy when no legend entry
+      bpm:   legend.bpm!=null?legend.bpm:(live.net_rtg!=null?live.net_rtg:null),
+      vorp:  legend.vorp!=null?legend.vorp:null,
+      rim:   legend.rim!=null?legend.rim:(live.efg!=null?live.efg:null),
+      mid:   legend.mid!=null?legend.mid:null,
+      thr:   legend.thr!=null?legend.thr:(live.fg3_pct!=null?live.fg3_pct:null),
+      paint: legend.paint!=null?legend.paint:null,
+    };
   }
   const aA=_mergeAdv(nA),aB=_mergeAdv(nB);
   const _livA=window.ADVANCED_STATS&&window.ADVANCED_STATS[nA];
   const _livB=window.ADVANCED_STATS&&window.ADVANCED_STATS[nB];
-  const hasAdvA=!!(ADV[nA]||_livA),hasAdvB=!!(ADV[nB]||_livB);
+  const hasAdvA=!!(LEGENDS_ADV[nA]||_livA),hasAdvB=!!(LEGENDS_ADV[nB]||_livB);
   renderBanner('ban-a',pA,aA,colA,'left');
   renderBanner('ban-b',pB,aB,colB,'right');
   // Era-adjust scoring stats only (pts, reb, ast are counting stats; fg/3p% are ratios — no era adjust)
@@ -3083,47 +3129,80 @@ function renderProps(){
 }
 
 // ─── SHARP MONEY / LINE MOVEMENT ───
+function _setHtml(el,html){
+  const frag=document.createRange().createContextualFragment(html);
+  el.replaceChildren(frag);
+}
 function renderSharpMoney(){
   const container=document.getElementById('sharp-money-container');
   if(!container)return;
   const data=window.LINE_MOVEMENT||[];
   if(!data.length){
-    container.innerHTML='<div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">Sharp Money Tracker</div><div class="tp-desc">Real-time line movement, reverse line movement, and steam move detection coming soon.</div></div>';
+    _setHtml(container,'<div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">No Line Data Today</div><div class="tp-desc">Line movement data will appear once odds are posted for today\'s games. Check back closer to tip-off.</div></div>');
     return;
   }
-  const classColor={sharp_action:'var(--green)',moderate_move:'var(--gold)',stable:'var(--t2)'};
-  const classLabel={sharp_action:'Sharp Action',moderate_move:'Moderate Move',stable:'Stable'};
+  const classColor={sharp_action:'var(--green)',moderate_move:'var(--gold)',stable:'var(--t2)',reverse_line_movement:'var(--purple)'};
+  const classLabel={sharp_action:'Sharp Action',moderate_move:'Moderate Move',stable:'Stable',reverse_line_movement:'Reverse Line'};
+  const steamCount=data.filter(g=>Math.abs(g.movement||0)>=1.5).length;
+  const maxMove=data.reduce((mx,g)=>Math.max(mx,Math.abs(g.movement||0)),0);
+  const mostMoved=data.find(g=>Math.abs(g.movement||0)===maxMove);
+  const summary='<div class="sgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">'
+    +'<div class="sc accent-green"><span class="sl">Games Tracked</span><span class="sv g">'+data.length+'</span><span class="schange">Today\'s slate</span></div>'
+    +'<div class="sc accent-gold"><span class="sl">Steam Moves</span><span class="sv o">'+steamCount+'</span><span class="schange">&ge;1.5 pt move</span></div>'
+    +'<div class="sc accent-blue"><span class="sl">Biggest Move</span><span class="sv b">'+(maxMove>0?'+':'')+maxMove.toFixed(1)+'</span><span class="schange">'+(mostMoved?esc(mostMoved.away_team)+' @ '+esc(mostMoved.home_team):'--')+'</span></div>'
+    +'</div>';
   const rows=data.map(g=>{
-    const mov=g.movement>0?'+'+g.movement.toFixed(1):g.movement.toFixed(1);
+    const mv=g.movement||0;
+    const movStr=(mv>0?'+':'')+mv.toFixed(1);
+    const isSteam=Math.abs(mv)>=1.5;
     const col=classColor[g.classification]||'var(--t2)';
     const lbl=classLabel[g.classification]||g.classification;
-    return `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:14px;font-weight:700;color:var(--t0)">${g.away_team} @ ${g.home_team}</div>
-        <div style="font-size:11px;color:var(--t2)">${g.game_date}</div>
-      </div>
-      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px">
-        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Opening</div><div style="font-size:14px;font-weight:700;color:var(--t1)">${g.opening_spread>0?'+'+g.opening_spread:g.opening_spread}</div></div>
-        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Current</div><div style="font-size:14px;font-weight:700;color:var(--t1)">${g.current_spread>0?'+'+g.current_spread:g.current_spread}</div></div>
-        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Movement</div><div style="font-size:14px;font-weight:700;color:${mov==='0.0'?'var(--t2)':parseFloat(mov)>0?'var(--green)':'var(--red)'}">${mov}</div></div>
-        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Signal</div><div style="font-size:13px;font-weight:700;color:${col}">${lbl}</div></div>
-      </div>
-      <div style="font-size:12px;color:var(--t1);border-top:1px solid var(--b0);padding-top:8px">${g.interpretation}</div>
-    </div>`;
+    const dirArrow=mv>0?'&#9650;':mv<0?'&#9660;':'&#9644;';
+    const movCol=mv===0?'var(--t2)':mv>0?'var(--green)':'var(--red)';
+    const fmt=v=>(v>0?'+':'')+v;
+    const barPct=maxMove>0?Math.min(100,Math.abs(mv)/maxMove*100):0;
+    return '<div class="card'+(isSteam?' card-value':'')+'" style="margin-bottom:12px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<div style="font-size:14px;font-weight:700;color:var(--t0)">'+esc(g.away_team)+' @ '+esc(g.home_team)+'</div>'
+      +(isSteam?'<span class="badge g" style="font-size:9px;letter-spacing:.5px">STEAM</span>':'')
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-size:11px;font-weight:700;color:'+col+';padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.05)">'+lbl+'</span>'
+      +'<span style="font-size:11px;color:var(--t2)">'+esc(g.game_date)+'</span>'
+      +'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:10px">'
+      +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Opening</div><div style="font-size:18px;font-weight:700;color:var(--t1);font-family:var(--fm)">'+fmt(g.opening_spread)+'</div></div>'
+      +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Current</div><div style="font-size:18px;font-weight:700;color:var(--t0);font-family:var(--fm)">'+fmt(g.current_spread)+'</div></div>'
+      +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Move</div><div style="font-size:18px;font-weight:700;color:'+movCol+';font-family:var(--fm)">'+dirArrow+' '+movStr+'</div></div>'
+      +'</div>'
+      +(barPct>0?'<div style="height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:10px"><div style="height:100%;width:'+barPct.toFixed(0)+'%;border-radius:4px;background:'+movCol+';transition:width 600ms cubic-bezier(.16,1,.3,1)"></div></div>':'')
+      +'<div style="font-size:12px;color:var(--t1);border-top:1px solid var(--b0);padding-top:8px">'+esc(g.interpretation)+'</div>'
+      +'</div>';
   }).join('');
-  container.innerHTML=rows;
+  _setHtml(container,summary+rows);
 }
 
 // ─── DEEP DIVE — MATCHUPS ───
-const MATCHUP_DATA=[
-  {label:"TOR @ MIN",away:"TOR",home:"MIN",awayRec:"34-25",homeRec:"38-23",stats:[["Points Per Game (L10)", "113.9", "117.5"], ["Points Allowed (L10)", "110.3", "114.8"], ["Pace (L10)", "102.7", "103.3"], ["3-Point Shooting (L10)", "36.4%", "36.4%"], ["Turnovers / Game (L10)", "13.9", "15.4"]],edge:"MIN",reason:"MIN home advantage (92% win prob) -- superior offense (117.5 pts/g vs 113.9)"},
-  {label:"NOP @ SAC",away:"NOP",home:"SAC",awayRec:"19-43",homeRec:"14-48",stats:[["Points Per Game (L10)", "120.5", "109.4"], ["Points Allowed (L10)", "119.2", "124.8"], ["Pace (L10)", "104.1", "102.9"], ["3-Point Shooting (L10)", "37.2%", "27.2%"], ["Turnovers / Game (L10)", "15.0", "13.9"]],edge:"SAC",reason:"SAC home court edge (90% win prob) -- model finds advantage despite close raw stats"},
-  {label:"BKN @ MIA",away:"BKN",home:"MIA",awayRec:"15-45",homeRec:"32-29",stats:[["Points Per Game (L10)", "107.1", "119.0"], ["Points Allowed (L10)", "117.8", "112.6"], ["Pace (L10)", "100.2", "104.3"], ["3-Point Shooting (L10)", "36.0%", "35.0%"], ["Turnovers / Game (L10)", "15.1", "13.4"]],edge:"MIA",reason:"MIA dominant at home (90% win prob) -- better offense (119.0 pts/g) and defense (112.6 allowed/g)"},
-];
+// Populated dynamically from matchup_analysis.json at load time
+const MATCHUP_DATA=[];
 
 function renderMatchups(){
   const btns=document.getElementById('matchup-btns');
-  btns.innerHTML=MATCHUP_DATA.map((m,i)=>`<button class="matchup-btn${i===0?' active':''}" onclick="selectMatchup(${i})">${m.label}</button>`).join('');
+  if(!MATCHUP_DATA.length){
+    btns.textContent='';
+    const cont=document.getElementById('matchup-content');
+    if(cont)cont.textContent='No matchup data for today.';
+    return;
+  }
+  btns.textContent='';
+  MATCHUP_DATA.forEach((m,i)=>{
+    const b=document.createElement('button');
+    b.className='matchup-btn'+(i===0?' active':'');
+    b.textContent=m.label;
+    b.onclick=()=>selectMatchup(i);
+    btns.appendChild(b);
+  });
   drawMatchup(0);
 }
 function selectMatchup(i){
@@ -3344,7 +3423,7 @@ function renderShotMaps(){
   const tsVals=topPlayers.map((p,i)=>{
     const live=window.ADVANCED_STATS&&window.ADVANCED_STATS[p.name];
     if(live&&live.ts!=null)return live.ts;
-    const adv=ADV[p.name];
+    const adv=LEGENDS_ADV[p.name];
     if(adv&&adv.ts!=null)return adv.ts;
     return _fallbackTS[i]||62;
   });
@@ -3806,8 +3885,15 @@ async function loadDashboardData(){
     if(window.PERF_DATA){
       const p=window.PERF_DATA;
       const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-      setEl('bt-win-rate',(p.season_accuracy*100).toFixed(1)+'%');
+      const accStr=(p.season_accuracy*100).toFixed(1)+'%';
+      setEl('bt-win-rate',accStr);
+      setEl('bt-ats-inline',accStr);
       setEl('bt-total-games',p.total_games.toLocaleString());
+      // Backtest total = sum of backtest entry games
+      if(Array.isArray(p.accuracy_history)){
+        const btGames=p.accuracy_history.filter(r=>r.backtest).reduce((s,r)=>s+(r.games||0),0);
+        if(btGames>0)setEl('bt-backtest-total',btGames.toLocaleString());
+      }
       const streak=p.current_streak;
       if(streak)setEl('bt-streak',(streak.type==='W'?'W':'L')+streak.length);
       const bestStreak=p.best_streak;
@@ -3967,6 +4053,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   // Restore theme preference
   if(localStorage.getItem('nba-theme')==='light') toggleTheme();
   setGreeting();
+  // Pre-fill bet tracker date field with today
+  const _btDate=document.getElementById('btf-date');
+  if(_btDate)_btDate.value=new Date().toISOString().slice(0,10);
   // Load real data first, then render
   await loadDashboardData();
   renderGames();
@@ -4679,6 +4768,172 @@ function calcSizing(){
   document.getElementById('cs-dollars').textContent='$'+parseFloat(dollars).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('cs-units').textContent=units+'u (1u = $'+parseFloat(unit).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+')';
   res.style.display='block';
+}
+
+// ─── SEASON HISTORY ────────────────────────────────────────────────────────────
+let _histData=null;
+function initSeasonHistory(){
+  const body=document.getElementById('hist-body');
+  const sel=document.getElementById('hist-season-sel');
+  if(!body||!sel)return;
+  if(_histData){renderSeasonHistory(sel.value);return;}
+  _setHtml(body,'<div style="padding:32px;text-align:center;color:var(--t2);font-size:13px">Loading season data...</div>');
+  fetch('data/season_history.json').then(r=>r.ok?r.json():null).then(d=>{
+    if(!d){_setHtml(body,'<div style="padding:32px;text-align:center;color:var(--red);font-size:13px">Could not load season_history.json</div>');return;}
+    _histData=d;
+    // Populate season selector
+    sel.textContent='';
+    (d.seasons||[]).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});
+    renderSeasonHistory(d.seasons[0]);
+  }).catch(()=>{_setHtml(body,'<div style="padding:32px;text-align:center;color:var(--red);font-size:13px">Failed to fetch season data</div>');});
+}
+function renderSeasonHistory(season){
+  const body=document.getElementById('hist-body');
+  if(!body||!_histData)return;
+  const sd=(_histData.data||{})[season];
+  if(!sd){_setHtml(body,'<div style="padding:32px;text-align:center;color:var(--t2);font-size:13px">No data for '+esc(season)+'</div>');return;}
+  const standings=sd.standings||[];
+  const games=(sd.games||[]).slice(0,50); // show 50 most recent
+  const stRows=standings.map((t,i)=>'<tr>'
+    +'<td><span class="rn">'+(i+1)+'</span></td>'
+    +'<td style="font-weight:700;font-family:var(--f)">'+esc(t.name)+'</td>'
+    +'<td style="color:var(--green)">'+t.w+'</td>'
+    +'<td style="color:var(--red)">'+t.l+'</td>'
+    +'<td>'+(t.pct*1000/10).toFixed(1)+'%</td>'
+    +'</tr>').join('');
+  const gRows=games.map(g=>{
+    const hWin=g.winner===g.home;
+    return '<tr>'
+      +'<td>'+esc(g.date)+'</td>'
+      +'<td style="font-weight:'+(hWin?'700':'400')+';color:'+(hWin?'var(--t0)':'var(--t2)')+'">'+esc(g.home)+'</td>'
+      +'<td style="font-weight:'+(!hWin?'700':'400')+';color:'+(!hWin?'var(--t0)':'var(--t2)')+'">'+esc(g.away)+'</td>'
+      +'<td style="font-family:var(--fm);font-weight:700">'+(g.home_pts!=null?g.home_pts:'--')+'</td>'
+      +'<td style="font-family:var(--fm);font-weight:700">'+(g.away_pts!=null?g.away_pts:'--')+'</td>'
+      +'</tr>';
+  }).join('');
+  const html='<div class="g2" style="gap:16px;align-items:start">'
+    +'<div class="card"><div class="sh" style="margin-bottom:14px"><div class="st">Standings</div><div class="ss">'+standings.length+' teams</div></div>'
+    +'<div class="tw"><table><thead><tr><th>#</th><th>Team</th><th style="color:var(--green)">W</th><th style="color:var(--red)">L</th><th>PCT</th></tr></thead><tbody>'+stRows+'</tbody></table></div></div>'
+    +'<div class="card"><div class="sh" style="margin-bottom:14px"><div class="st">Game Log</div><div class="ss">Most recent '+games.length+' games</div></div>'
+    +'<div class="tw"><table><thead><tr><th>Date</th><th>Home</th><th>Away</th><th>H Pts</th><th>A Pts</th></tr></thead><tbody>'+gRows+'</tbody></table></div></div>'
+    +'</div>';
+  _setHtml(body,html);
+}
+// ─── BET TRACKER ───────────────────────────────────────────────────────────────
+const BT_KEY='baseline_bets_v1';
+function btLoad(){try{return JSON.parse(localStorage.getItem(BT_KEY)||'[]');}catch{return [];}}
+function btSave(bets){localStorage.setItem(BT_KEY,JSON.stringify(bets));}
+function btAmericanToDecimal(ml){
+  const n=parseFloat(ml);
+  if(isNaN(n))return null;
+  return n>0?(n/100+1):(-100/n+1);
+}
+function btComputeStats(bets){
+  let wins=0,losses=0,pushes=0,totalStake=0,totalPnl=0;
+  bets.forEach(b=>{
+    if(b.result==='W'){
+      wins++;
+      const dec=btAmericanToDecimal(b.odds);
+      const profit=dec!=null?b.stake*(dec-1):b.stake*0.909;
+      totalStake+=b.stake;totalPnl+=profit;
+    } else if(b.result==='L'){
+      losses++;totalStake+=b.stake;totalPnl-=b.stake;
+    } else if(b.result==='push'){
+      pushes++;totalStake+=b.stake;
+    }
+  });
+  const settled=wins+losses;
+  const roi=totalStake>0?(totalPnl/totalStake*100):0;
+  return {wins,losses,pushes,settled,totalStake,totalPnl,roi};
+}
+function btRender(){
+  const bets=btLoad();
+  const s=btComputeStats(bets);
+  const setTxt=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  const setCol=(id,col)=>{const el=document.getElementById(id);if(el)el.style.color=col;};
+  setTxt('btt-total',bets.length);
+  setTxt('btt-record',s.wins+'-'+s.losses);
+  setTxt('btt-push-note',s.pushes?s.pushes+' push'+(s.pushes>1?'es':''):'');
+  const roiStr=(s.roi>=0?'+':'')+s.roi.toFixed(1)+'%';
+  setTxt('btt-roi',s.settled>0?roiStr:'--');
+  setCol('btt-roi',s.roi>=0?'var(--green)':s.roi<0?'var(--red)':'var(--t0)');
+  const pnlStr=(s.totalPnl>=0?'+$':'$')+Math.abs(s.totalPnl).toFixed(2);
+  setTxt('btt-pnl',s.settled>0?pnlStr:'$0');
+  setCol('btt-pnl',s.totalPnl>0?'var(--green)':s.totalPnl<0?'var(--red)':'var(--t0)');
+  const sub=document.getElementById('btt-history-sub');
+  if(sub)sub.textContent=bets.length?bets.length+' bet'+(bets.length>1?'s':'')+' logged':'No bets logged yet';
+  const list=document.getElementById('bt-history-list');
+  if(!list)return;
+  if(!bets.length){
+    _setHtml(list,'<div style="padding:24px;text-align:center;color:var(--t2);font-size:13px">No bets yet. Add your first bet above.</div>');
+    return;
+  }
+  const resColor={W:'var(--green)',L:'var(--red)',push:'var(--t2)',pending:'var(--gold)'};
+  const resLabel={W:'Win',L:'Loss',push:'Push',pending:'Pending'};
+  const sorted=[...bets].sort((a,b)=>b.id-a.id);
+  const rows='<div class="tw"><table><thead><tr>'
+    +'<th>Date</th><th>Matchup</th><th>Pick</th><th>Market</th><th>Odds</th><th>Stake</th><th>P&amp;L</th><th>Result</th><th></th>'
+    +'</tr></thead><tbody>'
+    +sorted.map(b=>{
+      const col=resColor[b.result]||'var(--t2)';
+      const lbl=resLabel[b.result]||b.result;
+      const dec=btAmericanToDecimal(b.odds);
+      let pnl='--';
+      if(b.result==='W'&&dec!=null)pnl='+'+(b.stake*(dec-1)).toFixed(2);
+      else if(b.result==='L')pnl='-'+parseFloat(b.stake).toFixed(2);
+      else if(b.result==='push')pnl='0.00';
+      const pnlCol=pnl.startsWith('+')?'var(--green)':pnl.startsWith('-')?'var(--red)':'var(--t2)';
+      return '<tr>'
+        +'<td>'+esc(b.date)+'</td>'
+        +'<td style="font-family:var(--f)">'+esc(b.matchup)+'</td>'
+        +'<td style="font-family:var(--f)">'+esc(b.pick||'')+'</td>'
+        +'<td><span class="badge b">'+esc(b.market)+'</span></td>'
+        +'<td>'+esc(String(b.odds))+'</td>'
+        +'<td>$'+parseFloat(b.stake).toFixed(2)+'</td>'
+        +'<td style="color:'+pnlCol+'">'+pnl+'</td>'
+        +'<td><span style="font-size:11px;font-weight:700;color:'+col+'">'+lbl+'</span></td>'
+        +'<td><button onclick="btDelete('+b.id+')" style="font-size:10px;color:var(--t2);background:transparent;border:none;cursor:pointer;padding:2px 6px" title="Remove">&times;</button></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table></div>';
+  _setHtml(list,rows);
+}
+function btAddBet(){
+  const err=document.getElementById('btf-error');
+  const date=document.getElementById('btf-date').value;
+  const matchup=document.getElementById('btf-matchup').value.trim();
+  const pick=document.getElementById('btf-pick').value.trim();
+  const market=document.getElementById('btf-market').value;
+  const odds=document.getElementById('btf-odds').value.trim();
+  const stake=parseFloat(document.getElementById('btf-stake').value);
+  const result=document.getElementById('btf-result').value;
+  if(!date||!matchup){
+    err.textContent='Date and Matchup are required.';err.style.display='block';return;
+  }
+  if(isNaN(stake)||stake<=0){
+    err.textContent='Please enter a valid stake amount.';err.style.display='block';return;
+  }
+  err.style.display='none';
+  const bets=btLoad();
+  bets.push({id:Date.now(),date,matchup,pick,market,odds:odds||'-110',stake,result});
+  btSave(bets);
+  // Reset form
+  document.getElementById('btf-date').value='';
+  document.getElementById('btf-matchup').value='';
+  document.getElementById('btf-pick').value='';
+  document.getElementById('btf-odds').value='';
+  document.getElementById('btf-stake').value='';
+  document.getElementById('btf-result').value='pending';
+  btRender();
+}
+function btDelete(id){
+  if(!confirm('Remove this bet?'))return;
+  btSave(btLoad().filter(b=>b.id!==id));
+  btRender();
+}
+function btClearAll(){
+  if(!confirm('Clear all bets? This cannot be undone.'))return;
+  btSave([]);btRender();
 }
 </script>
 
