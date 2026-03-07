@@ -208,9 +208,27 @@ def build_line_movement(
                     continue
                 seen.add(key)
 
-                if pd.isna(row["opening_spread"]) or pd.isna(row["closing_spread"]):
+                if pd.isna(row["opening_spread"]):
                     continue
                 opening = float(row["opening_spread"])
+
+                # Closing spread may be NULL for pending games — show opening line
+                if pd.isna(row["closing_spread"]):
+                    results.append({
+                        "home_team": home,
+                        "away_team": away,
+                        "game_date": date,
+                        "opening_spread": opening,
+                        "current_spread": opening,
+                        "movement": 0.0,
+                        "direction": "no_movement",
+                        "classification": "stable",
+                        "interpretation": (
+                            f"Opening line {opening:+.1f} -- game not yet closed"
+                        ),
+                    })
+                    continue
+
                 closing = float(row["closing_spread"])
                 movement = round(closing - opening, 2)
 

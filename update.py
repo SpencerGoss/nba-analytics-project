@@ -230,13 +230,85 @@ def main() -> None:
             print(f"Injury report fetch failed (non-fatal): {injury_err}")
 
         print("\n=== Step 6: Generating today's game predictions ===")
+        today_str = now.strftime("%Y-%m-%d")
         try:
-            today_str = now.strftime("%Y-%m-%d")
             n_written = generate_today_predictions(today_str)
             print(f"  Wrote {n_written} prediction(s) to predictions_history.db")
         except Exception as pred_err:
             log_pipeline_error("update.py:generate_predictions", pred_err)
             print(f"  Prediction generation failed (non-fatal): {pred_err}")
+
+        print("\n=== Step 6b: Running ensemble on today's predictions ===")
+        try:
+            import pandas as pd
+            from src.models.ensemble import NBAEnsemble
+
+            matchup_path = "data/features/game_matchup_features.csv"
+            if Path(matchup_path).exists():
+                matchup_df = pd.read_csv(matchup_path)
+                matchup_df["game_date"] = pd.to_datetime(
+                    matchup_df["game_date"], format="mixed"
+                )
+                today_rows = matchup_df[
+                    matchup_df["game_date"].dt.strftime("%Y-%m-%d") == today_str
+                ].copy()
+
+                if today_rows.empty:
+                    print(f"  No matchup rows for {today_str}; ensemble skipped.")
+                else:
+                    ens = NBAEnsemble.load()
+                    scores = ens.predict(today_rows)
+
+                    import sqlite3
+                    db_path = "database/predictions_history.db"
+                    with sqlite3.connect(db_path) as conn:
+                        conn.execute("""
+                            CREATE TABLE IF NOT EXISTS ensemble_predictions (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                game_date TEXT,
+                                home_team TEXT,
+                                away_team TEXT,
+                                win_prob REAL,
+                                ats_prob REAL,
+                                margin_pred REAL,
+                                margin_signal REAL,
+                                ensemble_score REAL,
+                                ensemble_edge REAL,
+                                confidence TEXT,
+                                created_at TEXT
+                            )
+                        """)
+                        for idx, row in scores.iterrows():
+                            src = today_rows.loc[idx]
+                            conn.execute("""
+                                INSERT INTO ensemble_predictions
+                                    (game_date, home_team, away_team,
+                                     win_prob, ats_prob, margin_pred, margin_signal,
+                                     ensemble_score, ensemble_edge, confidence,
+                                     created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                today_str,
+                                str(src.get("home_team", "")),
+                                str(src.get("away_team", "")),
+                                float(row["win_prob"]) if pd.notna(row["win_prob"]) else None,
+                                float(row["ats_prob"]) if pd.notna(row["ats_prob"]) else None,
+                                float(row["margin_pred"]) if pd.notna(row["margin_pred"]) else None,
+                                float(row["margin_signal"]) if pd.notna(row["margin_signal"]) else None,
+                                float(row["ensemble_score"]) if pd.notna(row["ensemble_score"]) else None,
+                                float(row["ensemble_edge"]) if pd.notna(row["ensemble_edge"]) else None,
+                                str(row["confidence"]),
+                                datetime.now().isoformat(),
+                            ))
+                        conn.commit()
+
+                    n_ens = len(scores)
+                    print(f"  Ensemble scores written: {n_ens} row(s) to ensemble_predictions table")
+            else:
+                print(f"  Matchup CSV not found at {matchup_path}; ensemble skipped.")
+        except Exception as ens_err:
+            log_pipeline_error("update.py:ensemble", ens_err)
+            print(f"  Ensemble step failed (non-fatal): {ens_err}")
 
         elapsed = datetime.now() - start_time
         total_seconds = int(elapsed.total_seconds())

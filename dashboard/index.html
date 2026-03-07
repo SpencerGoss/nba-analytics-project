@@ -2062,42 +2062,10 @@ function buildHeroSection(picks, valueBets, explainers, contexts){
 // NBA CDN headshots: https://cdn.nba.com/headshots/nba/latest/260x190/{id}.png
 // These are official NBA media assets, publicly served, no login required
 const DATA = {
-  games:[
-    {id:1,away:'BOS',home:'NYK',aS:108,hS:112,status:'live',q:'3rd 4:22',aR:'48-14',hR:'41-21',spread:'-3.5 NYK',ats:'NYK -3.5 ✓'},
-    {id:2,away:'LAL',home:'GSW',aS:94, hS:89, status:'live',q:'4th 1:55',aR:'36-26',hR:'31-31',spread:'-4.5 LAL',ats:'LAL -4.5 ✓'},
-    {id:3,away:'MIL',home:'CHI',aS:115,hS:102,status:'live',q:'3rd 9:11',aR:'39-23',hR:'28-34',spread:'-7.5 MIL',ats:'Awaiting'},
-    {id:4,away:'PHX',home:'DEN',aS:104,hS:118,status:'final',q:'Final',aR:'32-30',hR:'44-18',spread:'-5 DEN',ats:'DEN -5 ✓'},
-    {id:5,away:'MEM',home:'OKC',aS:98, hS:124,status:'final',q:'Final',aR:'29-33',hR:'50-12',spread:'-12 OKC',ats:'MEM +12 ✓'},
-    {id:6,away:'MIA',home:'ATL',aS:87, hS:91, status:'final',q:'Final',aR:'33-29',hR:'30-32',spread:'+2.5 ATL',ats:'ATL +2.5 ✓'},
-    {id:7,away:'CLE',home:'IND',aS:null,hS:null,status:'upcoming',q:'7:30 PM',aR:'44-18',hR:'37-25',spread:'-3 CLE',ats:'Pick: CLE'},
-    {id:8,away:'SAS',home:'HOU',aS:null,hS:null,status:'upcoming',q:'8:00 PM',aR:'26-36',hR:'38-24',spread:'-8.5 HOU',ats:'Pick: HOU'},
-    {id:9,away:'POR',home:'MIN',aS:null,hS:null,status:'upcoming',q:'9:30 PM',aR:'19-43',hR:'42-20',spread:'-11 MIN',ats:'Pick: MIN'},
-  ],
+  games:[], // populated by loadDashboardData() from live_scores.json
   players:[], // populated by loadDashboardData() from player_comparison.json
-  east:[
-    {team:'Detroit Pistons',          abbr:'DET',w:45,l:15,gb:'-', streak:'L1'},
-    {team:'Boston Celtics',            abbr:'BOS',w:41,l:21,gb:4,  streak:'L1'},
-    {team:'New York Knicks',           abbr:'NYK',w:40,l:23,gb:5,  streak:'L1'},
-    {team:'Cleveland Cavaliers',       abbr:'CLE',w:39,l:24,gb:6,  streak:'W2'},
-    {team:'Toronto Raptors',           abbr:'TOR',w:35,l:26,gb:10, streak:'L1'},
-    {team:'Philadelphia 76ers',        abbr:'PHI',w:34,l:28,gb:11, streak:'W1'},
-    {team:'Miami Heat',                abbr:'MIA',w:33,l:29,gb:12, streak:'W2'},
-    {team:'Orlando Magic',             abbr:'ORL',w:32,l:28,gb:13, streak:'W1'},
-    {team:'Charlotte Hornets',         abbr:'CHA',w:32,l:31,gb:13, streak:'W6'},
-    {team:'Atlanta Hawks',             abbr:'ATL',w:32,l:31,gb:13, streak:'W5'},
-  ],
-  west:[
-    {team:'Oklahoma City Thunder',    abbr:'OKC',w:49,l:15,gb:'-', streak:'W4'},
-    {team:'San Antonio Spurs',         abbr:'SAS',w:44,l:17,gb:5,  streak:'W1'},
-    {team:'Minnesota Timberwolves',    abbr:'MIN',w:39,l:23,gb:10, streak:'W4'},
-    {team:'Houston Rockets',           abbr:'HOU',w:38,l:22,gb:11, streak:'W1'},
-    {team:'Denver Nuggets',            abbr:'DEN',w:38,l:24,gb:11, streak:'W1'},
-    {team:'Los Angeles Lakers',        abbr:'LAL',w:37,l:24,gb:12, streak:'W3'},
-    {team:'Phoenix Suns',              abbr:'PHX',w:35,l:26,gb:14, streak:'W2'},
-    {team:'Golden State Warriors',     abbr:'GSW',w:31,l:30,gb:18, streak:'L2'},
-    {team:'LA Clippers',               abbr:'LAC',w:30,l:31,gb:19, streak:'W3'},
-    {team:'Portland Trail Blazers',    abbr:'POR',w:30,l:33,gb:19, streak:'W1'},
-  ],
+  east:[], // populated by loadDashboardData() from standings.json
+  west:[], // populated by loadDashboardData() from standings.json
   picks:[
     {matchup:'DAL @ ORL', time:'Mar 5',pick:'ORL',spread:'',conf:70,tier:'hi',reason:'Home advantage + model edge'},
     {matchup:'UTA @ WAS', time:'Mar 5',pick:'WAS',spread:'',conf:61,tier:'md',reason:'Slight home edge'},
@@ -2853,8 +2821,17 @@ function updateComparison(){
   }
   document.getElementById('cmp-prompt').style.display='none';
   document.getElementById('cmp-content').style.display='block';
-  const aA=ADV[nA]||ADV_NULL,aB=ADV[nB]||ADV_NULL;
-  const hasAdvA=!!ADV[nA],hasAdvB=!!ADV[nB];
+  // Merge live stats (ts%, usg%) over hardcoded ADV; fall back to ADV then ADV_NULL
+  function _mergeAdv(name){
+    const base=ADV[name]||ADV_NULL;
+    const live=(window.ADVANCED_STATS&&window.ADVANCED_STATS[name])||{};
+    return Object.assign({},base,{
+      ts:live.ts!=null?live.ts:base.ts,
+      usg:live.usg!=null?live.usg:base.usg,
+    });
+  }
+  const aA=_mergeAdv(nA),aB=_mergeAdv(nB);
+  const hasAdvA=!!(ADV[nA]||(window.ADVANCED_STATS&&window.ADVANCED_STATS[nA])),hasAdvB=!!(ADV[nB]||(window.ADVANCED_STATS&&window.ADVANCED_STATS[nB]));
   renderBanner('ban-a',pA,aA,colA,'left');
   renderBanner('ban-b',pB,aB,colB,'right');
   // Era-adjust scoring stats only (pts, reb, ast are counting stats; fg/3p% are ratios — no era adjust)
@@ -3011,8 +2988,8 @@ function drawMatchup(i){
 }
 
 // ─── DEEP DIVE — PLAYOFF ───
-function renderPlayoff(){
-  const eastOdds=[
+async function renderPlayoff(){
+  const fallbackEast=[
     {team:'Detroit Pistons',    pct:100,title:20.5},
     {team:'Boston Celtics',     pct:100,title:7.8},
     {team:'New York Knicks',    pct:100,title:9.8},
@@ -3024,7 +3001,7 @@ function renderPlayoff(){
     {team:'Charlotte Hornets',  pct:31, title:0.5},
     {team:'Atlanta Hawks',      pct:10, title:0.0},
   ];
-  const westOdds=[
+  const fallbackWest=[
     {team:'San Antonio Spurs',      pct:100,title:25.2},
     {team:'Oklahoma City Thunder',  pct:100,title:20.2},
     {team:'Minnesota Timberwolves', pct:100,title:3.1},
@@ -3036,6 +3013,16 @@ function renderPlayoff(){
     {team:'LA Clippers',            pct:15, title:0.1},
     {team:'Portland Trail Blazers', pct:6,  title:0.0},
   ];
+  let eastOdds=fallbackEast;
+  let westOdds=fallbackWest;
+  try{
+    const poJson=await fetch('data/playoff_odds.json').then(r=>r.ok?r.json():null).catch(()=>null);
+    if(poJson){
+      function mapPO(t){return {team:t.team,pct:t.pct,title:t.title};}
+      if(poJson.east&&poJson.east.length)eastOdds=poJson.east.map(mapPO);
+      if(poJson.west&&poJson.west.length)westOdds=poJson.west.map(mapPO);
+    }
+  }catch(e){console.warn('playoff_odds.json load failed, using fallback:',e);}
   function poList(data,id){
     document.getElementById(id).innerHTML=data.map((t,i)=>{
       const col=t.pct>=90?'var(--green)':t.pct>=60?'var(--gold)':'var(--red)';
@@ -3065,58 +3052,85 @@ function renderPlayoff(){
 }
 
 // ─── DEEP DIVE — STREAKS ───
-function renderStreaks(){
-  const hot=[
-    {name:"Cooper Flagg",team:"DAL",sub:"Last 5: 34, 36, 32, 14, 27 pts",stat:"+8.2 PPG"},
-    {name:"Jalen Duren",team:"DET",sub:"Last 5: 25, 29, 33, 16, 24 pts",stat:"+6.8 PPG"},
-    {name:"Jrue Holiday",team:"POR",sub:"Last 5: 22, 10, 25, 23, 35 pts",stat:"+6.4 PPG"},
-    {name:"Saddiq Bey",team:"NOP",sub:"Last 5: 18, 42, 24, 14, 18 pts",stat:"+5.9 PPG"},
+async function renderStreaks(){
+  const fallbackHot=[
+    {name:'Cooper Flagg',team:'DAL',sub:'Last 5: 34, 36, 32, 14, 27 pts',stat:'+8.2 PPG'},
+    {name:'Jalen Duren',team:'DET',sub:'Last 5: 25, 29, 33, 16, 24 pts',stat:'+6.8 PPG'},
+    {name:'Jrue Holiday',team:'POR',sub:'Last 5: 22, 10, 25, 23, 35 pts',stat:'+6.4 PPG'},
+    {name:'Saddiq Bey',team:'NOP',sub:'Last 5: 18, 42, 24, 14, 18 pts',stat:'+5.9 PPG'},
   ];
-  const cold=[
-    {name:"Jalen Johnson",team:"ATL",sub:"Last 5: 16, 26, 5, 8, 20 pts",stat:"40.4% FG"},
-    {name:"Austin Reaves",team:"LAL",sub:"Last 5: 18, 14, 18, 12, 15 pts",stat:"40.6% FG"},
-    {name:"Franz Wagner",team:"ORL",sub:"Last 5: 7, 18, 14, 14, 5 pts",stat:"45.1% FG"},
-    {name:"Deni Avdija",team:"POR",sub:"Last 5: 11, 26, 11, 15, 0 pts",stat:"37.5% FG"},
+  const fallbackCold=[
+    {name:'Jalen Johnson',team:'ATL',sub:'Last 5: 16, 26, 5, 8, 20 pts',stat:'40.4% FG'},
+    {name:'Austin Reaves',team:'LAL',sub:'Last 5: 18, 14, 18, 12, 15 pts',stat:'40.6% FG'},
+    {name:'Franz Wagner',team:'ORL',sub:'Last 5: 7, 18, 14, 14, 5 pts',stat:'45.1% FG'},
+    {name:'Deni Avdija',team:'POR',sub:'Last 5: 11, 26, 11, 15, 0 pts',stat:'37.5% FG'},
   ];
-  document.getElementById('hot-players').innerHTML=hot.map(p=>`
+  const fallbackTeamStreaks=[
+    {team:'OKC',streak:4},{team:'DET',streak:-1},{team:'SAS',streak:1},{team:'BOS',streak:-1},
+    {team:'NYK',streak:-1},{team:'CLE',streak:2},{team:'MIN',streak:4},{team:'HOU',streak:1},
+    {team:'DEN',streak:1},{team:'LAL',streak:3},
+  ];
+  const fallbackHomeAway=[
+    {team:'OKC',home_pct:81,away_pct:75},{team:'DET',home_pct:77,away_pct:72},
+    {team:'SAS',home_pct:78,away_pct:67},{team:'BOS',home_pct:67,away_pct:66},
+    {team:'NYK',home_pct:72,away_pct:53},
+  ];
+  let hot=fallbackHot;
+  let cold=fallbackCold;
+  let teamStreaks=fallbackTeamStreaks;
+  let homeAway=fallbackHomeAway;
+  try{
+    const stJson=await fetch("data/streaks.json").then(r=>r.ok?r.json():null).catch(()=>null);
+    if(stJson){
+      if(stJson.hot&&stJson.hot.length)hot=stJson.hot;
+      if(stJson.cold&&stJson.cold.length)cold=stJson.cold;
+      if(stJson.team_streaks&&stJson.team_streaks.length)teamStreaks=stJson.team_streaks;
+      if(stJson.home_away&&stJson.home_away.length)homeAway=stJson.home_away.slice(0,5);
+    }
+  }catch(e){console.warn("streaks.json load failed, using fallback:",e);}
+  document.getElementById("hot-players").innerHTML=hot.map(p=>`
     <div class="streak-card hot">
       <div style="width:32px;height:32px;border-radius:10px;background:var(--green-d);border:1px solid rgba(0,200,150,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       </div>
       <div class="streak-info">
-        <div class="streak-name">${p.name} <span class="tpill">${p.team}</span></div>
-        <div class="streak-sub">${p.sub}</div>
+        <div class="streak-name">${esc(p.name)} <span class="tpill">${esc(p.team)}</span></div>
+        <div class="streak-sub">${esc(p.sub)}</div>
       </div>
-      <div class="streak-badge" style="color:var(--green)">${p.stat}</div>
-    </div>`).join('');
-  document.getElementById('cold-players').innerHTML=cold.map(p=>`
+      <div class="streak-badge" style="color:var(--green)">${esc(p.stat)}</div>
+    </div>`).join("");
+  document.getElementById("cold-players").innerHTML=cold.map(p=>`
     <div class="streak-card cold">
       <div style="width:32px;height:32px;border-radius:10px;background:var(--blue-d);border:1px solid rgba(79,158,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
       </div>
       <div class="streak-info">
-        <div class="streak-name">${p.name} <span class="tpill">${p.team}</span></div>
-        <div class="streak-sub">${p.sub}</div>
+        <div class="streak-name">${esc(p.name)} <span class="tpill">${esc(p.team)}</span></div>
+        <div class="streak-sub">${esc(p.sub)}</div>
       </div>
-      <div class="streak-badge" style="color:var(--blue)">${p.stat}</div>
-    </div>`).join('');
+      <div class="streak-badge" style="color:var(--blue)">${esc(p.stat)}</div>
+    </div>`).join("");
 
-  const teams=['OKC','DET','SAS','BOS','NYK','CLE','MIN','HOU','DEN','LAL'];
-  const streaks=[4,-1,1,-1,-1,2,4,1,1,3];
-  Plotly.newPlot('streak-chart',[{
-    x:teams,y:streaks,type:'bar',
+  const teams=teamStreaks.map(t=>t.team);
+  const streaks=teamStreaks.map(t=>t.streak);
+  const xEnd=Math.max(teams.length-1,0)+0.5;
+  Plotly.newPlot("streak-chart",[{
+    x:teams,y:streaks,type:"bar",
     marker:{color:streaks.map(v=>v>0?`rgba(0,200,150,${Math.min(.9,.35+v*.12)})`:`rgba(255,92,92,${Math.min(.9,.35+Math.abs(v)*.12)})`),line:{width:0}},
-    hovertemplate:'<b>%{x}</b><br>%{y} game streak<extra></extra>'
+    hovertemplate:"<b>%{x}</b><br>%{y} game streak<extra></extra>"
   }],ML({
     y:{},
-    ex:{shapes:[{type:'line',x0:-.5,x1:9.5,y0:0,y1:0,line:{color:'rgba(255,255,255,.12)',width:1.5}}]}
+    ex:{shapes:[{type:"line",x0:-.5,x1:xEnd,y0:0,y1:0,line:{color:"rgba(255,255,255,.12)",width:1.5}}]}
   }),{responsive:true,displayModeBar:false});
 
-  Plotly.newPlot('homeway-chart',[
-    {x:['OKC','DET','SAS','BOS','NYK'],y:[81,77,78,67,72],type:'bar',name:'Home',marker:{color:'rgba(0,200,150,.7)',line:{width:0}},hovertemplate:'%{x} home: %{y}%<extra></extra>'},
-    {x:['OKC','DET','SAS','BOS','NYK'],y:[75,72,67,66,53],type:'bar',name:'Away',marker:{color:'rgba(79,158,255,.6)',line:{width:0}},hovertemplate:'%{x} away: %{y}%<extra></extra>'},
-  ],{...ML({y:{ticksuffix:'%',range:[40,100]}}),barmode:'group',bargap:.3,bargroupgap:.1,
-    legend:{font:{color:'#8892AA',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'}},
+  const haTeams=homeAway.map(t=>t.team);
+  const haPct=homeAway.map(t=>t.home_pct);
+  const awPct=homeAway.map(t=>t.away_pct);
+  Plotly.newPlot("homeway-chart",[
+    {x:haTeams,y:haPct,type:"bar",name:"Home",marker:{color:"rgba(0,200,150,.7)",line:{width:0}},hovertemplate:"%{x} home: %{y}%<extra></extra>"},
+    {x:haTeams,y:awPct,type:"bar",name:"Away",marker:{color:"rgba(79,158,255,.6)",line:{width:0}},hovertemplate:"%{x} away: %{y}%<extra></extra>"},
+  ],{...ML({y:{ticksuffix:"%",range:[40,100]}}),barmode:"group",bargap:.3,bargroupgap:.1,
+    legend:{font:{color:"#8892AA",size:12,family:"Plus Jakarta Sans"},bgcolor:"transparent"}},
     {responsive:true,displayModeBar:false});
 }
 
@@ -3124,18 +3138,31 @@ function renderStreaks(){
 let shotRendered=false;
 function renderShotMaps(){
   if(shotRendered)return;shotRendered=true;
-  const players=DATA.players.slice(0,8).map(p=>p.name.split(' ').pop());
+  // Use real TS% from advanced_stats.json; fallback to ADV constant; then hardcoded
+  const _fallbackTS=[61.3,66.5,61.7,58.8,57.1,67.6,61.4,62.2];
+  const topPlayers=DATA.players.filter(p=>!p.retired).slice(0,8);
+  const playerNames=topPlayers.map(p=>p.name.split(' ').pop());
+  const tsVals=topPlayers.map((p,i)=>{
+    const live=window.ADVANCED_STATS&&window.ADVANCED_STATS[p.name];
+    if(live&&live.ts!=null)return live.ts;
+    const adv=ADV[p.name];
+    if(adv&&adv.ts!=null)return adv.ts;
+    return _fallbackTS[i]||62;
+  });
+  // TS% -> rough pts/attempt (TS% / 50 * 1.0 scale; 66% TS ~ 1.32 pts/att)
+  const effVals=tsVals.map(ts=>Math.round(ts/50*100)/100);
+
   Plotly.newPlot('shot-quality-chart',[{
-    y:players,x:[61.3, 66.5, 61.7, 58.8, 57.1, 67.6, 61.4, 62.2],type:'bar',orientation:'h',
-    marker:{color:[61.3, 66.5, 61.7, 58.8, 57.1, 67.6, 61.4, 62.2].map(v=>v>=65?'rgba(0,200,150,.75)':v>=60?'rgba(245,166,35,.7)':'rgba(79,158,255,.6)'),line:{width:0}},
-    hovertemplate:'<b>%{y}</b><br>Shot quality: %{x}<extra></extra>'
-  }],{...ML({y:{},x:{range:[50,72]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
+    y:playerNames,x:tsVals,type:'bar',orientation:'h',
+    marker:{color:tsVals.map(v=>v>=65?'rgba(0,200,150,.75)':v>=60?'rgba(245,166,35,.7)':'rgba(79,158,255,.6)'),line:{width:0}},
+    hovertemplate:'<b>%{y}</b><br>TS%: %{x:.1f}%<extra></extra>'
+  }],{...ML({y:{},x:{range:[50,75]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
 
   Plotly.newPlot('efficiency-chart',[{
-    y:players,x:[1.23, 1.33, 1.23, 1.18, 1.14, 1.35, 1.23, 1.24],type:'bar',orientation:'h',
-    marker:{color:[1.23, 1.33, 1.23, 1.18, 1.14, 1.35, 1.23, 1.24].map(v=>v>=1.3?'rgba(0,200,150,.75)':v>=1.2?'rgba(245,166,35,.7)':'rgba(79,158,255,.6)'),line:{width:0}},
-    hovertemplate:'<b>%{y}</b><br>%{x} pts/attempt<extra></extra>'
-  }],{...ML({y:{},x:{range:[.9,1.4]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
+    y:playerNames,x:effVals,type:'bar',orientation:'h',
+    marker:{color:effVals.map(v=>v>=1.3?'rgba(0,200,150,.75)':v>=1.2?'rgba(245,166,35,.7)':'rgba(79,158,255,.6)'),line:{width:0}},
+    hovertemplate:'<b>%{y}</b><br>%{x:.2f} pts/attempt (est.)<extra></extra>'
+  }],{...ML({y:{},x:{range:[.9,1.5]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
 
   Plotly.newPlot('shot-zone-chart',[
     {x:["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"],y:[24, 7, 10, 34, 12],type:'bar',name:'Luka',marker:{color:'rgba(245,166,35,.7)',line:{width:0}},hovertemplate:'Luka -- %{x}: %{y}%<extra></extra>'},
@@ -3451,7 +3478,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -3459,6 +3486,9 @@ async function loadDashboardData(){
       fetch('data/explainers.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/game_context.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/player_comparison.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('data/live_scores.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/standings.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('data/advanced_stats.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
     // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
     if(playerJson&&playerJson.players&&playerJson.players.length){
@@ -3475,11 +3505,40 @@ async function loadDashboardData(){
       // Fallback: use LEGENDS only so the page is never empty
       DATA.players=[...LEGENDS];
     }
+    // ── Populate DATA.games from live_scores.json ──
+    // Handle both bare array format and {games:[...], exported_at:"..."} dict format
+    const _liveGames=Array.isArray(liveScores)?liveScores:(liveScores&&liveScores.games?liveScores.games:[]);
+    if(_liveGames.length){
+      DATA.games=_liveGames;
+      // Re-render game cards and ticker now that live data is available
+      renderGames();
+      renderTicker();
+    }
+    // ── Populate DATA.east/west from standings.json ──
+    if(standingsJson){
+      function mapStandingRow(t){
+        const gb=t.games_behind===0||t.games_behind==='0'?'-':t.games_behind;
+        const rawStreak=String(t.streak||'');
+        let streak=rawStreak;
+        if(/^[+-]?\d+$/.test(rawStreak)){
+          const n=parseInt(rawStreak,10);
+          streak=n<0?'L'+Math.abs(n):'W'+(n||1);
+        }
+        return {team:t.team_name||t.team,abbr:t.team,w:t.w,l:t.l,gb:gb,streak:streak};
+      }
+      if(standingsJson.east&&standingsJson.east.length)DATA.east=standingsJson.east.map(mapStandingRow);
+      if(standingsJson.west&&standingsJson.west.length)DATA.west=standingsJson.west.map(mapStandingRow);
+      // Re-render standings tables now that data is loaded
+      renderStandings();
+      buildTeamsOverview();
+    }
     // Allow pickers to reinitialise with the full player list
     pickersInited=false;
     window.ACCURACY_DATA=accuracy;
     window.VALUE_BETS=valueBets;
     window.META=meta;
+    // Store live advanced stats for player comparison (ts%, usg%, off/def ratings)
+    window.ADVANCED_STATS=(advStats&&advStats.players)?advStats.players:{};
     window._VB_EXPLAINERS=explainers;
     if(picks.length){
       DATA.picks=picks.map(p=>{
@@ -3506,7 +3565,7 @@ async function loadDashboardData(){
       const d=new Date(meta.exported_at);
       const label=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
       const updEl=document.getElementById('dash-updated');
-      if(updEl)updEl.textContent='Updated '+label+' \u00b7 nba_api \u00b7 Model v2.3';
+      if(updEl)updEl.textContent='Updated '+label+' \u00b7 nba_api \u00b7 Model '+(meta.model_version||'v2.3');
       const relEl=document.getElementById('last-updated-rel');
       if(relEl)relEl.textContent=formatLastUpdated(meta.exported_at);
     }
@@ -4217,7 +4276,7 @@ if ('serviceWorker' in navigator) {
 
 <script>
 // ── TEAMS PAGE ──
-(function buildTeamsOverview(){
+function buildTeamsOverview(){
   function row(t,i){
     const pct=(t.w/(t.w+t.l+0.001)).toFixed(3);
     const sc=String(t.streak).startsWith('W')?'var(--green)':'var(--red)';
@@ -4226,9 +4285,10 @@ if ('serviceWorker' in navigator) {
   }
   const e=document.getElementById('teams-east-tb');
   const w=document.getElementById('teams-west-tb');
-  if(e&&DATA.east)e.innerHTML=DATA.east.map(row).join('');
-  if(w&&DATA.west)w.innerHTML=DATA.west.map(row).join('');
-})();
+  if(e&&DATA.east.length)e.innerHTML=DATA.east.map(row).join('');
+  if(w&&DATA.west.length)w.innerHTML=DATA.west.map(row).join('');
+}
+buildTeamsOverview();
 
 function buildTeamsForm(){
   const grid=document.getElementById('teams-form-grid');
