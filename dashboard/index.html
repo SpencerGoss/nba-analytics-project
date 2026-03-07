@@ -1105,6 +1105,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
       <button class="fc" id="pfilt-legends" onclick="setPlayerFilter('legends',this)">All-Time Legends</button>
       <button class="fc" id="pfilt-all" onclick="setPlayerFilter('all',this)">All Players</button>
     </div>
+    <div style="margin-bottom:10px"><input id="player-search" type="search" placeholder="Search player name…" oninput="setPlayerSearch(this.value)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t0);font-family:var(--f);font-size:13px;outline:none"/></div>
     <div class="card"><div class="tw"><table><thead><tr>
       <th style="width:32px">#</th><th>Player</th>
       <th class="stat-th active-sort" id="th-pts" onclick="sortPlayers('pts')">PTS <span class="sort-arrow" id="arr-pts">&#9660;</span></th>
@@ -1114,12 +1115,21 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
       <th class="stat-th" id="th-thr" onclick="sortPlayers('thr')">3P% <span class="sort-arrow" id="arr-thr">&#8597;</span></th>
       <th>Team</th>
     </tr></thead><tbody id="players-tb"></tbody></table></div></div>
+    <div id="players-show-more" style="display:none;text-align:center;margin-top:12px"><button onclick="pShowAll=true;renderPlayersTable()" style="padding:8px 22px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t1);font-family:var(--f);font-size:13px;cursor:pointer">Show all players</button></div>
   </div>
   <div class="tab-content" id="players-tab-compare">
     <div class="g2" style="margin-bottom:16px">
       <div class="card" style="padding:14px 18px"><div class="sl" style="margin-bottom:7px">Player 1</div><div class="sel-wrap"><select id="picker-a" onchange="updateComparison()"></select><svg class="sel-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div><div id="prev-a" style="margin-top:10px;min-height:24px"></div></div>
       <div class="card" style="padding:14px 18px"><div class="sl" style="margin-bottom:7px">Player 2</div><div class="sel-wrap"><select id="picker-b" onchange="updateComparison()"></select><svg class="sel-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div><div id="prev-b" style="margin-top:10px;min-height:24px"></div></div>
     </div>
+    <div class="era-toggle-wrap">
+      <span class="era-toggle-lbl">Stats</span>
+      <div class="era-pill">
+        <button id="era-btn-raw" class="active" onclick="setEraMode(false)">Raw</button>
+        <button id="era-btn-adj" onclick="setEraMode(true)">Era-Adjusted</button>
+      </div>
+    </div>
+    <p class="era-footnote" id="era-footnote">Era-adjusted: scoring stats normalized to the modern scoring environment (baseline 14.5 PPG). Ratios (FG%, 3P%) are not adjusted.</p>
     <div id="cmp-prompt" class="card" style="text-align:center;padding:48px;color:var(--t2)"><div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">Select two players to compare</div><div style="font-size:12px">Radar chart, stats, and shooting breakdown will appear here</div></div>
     <div id="cmp-content" style="display:none">
       <div class="card" style="margin-bottom:16px;padding:18px 22px"><div style="display:flex;align-items:center;justify-content:space-between;gap:18px"><div id="ban-a" style="flex:1"></div><div style="font-size:11px;font-weight:800;color:var(--t2);letter-spacing:.5px;flex-shrink:0">VS</div><div id="ban-b" style="flex:1;text-align:right"></div></div></div>
@@ -1598,17 +1608,18 @@ function injectTooltips() {
     if (el.textContent.includes('Rolling accuracy')) replaceLabelWithTip(el, 'rolling');
   });
 
-  // CLV label in backtest card header
-  const clvSt = document.querySelector('#model-tab-backtest .st');
-  if (clvSt && clvSt.textContent.includes('Closing Line Value')) replaceLabelWithTip(clvSt, 'clv');
+  // CLV label in performance page card header (page-bet-performance)
+  document.querySelectorAll('#page-bet-performance .st').forEach(el => {
+    if (el.textContent.includes('Closing Line Value')) replaceLabelWithTip(el, 'clv');
+  });
 
   // ATS label in sidebar record card
   document.querySelectorAll('.sl').forEach(el => {
     if (el.textContent === 'Season ATS') replaceLabelWithTip(el, 'ats');
   });
 
-  // Edge / Model / Market column headers in value bets table
-  document.querySelectorAll('#model-tab-valuebets thead th').forEach(th => {
+  // Edge / Model / Market column headers in value bets table (page-bet-valuebets)
+  document.querySelectorAll('#page-bet-valuebets thead th').forEach(th => {
     if (th.textContent === 'Edge')   replaceLabelWithTip(th, 'edge');
     if (th.textContent === 'Model')  replaceLabelWithTip(th, 'modelp');
     if (th.textContent === 'Market') replaceLabelWithTip(th, 'marketp');
@@ -1645,7 +1656,7 @@ function showTab(name) {
   const page = pageMap[name];
   if (page) {
     showPage(page);
-    if (name === 'standings') setTimeout(() => switchTab('games','standings'), 80);
+    if (name === 'standings') setTimeout(() => switchTab('standings','conf'), 80);
   }
   // Sync mob nav active state
   const idMap = {
@@ -1657,15 +1668,10 @@ function showTab(name) {
   if (idMap[name]) syncMobNav(idMap[name]);
 }
 
-function showBettingTab(name) {
-  showPage('model');
-  if (name === 'picks') setTimeout(() => switchTab('model','picks'), 80);
-  syncMobNav('mbn-picks');
-}
-
 // Also sync mob nav when top-level showPage is called directly
-// Wrap showPage to also sync mob nav
-(function(){
+// Wrap showPage to also sync mob nav — deferred until after showPage is defined
+document.addEventListener('DOMContentLoaded', function(){
+  if (typeof showPage !== 'function') return;
   const pageToMbn = {
     dashboard: 'mbn-today',
     players:   'mbn-players',
@@ -1673,13 +1679,13 @@ function showBettingTab(name) {
     model:     'mbn-picks',
     deep:      'mbn-more',
   };
-  const orig = showPage;
+  const _origShowPage = showPage;
   showPage = function(id) {
-    orig(id);
+    _origShowPage(id);
     const mbnId = pageToMbn[id];
     if (mbnId) syncMobNav(mbnId);
   };
-})();
+});
 
 // Safe DOM setter: sets markup on an element using insertAdjacentHTML after clearing it.
 // Only called with server-controlled or fully-escaped markup — never with raw user input.
@@ -2067,26 +2073,7 @@ const DATA = {
     {id:8,away:'SAS',home:'HOU',aS:null,hS:null,status:'upcoming',q:'8:00 PM',aR:'26-36',hR:'38-24',spread:'-8.5 HOU',ats:'Pick: HOU'},
     {id:9,away:'POR',home:'MIN',aS:null,hS:null,status:'upcoming',q:'9:30 PM',aR:'19-43',hR:'42-20',spread:'-11 MIN',ats:'Pick: MIN'},
   ],
-  players:[
-    {name:'Luka Doncic',             team:'LAL',pts:32.4,reb:7.7,ast:8.6,fg:47.3,thr:35.9,ini:'LD',nbaId:1629029},
-    {name:'Shai Gilgeous-Alexander', team:'OKC',pts:31.6,reb:4.4,ast:6.4,fg:55.0,thr:38.4,ini:'SG',nbaId:1628983},
-    {name:'Anthony Edwards',         team:'MIN',pts:29.7,reb:5.2,ast:3.7,fg:49.4,thr:40.2,ini:'AE',nbaId:1630162},
-    {name:'Tyrese Maxey',            team:'PHI',pts:28.9,reb:4.2,ast:6.7,fg:46.0,thr:37.2,ini:'TM',nbaId:1630178},
-    {name:'Jaylen Brown',            team:'BOS',pts:28.9,reb:7.2,ast:5.0,fg:48.0,thr:34.8,ini:'JB',nbaId:1627759},
-    {name:'Nikola Jokic',            team:'DEN',pts:28.7,reb:12.6,ast:10.3,fg:57.0,thr:40.1,ini:'NJ',nbaId:203999},
-    {name:'Donovan Mitchell',        team:'CLE',pts:28.5,reb:4.5,ast:5.8,fg:48.3,thr:36.9,ini:'DM',nbaId:1628378},
-    {name:'Kawhi Leonard',           team:'LAC',pts:27.9,reb:6.4,ast:3.7,fg:49.7,thr:37.9,ini:'KL',nbaId:202695},
-    {name:'Giannis Antetokounmpo',   team:'MIL',pts:27.6,reb:9.9,ast:5.4,fg:63.7,thr:37.5,ini:'GA',nbaId:203507},
-    {name:'Stephen Curry',           team:'GSW',pts:27.2,reb:3.5,ast:4.8,fg:46.8,thr:39.1,ini:'SC',nbaId:201939},
-    {name:'LeBron James',            team:'LAL',pts:27.0,reb:7.4,ast:7.4,fg:50.4,thr:34.5,ini:'LJ',nbaId:2544,  debutYear:2003,primaryTeam:'LAL'},
-    // ── All-Time Legends (retired) ──────────────────────────────────────────────
-    {name:'Michael Jordan',          team:'CHI',pts:30.1,reb:6.2,ast:5.3,fg:49.7,thr:32.7,ini:'MJ',nbaId:893,   debutYear:1984,primaryTeam:'CHI', retired:true},
-    {name:'Kobe Bryant',             team:'LAL',pts:25.0,reb:5.2,ast:4.7,fg:44.7,thr:32.9,ini:'KB',nbaId:977,   debutYear:1996,primaryTeam:'LAL', retired:true},
-    {name:'Larry Bird',              team:'BOS',pts:24.3,reb:10.0,ast:6.3,fg:49.6,thr:37.6,ini:'LB',nbaId:null, debutYear:1979,primaryTeam:'BOS', retired:true},
-    {name:'Magic Johnson',           team:'LAL',pts:19.5,reb:7.2,ast:11.2,fg:52.0,thr:30.3,ini:'MgJ',nbaId:null,debutYear:1979,primaryTeam:'LAL', retired:true},
-    {name:'Kareem Abdul-Jabbar',     team:'LAL',pts:24.6,reb:11.2,ast:3.6,fg:55.9,thr:6.0, ini:'KA',nbaId:null, debutYear:1969,primaryTeam:'LAL', retired:true},
-    {name:'Wilt Chamberlain',        team:'PHI',pts:30.1,reb:22.9,ast:4.4,fg:54.0,thr:0.0,  ini:'WC',nbaId:null, debutYear:1959,primaryTeam:'PHI', retired:true},
-  ],
+  players:[], // populated by loadDashboardData() from player_comparison.json
   east:[
     {team:'Detroit Pistons',          abbr:'DET',w:45,l:15,gb:'-', streak:'L1'},
     {team:'Boston Celtics',            abbr:'BOS',w:41,l:21,gb:4,  streak:'L1'},
@@ -2123,6 +2110,51 @@ const DATA = {
     {matchup:'NOP @ SAC', time:'Mar 5',pick:'SAC',spread:'',conf:90,tier:'hi',reason:'Strong home court'},
   ]
 };
+
+// ─── HARDCODED LEGENDS — merged into DATA.players after JSON fetch ───
+// These supply ini, nbaId, debutYear, primaryTeam fields not present in the JSON legends.
+const LEGENDS = [
+  {name:'Michael Jordan',      team:'CHI',pts:30.1,reb:6.2, ast:5.3, fg:49.7,thr:32.7,ini:'MJ', nbaId:893,  debutYear:1984,primaryTeam:'CHI',retired:true},
+  {name:'Kobe Bryant',         team:'LAL',pts:25.0,reb:5.2, ast:4.7, fg:44.7,thr:32.9,ini:'KB', nbaId:977,  debutYear:1996,primaryTeam:'LAL',retired:true},
+  {name:'Larry Bird',          team:'BOS',pts:24.3,reb:10.0,ast:6.3, fg:49.6,thr:37.6,ini:'LB', nbaId:null, debutYear:1979,primaryTeam:'BOS',retired:true},
+  {name:'Magic Johnson',       team:'LAL',pts:19.5,reb:7.2, ast:11.2,fg:52.0,thr:30.3,ini:'MgJ',nbaId:null, debutYear:1979,primaryTeam:'LAL',retired:true},
+  {name:'Kareem Abdul-Jabbar', team:'LAL',pts:24.6,reb:11.2,ast:3.6, fg:55.9,thr:6.0, ini:'KA', nbaId:null, debutYear:1969,primaryTeam:'LAL',retired:true},
+  {name:'Wilt Chamberlain',    team:'PHI',pts:30.1,reb:22.9,ast:4.4, fg:54.0,thr:0.0, ini:'WC', nbaId:null, debutYear:1959,primaryTeam:'PHI',retired:true},
+];
+
+// Derive two-letter initials from a player name (First Last -> FL)
+function playerIni(name){
+  const parts=(name||'').trim().split(/\s+/);
+  if(parts.length>=2)return (parts[0][0]+(parts[parts.length-1][0])).toUpperCase();
+  return (name||'??').slice(0,2).toUpperCase();
+}
+
+// Map a player_comparison.json entry into the DATA.players shape
+function mapJsonPlayer(p){
+  const ca=p.career_avgs||{};
+  const lastSeason=p.seasons&&p.seasons.length?p.seasons[p.seasons.length-1]:null;
+  const team=lastSeason?lastSeason.team:(p.seasons&&p.seasons[0]?p.seasons[0].team:'N/A');
+  const fgRaw=lastSeason?lastSeason.fg_pct:(p.fg_pct||null);
+  const thrRaw=lastSeason?lastSeason.fg3_pct:(p.fg3_pct||null);
+  // debutYear: parse from seasons_span e.g. "2007-2025" -> 2007
+  const spanStr=String(p.seasons_span||'');
+  const debutYear=spanStr?parseInt(spanStr.split('-')[0],10)||null:null;
+  return {
+    name:     p.player_name,
+    team:     team||'N/A',
+    pts:      Math.round((ca.pts||0)*10)/10,
+    reb:      Math.round((ca.reb||0)*10)/10,
+    ast:      Math.round((ca.ast||0)*10)/10,
+    fg:       fgRaw!=null?Math.round(fgRaw*1000)/10:0,
+    thr:      thrRaw!=null?Math.round(thrRaw*1000)/10:0,
+    ini:      playerIni(p.player_name),
+    nbaId:    p.player_id>0?p.player_id:null,
+    debutYear:debutYear,
+    primaryTeam:team||'N/A',
+    retired:  !!p._legend,
+    seasons_span: spanStr,
+  };
+}
 
 const ADV = {
   'Luka Doncic':               {per:29.1,ts:61.3,usg:36.2,ws:11.8,bpm:7.2,vorp:5.1,rim:57.2,mid:46.8,thr:35.9,paint:60.4},
@@ -2457,26 +2489,48 @@ function updateSortHeaders(){
 }
 
 let pFilter='current'; // 'current' | 'legends' | 'all'
+let pSearch='';        // name search term
+const P_PAGE_SIZE=100; // rows rendered initially before "Show more"
+let pShowAll=false;    // true after user clicks "Show all N players"
 
 function setPlayerFilter(mode,btn){
   pFilter=mode;
+  pShowAll=false;
   document.querySelectorAll('#pfilt-current,#pfilt-legends,#pfilt-all').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   renderPlayersTable();
 }
 
+function setPlayerSearch(val){
+  pSearch=(val||'').toLowerCase().trim();
+  pShowAll=false;
+  renderPlayersTable();
+}
+
 function renderPlayersTable(){
+  // 1. Filter by tab: "current" = active in 2024 or 2025 season and not retired
   let pool=DATA.players;
-  if(pFilter==='current')pool=DATA.players.filter(p=>!p.retired);
-  else if(pFilter==='legends')pool=DATA.players.filter(p=>p.retired);
+  if(pFilter==='current')
+    pool=DATA.players.filter(p=>!p.retired&&(p.seasons_span
+      ?(p.seasons_span.includes('2024')||p.seasons_span.includes('2025'))
+      :true));
+  else if(pFilter==='legends')
+    pool=DATA.players.filter(p=>p.retired);
+  // 2. Search filter (case-insensitive substring on name)
+  if(pSearch)pool=pool.filter(p=>(p.name||'').toLowerCase().includes(pSearch));
+  // 3. Sort
   const s=[...pool].sort((a,b)=>(a[pSort]-b[pSort])*pDir);
-  document.getElementById('players-tb').innerHTML=s.map((p,i)=>`
+  // 4. Paginate to avoid freezing browser on all 1,710 rows
+  const total=s.length;
+  const visible=pShowAll?s:s.slice(0,P_PAGE_SIZE);
+  // 5. Render rows
+  document.getElementById('players-tb').innerHTML=visible.map((p,i)=>`
     <tr>
       <td><span class="rn">${i+1}</span></td>
       <td class="nc">
         ${headshot(p.nbaId,p.ini,36)}
         <div>
-          <span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name}</span>
+          <span style="font-family:var(--f);font-weight:600;font-size:13px">${esc(p.name)}</span>
           ${p.retired?'<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--purple);margin-left:6px;vertical-align:middle">Legend</span>':''}
         </div>
       </td>
@@ -2485,8 +2539,18 @@ function renderPlayersTable(){
       <td style="${pSort==='ast'?'color:var(--gold);font-weight:700':''}">${p.ast}</td>
       <td style="${pSort==='fg'?'color:var(--gold);font-weight:700':''}">${p.fg}%</td>
       <td style="${pSort==='thr'?'color:var(--gold);font-weight:700':''}">${p.thr}%</td>
-      <td><span class="tpill">${p.team}</span></td>
+      <td><span class="tpill">${esc(p.team)}</span></td>
     </tr>`).join('');
+  // 6. Show-more footer button
+  const showMoreEl=document.getElementById('players-show-more');
+  if(showMoreEl){
+    if(!pShowAll&&total>P_PAGE_SIZE){
+      showMoreEl.style.display='block';
+      showMoreEl.querySelector('button').textContent='Show all '+total+' players';
+    }else{
+      showMoreEl.style.display='none';
+    }
+  }
 }
 
 function sortPlayers(col){
@@ -2641,6 +2705,7 @@ function probToAmerican(prob){
 let parlaySelected=new Set();
 function renderParlay(){
   const el=document.getElementById('parlay-games');
+  if(!el)return;
   el.innerHTML=DATA.picks.map((p,i)=>{
     const prob=p.conf/100;
     const odds=probToAmerican(prob);
@@ -2659,22 +2724,29 @@ function renderParlay(){
 }
 function toggleParlay(i){
   if(parlaySelected.has(i))parlaySelected.delete(i);else parlaySelected.add(i);
-  document.getElementById('par-'+i).classList.toggle('selected',parlaySelected.has(i));
+  const parGame=document.getElementById('par-'+i);
+  if(parGame)parGame.classList.toggle('selected',parlaySelected.has(i));
   const icon=document.getElementById('pchk-icon-'+i);
-  icon.style.display=parlaySelected.has(i)?'block':'none';
+  if(icon)icon.style.display=parlaySelected.has(i)?'block':'none';
   updateParlaySlip();
 }
 function updateParlaySlip(){
   const n=parlaySelected.size;
-  document.getElementById('par-legs').textContent=n;
-  if(n>0){
-    const probs=[...parlaySelected].map(i=>DATA.picks[i].conf/100);
-    const combined=probs.reduce((a,b)=>a*b,1);
-    document.getElementById('par-odds').textContent=probToAmerican(combined);
-  } else { document.getElementById('par-odds').textContent='—'; }
+  const parLegs=document.getElementById('par-legs');
+  const parOdds=document.getElementById('par-odds');
+  const parConf=document.getElementById('par-conf');
+  const parLegsList=document.getElementById('par-legs-list');
+  if(parLegs)parLegs.textContent=n;
+  if(parOdds){
+    if(n>0){
+      const probs=[...parlaySelected].map(i=>DATA.picks[i].conf/100);
+      const combined=probs.reduce((a,b)=>a*b,1);
+      parOdds.textContent=probToAmerican(combined);
+    } else { parOdds.textContent='—'; }
+  }
   const avgConf=n===0?0:Math.round([...parlaySelected].reduce((a,i)=>a+DATA.picks[i].conf,0)/n);
-  document.getElementById('par-conf').textContent=n>0?avgConf+'%':'—';
-  document.getElementById('par-legs-list').innerHTML=[...parlaySelected].map(i=>`
+  if(parConf)parConf.textContent=n>0?avgConf+'%':'—';
+  if(parLegsList)parLegsList.innerHTML=[...parlaySelected].map(i=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.12);border-radius:8px;font-size:12px">
       <span style="font-weight:600">${DATA.picks[i].matchup}</span>
       <span style="font-family:var(--fm);color:var(--green)">${DATA.picks[i].pick} ${DATA.picks[i].spread}</span>
@@ -2733,8 +2805,10 @@ function getPlayerColors(p){
 
 function setEraMode(adj){
   eraAdjusted=adj;
-  document.getElementById('era-btn-raw').classList.toggle('active',!adj);
-  document.getElementById('era-btn-adj').classList.toggle('active',adj);
+  const btnRaw=document.getElementById('era-btn-raw');
+  const btnAdj=document.getElementById('era-btn-adj');
+  if(btnRaw)btnRaw.classList.toggle('active',!adj);
+  if(btnAdj)btnAdj.classList.toggle('active',adj);
   const fn=document.getElementById('era-footnote');
   if(fn)fn.classList.toggle('visible',adj);
   updateComparison();
@@ -2742,14 +2816,18 @@ function setEraMode(adj){
 
 function initPickers(){
   if(pickersInited)return;pickersInited=true;
-  const current=DATA.players.filter(p=>!p.retired);
+  // "current" = active in 2024 or 2025 season, not retired
+  const current=DATA.players.filter(p=>!p.retired&&(p.seasons_span
+    ?(p.seasons_span.includes('2024')||p.seasons_span.includes('2025'))
+    :true));
   const legends=DATA.players.filter(p=>p.retired);
-  const mkOpts=arr=>arr.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  const mkOpts=arr=>arr.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
   ['picker-a','picker-b'].forEach(id=>{
     const sel=document.getElementById(id);
+    if(!sel)return;
     sel.innerHTML=
       '<option value="">— Select player —</option>'+
-      '<optgroup label="Current Season">'+mkOpts(current)+'</optgroup>'+
+      '<optgroup label="Current Season ('+current.length+')">'+mkOpts(current)+'</optgroup>'+
       '<optgroup label="All-Time Legends">'+mkOpts(legends)+'</optgroup>';
   });
   // Default: LeBron vs Michael Jordan
@@ -2758,6 +2836,9 @@ function initPickers(){
   if(names.includes('Michael Jordan'))document.getElementById('picker-b').value='Michael Jordan';
   updateComparison();
 }
+
+// Null-safe ADV stub used when a player has no entry in ADV
+const ADV_NULL={per:null,ts:null,usg:null,ws:null,bpm:null,vorp:null,rim:null,mid:null,thr:null,paint:null};
 
 function updateComparison(){
   const nA=document.getElementById('picker-a').value,nB=document.getElementById('picker-b').value;
@@ -2772,10 +2853,10 @@ function updateComparison(){
   }
   document.getElementById('cmp-prompt').style.display='none';
   document.getElementById('cmp-content').style.display='block';
-  const aA=ADV[nA],aB=ADV[nB];
+  const aA=ADV[nA]||ADV_NULL,aB=ADV[nB]||ADV_NULL;
+  const hasAdvA=!!ADV[nA],hasAdvB=!!ADV[nB];
   renderBanner('ban-a',pA,aA,colA,'left');
   renderBanner('ban-b',pB,aB,colB,'right');
-  renderRadar(pA,pB,aA,aB,colA,colB);
   // Era-adjust scoring stats only (pts, reb, ast are counting stats; fg/3p% are ratios — no era adjust)
   const eA=pA.debutYear,eB=pB.debutYear;
   renderBars('stat-bars',[
@@ -2783,10 +2864,23 @@ function updateComparison(){
     ['Rebounds',applyEra(pA.reb,eA),applyEra(pB.reb,eB),16],
     ['Assists',applyEra(pA.ast,eA),applyEra(pB.ast,eB),12],
     ['FG%',pA.fg,pB.fg,70,'%'],['3P%',pA.thr,pB.thr,50,'%']],nA,nB,colA,colB);
-  renderBars('adv-bars',[
-    ['PER',aA.per,aB.per,35],['TS%',aA.ts,aB.ts,70,'%'],['USG%',aA.usg,aB.usg,40,'%'],
-    ['Win Shares',aA.ws,aB.ws,18],['BPM',aA.bpm,aB.bpm,14],['VORP',aA.vorp,aB.vorp,10]],nA,nB,colA,colB);
-  renderShoot(aA,aB,nA,nB,colA,colB);
+  // Advanced section: show "No advanced data" message if either player lacks ADV
+  if(!hasAdvA||!hasAdvB){
+    const noAdvMsg='<div style="padding:24px;color:var(--t2);font-size:13px;text-align:center">No advanced data available for '
+      +(!hasAdvA?esc(nA):esc(nB))+'</div>';
+    const advEl=document.getElementById('adv-bars');
+    const radarEl=document.getElementById('radar');
+    const shootEl=document.getElementById('shoot-chart');
+    if(advEl)advEl.innerHTML=noAdvMsg;
+    if(radarEl)radarEl.innerHTML=noAdvMsg;
+    if(shootEl)shootEl.innerHTML=noAdvMsg;
+  }else{
+    renderRadar(pA,pB,aA,aB,colA,colB);
+    renderBars('adv-bars',[
+      ['PER',aA.per,aB.per,35],['TS%',aA.ts,aB.ts,70,'%'],['USG%',aA.usg,aB.usg,40,'%'],
+      ['Win Shares',aA.ws,aB.ws,18],['BPM',aA.bpm,aB.bpm,14],['VORP',aA.vorp,aB.vorp,10]],nA,nB,colA,colB);
+    renderShoot(aA,aB,nA,nB,colA,colB);
+  }
 }
 
 function updatePreview(id,name,col){
@@ -2800,9 +2894,12 @@ function updatePreview(id,name,col){
 }
 
 function renderBanner(id,p,adv,col,align){
+  const perStr=(adv&&adv.per!=null)?'PER '+adv.per:'';
+  const tsStr=(adv&&adv.ts!=null)?'TS% '+adv.ts+'%':'';
+  const advStr=[perStr,tsStr].filter(Boolean).join(' · ');
   document.getElementById(id).innerHTML=`<div style="text-align:${align}">
-    <div class="bname" style="color:${col}">${p.name}</div>
-    <div class="bsub">${p.team} · PER ${adv.per} · TS% ${adv.ts}%</div>
+    <div class="bname" style="color:${col}">${esc(p.name)}</div>
+    <div class="bsub">${esc(p.team)}${advStr?' · '+advStr:''}</div>
     <div class="bsts" style="justify-content:${align==='left'?'flex-start':'flex-end'}">
       ${[['PTS',p.pts],['REB',p.reb],['AST',p.ast],['FG%',p.fg+'%'],['3P%',p.thr+'%']].map(([l,v])=>`
         <div><div class="bst-v" style="color:${col}">${v}</div><div class="bst-l">${l}</div></div>`).join('')}
@@ -3354,14 +3451,32 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/meta.json').then(r=>r.ok?r.json():{}).catch(()=>({})),
       fetch('data/explainers.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/game_context.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/player_comparison.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
+    // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
+    if(playerJson&&playerJson.players&&playerJson.players.length){
+      const legendNames=new Set(LEGENDS.map(l=>l.name));
+      // Map all non-legend JSON entries to the DATA.players shape
+      const mapped=playerJson.players
+        .filter(p=>!p._legend)
+        .map(mapJsonPlayer);
+      // Append any LEGEND not already covered by the JSON (by name)
+      const nameSet=new Set(mapped.map(p=>p.name));
+      LEGENDS.forEach(l=>{ if(!nameSet.has(l.name))mapped.push(l); });
+      DATA.players=mapped;
+    } else {
+      // Fallback: use LEGENDS only so the page is never empty
+      DATA.players=[...LEGENDS];
+    }
+    // Allow pickers to reinitialise with the full player list
+    pickersInited=false;
     window.ACCURACY_DATA=accuracy;
     window.VALUE_BETS=valueBets;
     window.META=meta;
