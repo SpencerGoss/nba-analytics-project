@@ -223,16 +223,146 @@ def fetch_game_lines() -> pd.DataFrame:
     return df
 
 
-# -- Player props (stub) -------------------------------------------------------
+# -- Player props --------------------------------------------------------------
+
+import re
+import time
+
+_STAT_LABEL_MAP = {
+    "Points":        "PTS",
+    "Rebounds":      "REB",
+    "Assists":       "AST",
+    "3 Point FG":    "3PM",
+    "Pts+Rebs+Asts": "PRA",
+    "Double+Double": "DD2",
+}
+
+_PROP_DESC_RE = re.compile(r"^(.+)\s+\(([^)]+)\)$")
+
+PROPS_CSV_PATH = PROJECT_ROOT / "data" / "processed" / "player_props_lines.csv"
+PROPS_CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+_PROP_BATCH_LIMIT = 80   # cap to avoid hitting rate limits
 
 
 def fetch_player_props(event_ids: list[str], game_dates: dict[str, str]) -> pd.DataFrame:
-    """Return an empty DataFrame -- Pinnacle player props use a different endpoint
-    structure and are not yet implemented.
+    """Fetch player prop lines from the Pinnacle guest API.
+
+    Calls /leagues/487/matchups to get all prop matchups (type="special",
+    special.category="Player Props"), then for each prop matchup fetches
+    /matchups/{id}/markets/straight to get the over/under line.
+
+    Returns a DataFrame with columns:
+        player_name, stat, line, over_price, under_price, game_date
+
+    Also saves the result to data/processed/player_props_lines.csv.
     """
-    log.info("Player props not implemented for Pinnacle source -- returning empty DataFrame.")
-    return pd.DataFrame(columns=["date", "player_name", "stat", "line",
-                                  "over_odds", "under_odds"])
+    empty = pd.DataFrame(columns=[
+        "player_name", "stat", "line", "over_price", "under_price", "date",
+    ])
+
+    try:
+        matchups_raw = get_pinnacle(f"leagues/{LEAGUE_ID}/matchups")
+        if not matchups_raw:
+            log.warning("No matchups returned from Pinnacle -- cannot fetch player props.")
+            return empty
+
+        # Filter to player prop specials only
+        prop_matchups = [
+            m for m in matchups_raw
+            if m.get("type") == "special"
+            and (m.get("special") or {}).get("category") == "Player Props"
+        ]
+        log.info(f"Found {len(prop_matchups)} player prop matchups")
+
+        if not prop_matchups:
+            return empty
+
+        today_str = dt.date.today().isoformat()
+        rows = []
+
+        for matchup in prop_matchups[:_PROP_BATCH_LIMIT]:
+            mid = matchup.get("id")
+            # Description is in special.description, not top-level description
+            special = matchup.get("special") or {}
+            description = special.get("description", "")
+            start_time = matchup.get("startTime", "")
+            game_date = start_time[:10] if start_time else today_str
+
+            m = _PROP_DESC_RE.match(description)
+            if not m:
+                log.debug(f"Could not parse prop description: {description!r}")
+                continue
+
+            player_name = m.group(1).strip()
+            stat_raw = m.group(2).strip()
+            stat = _STAT_LABEL_MAP.get(stat_raw, stat_raw)
+
+            # Build participant_id -> name map (Over / Under) from the matchup
+            participants = matchup.get("participants", [])
+            participant_names: dict[int, str] = {
+                p["id"]: p["name"].lower()
+                for p in participants
+                if p.get("id") and p.get("name")
+            }
+
+            time.sleep(0.3)
+
+            markets = get_pinnacle(f"matchups/{mid}/markets/straight")
+            if not markets:
+                log.debug(f"No markets for prop matchup {mid} ({description!r}) -- skipping")
+                continue
+
+            # Handle both list and dict responses
+            if isinstance(markets, dict):
+                markets = [markets]
+
+            over_price = None
+            under_price = None
+            line = None
+
+            for mkt in markets:
+                prices = mkt.get("prices", [])
+                for price in prices:
+                    pts = price.get("points")
+                    if pts is not None and line is None:
+                        line = float(pts)
+                    p = price.get("price")
+                    # Resolve designation from participant name via participantId
+                    pid = price.get("participantId")
+                    part_name = participant_names.get(pid, "") if pid else ""
+                    if not part_name:
+                        # Fall back to designation field if present
+                        part_name = (price.get("designation") or "").lower()
+                    if "over" in part_name:
+                        over_price = p
+                    elif "under" in part_name:
+                        under_price = p
+
+            if line is None:
+                log.debug(f"No line found for {description!r} -- skipping")
+                continue
+
+            rows.append({
+                "player_name": player_name,
+                "stat":        stat,
+                "line":        line,
+                "over_price":  over_price,
+                "under_price": under_price,
+                "date":        game_date,
+            })
+
+        df = pd.DataFrame(rows) if rows else empty.copy()
+        log.info(f"Fetched {len(df)} player prop lines from Pinnacle")
+
+        df.to_csv(PROPS_CSV_PATH, index=False)
+        log.info(f"Saved player props lines to {PROPS_CSV_PATH}")
+
+        return df
+
+    except Exception as e:
+        log.error(f"fetch_player_props failed: {e}")
+        return empty
 
 
 # -- Model projections ---------------------------------------------------------
@@ -473,7 +603,7 @@ def main():
     except Exception as e:
         log.warning(f"CLV tracking skipped (non-fatal): {e}")
 
-    # 2. Player props -- stub returns empty DataFrame (Pinnacle props not yet implemented)
+    # 2. Player props -- fetch live lines from Pinnacle guest API
     player_props = fetch_player_props([], {})
     player_props.to_csv(ODDS_DIR / "player_props.csv", index=False)
     log.info(f"Saved player_props.csv ({len(player_props)} rows)")

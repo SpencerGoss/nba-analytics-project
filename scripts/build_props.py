@@ -28,6 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PICKS_PATH = PROJECT_ROOT / "dashboard" / "data" / "todays_picks.json"
 PLAYER_LOGS_PATH = PROJECT_ROOT / "data" / "processed" / "player_game_logs.csv"
 ABSENCES_PATH = PROJECT_ROOT / "data" / "processed" / "player_absences.csv"
+PINNACLE_LINES_PATH = PROJECT_ROOT / "data" / "processed" / "player_props_lines.csv"
 OUTPUT_PATH = PROJECT_ROOT / "dashboard" / "data" / "player_props.json"
 
 # ---------------------------------------------------------------------------
@@ -77,6 +78,37 @@ def load_absent_player_ids(game_date: pd.Timestamp) -> set[int]:
     return set(df.loc[mask, "player_id"].tolist())
 
 
+def load_pinnacle_lines() -> dict[tuple[str, str], tuple[float, float | None, float | None]]:
+    """Load Pinnacle player prop lines from CSV.
+
+    Returns a dict keyed by (player_name_lower, stat) ->
+        (line, over_price, under_price).
+    Returns an empty dict if the CSV does not exist or cannot be loaded.
+    """
+    if not PINNACLE_LINES_PATH.exists():
+        log.info("No Pinnacle lines CSV found at %s -- book_line will be null", PINNACLE_LINES_PATH)
+        return {}
+    try:
+        df = pd.read_csv(PINNACLE_LINES_PATH)
+        result: dict[tuple[str, str], tuple[float, float | None, float | None]] = {}
+        for _, row in df.iterrows():
+            key = (str(row["player_name"]).lower().strip(), str(row["stat"]).strip())
+            try:
+                line = float(row["line"])
+            except (ValueError, TypeError):
+                continue
+            over_price = row.get("over_price")
+            under_price = row.get("under_price")
+            over_price = float(over_price) if pd.notna(over_price) else None
+            under_price = float(under_price) if pd.notna(under_price) else None
+            result[key] = (line, over_price, under_price)
+        log.info("Loaded %d Pinnacle prop lines", len(result))
+        return result
+    except Exception as exc:
+        log.warning("Could not load Pinnacle lines: %s", exc)
+        return {}
+
+
 # ---------------------------------------------------------------------------
 # Rolling projections
 # ---------------------------------------------------------------------------
@@ -110,8 +142,16 @@ def build_game_props(
     game: dict,
     current_season_logs: pd.DataFrame,
     absent_player_ids: set[int],
+    pinnacle_lines: dict[tuple[str, str], tuple[float, float | None, float | None]] | None = None,
 ) -> list[dict]:
-    """Build prop projections for top players in one game."""
+    """Build prop projections for top players in one game.
+
+    pinnacle_lines: optional dict keyed by (player_name_lower, stat) ->
+        (line, over_price, under_price) from load_pinnacle_lines().
+    """
+    if pinnacle_lines is None:
+        pinnacle_lines = {}
+
     home_team = game["home_team"]
     away_team = game["away_team"]
     game_date_str = game["game_date"]
@@ -145,7 +185,7 @@ def build_game_props(
             rolling = compute_player_rolling(player_df)
 
             if not rolling:
-                log.debug("Skipping %s — insufficient game history", player_name)
+                log.debug("Skipping %s - insufficient game history", player_name)
                 continue
 
             props: list[dict] = []
@@ -154,22 +194,33 @@ def build_game_props(
                 if projection is None:
                     continue
                 recent = last_n_values(player_df, col)
-                book_line: float | None = None  # Pinnacle props not yet available
-                edge = (
-                    round(projection - book_line, 1)
-                    if book_line is not None
-                    else None
-                )
-                value = (
-                    edge is not None and edge > VALUE_THRESHOLD
-                )
-                recommendation = (
-                    "OVER" if (value and edge is not None and edge > 0) else None
-                )
+
+                # Look up Pinnacle book line by (lower-case player name, stat label)
+                lookup_key = (player_name.lower().strip(), label)
+                pinnacle_entry = pinnacle_lines.get(lookup_key)
+                if pinnacle_entry is not None:
+                    book_line, over_price, under_price = pinnacle_entry
+                else:
+                    book_line = None
+                    over_price = None
+                    under_price = None
+
+                # edge = model_projection - book_line (positive = lean OVER)
+                if book_line is not None:
+                    edge = round(projection - book_line, 1)
+                    value = abs(edge) >= 2.0
+                    recommendation = "OVER" if edge > 0 else "UNDER"
+                else:
+                    edge = None
+                    value = False
+                    recommendation = None
+
                 props.append({
                     "stat": label,
                     "model_projection": projection,
                     "book_line": book_line,
+                    "over_price": over_price,
+                    "under_price": under_price,
                     "edge": edge,
                     "recommendation": recommendation,
                     "value": value,
@@ -213,9 +264,11 @@ def main() -> None:
     absent_ids = load_absent_player_ids(latest_date)
     log.info("Found %d absent players on %s", len(absent_ids), latest_date.date())
 
+    pinnacle_lines = load_pinnacle_lines()
+
     all_props: list[dict] = []
     for game in games:
-        game_props = build_game_props(game, current_logs, absent_ids)
+        game_props = build_game_props(game, current_logs, absent_ids, pinnacle_lines)
         all_props.extend(game_props)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
