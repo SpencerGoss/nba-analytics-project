@@ -1,0 +1,302 @@
+[
+  {
+    "rank": 1,
+    "team": "SAS",
+    "team_name": "San Antonio Spurs",
+    "composite_score": 88.2,
+    "net_rating": 13.8,
+    "last10_record": "9-1",
+    "trend": "down",
+    "prev_rank": 3
+  },
+  {
+    "rank": 2,
+    "team": "CHA",
+    "team_name": "Charlotte Hornets",
+    "composite_score": 84.9,
+    "net_rating": 13.6,
+    "last10_record": "7-3",
+    "trend": "up",
+    "prev_rank": 9
+  },
+  {
+    "rank": 3,
+    "team": "DET",
+    "team_name": "Detroit Pistons",
+    "composite_score": 79.1,
+    "net_rating": 10.4,
+    "last10_record": "7-3",
+    "trend": "down",
+    "prev_rank": 4
+  },
+  {
+    "rank": 4,
+    "team": "MIA",
+    "team_name": "Miami Heat",
+    "composite_score": 79.1,
+    "net_rating": 11.5,
+    "last10_record": "7-3",
+    "trend": "down",
+    "prev_rank": 5
+  },
+  {
+    "rank": 5,
+    "team": "NYK",
+    "team_name": "New York Knicks",
+    "composite_score": 75.1,
+    "net_rating": 9.1,
+    "last10_record": "7-3",
+    "trend": "up",
+    "prev_rank": 6
+  },
+  {
+    "rank": 6,
+    "team": "BOS",
+    "team_name": "Boston Celtics",
+    "composite_score": 74.0,
+    "net_rating": 8.3,
+    "last10_record": "8-2",
+    "trend": "down",
+    "prev_rank": 2
+  },
+  {
+    "rank": 7,
+    "team": "OKC",
+    "team_name": "Oklahoma City Thunder",
+    "composite_score": 73.4,
+    "net_rating": 7.2,
+    "last10_record": "8-2",
+    "trend": "down",
+    "prev_rank": 7
+  },
+  {
+    "rank": 8,
+    "team": "CLE",
+    "team_name": "Cleveland Cavaliers",
+    "composite_score": 71.2,
+    "net_rating": 7.1,
+    "last10_record": "7-3",
+    "trend": "down",
+    "prev_rank": 1
+  },
+  {
+    "rank": 9,
+    "team": "LAC",
+    "team_name": "Los Angeles Clippers",
+    "composite_score": 64.2,
+    "net_rating": 5.9,
+    "last10_record": "5-5",
+    "trend": "up",
+    "prev_rank": 16
+  },
+  {
+    "rank": 10,
+    "team": "HOU",
+    "team_name": "Houston Rockets",
+    "composite_score": 63.2,
+    "net_rating": 5.5,
+    "last10_record": "6-4",
+    "trend": "same",
+    "prev_rank": 13
+  },
+  {
+    "rank": 11,
+    "team": "DEN",
+    "team_name": "Denver Nuggets",
+    "composite_score": 61.7,
+    "net_rating": 5.7,
+    "last10_record": "5-5",
+    "trend": "down",
+    "prev_rank": 10
+  },
+  {
+    "rank": 12,
+    "team": "MIN",
+    "team_name": "Minnesota Timberwolves",
+    "composite_score": 60.6,
+    "net_rating": 2.8,
+    "last10_record": "8-2",
+    "trend": "down",
+    "prev_rank": 8
+  },
+  {
+    "rank": 13,
+    "team": "ATL",
+    "team_name": "Atlanta Hawks",
+    "composite_score": 60.0,
+    "net_rating": 4.2,
+    "last10_record": "6-4",
+    "trend": "up",
+    "prev_rank": 15
+  },
+  {
+    "rank": 14,
+    "team": "ORL",
+    "team_name": "Orlando Magic",
+    "composite_score": 58.5,
+    "net_rating": 4.8,
+    "last10_record": "6-4",
+    "trend": "down",
+    "prev_rank": 11
+  },
+  {
+    "rank": 15,
+    "team": "TOR",
+    "team_name": "Toronto Raptors",
+    "composite_score": 56.6,
+    "net_rating": 3.0,
+    "last10_record": "5-5",
+    "trend": "down",
+    "prev_rank": 12
+  },
+  {
+    "rank": 16,
+    "team": "LAL",
+    "team_name": "Los Angeles Lakers",
+    "composite_score": 55.3,
+    "net_rating": 2.3,
+    "last10_record": "6-4",
+    "trend": "up",
+    "prev_rank": 18
+  },
+  {
+    "rank": 17,
+    "team": "NOP",
+    "team_name": "New Orleans Pelicans",
+    "composite_score": 54.1,
+    "net_rating": 1.4,
+    "last10_record": "5-5",
+    "trend": "down",
+    "prev_rank": 14
+  },
+  {
+    "rank": 18,
+    "team": "MEM",
+    "team_name": "Memphis Grizzlies",
+    "composite_score": 40.7,
+    "net_rating": -2.0,
+    "last10_record": "3-7",
+    "trend": "up",
+    "prev_rank": 25
+  },
+  {
+    "rank": 19,
+    "team": "GSW",
+    "team_name": "Golden State Warriors",
+    "composite_score": 40.3,
+    "net_rating": -3.9,
+    "last10_record": "4-6",
+    "trend": "up",
+    "prev_rank": 19
+  },
+  {
+    "rank": 20,
+    "team": "POR",
+    "team_name": "Portland Trail Blazers",
+    "composite_score": 38.5,
+    "net_rating": -5.9,
+    "last10_record": "4-6",
+    "trend": "down",
+    "prev_rank": 22
+  },
+  {
+    "rank": 21,
+    "team": "MIL",
+    "team_name": "Milwaukee Bucks",
+    "composite_score": 33.8,
+    "net_rating": -6.9,
+    "last10_record": "5-5",
+    "trend": "down",
+    "prev_rank": 17
+  },
+  {
+    "rank": 22,
+    "team": "PHX",
+    "team_name": "Phoenix Suns",
+    "composite_score": 33.6,
+    "net_rating": -7.2,
+    "last10_record": "5-5",
+    "trend": "up",
+    "prev_rank": 20
+  },
+  {
+    "rank": 23,
+    "team": "UTA",
+    "team_name": "Utah Jazz",
+    "composite_score": 32.7,
+    "net_rating": -3.9,
+    "last10_record": "3-7",
+    "trend": "down",
+    "prev_rank": 24
+  },
+  {
+    "rank": 24,
+    "team": "PHI",
+    "team_name": "Philadelphia 76ers",
+    "composite_score": 32.6,
+    "net_rating": -8.3,
+    "last10_record": "4-6",
+    "trend": "up",
+    "prev_rank": 21
+  },
+  {
+    "rank": 25,
+    "team": "DAL",
+    "team_name": "Dallas Mavericks",
+    "composite_score": 24.0,
+    "net_rating": -9.4,
+    "last10_record": "2-8",
+    "trend": "down",
+    "prev_rank": 26
+  },
+  {
+    "rank": 26,
+    "team": "CHI",
+    "team_name": "Chicago Bulls",
+    "composite_score": 20.4,
+    "net_rating": -9.7,
+    "last10_record": "2-8",
+    "trend": "up",
+    "prev_rank": 29
+  },
+  {
+    "rank": 27,
+    "team": "IND",
+    "team_name": "Indiana Pacers",
+    "composite_score": 17.1,
+    "net_rating": -11.6,
+    "last10_record": "2-8",
+    "trend": "down",
+    "prev_rank": 23
+  },
+  {
+    "rank": 28,
+    "team": "WAS",
+    "team_name": "Washington Wizards",
+    "composite_score": 15.5,
+    "net_rating": -13.0,
+    "last10_record": "2-8",
+    "trend": "down",
+    "prev_rank": 27
+  },
+  {
+    "rank": 29,
+    "team": "SAC",
+    "team_name": "Sacramento Kings",
+    "composite_score": 8.7,
+    "net_rating": -15.9,
+    "last10_record": "2-8",
+    "trend": "up",
+    "prev_rank": 30
+  },
+  {
+    "rank": 30,
+    "team": "BKN",
+    "team_name": "Brooklyn Nets",
+    "composite_score": 6.4,
+    "net_rating": -14.9,
+    "last10_record": "0-10",
+    "trend": "down",
+    "prev_rank": 28
+  }
+]

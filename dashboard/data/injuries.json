@@ -1,0 +1,302 @@
+[
+  {
+    "game_date": "2026-03-06",
+    "home_team": "BOS",
+    "away_team": "DAL",
+    "home_injuries": [
+      {
+        "player": "Jaylen Brown",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 28.8,
+        "impact": "high"
+      },
+      {
+        "player": "Neemias Queta",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 10.1,
+        "impact": "medium"
+      }
+    ],
+    "away_injuries": [
+      {
+        "player": "Cooper Flagg",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 20.3,
+        "impact": "high"
+      },
+      {
+        "player": "Naji Marshall",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 15.2,
+        "impact": "high"
+      },
+      {
+        "player": "Klay Thompson",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 11.8,
+        "impact": "medium"
+      },
+      {
+        "player": "Marvin Bagley III",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 10.6,
+        "impact": "medium"
+      },
+      {
+        "player": "Tyus Jones",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 3.1,
+        "impact": "low"
+      }
+    ],
+    "spread_impact_note": "3 high-impact players out -- significant spread effect expected"
+  },
+  {
+    "game_date": "2026-03-06",
+    "home_team": "CHA",
+    "away_team": "MIA",
+    "home_injuries": [
+      {
+        "player": "Coby White",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 17.9,
+        "impact": "high"
+      },
+      {
+        "player": "Grant Williams",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 7.6,
+        "impact": "low"
+      },
+      {
+        "player": "Tidjane Salaün",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 6.2,
+        "impact": "low"
+      }
+    ],
+    "away_injuries": [
+      {
+        "player": "Norman Powell",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 22.5,
+        "impact": "high"
+      }
+    ],
+    "spread_impact_note": "2 high-impact players out -- significant spread effect expected"
+  },
+  {
+    "game_date": "2026-03-06",
+    "home_team": "HOU",
+    "away_team": "POR",
+    "home_injuries": [
+      {
+        "player": "Jabari Smith Jr.",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 15.3,
+        "impact": "high"
+      }
+    ],
+    "away_injuries": [
+      {
+        "player": "Deni Avdija",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 24.4,
+        "impact": "high"
+      },
+      {
+        "player": "Caleb Love",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 11.3,
+        "impact": "medium"
+      },
+      {
+        "player": "Kris Murray",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 6.0,
+        "impact": "low"
+      }
+    ],
+    "spread_impact_note": "2 high-impact players out -- significant spread effect expected"
+  },
+  {
+    "game_date": "2026-03-06",
+    "home_team": "DEN",
+    "away_team": "NYK",
+    "home_injuries": [
+      {
+        "player": "Cameron Johnson",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 11.2,
+        "impact": "medium"
+      },
+      {
+        "player": "Spencer Jones",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 5.7,
+        "impact": "low"
+      },
+      {
+        "player": "KJ Simpson",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 5.2,
+        "impact": "low"
+      }
+    ],
+    "away_injuries": [
+      {
+        "player": "Mitchell Robinson",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 5.2,
+        "impact": "low"
+      }
+    ],
+    "spread_impact_note": "1 medium-impact player(s) out -- minor spread effect"
+  },
+  {
+    "game_date": "2026-03-06",
+    "home_team": "PHX",
+    "away_team": "NOP",
+    "home_injuries": [
+      {
+        "player": "Dillon Brooks",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 20.9,
+        "impact": "high"
+      },
+      {
+        "player": "Jordan Goodwin",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 8.9,
+        "impact": "medium"
+      },
+      {
+        "player": "Jamaree Bouyea",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 6.5,
+        "impact": "low"
+      }
+    ],
+    "away_injuries": [
+      {
+        "player": "Jordan Poole",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 13.9,
+        "impact": "medium"
+      },
+      {
+        "player": "Karlo Matković",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 5.5,
+        "impact": "low"
+      },
+      {
+        "player": "Kevon Looney",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 2.9,
+        "impact": "low"
+      }
+    ],
+    "spread_impact_note": "Key player out: Dillon Brooks -- monitor line movement"
+  },
+  {
+    "game_date": "2026-03-06",
+    "home_team": "SAS",
+    "away_team": "LAC",
+    "home_injuries": [
+      {
+        "player": "Harrison Barnes",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 10.2,
+        "impact": "medium"
+      }
+    ],
+    "away_injuries": [
+      {
+        "player": "John Collins",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 13.8,
+        "impact": "medium"
+      },
+      {
+        "player": "Bogdan Bogdanović",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 7.7,
+        "impact": "low"
+      },
+      {
+        "player": "Dalano Banton",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 2.0,
+        "impact": "low"
+      }
+    ],
+    "spread_impact_note": "2 medium-impact player(s) out -- minor spread effect"
+  },
+  {
+    "game_date": "2026-03-06",
+    "home_team": "LAL",
+    "away_team": "IND",
+    "home_injuries": [],
+    "away_injuries": [
+      {
+        "player": "Johnny Furphy",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 5.1,
+        "impact": "low"
+      },
+      {
+        "player": "Ethan Thompson",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 4.9,
+        "impact": "low"
+      },
+      {
+        "player": "Kam Jones",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 4.2,
+        "impact": "low"
+      },
+      {
+        "player": "Taelon Peter",
+        "status": "OUT",
+        "position": "",
+        "season_avg_pts": 3.6,
+        "impact": "low"
+      }
+    ],
+    "spread_impact_note": "No key injuries affecting this game"
+  }
+]

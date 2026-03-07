@@ -8,7 +8,7 @@ Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (573 passing baseline after build_line_movement tests added)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (560 passing, current baseline as of 2026-03-07)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard

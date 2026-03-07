@@ -1,0 +1,706 @@
+[
+  {
+    "home_team": "BOS",
+    "away_team": "DAL",
+    "series_record": "BOS leads 7-3 (last 10 meetings)",
+    "avg_total": 223.7,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "BOS",
+        "home_score": 120,
+        "away_score": 100,
+        "winner": "BOS",
+        "margin": 20
+      },
+      {
+        "date": "2026-02-03",
+        "home_team": "DAL",
+        "home_score": 100,
+        "away_score": 110,
+        "winner": "BOS",
+        "margin": 10
+      },
+      {
+        "date": "2025-02-06",
+        "home_team": "BOS",
+        "home_score": 120,
+        "away_score": 127,
+        "winner": "DAL",
+        "margin": 7
+      },
+      {
+        "date": "2025-01-25",
+        "home_team": "DAL",
+        "home_score": 107,
+        "away_score": 122,
+        "winner": "BOS",
+        "margin": 15
+      },
+      {
+        "date": "2024-03-01",
+        "home_team": "BOS",
+        "home_score": 138,
+        "away_score": 110,
+        "winner": "BOS",
+        "margin": 28
+      },
+      {
+        "date": "2024-01-22",
+        "home_team": "DAL",
+        "home_score": 110,
+        "away_score": 119,
+        "winner": "BOS",
+        "margin": 9
+      },
+      {
+        "date": "2023-01-05",
+        "home_team": "DAL",
+        "home_score": 95,
+        "away_score": 124,
+        "winner": "BOS",
+        "margin": 29
+      },
+      {
+        "date": "2022-11-23",
+        "home_team": "BOS",
+        "home_score": 125,
+        "away_score": 112,
+        "winner": "BOS",
+        "margin": 13
+      },
+      {
+        "date": "2022-03-13",
+        "home_team": "BOS",
+        "home_score": 92,
+        "away_score": 95,
+        "winner": "DAL",
+        "margin": 3
+      },
+      {
+        "date": "2021-11-06",
+        "home_team": "DAL",
+        "home_score": 107,
+        "away_score": 104,
+        "winner": "DAL",
+        "margin": 3
+      }
+    ]
+  },
+  {
+    "home_team": "CHA",
+    "away_team": "MIA",
+    "series_record": "MIA leads 9-1 (last 10 meetings)",
+    "avg_total": 222.9,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "CHA",
+        "home_score": 120,
+        "away_score": 128,
+        "winner": "MIA",
+        "margin": 8
+      },
+      {
+        "date": "2025-11-07",
+        "home_team": "MIA",
+        "home_score": 126,
+        "away_score": 108,
+        "winner": "MIA",
+        "margin": 18
+      },
+      {
+        "date": "2025-10-28",
+        "home_team": "MIA",
+        "home_score": 144,
+        "away_score": 117,
+        "winner": "MIA",
+        "margin": 27
+      },
+      {
+        "date": "2025-03-23",
+        "home_team": "MIA",
+        "home_score": 122,
+        "away_score": 105,
+        "winner": "MIA",
+        "margin": 17
+      },
+      {
+        "date": "2025-03-10",
+        "home_team": "MIA",
+        "home_score": 102,
+        "away_score": 105,
+        "winner": "CHA",
+        "margin": 3
+      },
+      {
+        "date": "2024-11-27",
+        "home_team": "CHA",
+        "home_score": 94,
+        "away_score": 98,
+        "winner": "MIA",
+        "margin": 4
+      },
+      {
+        "date": "2024-10-26",
+        "home_team": "CHA",
+        "home_score": 106,
+        "away_score": 114,
+        "winner": "MIA",
+        "margin": 8
+      },
+      {
+        "date": "2024-01-14",
+        "home_team": "MIA",
+        "home_score": 104,
+        "away_score": 87,
+        "winner": "MIA",
+        "margin": 17
+      },
+      {
+        "date": "2023-12-13",
+        "home_team": "MIA",
+        "home_score": 115,
+        "away_score": 104,
+        "winner": "MIA",
+        "margin": 11
+      },
+      {
+        "date": "2023-12-11",
+        "home_team": "CHA",
+        "home_score": 114,
+        "away_score": 116,
+        "winner": "MIA",
+        "margin": 2
+      }
+    ]
+  },
+  {
+    "home_team": "HOU",
+    "away_team": "POR",
+    "series_record": "HOU leads 7-3 (last 10 meetings)",
+    "avg_total": 217.1,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "HOU",
+        "home_score": 106,
+        "away_score": 99,
+        "winner": "HOU",
+        "margin": 7
+      },
+      {
+        "date": "2026-01-09",
+        "home_team": "POR",
+        "home_score": 111,
+        "away_score": 105,
+        "winner": "POR",
+        "margin": 6
+      },
+      {
+        "date": "2026-01-07",
+        "home_team": "POR",
+        "home_score": 103,
+        "away_score": 102,
+        "winner": "POR",
+        "margin": 1
+      },
+      {
+        "date": "2025-11-14",
+        "home_team": "HOU",
+        "home_score": 140,
+        "away_score": 116,
+        "winner": "HOU",
+        "margin": 24
+      },
+      {
+        "date": "2025-01-18",
+        "home_team": "POR",
+        "home_score": 103,
+        "away_score": 125,
+        "winner": "HOU",
+        "margin": 22
+      },
+      {
+        "date": "2024-11-23",
+        "home_team": "HOU",
+        "home_score": 98,
+        "away_score": 104,
+        "winner": "POR",
+        "margin": 6
+      },
+      {
+        "date": "2024-11-22",
+        "home_team": "HOU",
+        "home_score": 116,
+        "away_score": 88,
+        "winner": "HOU",
+        "margin": 28
+      },
+      {
+        "date": "2024-04-12",
+        "home_team": "POR",
+        "home_score": 107,
+        "away_score": 116,
+        "winner": "HOU",
+        "margin": 9
+      },
+      {
+        "date": "2024-03-25",
+        "home_team": "HOU",
+        "home_score": 110,
+        "away_score": 92,
+        "winner": "HOU",
+        "margin": 18
+      },
+      {
+        "date": "2024-03-08",
+        "home_team": "POR",
+        "home_score": 107,
+        "away_score": 123,
+        "winner": "HOU",
+        "margin": 16
+      }
+    ]
+  },
+  {
+    "home_team": "DEN",
+    "away_team": "NYK",
+    "series_record": "NYK leads 7-3 (last 10 meetings)",
+    "avg_total": 231.6,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "DEN",
+        "home_score": 103,
+        "away_score": 142,
+        "winner": "NYK",
+        "margin": 39
+      },
+      {
+        "date": "2026-02-04",
+        "home_team": "NYK",
+        "home_score": 134,
+        "away_score": 127,
+        "winner": "NYK",
+        "margin": 7
+      },
+      {
+        "date": "2025-01-29",
+        "home_team": "NYK",
+        "home_score": 122,
+        "away_score": 112,
+        "winner": "NYK",
+        "margin": 10
+      },
+      {
+        "date": "2024-11-25",
+        "home_team": "DEN",
+        "home_score": 118,
+        "away_score": 145,
+        "winner": "NYK",
+        "margin": 27
+      },
+      {
+        "date": "2024-03-21",
+        "home_team": "DEN",
+        "home_score": 113,
+        "away_score": 100,
+        "winner": "DEN",
+        "margin": 13
+      },
+      {
+        "date": "2024-01-25",
+        "home_team": "NYK",
+        "home_score": 122,
+        "away_score": 84,
+        "winner": "NYK",
+        "margin": 38
+      },
+      {
+        "date": "2023-03-18",
+        "home_team": "NYK",
+        "home_score": 116,
+        "away_score": 110,
+        "winner": "NYK",
+        "margin": 6
+      },
+      {
+        "date": "2022-11-16",
+        "home_team": "DEN",
+        "home_score": 103,
+        "away_score": 106,
+        "winner": "NYK",
+        "margin": 3
+      },
+      {
+        "date": "2022-02-08",
+        "home_team": "DEN",
+        "home_score": 132,
+        "away_score": 115,
+        "winner": "DEN",
+        "margin": 17
+      },
+      {
+        "date": "2021-12-04",
+        "home_team": "NYK",
+        "home_score": 99,
+        "away_score": 113,
+        "winner": "DEN",
+        "margin": 14
+      }
+    ]
+  },
+  {
+    "home_team": "PHX",
+    "away_team": "NOP",
+    "series_record": "PHX leads 7-3 (last 10 meetings)",
+    "avg_total": 232.1,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "PHX",
+        "home_score": 118,
+        "away_score": 116,
+        "winner": "PHX",
+        "margin": 2
+      },
+      {
+        "date": "2025-12-27",
+        "home_team": "NOP",
+        "home_score": 114,
+        "away_score": 123,
+        "winner": "PHX",
+        "margin": 9
+      },
+      {
+        "date": "2025-12-26",
+        "home_team": "NOP",
+        "home_score": 108,
+        "away_score": 115,
+        "winner": "PHX",
+        "margin": 7
+      },
+      {
+        "date": "2025-11-10",
+        "home_team": "PHX",
+        "home_score": 121,
+        "away_score": 98,
+        "winner": "PHX",
+        "margin": 23
+      },
+      {
+        "date": "2025-02-28",
+        "home_team": "PHX",
+        "home_score": 125,
+        "away_score": 108,
+        "winner": "PHX",
+        "margin": 17
+      },
+      {
+        "date": "2025-02-27",
+        "home_team": "PHX",
+        "home_score": 116,
+        "away_score": 124,
+        "winner": "NOP",
+        "margin": 8
+      },
+      {
+        "date": "2024-12-05",
+        "home_team": "NOP",
+        "home_score": 126,
+        "away_score": 124,
+        "winner": "NOP",
+        "margin": 2
+      },
+      {
+        "date": "2024-04-07",
+        "home_team": "PHX",
+        "home_score": 105,
+        "away_score": 113,
+        "winner": "NOP",
+        "margin": 8
+      },
+      {
+        "date": "2024-04-01",
+        "home_team": "NOP",
+        "home_score": 111,
+        "away_score": 124,
+        "winner": "PHX",
+        "margin": 13
+      },
+      {
+        "date": "2024-01-19",
+        "home_team": "NOP",
+        "home_score": 109,
+        "away_score": 123,
+        "winner": "PHX",
+        "margin": 14
+      }
+    ]
+  },
+  {
+    "home_team": "SAS",
+    "away_team": "LAC",
+    "series_record": "LAC leads 8-2 (last 10 meetings)",
+    "avg_total": 227.1,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "SAS",
+        "home_score": 116,
+        "away_score": 112,
+        "winner": "SAS",
+        "margin": 4
+      },
+      {
+        "date": "2025-04-08",
+        "home_team": "LAC",
+        "home_score": 122,
+        "away_score": 117,
+        "winner": "LAC",
+        "margin": 5
+      },
+      {
+        "date": "2025-01-29",
+        "home_team": "SAS",
+        "home_score": 116,
+        "away_score": 128,
+        "winner": "LAC",
+        "margin": 12
+      },
+      {
+        "date": "2024-12-31",
+        "home_team": "SAS",
+        "home_score": 122,
+        "away_score": 86,
+        "winner": "SAS",
+        "margin": 36
+      },
+      {
+        "date": "2024-11-04",
+        "home_team": "LAC",
+        "home_score": 113,
+        "away_score": 104,
+        "winner": "LAC",
+        "margin": 9
+      },
+      {
+        "date": "2023-11-22",
+        "home_team": "SAS",
+        "home_score": 102,
+        "away_score": 109,
+        "winner": "LAC",
+        "margin": 7
+      },
+      {
+        "date": "2023-11-20",
+        "home_team": "SAS",
+        "home_score": 99,
+        "away_score": 124,
+        "winner": "LAC",
+        "margin": 25
+      },
+      {
+        "date": "2023-10-29",
+        "home_team": "LAC",
+        "home_score": 123,
+        "away_score": 83,
+        "winner": "LAC",
+        "margin": 40
+      },
+      {
+        "date": "2023-01-26",
+        "home_team": "LAC",
+        "home_score": 138,
+        "away_score": 100,
+        "winner": "LAC",
+        "margin": 38
+      },
+      {
+        "date": "2023-01-20",
+        "home_team": "SAS",
+        "home_score": 126,
+        "away_score": 131,
+        "winner": "LAC",
+        "margin": 5
+      }
+    ]
+  },
+  {
+    "home_team": "LAL",
+    "away_team": "IND",
+    "series_record": "LAL leads 7-3 (last 10 meetings)",
+    "avg_total": 236.5,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "LAL",
+        "home_score": 128,
+        "away_score": 117,
+        "winner": "LAL",
+        "margin": 11
+      },
+      {
+        "date": "2025-03-26",
+        "home_team": "IND",
+        "home_score": 119,
+        "away_score": 120,
+        "winner": "LAL",
+        "margin": 1
+      },
+      {
+        "date": "2025-02-08",
+        "home_team": "LAL",
+        "home_score": 124,
+        "away_score": 117,
+        "winner": "LAL",
+        "margin": 7
+      },
+      {
+        "date": "2024-03-29",
+        "home_team": "IND",
+        "home_score": 109,
+        "away_score": 90,
+        "winner": "IND",
+        "margin": 19
+      },
+      {
+        "date": "2024-03-24",
+        "home_team": "LAL",
+        "home_score": 150,
+        "away_score": 145,
+        "winner": "LAL",
+        "margin": 5
+      },
+      {
+        "date": "2023-02-02",
+        "home_team": "IND",
+        "home_score": 111,
+        "away_score": 112,
+        "winner": "LAL",
+        "margin": 1
+      },
+      {
+        "date": "2022-11-28",
+        "home_team": "LAL",
+        "home_score": 115,
+        "away_score": 116,
+        "winner": "IND",
+        "margin": 1
+      },
+      {
+        "date": "2022-01-19",
+        "home_team": "LAL",
+        "home_score": 104,
+        "away_score": 111,
+        "winner": "IND",
+        "margin": 7
+      },
+      {
+        "date": "2021-11-24",
+        "home_team": "IND",
+        "home_score": 116,
+        "away_score": 124,
+        "winner": "LAL",
+        "margin": 8
+      },
+      {
+        "date": "2021-05-15",
+        "home_team": "IND",
+        "home_score": 115,
+        "away_score": 122,
+        "winner": "LAL",
+        "margin": 7
+      }
+    ]
+  },
+  {
+    "home_team": "BOS",
+    "away_team": "DAL",
+    "series_record": "BOS leads 7-3 (last 10 meetings)",
+    "avg_total": 223.7,
+    "meetings": [
+      {
+        "date": "2026-03-06",
+        "home_team": "BOS",
+        "home_score": 120,
+        "away_score": 100,
+        "winner": "BOS",
+        "margin": 20
+      },
+      {
+        "date": "2026-02-03",
+        "home_team": "DAL",
+        "home_score": 100,
+        "away_score": 110,
+        "winner": "BOS",
+        "margin": 10
+      },
+      {
+        "date": "2025-02-06",
+        "home_team": "BOS",
+        "home_score": 120,
+        "away_score": 127,
+        "winner": "DAL",
+        "margin": 7
+      },
+      {
+        "date": "2025-01-25",
+        "home_team": "DAL",
+        "home_score": 107,
+        "away_score": 122,
+        "winner": "BOS",
+        "margin": 15
+      },
+      {
+        "date": "2024-03-01",
+        "home_team": "BOS",
+        "home_score": 138,
+        "away_score": 110,
+        "winner": "BOS",
+        "margin": 28
+      },
+      {
+        "date": "2024-01-22",
+        "home_team": "DAL",
+        "home_score": 110,
+        "away_score": 119,
+        "winner": "BOS",
+        "margin": 9
+      },
+      {
+        "date": "2023-01-05",
+        "home_team": "DAL",
+        "home_score": 95,
+        "away_score": 124,
+        "winner": "BOS",
+        "margin": 29
+      },
+      {
+        "date": "2022-11-23",
+        "home_team": "BOS",
+        "home_score": 125,
+        "away_score": 112,
+        "winner": "BOS",
+        "margin": 13
+      },
+      {
+        "date": "2022-03-13",
+        "home_team": "BOS",
+        "home_score": 92,
+        "away_score": 95,
+        "winner": "DAL",
+        "margin": 3
+      },
+      {
+        "date": "2021-11-06",
+        "home_team": "DAL",
+        "home_score": 107,
+        "away_score": 104,
+        "winner": "DAL",
+        "margin": 3
+      }
+    ]
+  }
+]

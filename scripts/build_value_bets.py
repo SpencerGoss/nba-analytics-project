@@ -26,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 DB_PATH = PROJECT_ROOT / "database" / "predictions_history.db"
-GAME_LINES_CSV = PROJECT_ROOT / "data" / "processed" / "game_lines.csv"
+GAME_LINES_CSV = PROJECT_ROOT / "data" / "odds" / "game_lines.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "value_bets.json"
 TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
 
@@ -55,17 +55,43 @@ def _load_all_predictions(conn: sqlite3.Connection) -> list[dict]:
     return [dict(zip(col_names, row)) for row in cur.fetchall()]
 
 
+def _american_to_prob(ml) -> float | None:
+    """Convert American moneyline to implied probability (vig-inclusive)."""
+    try:
+        ml = float(ml)
+    except (TypeError, ValueError):
+        return None
+    if ml > 0:
+        return round(100 / (ml + 100), 4)
+    else:
+        return round(abs(ml) / (abs(ml) + 100), 4)
+
+
 def _load_game_lines_all() -> pd.DataFrame:
     """
     Load all game_lines.csv rows. Returns empty DataFrame if file missing.
-    Expected columns: home_team, away_team, game_date, home_market_prob, spread.
+
+    fetch_odds.py writes: date, home_team, away_team, home_moneyline,
+    away_moneyline, spread.  We normalise to the columns expected downstream:
+    game_date, home_team, away_team, home_market_prob, spread.
     """
     if not GAME_LINES_CSV.exists():
         return pd.DataFrame()
     try:
         df = pd.read_csv(GAME_LINES_CSV)
+
+        # Rename 'date' -> 'game_date' if needed (fetch_odds.py writes 'date')
+        if "date" in df.columns and "game_date" not in df.columns:
+            df = df.rename(columns={"date": "game_date"})
+
         if "game_date" in df.columns:
             df["game_date"] = pd.to_datetime(df["game_date"], format="mixed").dt.date.astype(str)
+
+        # Compute home_market_prob from home_moneyline if not already present
+        if "home_market_prob" not in df.columns and "home_moneyline" in df.columns:
+            df = df.copy()
+            df["home_market_prob"] = df["home_moneyline"].apply(_american_to_prob)
+
         return df
     except Exception as exc:
         print(f"  WARN: could not read game_lines.csv: {exc}")

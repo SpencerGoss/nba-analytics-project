@@ -1,0 +1,83 @@
+{
+  "games": [
+    {
+      "id": 1,
+      "away": "ORL",
+      "home": "MIN",
+      "aS": 23,
+      "hS": 27,
+      "status": "live",
+      "q": "1st 2:30",
+      "aR": "33-28",
+      "hR": "40-23",
+      "spread": "",
+      "game_date": "2026-03-07"
+    },
+    {
+      "id": 2,
+      "away": "BKN",
+      "home": "DET",
+      "aS": null,
+      "hS": null,
+      "status": "upcoming",
+      "q": "6:00 PM ET",
+      "aR": "15-47",
+      "hR": "45-16",
+      "spread": "",
+      "game_date": "2026-03-07"
+    },
+    {
+      "id": 3,
+      "away": "PHI",
+      "home": "ATL",
+      "aS": null,
+      "hS": null,
+      "status": "upcoming",
+      "q": "6:00 PM ET",
+      "aR": "34-28",
+      "hR": "32-31",
+      "spread": "",
+      "game_date": "2026-03-07"
+    },
+    {
+      "id": 4,
+      "away": "LAC",
+      "home": "MEM",
+      "aS": null,
+      "hS": null,
+      "status": "upcoming",
+      "q": "8:00 PM ET",
+      "aR": "30-32",
+      "hR": "23-38",
+      "spread": "",
+      "game_date": "2026-03-07"
+    },
+    {
+      "id": 5,
+      "away": "UTA",
+      "home": "MIL",
+      "aS": null,
+      "hS": null,
+      "status": "upcoming",
+      "q": "8:00 PM ET",
+      "aR": "19-44",
+      "hR": "26-35",
+      "spread": "",
+      "game_date": "2026-03-07"
+    },
+    {
+      "id": 6,
+      "away": "GSW",
+      "home": "OKC",
+      "aS": null,
+      "hS": null,
+      "status": "upcoming",
+      "q": "8:30 PM ET",
+      "aR": "32-30",
+      "hR": "49-15",
+      "spread": "",
+      "game_date": "2026-03-07"
+    }
+  ],
+  "exported_at": "2026-03-07T20:31:49.635162+00:00"
+}

@@ -1,0 +1,155 @@
+[
+  {
+    "home_team": "BOS",
+    "away_team": "DAL",
+    "game_date": "2026-03-06",
+    "home_b2b": false,
+    "away_b2b": true,
+    "home_rest_days": 2,
+    "away_rest_days": 1,
+    "home_last10": "7-3",
+    "away_last10": "2-8",
+    "home_streak": -1,
+    "away_streak": -2,
+    "home_season_home_record": "20-10",
+    "away_season_away_record": "7-22",
+    "situational_flags": [
+      "AWAY_B2B",
+      "HOME_HOT",
+      "AWAY_COLD"
+    ]
+  },
+  {
+    "home_team": "CHA",
+    "away_team": "MIA",
+    "game_date": "2026-03-06",
+    "home_b2b": false,
+    "away_b2b": true,
+    "home_rest_days": 2,
+    "away_rest_days": 1,
+    "home_last10": "7-3",
+    "away_last10": "7-3",
+    "home_streak": 2,
+    "away_streak": -2,
+    "home_season_home_record": "14-16",
+    "away_season_away_record": "14-18",
+    "situational_flags": [
+      "AWAY_B2B",
+      "HOME_HOT",
+      "AWAY_HOT"
+    ]
+  },
+  {
+    "home_team": "HOU",
+    "away_team": "POR",
+    "game_date": "2026-03-06",
+    "home_b2b": true,
+    "away_b2b": false,
+    "home_rest_days": 1,
+    "away_rest_days": 2,
+    "home_last10": "6-4",
+    "away_last10": "5-5",
+    "home_streak": -1,
+    "away_streak": 1,
+    "home_season_home_record": "20-8",
+    "away_season_away_record": "14-18",
+    "situational_flags": [
+      "HOME_B2B"
+    ]
+  },
+  {
+    "home_team": "DEN",
+    "away_team": "NYK",
+    "game_date": "2026-03-06",
+    "home_b2b": true,
+    "away_b2b": false,
+    "home_rest_days": 1,
+    "away_rest_days": 2,
+    "home_last10": "5-5",
+    "away_last10": "6-4",
+    "home_streak": 1,
+    "away_streak": 2,
+    "home_season_home_record": "17-12",
+    "away_season_away_record": "17-14",
+    "situational_flags": [
+      "HOME_B2B"
+    ]
+  },
+  {
+    "home_team": "PHX",
+    "away_team": "NOP",
+    "game_date": "2026-03-06",
+    "home_b2b": true,
+    "away_b2b": true,
+    "home_rest_days": 1,
+    "away_rest_days": 1,
+    "home_last10": "4-6",
+    "away_last10": "6-4",
+    "home_streak": -1,
+    "away_streak": 1,
+    "home_season_home_record": "20-13",
+    "away_season_away_record": "9-23",
+    "situational_flags": [
+      "HOME_B2B",
+      "AWAY_B2B"
+    ]
+  },
+  {
+    "home_team": "SAS",
+    "away_team": "LAC",
+    "game_date": "2026-03-06",
+    "home_b2b": true,
+    "away_b2b": false,
+    "home_rest_days": 1,
+    "away_rest_days": 2,
+    "home_last10": "9-1",
+    "away_last10": "6-4",
+    "home_streak": 6,
+    "away_streak": 1,
+    "home_season_home_record": "22-6",
+    "away_season_away_record": "14-18",
+    "situational_flags": [
+      "HOME_B2B",
+      "HOME_HOT"
+    ]
+  },
+  {
+    "home_team": "LAL",
+    "away_team": "IND",
+    "game_date": "2026-03-06",
+    "home_b2b": true,
+    "away_b2b": false,
+    "home_rest_days": 1,
+    "away_rest_days": 2,
+    "home_last10": "5-5",
+    "away_last10": "2-8",
+    "home_streak": 2,
+    "away_streak": -3,
+    "home_season_home_record": "18-12",
+    "away_season_away_record": "5-25",
+    "situational_flags": [
+      "HOME_B2B",
+      "AWAY_COLD"
+    ]
+  },
+  {
+    "home_team": "BOS",
+    "away_team": "DAL",
+    "game_date": "2026-03-06",
+    "home_b2b": false,
+    "away_b2b": true,
+    "home_rest_days": 2,
+    "away_rest_days": 1,
+    "home_last10": "7-3",
+    "away_last10": "2-8",
+    "home_streak": -1,
+    "away_streak": -2,
+    "home_season_home_record": "20-10",
+    "away_season_away_record": "7-22",
+    "situational_flags": [
+      "AWAY_B2B",
+      "HOME_HOT",
+      "AWAY_COLD"
+    ]
+  }
+]

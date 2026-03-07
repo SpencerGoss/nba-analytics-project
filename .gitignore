@@ -43,8 +43,9 @@ Thumbs.db
 logs/
 *.log
 
-# Generated dashboard data (rebuilt by scripts/export_dashboard_data.py)
-dashboard/data/*.json
+# Generated dashboard data — tracked so GitHub Pages serves real data
+# (builder scripts regenerate locally; no build step in CI)
+# dashboard/data/*.json  ← was excluded; now tracked
 
 # Generated prediction snapshots (rebuilt by pipeline)
 data/outputs/

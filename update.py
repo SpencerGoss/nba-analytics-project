@@ -310,6 +310,62 @@ def main() -> None:
             log_pipeline_error("update.py:ensemble", ens_err)
             print(f"  Ensemble step failed (non-fatal): {ens_err}")
 
+        print("\n=== Step 7: Building dashboard data files ===")
+        import subprocess
+        _PYTHON = Path(sys.executable)
+        _SCRIPTS_DIR = Path(__file__).parent / "scripts"
+
+        _BUILDERS = [
+            # Must run first -- resolves yesterday's predictions before performance calc
+            ("backfill_outcomes", "Backfill prediction outcomes"),
+            # Picks and odds -- need fresh data
+            ("fetch_odds", "Fetch sportsbook odds and props"),
+            ("build_picks", "Today's picks"),
+            ("build_value_bets", "Value bets"),
+            # Static data builders -- no inter-dependency
+            ("build_standings", "Standings"),
+            ("build_injuries", "Injury report"),
+            ("build_power_rankings", "Power rankings"),
+            ("build_h2h", "Head-to-head"),
+            ("build_streaks", "Hot/cold streaks"),
+            ("build_advanced_stats", "Advanced stats"),
+            ("build_live_scores", "Live scores"),
+            ("build_playoff_odds", "Playoff odds"),
+            ("build_trends", "Trends"),
+            ("build_totals", "Totals"),
+            ("build_game_context", "Game context"),
+            ("build_explainers", "Explainers"),
+            ("build_matchup_analysis", "Matchup analysis"),
+            # Performance depends on backfill being done
+            ("build_performance", "Performance history"),
+            ("build_accuracy_history", "Accuracy history"),
+            ("build_line_movement", "Line movement"),
+            # Props after odds fetch
+            ("build_props", "Player props"),
+            # Heavy -- run last
+            ("build_player_comparison", "Player comparison"),
+        ]
+
+        for script_name, label in _BUILDERS:
+            script_path = _SCRIPTS_DIR / f"{script_name}.py"
+            if not script_path.exists():
+                print(f"  [{label}] skipped (script not found)")
+                continue
+            try:
+                result = subprocess.run(
+                    [str(_PYTHON), str(script_path)],
+                    capture_output=True, text=True, timeout=180,
+                    cwd=str(Path(__file__).parent)
+                )
+                if result.returncode == 0:
+                    print(f"  [{label}] OK")
+                else:
+                    print(f"  [{label}] WARN: {result.stderr.strip()[-200:] if result.stderr else 'non-zero exit'}")
+            except subprocess.TimeoutExpired:
+                print(f"  [{label}] WARN: timed out after 120s")
+            except Exception as build_err:
+                print(f"  [{label}] WARN: {build_err}")
+
         elapsed = datetime.now() - start_time
         total_seconds = int(elapsed.total_seconds())
         print(

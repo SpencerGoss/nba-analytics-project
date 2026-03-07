@@ -1,0 +1,330 @@
+[
+  {
+    "home_team": "BOS",
+    "away_team": "DAL",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "BOS": [
+        80,
+        80,
+        20,
+        80,
+        80
+      ],
+      "DAL": [
+        20,
+        20,
+        80,
+        20,
+        20
+      ]
+    },
+    "home_ortg": 114.60884246264844,
+    "home_drtg": 106.32702601386488,
+    "away_ortg": 106.74777085438625,
+    "away_drtg": 116.12184289031477,
+    "home_pace": 94.554,
+    "away_pace": 102.978,
+    "pace_diff": -8.4,
+    "home_fg3_rate": 0.3593,
+    "away_fg3_rate": 0.3137,
+    "home_net_rtg": 8.28181644878358,
+    "away_net_rtg": -9.37407203592852,
+    "net_rtg_diff": 17.7,
+    "home_recent_form": 0.7,
+    "away_recent_form": 0.2
+  },
+  {
+    "home_team": "CHA",
+    "away_team": "MIA",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "CHA": [
+        80,
+        20,
+        20,
+        80,
+        50
+      ],
+      "MIA": [
+        20,
+        80,
+        80,
+        20,
+        50
+      ]
+    },
+    "home_ortg": 120.0977975070028,
+    "home_drtg": 106.53795132288356,
+    "away_ortg": 117.4928786417851,
+    "away_drtg": 106.04034831729822,
+    "home_pace": 97.092,
+    "away_pace": 104.568,
+    "pace_diff": -7.5,
+    "home_fg3_rate": 0.4088,
+    "away_fg3_rate": 0.3617,
+    "home_net_rtg": 13.559846184119214,
+    "away_net_rtg": 11.452530324486858,
+    "net_rtg_diff": 2.1,
+    "home_recent_form": 0.7,
+    "away_recent_form": 0.7
+  },
+  {
+    "home_team": "HOU",
+    "away_team": "POR",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "HOU": [
+        80,
+        80,
+        20,
+        80,
+        80
+      ],
+      "POR": [
+        20,
+        20,
+        80,
+        20,
+        20
+      ]
+    },
+    "home_ortg": 113.57019232744268,
+    "home_drtg": 108.11686051880504,
+    "away_ortg": 108.7199794060998,
+    "away_drtg": 114.64493342304615,
+    "home_pace": 98.758,
+    "away_pace": 104.08200000000002,
+    "pace_diff": -5.3,
+    "home_fg3_rate": 0.3788000000000001,
+    "away_fg3_rate": 0.3294,
+    "home_net_rtg": 5.453331808637659,
+    "away_net_rtg": -5.92495401694634,
+    "net_rtg_diff": 11.4,
+    "home_recent_form": 0.6,
+    "away_recent_form": 0.5
+  },
+  {
+    "home_team": "DEN",
+    "away_team": "NYK",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "DEN": [
+        80,
+        20,
+        80,
+        80,
+        20
+      ],
+      "NYK": [
+        20,
+        80,
+        20,
+        20,
+        80
+      ]
+    },
+    "home_ortg": 116.35941585414062,
+    "home_drtg": 110.61183281205494,
+    "away_ortg": 112.88448054943282,
+    "away_drtg": 103.8181096382292,
+    "home_pace": 103.842,
+    "away_pace": 101.036,
+    "pace_diff": 2.8,
+    "home_fg3_rate": 0.3734,
+    "away_fg3_rate": 0.3485,
+    "home_net_rtg": 5.747583042085681,
+    "away_net_rtg": 9.06637091120364,
+    "net_rtg_diff": -3.3,
+    "home_recent_form": 0.5,
+    "away_recent_form": 0.6
+  },
+  {
+    "home_team": "PHX",
+    "away_team": "NOP",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "PHX": [
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "NOP": [
+        80,
+        80,
+        80,
+        80,
+        80
+      ]
+    },
+    "home_ortg": 104.50345012185,
+    "home_drtg": 111.70339073456223,
+    "away_ortg": 112.59594538042693,
+    "away_drtg": 111.20755845434952,
+    "home_pace": 98.32,
+    "away_pace": 105.108,
+    "pace_diff": -6.8,
+    "home_fg3_rate": 0.3194,
+    "away_fg3_rate": 0.3391,
+    "home_net_rtg": -7.199940612712251,
+    "away_net_rtg": 1.388386926077402,
+    "net_rtg_diff": -8.6,
+    "home_recent_form": 0.4,
+    "away_recent_form": 0.6
+  },
+  {
+    "home_team": "SAS",
+    "away_team": "LAC",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "SAS": [
+        80,
+        80,
+        80,
+        80,
+        80
+      ],
+      "LAC": [
+        20,
+        20,
+        20,
+        20,
+        20
+      ]
+    },
+    "home_ortg": 117.44869346297462,
+    "home_drtg": 103.60197168402586,
+    "away_ortg": 112.87682959487724,
+    "away_drtg": 106.9464080582313,
+    "home_pace": 103.308,
+    "away_pace": 99.964,
+    "pace_diff": 3.3,
+    "home_fg3_rate": 0.3690000000000001,
+    "away_fg3_rate": 0.3383,
+    "home_net_rtg": 13.846721778948762,
+    "away_net_rtg": 5.930421536645959,
+    "net_rtg_diff": 7.9,
+    "home_recent_form": 0.9,
+    "away_recent_form": 0.6
+  },
+  {
+    "home_team": "LAL",
+    "away_team": "IND",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "LAL": [
+        80,
+        80,
+        20,
+        80,
+        80
+      ],
+      "IND": [
+        20,
+        20,
+        80,
+        20,
+        20
+      ]
+    },
+    "home_ortg": 114.49442645771636,
+    "home_drtg": 112.19876222313738,
+    "away_ortg": 107.4912642427212,
+    "away_drtg": 119.04800222329617,
+    "home_pace": 100.154,
+    "away_pace": 106.472,
+    "pace_diff": -6.3,
+    "home_fg3_rate": 0.3941,
+    "away_fg3_rate": 0.36,
+    "home_net_rtg": 2.2956642345790144,
+    "away_net_rtg": -11.55673798057498,
+    "net_rtg_diff": 13.9,
+    "home_recent_form": 0.5,
+    "away_recent_form": 0.2
+  },
+  {
+    "home_team": "BOS",
+    "away_team": "DAL",
+    "dimensions": [
+      "Offense",
+      "Defense",
+      "Pace",
+      "3PT Rate",
+      "Recent Form"
+    ],
+    "radar": {
+      "BOS": [
+        80,
+        80,
+        20,
+        80,
+        80
+      ],
+      "DAL": [
+        20,
+        20,
+        80,
+        20,
+        20
+      ]
+    },
+    "home_ortg": 114.60884246264844,
+    "home_drtg": 106.32702601386488,
+    "away_ortg": 106.74777085438625,
+    "away_drtg": 116.12184289031477,
+    "home_pace": 94.554,
+    "away_pace": 102.978,
+    "pace_diff": -8.4,
+    "home_fg3_rate": 0.3593,
+    "away_fg3_rate": 0.3137,
+    "home_net_rtg": 8.28181644878358,
+    "away_net_rtg": -9.37407203592852,
+    "net_rtg_diff": 17.7,
+    "home_recent_form": 0.7,
+    "away_recent_form": 0.2
+  }
+]
