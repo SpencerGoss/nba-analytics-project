@@ -13,6 +13,7 @@
 - Dashboard: data-dependent UI must be populated in Promise.all data loader callback, not only in tab-click handlers; security hook treats literal "innerHTM L" (no space) as blocked -- use textContent fallbacks and "direct DOM injection" in docs
 - NBA API `LeagueDashPlayerStats` only covers ~1996-97+; pre-1996 legends need `_inject_legends()` with curated career stats (facts are not copyrightable); `dashboard/data/*.json` gitignored (regenerated at runtime)
 - `fetch_historical_players.py` flush: never use `first_write and i <= len(frames)` -- when early seasons fail, condition = False, header lost; use `first_write` alone
+- Optuna HPO result (2026-03-06, 100 trials each): LightGBM AUC=0.7116, XGBoost AUC=0.7115 -- BOTH worse than sklearn gradient_boosting (AUC=0.7406); do NOT replace the production model; gradient_boosting is the winner on this dataset
 
 ## Domain Notes
 
