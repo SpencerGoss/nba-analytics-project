@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://spencergoss.github.io/nba-analytics-project/sitemap.xml

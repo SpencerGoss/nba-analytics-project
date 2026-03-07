@@ -1,16 +1,34 @@
 """
 Build dashboard/index.html from nba1.html with real data substitutions + UI improvements.
-Run: python scripts/build_dashboard.py
+Run: python scripts/build_dashboard.py [--template PATH]
 
 Architecture: All data pre-computed here -> embedded as JS in HTML.
 No backend API needed.
 """
+import argparse
 import re, os, sys
 import json
+from pathlib import Path
 
-SRC = r'C:\Users\spenc\Downloads\nba1.html'
-DST = r'C:\Users\spenc\OneDrive\Desktop\GIT\nba-analytics-project\dashboard\index.html'
-PROJECT_ROOT = r'C:\Users\spenc\OneDrive\Desktop\GIT\nba-analytics-project'
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DST = PROJECT_ROOT / 'dashboard' / 'index.html'
+
+parser = argparse.ArgumentParser(description='Build dashboard/index.html from template.')
+parser.add_argument(
+    '--template',
+    type=Path,
+    default=None,
+    help='Path to nba1.html source template. Defaults to dashboard/nba1.html if it exists, '
+         'otherwise performs an in-place update of dashboard/index.html.',
+)
+args = parser.parse_args()
+
+if args.template is not None:
+    SRC = args.template
+elif (PROJECT_ROOT / 'dashboard' / 'nba1.html').exists():
+    SRC = PROJECT_ROOT / 'dashboard' / 'nba1.html'
+else:
+    SRC = DST  # in-place update mode
 
 with open(SRC, 'r', encoding='utf-8') as f:
     html = f.read()
@@ -78,16 +96,21 @@ html = re.sub(
 # ────────────────────────────────────────────────
 # 4. PICKS  (real model predictions, Mar 5 2026)
 # ────────────────────────────────────────────────
-NEW_PICKS = (
-    "    {matchup:'DAL @ ORL', time:'Mar 5',pick:'ORL',spread:'',conf:70,tier:'hi',reason:'Home advantage + model edge'},\n"
-    "    {matchup:'UTA @ WAS', time:'Mar 5',pick:'WAS',spread:'',conf:61,tier:'md',reason:'Slight home edge'},\n"
-    "    {matchup:'BKN @ MIA', time:'Mar 5',pick:'MIA',spread:'',conf:90,tier:'hi',reason:'Dominant home favorite'},\n"
-    "    {matchup:'GSW @ HOU', time:'Mar 5',pick:'HOU',spread:'',conf:60,tier:'md',reason:'Home team slight edge'},\n"
-    "    {matchup:'TOR @ MIN', time:'Mar 5',pick:'MIN',spread:'',conf:92,tier:'hi',reason:'Heavy home favorite'},\n"
-    "    {matchup:'DET @ SAS', time:'Mar 5',pick:'DET',spread:'',conf:68,tier:'hi',reason:'Road favorites on form'},\n"
-    "    {matchup:'CHI @ PHX', time:'Mar 5',pick:'PHX',spread:'',conf:70,tier:'hi',reason:'Home efficiency edge'},\n"
-    "    {matchup:'LAL @ DEN', time:'Mar 5',pick:'DEN',spread:'',conf:70,tier:'hi',reason:'Home altitude advantage'},\n"
-    "    {matchup:'NOP @ SAC', time:'Mar 5',pick:'SAC',spread:'',conf:90,tier:'hi',reason:'Strong home court'},"
+_PICKS_DATA = [
+    ('DAL @ ORL', 'Mar 5', 'ORL', '', 70, 'hi', 'Home advantage + model edge'),
+    ('UTA @ WAS', 'Mar 5', 'WAS', '', 61, 'md', 'Slight home edge'),
+    ('BKN @ MIA', 'Mar 5', 'MIA', '', 90, 'hi', 'Dominant home favorite'),
+    ('GSW @ HOU', 'Mar 5', 'HOU', '', 60, 'md', 'Home team slight edge'),
+    ('TOR @ MIN', 'Mar 5', 'MIN', '', 92, 'hi', 'Heavy home favorite'),
+    ('DET @ SAS', 'Mar 5', 'DET', '', 68, 'hi', 'Road favorites on form'),
+    ('CHI @ PHX', 'Mar 5', 'PHX', '', 70, 'hi', 'Home efficiency edge'),
+    ('LAL @ DEN', 'Mar 5', 'DEN', '', 70, 'hi', 'Home altitude advantage'),
+    ('NOP @ SAC', 'Mar 5', 'SAC', '', 90, 'hi', 'Strong home court'),
+]
+NEW_PICKS = '\n'.join(
+    f"    {{matchup:{json.dumps(matchup)},time:{json.dumps(time)},pick:{json.dumps(pick)},"
+    f"spread:{json.dumps(spread)},conf:{conf},tier:{json.dumps(tier)},reason:{json.dumps(reason)}}},"
+    for matchup, time, pick, spread, conf, tier, reason in _PICKS_DATA
 )
 html = re.sub(
     r"    \{matchup:'BOS @ NYK',time:'Live.*?\{matchup:'MIA @ ATL'.*?\},",

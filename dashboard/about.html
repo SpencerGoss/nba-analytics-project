@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>About — Baseline Analytics</title>
+<meta name="description" content="About Baseline Analytics — how we build data-driven NBA predictions with real machine learning and plain-English explanations."/>
+<meta name="theme-color" content="#08090E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2308090E'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='system-ui,sans-serif' font-weight='900' fill='%2300C896'>B</text></svg>"/>
+<meta property="og:title" content="About — Baseline Analytics"/>
+<meta property="og:description" content="How Baseline Analytics works: 10+ years of NBA data, 290+ ML features, plain-English explanations. Free."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://spencergoss.github.io/nba-analytics-project/about.html"/>
+<link rel="canonical" href="https://spencergoss.github.io/nba-analytics-project/about.html"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #08090E;
+  --bg2:      #0F1117;
+  --bg3:      #161B27;
+  --card:     rgba(255,255,255,0.055);
+  --card-h:   rgba(255,255,255,0.09);
+  --b0:       rgba(255,255,255,0.07);
+  --b1:       rgba(255,255,255,0.13);
+  --t0:       #F1F5FF;
+  --t1:       #8892AA;
+  --t2:       #4A5268;
+  --green:    #00C896;
+  --green-d:  rgba(0,200,150,0.12);
+  --red:      #FF5C5C;
+  --gold:     #F5A623;
+  --goldf:    #FFCC5C;
+  --gold-d:   rgba(245,166,35,0.10);
+  --blue:     #4F9EFF;
+  --blue-d:   rgba(79,158,255,0.10);
+  --purple:   #A78BFA;
+  --f:        'Plus Jakarta Sans',system-ui,sans-serif;
+  --fm:       'JetBrains Mono',monospace;
+  --r-card:   18px;
+  --r-pill:   100px;
+  --shadow:   0 1px 2px rgba(0,0,0,.6), 0 8px 32px rgba(0,0,0,.35);
+  --shadow-h: 0 1px 2px rgba(0,0,0,.6), 0 20px 48px rgba(0,0,0,.45);
+  --glow-g:   0 0 24px rgba(0,200,150,0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--f);
+  background: var(--bg);
+  color: var(--t0);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── BACKGROUND BLOBS ── */
+.bgl {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.18;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.blob-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,200,150,0.35), transparent 70%);
+  top: -200px; left: -150px;
+  animation-duration: 20s;
+}
+.blob-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(245,166,35,0.25), transparent 70%);
+  top: 30%; right: -150px;
+  animation-duration: 24s;
+  animation-delay: -6s;
+}
+.blob-3 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(79,158,255,0.20), transparent 70%);
+  bottom: -100px; left: 30%;
+  animation-duration: 22s;
+  animation-delay: -12s;
+}
+@keyframes drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(30px, -40px) scale(1.05); }
+  100% { transform: translate(-20px, 30px) scale(0.97); }
+}
+
+/* ── NAV ── */
+.nav {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(8,9,14,0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow);
+  max-width: calc(100vw - 32px);
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 8px;
+  border-right: 1px solid var(--b0);
+  margin-right: 4px;
+  text-decoration: none;
+}
+.nav-logo-txt {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+  color: var(--t0);
+  white-space: nowrap;
+}
+.nav-logo-txt span { color: var(--gold); }
+.nav-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--b0);
+  color: var(--t1);
+  font-family: var(--f);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 140ms, color 140ms, border-color 140ms;
+  white-space: nowrap;
+}
+.nav-back:hover {
+  background: var(--card-h);
+  color: var(--t0);
+  border-color: var(--b1);
+}
+.nav-back svg { flex-shrink: 0; }
+.nav-about-badge {
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  background: var(--green-d);
+  border: 1px solid rgba(0,200,150,0.25);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── MAIN CONTENT ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 120px 24px 80px;
+}
+
+/* ── HERO ── */
+.hero {
+  text-align: center;
+  margin-bottom: 72px;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: var(--r-pill);
+  background: var(--green-d);
+  border: 1px solid rgba(0,200,150,0.25);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.hero h1 {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
+  margin-bottom: 16px;
+}
+.hero h1 .accent { color: var(--green); }
+.hero-sub {
+  font-size: clamp(16px, 2.5vw, 20px);
+  color: var(--t1);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+/* ── SECTION HEADING ── */
+.section { margin-bottom: 56px; }
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--t2);
+  margin-bottom: 12px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--b0);
+}
+.section h2 {
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 800;
+  letter-spacing: -.5px;
+  margin-bottom: 16px;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--b0);
+  border-radius: var(--r-card);
+  padding: 28px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 160ms, border-color 160ms, box-shadow 160ms;
+}
+.card:hover {
+  background: var(--card-h);
+  border-color: var(--b1);
+  box-shadow: var(--shadow);
+}
+
+/* ── MISSION ── */
+.mission-card {
+  background: var(--card);
+  border: 1px solid rgba(0,200,150,0.15);
+  border-radius: 22px;
+  padding: 36px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+.mission-card::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,200,150,0.07), transparent 70%);
+  pointer-events: none;
+}
+.mission-placeholder {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(245,166,35,0.07);
+  border: 1px solid rgba(245,166,35,0.20);
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.mission-placeholder svg { flex-shrink: 0; margin-top: 1px; }
+.mission-body {
+  font-size: 15px;
+  color: var(--t1);
+  line-height: 1.75;
+}
+.mission-body p { margin-bottom: 14px; }
+.mission-body p:last-child { margin-bottom: 0; }
+.mission-personal {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: rgba(167,139,250,0.06);
+  border: 1px dashed rgba(167,139,250,0.22);
+  font-size: 14px;
+  color: var(--t1);
+  font-style: italic;
+  line-height: 1.65;
+  margin-top: 20px;
+}
+
+/* ── HOW IT WORKS ── */
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.how-card {
+  background: var(--card);
+  border: 1px solid var(--b0);
+  border-radius: var(--r-card);
+  padding: 28px 24px;
+  transition: background 160ms, border-color 160ms;
+}
+.how-card:hover {
+  background: var(--card-h);
+  border-color: var(--b1);
+}
+.how-num {
+  font-family: var(--fm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+  letter-spacing: .5px;
+  margin-bottom: 14px;
+}
+.how-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.how-icon-green { background: var(--green-d); color: var(--green); }
+.how-icon-gold  { background: var(--gold-d);  color: var(--gold);  }
+.how-icon-blue  { background: var(--blue-d);  color: var(--blue);  }
+.how-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -.2px;
+}
+.how-card p {
+  font-size: 13px;
+  color: var(--t1);
+  line-height: 1.65;
+}
+
+/* ── STATS GRID ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 14px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--b0);
+  border-radius: var(--r-card);
+  padding: 22px 18px;
+  text-align: center;
+  transition: background 160ms, border-color 160ms, transform 160ms;
+}
+.stat-card:hover {
+  background: var(--card-h);
+  border-color: var(--b1);
+  transform: translateY(-2px);
+}
+.stat-value {
+  font-family: var(--fm);
+  font-size: clamp(20px, 3.5vw, 28px);
+  font-weight: 700;
+  letter-spacing: -.5px;
+  margin-bottom: 4px;
+}
+.stat-value.green { color: var(--green); }
+.stat-value.gold  { color: var(--gold);  }
+.stat-value.blue  { color: var(--blue);  }
+.stat-label {
+  font-size: 11px;
+  color: var(--t2);
+  font-weight: 600;
+  letter-spacing: .3px;
+  line-height: 1.4;
+}
+.stat-soon {
+  font-size: 10px;
+  color: var(--gold);
+  font-weight: 600;
+  margin-top: 4px;
+  opacity: .75;
+}
+
+/* ── MODELS (collapsible) ── */
+.models-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--b0);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--t1);
+  font-family: var(--f);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 140ms, border-color 140ms, color 140ms;
+}
+.models-toggle:hover {
+  background: var(--card-h);
+  border-color: var(--b1);
+  color: var(--t0);
+}
+.models-toggle svg {
+  flex-shrink: 0;
+  transition: transform 260ms ease;
+}
+.models-toggle[aria-expanded="true"] svg.chevron { transform: rotate(180deg); }
+.models-toggle .label-main { font-size: 14px; font-weight: 700; color: var(--t0); }
+.models-toggle .label-sub  { font-size: 12px; color: var(--t2); margin-left: 2px; }
+.models-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 320ms ease;
+}
+.models-body.open { max-height: 800px; }
+.models-inner {
+  padding: 4px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.model-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--b0);
+  border-radius: 12px;
+}
+.model-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.model-dot.green  { background: var(--green); box-shadow: 0 0 6px rgba(0,200,150,.5); }
+.model-dot.blue   { background: var(--blue);  box-shadow: 0 0 6px rgba(79,158,255,.4); }
+.model-dot.gold   { background: var(--gold);  box-shadow: 0 0 6px rgba(245,166,35,.4); }
+.model-dot.purple { background: var(--purple); box-shadow: 0 0 6px rgba(167,139,250,.4); }
+.model-name {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 3px;
+  color: var(--t0);
+}
+.model-desc {
+  font-family: var(--fm);
+  font-size: 11px;
+  color: var(--t2);
+  line-height: 1.55;
+}
+
+/* ── FREE FOREVER ── */
+.free-card {
+  background: linear-gradient(135deg, rgba(0,200,150,0.08), rgba(0,200,150,0.03));
+  border: 1px solid rgba(0,200,150,0.22);
+  border-radius: 22px;
+  padding: 36px;
+  position: relative;
+  overflow: hidden;
+}
+.free-card::before {
+  content: '';
+  position: absolute;
+  bottom: -60px; right: -60px;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,200,150,0.10), transparent 70%);
+  pointer-events: none;
+}
+.free-card h2 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.4px;
+  margin-bottom: 12px;
+}
+.free-card p {
+  font-size: 15px;
+  color: var(--t1);
+  line-height: 1.7;
+  max-width: 600px;
+  margin-bottom: 12px;
+}
+.free-card p:last-of-type { margin-bottom: 0; }
+.free-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 12px 24px;
+  border-radius: var(--r-pill);
+  background: var(--green);
+  color: #fff;
+  font-family: var(--f);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 160ms, transform 120ms;
+}
+.free-cta:hover { opacity: .85; transform: translateY(-1px); }
+.free-cta svg { flex-shrink: 0; }
+
+/* ── DISCLAIMER ── */
+.disclaimer {
+  background: rgba(255,92,92,0.05);
+  border: 1px solid rgba(255,92,92,0.18);
+  border-radius: var(--r-card);
+  padding: 22px 24px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.disclaimer-icon {
+  flex-shrink: 0;
+  color: var(--red);
+  margin-top: 1px;
+}
+.disclaimer p {
+  font-size: 13px;
+  color: var(--t1);
+  line-height: 1.65;
+}
+.disclaimer strong { color: var(--t0); }
+
+/* ── FOOTER ── */
+footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 32px 24px 48px;
+  border-top: 1px solid var(--b0);
+  color: var(--t2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+footer a {
+  color: var(--t1);
+  text-decoration: none;
+  transition: color 140ms;
+}
+footer a:hover { color: var(--green); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .nav { gap: 2px; padding: 5px 8px; }
+  .nav-logo-txt { font-size: 13px; }
+  .nav-back { padding: 5px 10px; font-size: 12px; }
+  .nav-about-badge { display: none; }
+  .page { padding: 100px 16px 60px; }
+  .mission-card { padding: 24px 20px; }
+  .how-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .free-card { padding: 24px 20px; }
+  .disclaimer { flex-direction: column; gap: 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── BACKGROUND ── -->
+<div class="bgl" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- ── NAV ── -->
+<nav class="nav" aria-label="Page navigation">
+  <a href="index.html" class="nav-logo" aria-label="Baseline Analytics home">
+    <svg width="28" height="28" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lg1" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#00C896"/>
+          <stop offset="100%" stop-color="#F5A623"/>
+        </linearGradient>
+        <linearGradient id="lg2" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#00C896" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#F5A623" stop-opacity="0.3"/>
+        </linearGradient>
+      </defs>
+      <path d="M15 2L27 8.5V21.5L15 28L3 21.5V8.5L15 2Z" stroke="url(#lg1)" stroke-width="1.5" fill="url(#lg2)"/>
+      <path d="M8 15 A7 7 0 0 1 22 15" stroke="url(#lg1)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <circle cx="15" cy="15" r="1.8" fill="url(#lg1)"/>
+      <rect x="10" y="17" width="2" height="4" rx=".8" fill="url(#lg1)" opacity=".9"/>
+      <rect x="14" y="15.5" width="2" height="5.5" rx=".8" fill="url(#lg1)" opacity=".9"/>
+      <rect x="18" y="18.5" width="2" height="2.5" rx=".8" fill="url(#lg1)" opacity=".9"/>
+    </svg>
+    <span class="nav-logo-txt">Baseline<span>Analytics</span></span>
+  </a>
+  <a href="index.html" class="nav-back" aria-label="Back to dashboard">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Dashboard
+  </a>
+  <span class="nav-about-badge">About</span>
+</nav>
+
+<!-- ── MAIN ── -->
+<main class="page">
+
+  <!-- HERO -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="hero-badge">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+      About
+    </div>
+    <h1 id="hero-heading">Baseline <span class="accent">Analytics</span></h1>
+    <p class="hero-sub">NBA intelligence, built for everyone.</p>
+  </section>
+
+  <!-- THE MISSION -->
+  <section class="section" aria-labelledby="mission-heading">
+    <div class="section-label">The mission</div>
+    <h2 id="mission-heading">Why I built this</h2>
+    <div class="mission-card">
+      <div class="mission-body">
+        <p>I built Baseline Analytics as a personal project, driven by a deep passion for the NBA. I've been watching basketball for years and wanted to build something that combined that love for the game with the skills I've been developing in data science and machine learning.</p>
+        <p>At its core, this started simply — I wanted a place where I could dig deep into player stats, compare players across different eras, and spend my free time doing something I genuinely enjoyed. Over time it grew into something more: a real machine learning pipeline, game outcome predictions, and a tool that explains every recommendation in plain English — so anyone can understand why a pick might have value, not just that someone thinks it does.</p>
+        <p>This is a showcase of what I've learned and built. It's not perfect, but it's real — real data, real models, real predictions. And it's something I actually use.</p>
+        <div class="mission-personal" role="note" aria-label="Creator attribution">
+          — <strong>Spencer</strong>, creator of Baseline Analytics
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" aria-labelledby="how-heading">
+    <div class="section-label">The process</div>
+    <h2 id="how-heading">How it works</h2>
+    <div class="how-grid">
+      <article class="how-card">
+        <div class="how-num">STEP 01</div>
+        <div class="how-icon how-icon-green" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+        </div>
+        <h3>We collect the data</h3>
+        <p>Every NBA game since 2000. Box scores, lineups, injuries, betting lines. Updated hourly during the season.</p>
+      </article>
+      <article class="how-card">
+        <div class="how-num">STEP 02</div>
+        <div class="how-icon how-icon-gold" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <h3>Our model finds edges</h3>
+        <p>A machine learning model trained on 290+ features identifies when sportsbooks misprice a game. 67.1% accuracy on unseen data.</p>
+      </article>
+      <article class="how-card">
+        <div class="how-num">STEP 03</div>
+        <div class="how-icon how-icon-blue" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <h3>We explain it plainly</h3>
+        <p>Every pick comes with plain-English reasoning. No jargon. No black boxes. You see exactly what the model sees.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- BY THE NUMBERS -->
+  <section class="section" aria-labelledby="stats-heading">
+    <div class="section-label">By the numbers</div>
+    <h2 id="stats-heading">What's under the hood</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value green">67.1%</div>
+        <div class="stat-label">Model accuracy<br>game outcome</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value green">54.9%</div>
+        <div class="stat-label">ATS model<br>accuracy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value gold">136,452</div>
+        <div class="stat-label">Historical games<br>analyzed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value gold">10+</div>
+        <div class="stat-label">Years of<br>NBA data</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value blue">456</div>
+        <div class="stat-label">Tests<br>passing</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value blue">80</div>
+        <div class="stat-label">Seasons of<br>player history</div>
+        <div class="stat-soon">Coming soon</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:28px">
+      <a href="index.html" class="free-cta" style="display:inline-flex">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        See live predictions on the dashboard
+      </a>
+    </div>
+  </section>
+
+  <!-- THE MODELS -->
+  <section class="section" aria-labelledby="models-heading">
+    <div class="section-label">Technical details</div>
+    <h2 id="models-heading">The models</h2>
+    <button
+      class="models-toggle"
+      aria-expanded="false"
+      aria-controls="models-body"
+      onclick="toggleModels(this)"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6"/><path d="M9 12h6"/><path d="M9 15h4"/>
+      </svg>
+      <span>
+        <span class="label-main">View technical specs</span>
+        <span class="label-sub">— for the curious</span>
+      </span>
+      <svg class="chevron" style="margin-left:auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+    <div class="models-body" id="models-body" role="region" aria-labelledby="models-heading">
+      <div class="models-inner">
+        <div class="model-row">
+          <div class="model-dot green"></div>
+          <div>
+            <div class="model-name">Game Outcome Model</div>
+            <div class="model-desc">GradientBoostingClassifier — 290+ features — expanding-window cross-validation — 67.1% accuracy, AUC 0.7406</div>
+          </div>
+        </div>
+        <div class="model-row">
+          <div class="model-dot blue"></div>
+          <div>
+            <div class="model-name">ATS (Against the Spread) Model</div>
+            <div class="model-desc">Logistic Regression (L1) — Brier-score optimized selection — 54.9% accuracy</div>
+          </div>
+        </div>
+        <div class="model-row">
+          <div class="model-dot gold"></div>
+          <div>
+            <div class="model-name">Probability Calibration</div>
+            <div class="model-desc">Platt Scaler — fitted on held-out 2021-22 season — probabilities mapped to [0, 1] true frequencies</div>
+          </div>
+        </div>
+        <div class="model-row">
+          <div class="model-dot purple"></div>
+          <div>
+            <div class="model-name">Leakage Prevention</div>
+            <div class="model-desc">shift(1) applied to all rolling features — row N sees only rows 0..N-1 — no same-game information ever used in training</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FREE FOREVER -->
+  <section class="section" aria-labelledby="free-heading">
+    <div class="free-card">
+      <div class="section-label" style="margin-bottom:16px">Access</div>
+      <h2 id="free-heading">Free forever (for now)</h2>
+      <p>Baseline Analytics is completely free right now. I'm building something I'd want to use myself, and I want to get feedback before charging for anything.</p>
+      <p>Premium features are coming — but the core data, player comparisons, and model predictions will always have a free tier. Join the waitlist to be first to know when premium features launch.</p>
+      <a href="index.html" class="free-cta">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        Go to the dashboard
+      </a>
+    </div>
+  </section>
+
+  <!-- DISCLAIMER -->
+  <section class="section" aria-labelledby="disclaimer-heading">
+    <div class="section-label">Legal</div>
+    <h2 id="disclaimer-heading" class="visually-hidden">Disclaimer</h2>
+    <div class="disclaimer" role="note">
+      <div class="disclaimer-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <p>
+        <strong>Disclaimer:</strong> This tool is for informational and entertainment purposes only.
+        It is not financial advice. Past model accuracy does not guarantee future results.
+        Always gamble responsibly and only with money you can afford to lose.
+        Check that sports betting is legal where you are.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p>Built with Python, scikit-learn, and a lot of NBA data.</p>
+  <p style="margin-top:6px">&copy; 2026 Baseline Analytics &nbsp;&middot;&nbsp; <a href="index.html">Dashboard</a></p>
+</footer>
+
+<style>
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+</style>
+
+<script>
+function toggleModels(btn) {
+  var expanded = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', String(!expanded));
+  var body = document.getElementById('models-body');
+  body.classList.toggle('open', !expanded);
+}
+</script>
+</body>
+</html>
