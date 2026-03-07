@@ -3,7 +3,7 @@ build_picks.py -- regenerate dashboard/data/todays_picks.json
 
 Reads predictions from database/predictions_history.db.
 Finds predictions for today's date, or falls back to the most recent date
-with predictions. Joins with odds from data/processed/game_lines.csv if
+with predictions. Joins with odds from data/odds/game_lines.csv if
 it exists.
 
 If the DB has no predictions at all, reads the existing todays_picks.json
@@ -26,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 DB_PATH = PROJECT_ROOT / "database" / "predictions_history.db"
-GAME_LINES_CSV = PROJECT_ROOT / "data" / "processed" / "game_lines.csv"
+GAME_LINES_CSV = PROJECT_ROOT / "data" / "odds" / "game_lines.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "todays_picks.json"
 
 TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
