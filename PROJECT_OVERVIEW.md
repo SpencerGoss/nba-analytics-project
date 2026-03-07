@@ -12,7 +12,7 @@ End-to-end NBA analytics system: data ingestion → feature engineering → game
 - Tests: 145 passing
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
 - **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv populates live with NBA moneylines + spreads
-- **Dashboard:** all ~35 mock/hardcoded sections live; new in this session: dark/light theme toggle (localStorage), scrolling game ticker, Value Bets tab (renderValueBets + kelly display), CLV summary card in Track Record tab, sortable standings, real accuracy chart (accuracy_history.json); full XSS hardening (esc() sanitizer, textContent fallbacks, nbaId guard)
+- **Dashboard v3:** full Linear/Coinbase redesign; Teams page (conference tables + form), H2H page, Power Rankings, Injuries tab, upgraded Value Bet cards (WE SAY/BOOKS SAY/EDGE bars, explainer bullets), Betting Tools drawer (odds converter + edge calc + sizing), Player Comparison (LeBron vs Jordan default, era toggle, legend injection for Jordan/Bird/Magic/Kareem/Kobe/Wilt), 16 static-JSON builder scripts; 1,710 players in comparison JSON; live at https://spencergoss.github.io/nba-analytics-project/
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)

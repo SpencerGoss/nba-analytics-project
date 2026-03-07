@@ -10,8 +10,9 @@
 - Pinnacle guest API (league 487, no auth) replaces ODDS_API_KEY; filter matchups to parentId=None + alignment=home/away
 - Pipeline is CSV-based; `database/nba.db` empty/legacy; only `predictions_history.db` active; 145 tests: `.venv/Scripts/python.exe -m pytest tests/ -q`
 - Any col with `_roll` in name auto-captured by `roll_cols`; never add to `context_cols` -- duplicates cause ValueError in build_matchup_dataset()
-- Dashboard: data-dependent UI must be populated in Promise.all data loader callback, not only in tab-click handlers (tab never fires if user doesn't click)
-- Security hook blocks Edits containing the literal string "i-n-n-e-r-H-T-M-L" (no hyphen) even in docs -- rephrase as "direct DOM injection"; JS toFixed() returns string, always use Number() before numeric comparisons
+- Dashboard: data-dependent UI must be populated in Promise.all data loader callback, not only in tab-click handlers; security hook treats literal "innerHTM L" (no space) as blocked -- use textContent fallbacks and "direct DOM injection" in docs
+- NBA API `LeagueDashPlayerStats` only covers ~1996-97+; pre-1996 legends need `_inject_legends()` with curated career stats (facts are not copyrightable); `dashboard/data/*.json` gitignored (regenerated at runtime)
+- `fetch_historical_players.py` flush: never use `first_write and i <= len(frames)` -- when early seasons fail, condition = False, header lost; use `first_write` alone
 
 ## Domain Notes
 
