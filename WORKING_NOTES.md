@@ -87,6 +87,10 @@
 [2026-03-06] [lightgbm] INSIGHT: LightGBM added as guarded candidate in game_outcome_model.py; gradient_boosting still selected (67.1% acc, AUC 0.7406). LightGBM competed but did not win in v2.1.
 [2026-03-06] [lightgbm] WHY: Guarded import `try: from lightgbm import LGBMClassifier; _LGBM_AVAILABLE=True except ImportError: _LGBM_AVAILABLE=False`. LightGBM is available for Optuna HPO in Phase 2. Install: `lightgbm>=4.0.0` in requirements.txt.
 
+### [pipeline]
+[2026-03-07] [pipeline] INSIGHT: `build_picks.py` was reading `data/processed/game_lines.csv` but the file lives at `data/odds/game_lines.csv` (written by fetch_odds.py) -- caused spread/ATS fields to always be null in todays_picks.json. Fixed by updating GAME_LINES_CSV constant.
+[2026-03-07] [pipeline] WHY: fetch_odds.py writes to data/odds/ to separate raw API output from pipeline-processed data; build_picks.py referenced the wrong directory.
+
 ### [dashboard]
 
 [2026-03-06] [dashboard] INSIGHT: build_dashboard.py reads nba1.html (template) and applies regex replacements sequentially; new sections must match the post-replacement state of html, not the original template.
