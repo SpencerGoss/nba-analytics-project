@@ -1057,10 +1057,10 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     </div>
   </section>
   <div class="sgrid" style="margin-top:8px;margin-bottom:20px">
-    <div class="sc accent-blue"><span class="sl">Games Tonight</span><span class="sv b" data-count="9">0</span><div class="schange"><span class="badge b">3 live now</span></div></div>
-    <div class="sc accent-gold"><span class="sl">Top Scorer Today</span><span class="sv o" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px">L. Doncic</span><div class="schange up" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>32.4 PPG &#183; LAL &#183; Season leader</div></div>
-    <div class="sc accent-green"><span class="sl">Hottest Team</span><span class="sv g" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px">Charlotte Hornets</span><div class="schange up" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>W6 streak &#183; Hottest in the NBA</div></div>
-    <div class="sc accent-red"><span class="sl">Biggest Upset</span><span class="sv" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px;color:var(--red)">MEM +26 vs OKC</span><div class="schange dn" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>#1 seed lost outright</div></div>
+    <div class="sc accent-blue"><span class="sl">Games Tonight</span><span id="home-games-count" class="sv b" data-count="9">0</span><div class="schange"><span class="badge b" id="home-games-badge">loading...</span></div></div>
+    <div class="sc accent-gold"><span class="sl">Top Hot Player</span><span id="home-hot-player" class="sv o" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px">-</span><div class="schange up" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg><span id="home-hot-player-sub">Loading...</span></div></div>
+    <div class="sc accent-green"><span class="sl">Hottest Team</span><span id="home-hot-team" class="sv g" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px">-</span><div class="schange up" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg><span id="home-hot-team-sub">Loading...</span></div></div>
+    <div class="sc accent-red"><span class="sl">Coldest Team</span><span id="home-cold-team" class="sv" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px;color:var(--red)">-</span><div class="schange dn" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg><span id="home-cold-team-sub">Loading...</span></div></div>
   </div>
   <div class="dl">
     <div class="dm">
@@ -1366,13 +1366,13 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   </div>
   <div class="picks-hero-grid" id="hero-picks-grid" style="display:none"></div>
   <div class="sgrid" style="margin-top:28px;margin-bottom:22px">
-    <div class="sc accent-blue"><span class="sl">Games Tonight</span><span class="sv b" data-count="9">0</span><div class="schange"><span class="badge b">9 matchups</span></div></div>
-    <div class="sc accent-green"><span class="sl">Strong Picks</span><span class="sv g" data-count="7">0</span><div class="schange up">Model confidence &ge;65%</div></div>
-    <div class="sc accent-gold"><span class="sl">Season Record</span><span class="sv o" data-count-str="67-55">-</span><div class="schange"><span class="badge g">54.9% ATS</span></div></div>
-    <div class="sc accent-green"><span class="sl">Last 10 Picks</span><span class="sv g" data-count-str="7-3">-</span><div class="schange up">Hot streak</div></div>
+    <div class="sc accent-blue"><span class="sl">Games Tonight</span><span id="picks-games-count" class="sv b" data-count="9">0</span><div class="schange"><span class="badge b" id="picks-games-badge">9 matchups</span></div></div>
+    <div class="sc accent-green"><span class="sl">Strong Picks</span><span id="picks-strong-count" class="sv g" data-count="7">0</span><div class="schange up">Model confidence &ge;65%</div></div>
+    <div class="sc accent-gold"><span class="sl">Season Record</span><span id="picks-season-rec" class="sv o" data-count-str="67-55">-</span><div class="schange"><span class="badge g" id="picks-ats-badge">ATS</span></div></div>
+    <div class="sc accent-green"><span class="sl">Last 10 Picks</span><span id="picks-last10" class="sv g" data-count-str="7-3">-</span><div class="schange up">Hot streak</div></div>
   </div>
   <div class="g3" id="picks-grid"></div>
-  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Model v2.2 &#183; 67.1% game outcome &#183; 54.9% ATS</p>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="picks-footer-meta">Model v2.3 &#183; 67.1% game outcome &#183; 54.9% ATS</span></p>
 </section>
 
 <!-- VALUE BETS (betting tab) -->
@@ -1417,7 +1417,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 <!-- SHARP MONEY (betting tab) -->
 <section id="page-bet-sharp" class="page">
   <div class="ph"><h1 class="pt">Sharp Money</h1><p class="pd">Line movement, steam moves, and sharp action signals</p></div>
-  <div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">Sharp Money Tracker</div><div class="tp-desc">Real-time line movement, reverse line movement, and steam move detection coming soon.</div></div>
+  <div id="sharp-money-container"></div>
 </section>
 
 <!-- PERFORMANCE (betting tab) -->
@@ -1430,9 +1430,9 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     </div>
   </div>
   <div class="sgrid" style="margin-bottom:22px">
-    <div class="bt-stat"><span class="sl">Overall Win Rate</span><span class="bt-val g">54.9%</span><div class="schange up" style="justify-content:center;font-size:11px">Beats a coin flip by 4.9%</div></div>
-    <div class="bt-stat"><span class="sl">Best Month</span><span class="bt-val o">Feb '25</span><div class="schange up" style="justify-content:center;font-size:11px">57.4% cover rate</div></div>
-    <div class="bt-stat"><span class="sl">High Conf Picks</span><span class="bt-val g">49.0%</span><div class="schange" style="justify-content:center;font-size:11px">Cover rate, mkt &ge;65%</div></div>
+    <div class="bt-stat"><span class="sl">Overall Win Rate</span><span class="bt-val g" id="bt-win-rate">54.9%</span><div class="schange up" style="justify-content:center;font-size:11px">Beats a coin flip by 4.9%</div></div>
+    <div class="bt-stat"><span class="sl">Current Streak</span><span class="bt-val o" id="bt-streak">--</span><div class="schange up" style="justify-content:center;font-size:11px" id="bt-best-streak">--</div></div>
+    <div class="bt-stat"><span class="sl">Total Predictions</span><span class="bt-val g" id="bt-total-games">--</span><div class="schange" style="justify-content:center;font-size:11px">games tracked this season</div></div>
     <div class="bt-stat"><span class="sl">Total Picks Made</span><span class="bt-val">18,496</span><div class="schange" style="justify-content:center;font-size:11px">games in backtest</div></div>
   </div>
   <div class="card" style="margin-bottom:14px">
@@ -2056,6 +2056,26 @@ function buildHeroSection(picks, valueBets, explainers, contexts){
     const d=new Date(picks[0].game_date);
     sub.textContent=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+' \u00b7 Real model predictions';
   }
+  // Update live pick counters in picks tab
+  const gamesN=picks.length;
+  const strongN=picks.filter(p=>p.conf>=65).length;
+  const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setT('picks-games-count',gamesN);
+  setT('picks-games-badge',gamesN+' matchups');
+  setT('picks-strong-count',strongN);
+  // Update from PERF_DATA if available
+  const pd=window.PERF_DATA;
+  if(pd){
+    const totalG=pd.total_games||0;
+    const totalW=Math.round((pd.season_accuracy||0)*totalG);
+    setT('picks-season-rec',totalW+'-'+(totalG-totalW));
+    const pct=((pd.season_accuracy||0)*100).toFixed(1);
+    setT('picks-ats-badge',pct+'% ATS');
+    const streak=pd.current_streak;
+    if(streak)setT('picks-last10',(streak.type==='W'?'W':'L')+streak.length+' streak');
+    const meta=window.META||{};
+    setT('picks-footer-meta','Model '+(meta.model_version||'v2.3')+' \u00b7 '+(pd.season_accuracy?(pd.season_accuracy*100).toFixed(1)+'% accuracy':'67.1%')+' \u00b7 '+pct+'% ATS');
+  }
 }
 
 // ─── PLAYER DATA with NBA CDN headshot IDs ───
@@ -2247,6 +2267,7 @@ function _activateBettingTab(tabId, pillEl){
   // Lazy renders
   if(tabId==='performance')renderBacktest();
   if(tabId==='valuebets')renderValueBets();
+  if(tabId==='sharp')renderSharpMoney();
 }
 
 let _btDropOpen=false;
@@ -2939,6 +2960,38 @@ function renderShoot(aA,aB,nA,nB){
   },{responsive:true,displayModeBar:false});
 }
 
+// ─── SHARP MONEY / LINE MOVEMENT ───
+function renderSharpMoney(){
+  const container=document.getElementById('sharp-money-container');
+  if(!container)return;
+  const data=window.LINE_MOVEMENT||[];
+  if(!data.length){
+    container.innerHTML='<div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">Sharp Money Tracker</div><div class="tp-desc">Real-time line movement, reverse line movement, and steam move detection coming soon.</div></div>';
+    return;
+  }
+  const classColor={sharp_action:'var(--green)',moderate_move:'var(--gold)',stable:'var(--t2)'};
+  const classLabel={sharp_action:'Sharp Action',moderate_move:'Moderate Move',stable:'Stable'};
+  const rows=data.map(g=>{
+    const mov=g.movement>0?'+'+g.movement.toFixed(1):g.movement.toFixed(1);
+    const col=classColor[g.classification]||'var(--t2)';
+    const lbl=classLabel[g.classification]||g.classification;
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:700;color:var(--t0)">${g.away_team} @ ${g.home_team}</div>
+        <div style="font-size:11px;color:var(--t2)">${g.game_date}</div>
+      </div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px">
+        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Opening</div><div style="font-size:14px;font-weight:700;color:var(--t1)">${g.opening_spread>0?'+'+g.opening_spread:g.opening_spread}</div></div>
+        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Current</div><div style="font-size:14px;font-weight:700;color:var(--t1)">${g.current_spread>0?'+'+g.current_spread:g.current_spread}</div></div>
+        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Movement</div><div style="font-size:14px;font-weight:700;color:${mov==='0.0'?'var(--t2)':parseFloat(mov)>0?'var(--green)':'var(--red)'}">${mov}</div></div>
+        <div><div style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Signal</div><div style="font-size:13px;font-weight:700;color:${col}">${lbl}</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--t1);border-top:1px solid var(--b0);padding-top:8px">${g.interpretation}</div>
+    </div>`;
+  }).join('');
+  container.innerHTML=rows;
+}
+
 // ─── DEEP DIVE — MATCHUPS ───
 const MATCHUP_DATA=[
   {label:"TOR @ MIN",away:"TOR",home:"MIN",awayRec:"34-25",homeRec:"38-23",stats:[["Points Per Game (L10)", "113.9", "117.5"], ["Points Allowed (L10)", "110.3", "114.8"], ["Pace (L10)", "102.7", "103.3"], ["3-Point Shooting (L10)", "36.4%", "36.4%"], ["Turnovers / Game (L10)", "13.9", "15.4"]],edge:"MIN",reason:"MIN home advantage (92% win prob) -- superior offense (117.5 pts/g vs 113.9)"},
@@ -2976,7 +3029,8 @@ function drawMatchup(i){
           <div class="mu-stat-val" style="text-align:right;color:var(--t2);font-family:var(--f);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${m.home}</div>
         </div>
         ${m.stats.map(([lbl,a,h])=>{
-          const aWin=parseFloat(a)>=parseFloat(h);
+          const lowerIsBetter=lbl.toLowerCase().includes('def');
+          const aWin=lowerIsBetter?parseFloat(a)<=parseFloat(h):parseFloat(a)>=parseFloat(h);
           return `<div class="mu-stat-row">
             <div class="mu-stat-val" style="color:${aWin?'var(--green)':'var(--t0)'}">${a}</div>
             <div class="mu-stat-lbl">${lbl}</div>
@@ -3088,6 +3142,15 @@ async function renderStreaks(){
       if(stJson.home_away&&stJson.home_away.length)homeAway=stJson.home_away.slice(0,5);
     }
   }catch(e){console.warn("streaks.json load failed, using fallback:",e);}
+  // Update home tab spotlight cards from real streaks data
+  const _setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  if(hot.length){const h=hot[0];_setT('home-hot-player',h.name.split(' ').pop());_setT('home-hot-player-sub',h.stat+' \u00b7 '+h.team+' \u00b7 '+h.sub);}
+  if(teamStreaks.length){
+    const _ht=teamStreaks.find(t=>t.streak>0)||teamStreaks[0];
+    const _ct=teamStreaks.slice().sort((a,b)=>a.streak-b.streak)[0];
+    if(_ht){_setT('home-hot-team',_ht.team);_setT('home-hot-team-sub','W'+_ht.streak+' streak \u00b7 Hottest in the NBA');}
+    if(_ct&&_ct.streak<0){_setT('home-cold-team',_ct.team);_setT('home-cold-team-sub','L'+Math.abs(_ct.streak)+' streak \u00b7 Coldest in the NBA');}
+  }
   document.getElementById("hot-players").innerHTML=hot.map(p=>`
     <div class="streak-card hot">
       <div style="width:32px;height:32px;border-radius:10px;background:var(--green-d);border:1px solid rgba(0,200,150,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -3478,7 +3541,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -3489,6 +3552,9 @@ async function loadDashboardData(){
       fetch('data/live_scores.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/standings.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch('data/advanced_stats.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('data/matchup_analysis.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/performance.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('data/line_movement.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
     ]);
     // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
     if(playerJson&&playerJson.players&&playerJson.players.length){
@@ -3513,6 +3579,13 @@ async function loadDashboardData(){
       // Re-render game cards and ticker now that live data is available
       renderGames();
       renderTicker();
+      // Update home tab + picks tab games tonight counter
+      const liveN=_liveGames.filter(g=>g.status==='live').length;
+      const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+      setEl('home-games-count',_liveGames.length);
+      setEl('home-games-badge',liveN>0?liveN+' live now':_liveGames.length+' games tonight');
+      setEl('picks-games-count',_liveGames.length);
+      setEl('picks-games-badge',_liveGames.length+' matchups');
     }
     // ── Populate DATA.east/west from standings.json ──
     if(standingsJson){
@@ -3560,6 +3633,52 @@ async function loadDashboardData(){
       buildHeroSection(picks, valueBets, explainers, contexts);
       buildTodayGamesStrip(picks);
     }
+    // ── Wire matchup_analysis.json -> MATCHUP_DATA ──
+    window.MATCHUP_JSON=matchupJson;
+    if(window.MATCHUP_JSON&&window.MATCHUP_JSON.length){
+      MATCHUP_DATA.length=0;
+      const allTeams=[...DATA.east,...DATA.west];
+      window.MATCHUP_JSON.forEach(m=>{
+        const netDiff=m.home_net_rtg-m.away_net_rtg;
+        const edge=netDiff>0?m.home_team:m.away_team;
+        const edgeMargin=Math.abs(netDiff).toFixed(1);
+        const reason=`${edge} has a ${edgeMargin} net rtg advantage -- ${netDiff>0?'home':'away'} team model edge`;
+        const hRec=allTeams.find(t=>t.abbr===m.home_team||t.team===m.home_team);
+        const aRec=allTeams.find(t=>t.abbr===m.away_team||t.team===m.away_team);
+        const homeRec=hRec?hRec.w+'-'+hRec.l:'--';
+        const awayRec=aRec?aRec.w+'-'+aRec.l:'--';
+        const recentFmt=v=>v!==null&&v!==undefined?(+v*100).toFixed(0)+'% W':'-';
+        MATCHUP_DATA.push({
+          label:m.away_team+' @ '+m.home_team,
+          away:m.away_team,home:m.home_team,
+          awayRec:awayRec,homeRec:homeRec,
+          stats:[
+            ['Off Rating (Season)',m.away_ortg.toFixed(1),m.home_ortg.toFixed(1)],
+            ['Def Rating (Season)',m.away_drtg.toFixed(1),m.home_drtg.toFixed(1)],
+            ['Net Rating',m.away_net_rtg.toFixed(1),m.home_net_rtg.toFixed(1)],
+            ['Pace',m.away_pace.toFixed(1),m.home_pace.toFixed(1)],
+            ['3PT Rate',(m.away_fg3_rate*100).toFixed(1)+'%',(m.home_fg3_rate*100).toFixed(1)+'%'],
+            ['Recent Form (L5)',recentFmt(m.away_recent_form),recentFmt(m.home_recent_form)],
+          ],
+          edge:edge,reason:reason,
+        });
+      });
+    }
+    // ── Wire performance.json -> Performance tab stats ──
+    window.PERF_DATA=perfJson;
+    if(window.PERF_DATA){
+      const p=window.PERF_DATA;
+      const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+      setEl('bt-win-rate',(p.season_accuracy*100).toFixed(1)+'%');
+      setEl('bt-total-games',p.total_games.toLocaleString());
+      const streak=p.current_streak;
+      if(streak)setEl('bt-streak',(streak.type==='W'?'W':'L')+streak.length);
+      const bestStreak=p.best_streak;
+      if(bestStreak)setEl('bt-best-streak','W'+bestStreak.length+' best');
+    }
+    // ── Wire line_movement.json -> Sharp Money tab ──
+    window.LINE_MOVEMENT=lineMovJson;
+    renderSharpMoney();
     updateCLVSummary();
     if(meta.exported_at){
       const d=new Date(meta.exported_at);
