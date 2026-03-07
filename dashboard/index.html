@@ -1141,7 +1141,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
       <div class="card"><div class="sh"><div class="st">Shooting by Zone</div><div class="ss">FG% at rim, paint, mid-range, 3-pointers</div></div><div id="shoot-chart" style="height:250px"></div></div>
     </div>
   </div>
-  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Stats through Mar 5, 2026 &#183; Season 2025-26</p>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="rankings-footer-ts">Stats through Mar 5, 2026</span> &#183; Season 2025-26</p>
 </section>
 
 <!-- TEAMS (free) -->
@@ -1240,7 +1240,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     </div>
     <div class="gg" id="all-games"></div>
   </div>
-  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Standings through Mar 5, 2026 &#183; Source: nba_api</p>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="standings-footer-ts">Standings through Mar 5, 2026</span> &#183; Source: nba_api</p>
 </section>
 
 <!-- INJURIES (free) -->
@@ -1501,7 +1501,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     </div>
     <div class="card"><div class="sh"><div class="st">Shot Distribution by Zone</div><div class="ss">% of attempts by court zone</div></div><div id="shot-zone-chart" style="height:270px"></div></div>
   </div>
-  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Analysis updated daily &#183; Data through Mar 5, 2026</p>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Analysis updated daily &#183; <span id="deepdive-footer-ts">Data through Mar 5, 2026</span></p>
 </section>
 
 </main>
@@ -2842,17 +2842,24 @@ function updateComparison(){
   }
   document.getElementById('cmp-prompt').style.display='none';
   document.getElementById('cmp-content').style.display='block';
-  // Merge live stats (ts%, usg%) over hardcoded ADV; fall back to ADV then ADV_NULL
+  // Merge live advanced stats (all fields) over hardcoded ADV; fall back to ADV then ADV_NULL
   function _mergeAdv(name){
     const base=ADV[name]||ADV_NULL;
     const live=(window.ADVANCED_STATS&&window.ADVANCED_STATS[name])||{};
+    // off_rtg/def_rtg/net_rtg from advanced_stats.json map to off_rtg/def_rtg/net_rtg fields
     return Object.assign({},base,{
-      ts:live.ts!=null?live.ts:base.ts,
-      usg:live.usg!=null?live.usg:base.usg,
+      ts:   live.ts!=null?live.ts:base.ts,
+      usg:  live.usg!=null?live.usg:base.usg,
+      // net rating as a proxy for BPM/VORP when not in hardcoded ADV
+      bpm:  base.bpm!=null?base.bpm:(live.net_rtg!=null?live.net_rtg:null),
+      // efg from advanced_stats maps to thr slot if not in hardcoded ADV
+      thr:  base.thr!=null?base.thr:(live.efg!=null?live.efg:null),
     });
   }
   const aA=_mergeAdv(nA),aB=_mergeAdv(nB);
-  const hasAdvA=!!(ADV[nA]||(window.ADVANCED_STATS&&window.ADVANCED_STATS[nA])),hasAdvB=!!(ADV[nB]||(window.ADVANCED_STATS&&window.ADVANCED_STATS[nB]));
+  const _livA=window.ADVANCED_STATS&&window.ADVANCED_STATS[nA];
+  const _livB=window.ADVANCED_STATS&&window.ADVANCED_STATS[nB];
+  const hasAdvA=!!(ADV[nA]||_livA),hasAdvB=!!(ADV[nB]||_livB);
   renderBanner('ban-a',pA,aA,colA,'left');
   renderBanner('ban-b',pB,aB,colB,'right');
   // Era-adjust scoring stats only (pts, reb, ast are counting stats; fg/3p% are ratios — no era adjust)
@@ -3094,15 +3101,29 @@ async function renderPlayoff(){
   poList(eastOdds,'po-east-list');poList(westOdds,'po-west-list');
   setTimeout(()=>document.querySelectorAll('.po-pct-fill').forEach(el=>{el.style.width=el.dataset.t}),100);
 
+  // Build champ chart from live data (top 8 by title odds across both conferences)
+  const allOdds=[...eastOdds,...westOdds].filter(t=>t.title>0).sort((a,b)=>b.title-a.title).slice(0,8);
+  const champX=allOdds.map(t=>{
+    // Abbreviate long names
+    const abbr={'San Antonio Spurs':'SAS','Oklahoma City Thunder':'OKC','New York Knicks':'NYK',
+      'Detroit Pistons':'DET','Boston Celtics':'BOS','Cleveland Cavaliers':'CLE',
+      'Minnesota Timberwolves':'MIN','Miami Heat':'MIA','Denver Nuggets':'DEN',
+      'Houston Rockets':'HOU','Los Angeles Lakers':'LAL','Phoenix Suns':'PHX',
+      'Golden State Warriors':'GSW','LA Clippers':'LAC','Portland Trail Blazers':'POR',
+      'Dallas Mavericks':'DAL','Memphis Grizzlies':'MEM','New Orleans Pelicans':'NOP',
+      'Sacramento Kings':'SAC','Utah Jazz':'UTA','Indiana Pacers':'IND','Atlanta Hawks':'ATL',
+      'Toronto Raptors':'TOR','Chicago Bulls':'CHI','Milwaukee Bucks':'MIL','Orlando Magic':'ORL',
+      'Philadelphia 76ers':'PHI','Washington Wizards':'WAS','Charlotte Hornets':'CHA','Brooklyn Nets':'BKN'};
+    return abbr[t.team]||t.team.split(' ').pop();
+  });
+  const champY=allOdds.map(t=>t.title);
+  const champColors=['rgba(245,166,35,.85)','rgba(0,200,150,.75)','rgba(79,158,255,.65)','rgba(79,158,255,.55)','rgba(79,158,255,.45)','rgba(79,158,255,.4)','rgba(79,158,255,.35)','rgba(79,158,255,.3)'];
+  const maxY=Math.max(...champY,5);
   Plotly.newPlot('champ-chart',[{
-    x:['SAS','OKC','NYK','DET','BOS','CLE','MIN','MIA'],
-    y:[25.2,20.2,9.8,20.5,7.8,5.5,3.1,2.2],type:'bar',
-    marker:{
-      color:['rgba(245,166,35,.85)','rgba(0,200,150,.75)','rgba(79,158,255,.65)','rgba(79,158,255,.55)','rgba(79,158,255,.45)','rgba(79,158,255,.4)','rgba(79,158,255,.35)','rgba(79,158,255,.3)'],
-      line:{width:0}
-    },
-    hovertemplate:'<b>%{x}</b><br>%{y}% chance to win the title<extra></extra>'
-  }],ML({y:{ticksuffix:'%',range:[0,28]}}),{responsive:true,displayModeBar:false});
+    x:champX,y:champY,type:'bar',
+    marker:{color:champColors.slice(0,champX.length),line:{width:0}},
+    hovertemplate:'<b>%{x}</b><br>%{y}% title odds<extra></extra>'
+  }],ML({y:{ticksuffix:'%',range:[0,Math.ceil(maxY*1.15)]}}),{responsive:true,displayModeBar:false});
 }
 
 // ─── DEEP DIVE — STREAKS ───
@@ -3683,10 +3704,15 @@ async function loadDashboardData(){
     if(meta.exported_at){
       const d=new Date(meta.exported_at);
       const label=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const tsLabel='Data through '+label;
       const updEl=document.getElementById('dash-updated');
       if(updEl)updEl.textContent='Updated '+label+' \u00b7 nba_api \u00b7 Model '+(meta.model_version||'v2.3');
       const relEl=document.getElementById('last-updated-rel');
       if(relEl)relEl.textContent=formatLastUpdated(meta.exported_at);
+      // Update all footer timestamps that were hardcoded
+      ['rankings-footer-ts','standings-footer-ts','deepdive-footer-ts'].forEach(id=>{
+        const el=document.getElementById(id);if(el)el.textContent=tsLabel;
+      });
     }
   }catch(e){
     console.warn('Dashboard data load:',e);
