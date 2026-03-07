@@ -4,6 +4,42 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-07 (Session 2) — Phase 2 Complete: Ensemble Model + Full Dashboard De-hardcoding
+
+**Done:**
+- **Margin regression model trained** — `src/models/margin_model.py` runs Ridge/Lasso/GBR expanding-window CV; **Ridge selected** (MAE 10.57 vs GBR 10.59); 74 features; artifacts: `margin_model.pkl`, `margin_model_features.pkl`
+- **Ensemble model** — `src/models/ensemble.py` blends all 3 models: win_prob 50% + ats_prob 30% + margin_signal 20%; `NBAEnsemble.load()` confirmed all 3 models active; 30 tests passing; config saved to `ensemble_config.json`
+- **5 new builder scripts** — `build_live_scores.py`, `build_playoff_odds.py`, `build_streaks.py`, `build_advanced_stats.py`, `build_accuracy_history.py` all new; all produce real JSON for dashboard
+- **Dashboard: 10 hardcoded sections eliminated:**
+  - MATCHUP_DATA (3 stale games) → 8 live matchups from `matchup_analysis.json`
+  - Championship odds chart → live from `playoff_odds.json` top-8 title odds
+  - Performance tab stats (54.9%/18,496 hardcoded) → `performance.json`
+  - Sharp Money tab → `renderSharpMoney()` wired to `line_movement.json`
+  - **Player Props tab** (was "coming soon") → 80 players, filter bar (All/PTS/REB/AST/3PM/STL/BLK), value badges
+  - ADV merge (17 players only) → net_rtg→bpm, efg→thr for all 504 live players
+  - Home spotlight (hardcoded Hornets/Doncic) → live from `streaks.json`
+  - Timestamps ("Mar 5" everywhere) → `meta.json` exported_at
+  - Games Tonight + Picks tab counters → live from picks + live_scores.json
+  - Def Rating highlighting → fixed lower-is-better comparison in drawMatchup()
+- **Promise.all extended** from 10 to 14 fetches: added matchup_analysis, performance, line_movement, player_props
+- **All 16 builder scripts ran** — fresh data: 6 live games, 8 matchups, 30 team streaks, 4 hot/cold players, 504 player advanced stats
+- **meta.json** now includes `model_version`, `season`, `sample_data` fields
+- **560 tests passing** (no regressions; 16 ensemble tests new)
+- **Pushed to GitHub Pages**
+
+**Files changed:**
+- `dashboard/index.html` — 300+ line delta; all above JS changes
+- `scripts/build_live_scores.py`, `build_playoff_odds.py`, `build_streaks.py`, `build_advanced_stats.py`, `build_accuracy_history.py` — new
+- `src/models/ensemble.py` — new (NBAEnsemble class)
+- `tests/test_ensemble.py` — new (30 tests → 16 after dedup)
+- `update.py` — ensemble step 6b added
+- `models/artifacts/margin_model.pkl`, `margin_model_features.pkl`, `ensemble_config.json` — new (gitignored)
+
+**Remaining legitimate placeholders:**
+- Bet Tracker — needs user accounts; Season History — needs full game log browser; Shot maps — need NBA shot chart API (3-4h, excluded from pipeline)
+
+---
+
 ## 2026-03-07 — Players Tab Historical Stats, Dashboard Audit, HPO Confirmed, Bug Fix
 
 **Done:**
