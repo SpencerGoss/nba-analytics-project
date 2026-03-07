@@ -2,18 +2,15 @@
 
 ## Core Insights (loaded by session-kickoff)
 
-- `shift(1)` before ALL rolling features -- data leakage is the #1 silent killer of model validity; expanding-window validation only
-- ALL inference paths load `game_outcome_model_calibrated.pkl`; sys.path must include PROJECT_ROOT before any model load or running calibration.py/ats_model.py as scripts
-- update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; step 6: writes 9 predictions/night to `predictions_history.db`
-- ATS model selection uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out from CV
-- NBA API game_date: use `format="mixed"` in ALL pd.to_datetime(); no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526 (all other CSVs: `season=202526`)
-- Pinnacle guest API (league 487, no auth) replaces ODDS_API_KEY; filter matchups to parentId=None + alignment=home/away
-- Pipeline is CSV-based; `database/nba.db` empty/legacy; only `predictions_history.db` active; 145 tests: `.venv/Scripts/python.exe -m pytest tests/ -q`
-- Any col with `_roll` in name auto-captured by `roll_cols`; never add to `context_cols` -- duplicates cause ValueError in build_matchup_dataset()
-- Dashboard: data-dependent UI must be populated in Promise.all data loader callback, not only in tab-click handlers; security hook treats literal "innerHTM L" (no space) as blocked -- use textContent fallbacks and "direct DOM injection" in docs
-- NBA API `LeagueDashPlayerStats` only covers ~1996-97+; pre-1996 legends need `_inject_legends()` with curated career stats (facts are not copyrightable); `dashboard/data/*.json` gitignored (regenerated at runtime)
-- `fetch_historical_players.py` flush: never use `first_write and i <= len(frames)` -- when early seasons fail, condition = False, header lost; use `first_write` alone
-- Optuna HPO result (2026-03-06, 100 trials each): LightGBM AUC=0.7116, XGBoost AUC=0.7115 -- BOTH worse than sklearn gradient_boosting (AUC=0.7406); do NOT replace the production model; gradient_boosting is the winner on this dataset
+- `shift(1)` before ALL rolling features -- data leakage kills model validity; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out
+- ALL inference loads `game_outcome_model_calibrated.pkl`; sys.path must include PROJECT_ROOT; update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`
+- NBA API `format="mixed"` in ALL pd.to_datetime() on game_date; no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526 (all other CSVs: `season=202526`)
+- Pinnacle guest API (league 487, no auth); pipeline is CSV-based; `database/nba.db` empty/legacy; only `predictions_history.db` active; run tests: `.venv/Scripts/python.exe -m pytest tests/ -q`
+- Any col with `_roll` auto-captured by `roll_cols`; never also add to `context_cols` -- duplicates cause ValueError; `closing_spread` can be NULL in `predictions_history.db` before games close -- always guard with `pd.isna()` before `float()`
+- Dashboard: data-dependent UI goes in Promise.all loader, not tab-click handlers; always use `.venv/Scripts/python.exe` for ML scripts (system Python lacks optuna/lightgbm)
+- NBA API `LeagueDashPlayerStats` only covers ~1996-97+; pre-1996 legends use `_inject_legends()` with curated career stats; `dashboard/data/*.json` gitignored (regenerated at runtime)
+- Optuna HPO (100 trials, 2026-03-06): LightGBM 0.7116, XGBoost 0.7115 -- both WORSE than gradient_boosting (0.7406); gradient_boosting is the production model; do not replace without beating 0.74
+- `fetch_historical_players.py` flush: use `first_write` alone -- `first_write and i <= len(frames)` breaks when early seasons fail (i >> len(frames), header never written)
 
 ## Domain Notes
 

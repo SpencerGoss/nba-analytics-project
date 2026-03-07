@@ -1,14 +1,14 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → dashboard v3 (Linear/Coinbase redesign: Teams, H2H, Power Rankings, Injuries, Value Bets, Betting Tools drawer, Player Comparison with legend injection) + CLV tracking. Dashboard live at GitHub Pages. Phase 2 in progress: Optuna HPO (100 trials LightGBM+XGBoost running). Odds: Pinnacle guest API (free, keyless).
+Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized, calibration_season=202122) → prediction store → dashboard v3 (Linear/Coinbase redesign: Teams, H2H, Power Rankings, Injuries, Value Bets, Betting Tools drawer, Player Comparison with legend injection) + CLV tracking. Dashboard live at GitHub Pages. Optuna HPO complete: gradient_boosting confirmed best (LightGBM 0.7116, XGBoost 0.7115 both lost). Odds: Pinnacle guest API (free, keyless).
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (145 passing baseline)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (573 passing baseline after build_line_movement tests added)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
@@ -41,7 +41,8 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - ATS model selection uses `min(brier_score_loss)` NOT accuracy — never revert to accuracy; CALIBRATION_SEASON="202122" is permanently held out from CV
 - Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use -> instead
 - Any feature col with `_roll` in name is auto-captured by `roll_cols` in build_matchup_dataset(); never also add to `context_cols` -- duplicates cause ValueError
-- CLV formula: `clv = opening_spread - closing_spread` (positive = better line than closing); do NOT invert
+- CLV formula: `clv = opening_spread - closing_spread` (positive = better line than closing); do NOT invert; `closing_spread` is NULL in DB until game closes — always guard with `pd.isna()` before `float()` cast
+- Dashboard: always use `.venv/Scripts/python.exe` for ML scripts (system Python lacks optuna/lightgbm); HPO flag is `--trials N` not `--n-trials N`
 - `calibration.py`/`ats_model.py` need sys.path set before running as scripts; use python -c workaround
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
 - Dashboard JS: data-dependent UI (CLV card, value bets) must be populated from the Promise.all data loader, not only from tab-click handlers (tab never fires if user doesn't click that tab)

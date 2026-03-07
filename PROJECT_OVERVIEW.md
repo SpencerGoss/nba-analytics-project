@@ -9,10 +9,11 @@ End-to-end NBA analytics system: data ingestion → feature engineering → game
 - Value bet output: now includes `kelly_fraction` (fractional Kelly, 0.5x scale) per bet
 - CLV tracking: `clv_tracking` table in `predictions_history.db`; opening lines logged automatically from `fetch_odds.py`; `CLVTracker.get_clv_summary()` reports mean CLV and edge flag
 - `player_absences.csv`: 1,098,538 rows, 75 seasons, 12.6% absence rate — fully wired into injury pipeline
-- Tests: 145 passing
+- Tests: 573 passing (29 new in build_line_movement; NULL guard fix)
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
 - **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv populates live with NBA moneylines + spreads
-- **Dashboard v3:** full Linear/Coinbase redesign; Teams page (conference tables + form), H2H page, Power Rankings, Injuries tab, upgraded Value Bet cards (WE SAY/BOOKS SAY/EDGE bars, explainer bullets), Betting Tools drawer (odds converter + edge calc + sizing), Player Comparison (LeBron vs Jordan default, era toggle, legend injection for Jordan/Bird/Magic/Kareem/Kobe/Wilt), 16 static-JSON builder scripts; 1,710 players in comparison JSON; live at https://spencergoss.github.io/nba-analytics-project/
+- **Dashboard v3:** full Linear/Coinbase redesign; 1,710 players from `player_comparison.json` with search + pagination; Players tab filter (Current Season / Legends / All); Standings default tab = Conference; 7 audit bugs fixed (null crashes, missing era buttons, dead stubs); Betting Tools drawer, Power Rankings, Injuries, H2H, Teams, Value Bets all live; live at https://spencergoss.github.io/nba-analytics-project/
+- **HPO result:** Optuna 100 trials — LightGBM 0.7116, XGBoost 0.7115 — both lose to gradient_boosting (0.7406); production model unchanged
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)

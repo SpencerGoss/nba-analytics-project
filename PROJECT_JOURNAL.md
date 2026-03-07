@@ -4,6 +4,49 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-07 — Players Tab Historical Stats, Dashboard Audit, HPO Confirmed, Bug Fix
+
+**Done:**
+- **Players tab — 1,710 players from JSON** — `loadDashboardData()` now fetches `player_comparison.json` and maps all players into `DATA.players` at runtime. Static 12-entry hardcoded array replaced. Added `mapJsonPlayer()` and `LEGENDS` const to normalize fields; legends merged in after fetch.
+- **Search + pagination** — added `<input id="player-search">` with `setPlayerSearch()` function; table defaults to top-100 rows with "Show More" button (`pShowAll` flag); prevents DOM freeze with 1,710 rows.
+- **Filter fix** — "Current Season" filter now uses `seasons_span` containing "2024"/"2025" instead of `!p.retired` (more accurate).
+- **Compare pickers** — optgroup labels show player counts ("Current Season (471)"); null-safe with `esc()`.
+- **ADV_NULL stub** — `updateComparison()` uses `ADV[name]||ADV_NULL` so radar/advanced sections show "No advanced data" instead of crashing for players without ADV entries.
+- **Standings tab order fixed** — "Standings" (conference tables) is now the default active tab; "Today's Games" is second. Page description updated.
+- **Legends expanded** — Kobe Bryant, Larry Bird, Magic Johnson, Kareem Abdul-Jabbar, Wilt Chamberlain added to DATA.players with `retired:true` + ADV entries. LeBron corrected to LAL.
+- **Dashboard audit — 7 bugs found and fixed:**
+  1. `showPage` IIFE executing before function declared → `DOMContentLoaded`
+  2. `setEraMode` null crash — era toggle buttons missing from HTML → added buttons + null guards
+  3. Parlay functions (`renderParlay`, `toggleParlay`, `updateParlaySlip`) null crashes → guards added
+  4. `injectTooltips` querying `model-tab-*` IDs (don't exist) → fixed to `page-bet-*`
+  5. Dead `showBettingTab` stub conflicting with real function → removed
+  6. `switchTab('games','standings')` targeting non-existent page → fixed to `switchTab('standings','conf')`
+  7. `LEGENDS` and `mapJsonPlayer` referenced before defined → definitions added before `loadDashboardData`
+- **Optuna HPO ran (100 trials each)** — LightGBM AUC=0.7116, XGBoost AUC=0.7115. Both WORSE than gradient_boosting baseline (0.7406). Production model unchanged. Best params saved to `models/artifacts/best_hpo_params.json`.
+- **`build_line_movement.py` NULL guard** — `closing_spread` is NULL for games that haven't closed; added `pd.isna()` check before `float()` cast. Test `test_loads_real_db` now passes (29/29).
+- **Daily pipeline ran** — 7 predictions for Mar 6 games written to `predictions_history.db`.
+
+**Issues encountered:**
+- Background `run_in_background` bash commands on Windows didn't capture output (empty files). Fixed by using `cmd > /tmp/file.txt 2>&1 &` pattern instead.
+- HPO script uses `--trials` not `--n-trials`; failed silently on wrong flag name.
+- `python` vs `.venv/Scripts/python.exe` — system Python lacks optuna/lightgbm; always use venv Python for ML scripts.
+- Two parallel agents editing same file (historical stats + audit) — both changes captured in one commit since auditor ran while wiring agent was mid-edit.
+
+**Files changed:**
+- `dashboard/index.html` — 1,710 player JSON wiring, search/pagination, audit fixes, legends, standings tab order
+- `scripts/build_line_movement.py` — NULL guard on closing_spread
+- `WORKING_NOTES.md` — HPO result insight added
+- `models/artifacts/best_hpo_params.json`, `game_outcome_model_hpo.pkl` — HPO artifacts (gitignored)
+
+**Decision: gradient_boosting retained over LightGBM/XGBoost**
+- Context: 100 Optuna trials each, same expanding-window CV
+- Chose: keep gradient_boosting (AUC=0.7406) — LightGBM only reached 0.7116
+- Trade-off: LightGBM may improve with more features or different feature engineering; revisit in Phase 3
+
+**Next:** Phase 2 model improvements (margin regression, ensemble stacking, SBRO historical odds integration); wire real standings/injuries/rankings data from builder scripts into dashboard.
+
+---
+
 ## 2026-03-06 — Dashboard v3 Full Redesign + Legend Players + Phase 2 HPO
 
 **Done:**
