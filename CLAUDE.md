@@ -21,6 +21,8 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `src/models/clv_tracker.py` — CLV tracking (opening/closing line, edge flag)
 - `scripts/build_dashboard.py` — rebuilds dashboard/index.html with real CSV data
 - `scripts/build_player_comparison.py` — player comparison JSON (1,710 players + legend injection for Jordan/Bird/Magic/Kareem/Kobe/Wilt)
+- `scripts/build_player_props.py` — season-avg props builder (80 players, reads player_stats.csv + game_logs)
+- `scripts/build_value_bets.py` — reads `data/odds/game_lines.csv` (NOT data/processed/); columns: game_date, home_market_prob
 - `scripts/fetch_historical_players.py` — historical player/team seasons 1946-2025; header bug fix: use `first_write` not `first_write and i <= len(frames)`
 - `scripts/tune_hyperparams.py` — Optuna HPO (100 trials, LightGBM+XGBoost, expanding-window CV)
 - `scripts/build_live_scores.py` — live scoreboard from nba_api (6 games) -> live_scores.json
@@ -53,6 +55,10 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `calibration.py`/`ats_model.py` need sys.path set before running as scripts; use python -c workaround
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
 - Dashboard JS: data-dependent UI (CLV card, value bets) must be populated from the Promise.all data loader, not only from tab-click handlers (tab never fires if user doesn't click that tab)
+- `dashboard/data/*.json` are COMMITTED to git (not gitignored) — GitHub Pages has no build step; push dashboard/data/ after running update.py to deploy fresh data
+- `game_lines.csv` is at `data/odds/game_lines.csv` (not data/processed/); written by `scripts/fetch_odds.py` with columns `date`, `home_moneyline` — build_value_bets.py converts to `game_date`+`home_market_prob`
+- `player_stats.csv` stores season TOTALS not per-game averages — always divide by `gp` before computing projections
+- `update.py` Step 7 calls all 23 builder scripts; to deploy: run `python update.py` then `git add dashboard/data/ && git push`
 
 ## Skill Routing (auto-trigger — no prompting needed)
 

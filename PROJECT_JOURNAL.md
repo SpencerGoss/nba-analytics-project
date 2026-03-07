@@ -4,6 +4,31 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-07 (Session 3) — Live Site Deployed: Pipeline End-to-End + Real Dashboard Data
+
+**Done:**
+- **GitHub Pages now shows real data** — removed `dashboard/data/*.json` from .gitignore; committed all 22 JSON files; pushed → deploy triggered
+- **`update.py` Step 7 added** — 23 builder scripts called in dependency order after prediction generation; running `update.py` alone now produces a fully deployable dashboard
+- **`build_value_bets.py` fixed** — path mismatch: `data/processed/game_lines.csv` → `data/odds/game_lines.csv`; column mismatch: `date`→`game_date`, `home_moneyline`→`home_market_prob` (American odds to implied prob)
+- **`backfill_outcomes.py` ran** — 8 predictions resolved from 2026-03-06; season accuracy now 64.0% (214 games, 6/8 correct)
+- **6 new predictions for 2026-03-07** written: OKC/GSW 77.5%, MIL/UTA 86.3%, DET/BKN 88.5%, MIN/ORL 86.3%, MEM/LAC 77.5%, ATL/PHI 50%
+- **Pinnacle player props** (157 live props, 92% accessible) — `fetch_player_props()` stub in `scripts/fetch_odds.py` being replaced with real implementation (in-progress at session end)
+- **`build_player_props.py` created** — season-avg based props (80 players, <5s, reads player_stats.csv + game_logs)
+- **BallDontLie API key** added to `.env` by user; `.env.example` updated to document it
+- **Audited full dashboard** — 22 JSON files, all populated; confirmed 13 more builder scripts exist beyond the 5 known ones; `scheduler.py` is the separate runner
+- **All builder scripts running** — standings, injuries, power_rankings, h2h, streaks, live_scores, playoff_odds, trends, totals, game_context, explainers, matchup_analysis all OK
+- **2 commits, 1 push** — GitHub Actions deploying
+
+**Still in progress at session end:**
+- `props-wiring` agent: replacing Pinnacle props stub in `scripts/fetch_odds.py` + joining real book lines in `scripts/build_props.py`
+
+**Next:**
+1. Commit `scripts/fetch_odds.py` + `scripts/build_props.py` once props-wiring agent finishes
+2. Verify live GitHub Pages site loads real data
+3. Wire CLV summary card to `clv_tracking` table (currently uses `value_bets.edge_pct` as proxy — wrong semantics)
+
+---
+
 ## 2026-03-07 (Session 2) — Phase 2 Complete: Ensemble Model + Full Dashboard De-hardcoding
 
 **Done:**
