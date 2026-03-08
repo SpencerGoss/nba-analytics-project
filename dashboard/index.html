@@ -4038,7 +4038,7 @@ async function loadDashboardData(){
           const n=parseInt(rawStreak,10);
           streak=n<0?'L'+Math.abs(n):'W'+(n||1);
         }
-        return {team:t.team_name||t.team,abbr:t.team,w:t.w,l:t.l,gb:gb,streak:streak};
+        return {team:t.team_name||t.team,abbr:t.team,w:t.w,l:t.l,gb:gb,streak:streak,last10:t.last10||null};
       }
       if(standingsJson.east&&standingsJson.east.length)DATA.east=standingsJson.east.map(mapStandingRow);
       if(standingsJson.west&&standingsJson.west.length)DATA.west=standingsJson.west.map(mapStandingRow);
