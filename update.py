@@ -342,6 +342,8 @@ def main() -> None:
             ("build_line_movement", "Line movement"),
             # Props after odds fetch
             ("build_props", "Player props"),
+            # CLV tracking
+            ("build_clv", "CLV summary"),
             # Heavy -- run last
             ("build_player_comparison", "Player comparison"),
             ("build_season_history", "Season history"),

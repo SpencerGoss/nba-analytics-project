@@ -39,6 +39,46 @@ SEASON_LABELS = {
     202425: "2024-25",
 }
 
+TEAM_NAMES = {
+    "ATL": "Atlanta Hawks",
+    "BOS": "Boston Celtics",
+    "BKN": "Brooklyn Nets",
+    "CHA": "Charlotte Hornets",
+    "CHI": "Chicago Bulls",
+    "CLE": "Cleveland Cavaliers",
+    "DAL": "Dallas Mavericks",
+    "DEN": "Denver Nuggets",
+    "DET": "Detroit Pistons",
+    "GSW": "Golden State Warriors",
+    "HOU": "Houston Rockets",
+    "IND": "Indiana Pacers",
+    "LAC": "Los Angeles Clippers",
+    "LAL": "Los Angeles Lakers",
+    "MEM": "Memphis Grizzlies",
+    "MIA": "Miami Heat",
+    "MIL": "Milwaukee Bucks",
+    "MIN": "Minnesota Timberwolves",
+    "NOP": "New Orleans Pelicans",
+    "NYK": "New York Knicks",
+    "OKC": "Oklahoma City Thunder",
+    "ORL": "Orlando Magic",
+    "PHI": "Philadelphia 76ers",
+    "PHX": "Phoenix Suns",
+    "POR": "Portland Trail Blazers",
+    "SAC": "Sacramento Kings",
+    "SAS": "San Antonio Spurs",
+    "TOR": "Toronto Raptors",
+    "UTA": "Utah Jazz",
+    "WAS": "Washington Wizards",
+    # Historical teams
+    "NOH": "New Orleans Hornets",
+    "NOK": "New Orleans/Oklahoma City Hornets",
+    "NJN": "New Jersey Nets",
+    "SEA": "Seattle SuperSonics",
+    "VAN": "Vancouver Grizzlies",
+    "WSB": "Washington Bullets",
+}
+
 
 def season_label(code: int) -> str:
     return SEASON_LABELS.get(code, str(code))
@@ -99,15 +139,19 @@ def build_games(season_df: pd.DataFrame) -> list[dict]:
             continue
         home_abbr = parts[0].strip()
         away_abbr = parts[1].strip()
+        home_name = TEAM_NAMES.get(home_abbr, home_abbr)
+        away_name = TEAM_NAMES.get(away_abbr, away_abbr)
 
         records.append(
             {
                 "date": row["game_date"].strftime("%Y-%m-%d"),
-                "home": home_abbr,
-                "away": away_abbr,
+                "home": home_name,
+                "away": away_name,
+                "home_abbr": home_abbr,
+                "away_abbr": away_abbr,
                 "home_pts": int(row["pts"]) if pd.notna(row["pts"]) else None,
                 "away_pts": None,  # filled below from away row if available
-                "winner": home_abbr if row["wl"] == "W" else away_abbr,
+                "winner": home_name if row["wl"] == "W" else away_name,
                 "_game_id": row["game_id"],
                 "_home_pts": int(row["pts"]) if pd.notna(row["pts"]) else None,
                 "_home_wl": row["wl"],

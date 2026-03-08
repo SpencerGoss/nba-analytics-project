@@ -76,6 +76,10 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Adding features, scripts, or models | `nba-feature-dev` |
 | Backfilling or fetching historical data | `nba-backfill` |
 | Evaluating or comparing model performance | `nba-model-evaluation` |
+| Modifying dashboard/index.html or wiring new JSON | `nba-dashboard-dev` |
+| Adding/modifying Plotly charts | `plotly-charts` |
+| Querying or extending predictions_history.db | `sqlite-analytics` |
+| Picks, value bets, CLV, Kelly, ATS analysis | `nba-betting-analysis` |
 
 ### Development
 

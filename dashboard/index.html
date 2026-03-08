@@ -1123,7 +1123,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <div class="tab-content active" id="players-tab-stats">
     <div class="fb" style="margin-bottom:12px">
       <button class="fc active" id="pfilt-current" onclick="setPlayerFilter('current',this)">Current Season</button>
-      <button class="fc" id="pfilt-legends" onclick="setPlayerFilter('legends',this)">All-Time Legends</button>
+      <button class="fc" id="pfilt-legends" onclick="setPlayerFilter('legends',this)">All-Time Players</button>
       <button class="fc" id="pfilt-all" onclick="setPlayerFilter('all',this)">All Players</button>
     </div>
     <div style="margin-bottom:10px"><input id="player-search" type="search" placeholder="Search player name…" oninput="setPlayerSearch(this.value)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t0);font-family:var(--f);font-size:13px;outline:none"/></div>
@@ -1164,6 +1164,16 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   </div>
   <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="rankings-footer-ts">Stats through Mar 5, 2026</span> &#183; Season 2025-26</p>
 </section>
+
+<!-- PLAYER DETAIL MODAL -->
+<div id="player-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;backdrop-filter:blur(4px)" onclick="closePlayerModal()"></div>
+<div id="player-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:901;width:min(92vw,700px);max-height:85vh;overflow-y:auto;background:var(--card);border:1px solid var(--b1);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.6)">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--b0);position:sticky;top:0;background:var(--card);z-index:1">
+    <div style="font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--t0)" id="pm-title">Player Detail</div>
+    <button onclick="closePlayerModal()" style="background:none;border:1px solid var(--b1);border-radius:8px;padding:5px 10px;color:var(--t2);cursor:pointer;font-size:13px">&#10005;</button>
+  </div>
+  <div id="pm-content" style="padding:20px 22px"></div>
+</div>
 
 <!-- TEAMS (free) -->
 <section id="page-teams" class="page">
@@ -2223,7 +2233,7 @@ function mapJsonPlayer(p){
     nbaId:    p.player_id>0?p.player_id:null,
     debutYear:debutYear,
     primaryTeam:team||'N/A',
-    retired:  !!p._legend,
+    retired:  !spanStr.includes('2024')&&!spanStr.includes('2025'),
     seasons_span: spanStr,
   };
 }
@@ -2591,8 +2601,8 @@ function renderPlayersTable(){
   const total=s.length;
   const visible=pShowAll?s:s.slice(0,P_PAGE_SIZE);
   // 5. Render rows
-  document.getElementById('players-tb').innerHTML=visible.map((p,i)=>`
-    <tr>
+  const tbRows=visible.map((p,i)=>`
+    <tr style="cursor:pointer" onclick="showPlayerDetail('${esc(p.name).replace(/'/g,"\\'")}')">
       <td><span class="rn">${i+1}</span></td>
       <td class="nc">
         ${headshot(p.nbaId,p.ini,36)}
@@ -2608,6 +2618,7 @@ function renderPlayersTable(){
       <td style="${pSort==='thr'?'color:var(--gold);font-weight:700':''}">${p.thr}%</td>
       <td><span class="tpill">${esc(p.team)}</span></td>
     </tr>`).join('');
+  _setHtml(document.getElementById('players-tb'),tbRows);
   // 6. Show-more footer button
   const showMoreEl=document.getElementById('players-show-more');
   if(showMoreEl){
@@ -2624,6 +2635,112 @@ function sortPlayers(col){
   if(pSort===col)pDir*=-1;else{pSort=col;pDir=-1;}
   renderPlayersTable();
   updateSortHeaders();
+}
+
+function closePlayerModal(){
+  document.getElementById('player-modal').style.display='none';
+  document.getElementById('player-modal-backdrop').style.display='none';
+}
+
+function showPlayerDetail(name){
+  const p=DATA.players.find(x=>x.name===name);
+  if(!p)return;
+  const raw=window._FULL_PLAYER_DATA&&window._FULL_PLAYER_DATA.find(x=>x.player_name===name);
+  const primaryTeam=getPlayerPrimaryTeam(p);
+  const colors=getPlayerColors(p);
+  const col=colors?colors[0]:NEUTRAL_COLOR;
+  const col2=colors?colors[1]:NEUTRAL_COLOR_B;
+  const logoUrl=teamLogoByAbbr(primaryTeam);
+  const logoHtml=logoUrl?`<img src="${logoUrl}" width="40" height="40" style="object-fit:contain;border-radius:8px" onerror="this.style.display='none'" alt="${primaryTeam} logo">`:'';
+  document.getElementById('pm-title').textContent=name;
+
+  // Build team history from seasons
+  let teamHistoryHtml='';
+  let careerSeasonHtml='';
+  if(raw&&raw.seasons&&raw.seasons.length){
+    // Team history (group consecutive stints)
+    const stints=[];
+    raw.seasons.forEach(s=>{
+      if(!stints.length||stints[stints.length-1].team!==s.team){
+        stints.push({team:s.team,seasons:[s.season]});
+      } else {
+        stints[stints.length-1].seasons.push(s.season);
+      }
+    });
+    teamHistoryHtml='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Team History</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+
+      stints.map(st=>{
+        const tc=TEAM_COLORS[st.team];
+        const bg=tc?tc[0]+'22':'var(--b0)';
+        const border=tc?tc[0]+'55':'var(--b1)';
+        const txt=tc?tc[0]:col;
+        const yr=st.seasons.length>1?st.seasons[0].slice(0,4)+'-'+st.seasons[st.seasons.length-1].slice(5):st.seasons[0].slice(0,4);
+        return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:10px;background:${bg};border:1px solid ${border}"><span style="font-size:12px;font-weight:700;color:${txt}">${esc(st.team)}</span><span style="font-size:11px;color:var(--t2)">${yr}</span></div>`;
+      }).join('')+'</div></div>';
+
+    // Season-by-season table
+    careerSeasonHtml='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Season-by-Season</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<thead><tr style="border-bottom:1px solid var(--b0)">'+
+      '<th style="text-align:left;padding:5px 8px;color:var(--t2);font-weight:700">Season</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">Team</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">GP</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">PTS</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">REB</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">AST</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">FG%</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">3P%</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">TS%</th>'+
+      '</tr></thead><tbody>'+
+      raw.seasons.map((s,i)=>{
+        const isCareerBest=raw.best_season===s.season;
+        const tc=TEAM_COLORS[s.team];
+        const tCol=tc?tc[0]:col;
+        return `<tr style="border-bottom:1px solid var(--b0);${isCareerBest?'background:'+col+'11':''}">
+          <td style="padding:5px 8px;color:var(--t1);font-weight:${isCareerBest?700:400}">${esc(s.season)}${isCareerBest?' <span style="font-size:9px;color:'+col+';font-weight:700">BEST</span>':''}</td>
+          <td style="padding:5px 8px;text-align:center"><span style="font-size:11px;font-weight:700;color:${tCol}">${esc(s.team)}</span></td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.gp||'-'}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:600;color:var(--t0)">${s.pts!=null?s.pts.toFixed(1):'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.reb!=null?s.reb.toFixed(1):'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.ast!=null?s.ast.toFixed(1):'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.fg_pct!=null?(s.fg_pct*100).toFixed(1)+'%':'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.fg3_pct!=null?(s.fg3_pct*100).toFixed(1)+'%':'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.ts_pct!=null?(s.ts_pct*100).toFixed(1)+'%':'-'}</td>
+        </tr>`;
+      }).join('')+
+      '</tbody></table></div></div>';
+  }
+
+  // Career averages cards
+  const ca=raw?raw.career_avgs:{pts:p.pts,reb:p.reb,ast:p.ast};
+  const caHtml='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;margin-bottom:18px">'+
+    [['PTS',ca.pts,'pts'],['REB',ca.reb,'reb'],['AST',ca.ast,'ast'],['STL',ca.stl,'stl'],['BLK',ca.blk,'blk']].filter(([,v])=>v!=null&&v>0).map(([lbl,v])=>
+      `<div style="text-align:center;padding:10px 6px;background:${col}11;border:1px solid ${col}33;border-radius:12px">
+        <div style="font-family:var(--fm);font-size:20px;font-weight:800;color:${col}">${v!=null?Number(v).toFixed(1):'-'}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-top:3px">${lbl}</div>
+      </div>`
+    ).join('')+'</div>';
+
+  const spanStr=raw?raw.seasons_span:(p.seasons_span||'');
+  const gpStr=raw?raw.career_gp:p.career_gp;
+
+  const headerHtml=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--b0)">
+    ${headshot(p.nbaId,p.ini,64)}
+    <div style="flex:1">
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:${col};margin-bottom:4px">${esc(name)}</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        ${logoHtml}
+        <span style="font-size:13px;color:var(--t1);font-weight:600">${esc(primaryTeam)}</span>
+        ${spanStr?`<span style="font-size:12px;color:var(--t2)">${esc(spanStr)}</span>`:''}
+        ${gpStr?`<span style="font-size:12px;color:var(--t2)">${gpStr} career games</span>`:''}
+        ${p.retired?'<span style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--purple);padding:2px 7px;border:1px solid rgba(139,92,246,.3);border-radius:6px">Retired</span>':''}
+      </div>
+    </div>
+  </div>`;
+
+  const fullHtml=headerHtml+caHtml+teamHistoryHtml+careerSeasonHtml;
+  _setHtml(document.getElementById('pm-content'),fullHtml);
+  document.getElementById('player-modal').style.display='block';
+  document.getElementById('player-modal-backdrop').style.display='block';
 }
 
 // ─── STANDINGS ───
@@ -2826,9 +2943,30 @@ let eraAdjusted=false;
 
 // Team accent colors keyed by team abbreviation (primary, secondary)
 const TEAM_COLORS={
-  CLE:['#860038','#FDBB30'],
-  CHI:['#CE1141','#000000'],
+  ATL:['#C1272D','#FDB927'],BOS:['#007A33','#BA9653'],BKN:['#000000','#FFFFFF'],
+  CHA:['#1D1160','#00788C'],CHI:['#CE1141','#000000'],CLE:['#860038','#FDBB30'],
+  DAL:['#00538C','#002B5E'],DEN:['#0E2240','#FEC524'],DET:['#C8102E','#1D428A'],
+  GSW:['#1D428A','#FFC72C'],HOU:['#CE1141','#000000'],IND:['#002D62','#FDBB30'],
+  LAC:['#C8102E','#1D428A'],LAL:['#552583','#FDB927'],MEM:['#5D76A9','#12173F'],
+  MIA:['#98002E','#F9A01B'],MIL:['#00471B','#EEE1C6'],MIN:['#0C2340','#236192'],
+  NOP:['#0C2340','#31A851'],NYK:['#006BB6','#F58426'],OKC:['#007AC1','#EF3B24'],
+  ORL:['#0077C0','#C4CED4'],PHI:['#006BB6','#ED174C'],PHX:['#1D1160','#E56020'],
+  POR:['#E03A3E','#000000'],SAC:['#5A2D81','#63727A'],SAS:['#C4CED4','#000000'],
+  TOR:['#CE1141','#000000'],UTA:['#002B5C','#00471B'],WAS:['#002B5C','#E31837'],
 };
+// NBA team IDs for CDN logos: https://cdn.nba.com/logos/nba/{id}/global/L/logo.svg
+const TEAM_IDS={
+  ATL:1610612737,BOS:1610612738,BKN:1610612751,CHA:1610612766,CHI:1610612741,
+  CLE:1610612739,DAL:1610612742,DEN:1610612743,DET:1610612765,GSW:1610612744,
+  HOU:1610612745,IND:1610612754,LAC:1610612746,LAL:1610612747,MEM:1610612763,
+  MIA:1610612748,MIL:1610612749,MIN:1610612750,NOP:1610612740,NYK:1610612752,
+  OKC:1610612760,ORL:1610612753,PHI:1610612755,PHX:1610612756,POR:1610612757,
+  SAC:1610612758,SAS:1610612759,TOR:1610612761,UTA:1610612762,WAS:1610612764,
+};
+function teamLogoByAbbr(abbr){
+  const id=TEAM_IDS[abbr];
+  return id?`https://cdn.nba.com/logos/nba/${id}/global/L/logo.svg`:null;
+}
 // Neutral fallback color for teams not in TEAM_COLORS
 const NEUTRAL_COLOR='#4F9EFF';
 const NEUTRAL_COLOR_B='#F5A623';
@@ -2852,11 +2990,11 @@ function getEraDecade(debutYear){
 
 function eraFactor(debutYear){
   const decade=getEraDecade(debutYear);
-  const leagueAvg=ERA_LEAGUE_AVG[decade]||101.3;
-  // Scale: per-player baseline / (league ppg / 10 players per team)
-  // We use the ratio directly against a fixed 14.5 ppg player-level baseline
-  const perPlayerLeague=leagueAvg/10;
-  return ERA_BASELINE/perPlayerLeague;
+  const eraAvg=ERA_LEAGUE_AVG[decade]||101.3;
+  const modernAvg=ERA_LEAGUE_AVG[2020]||111.8;
+  // Normalize: ratio of modern league scoring to player's era scoring
+  // Modern players get 1.0; low-scoring eras get slight boost; high-scoring eras get slight reduction
+  return modernAvg/eraAvg;
 }
 
 function applyEra(val,debutYear){
@@ -2864,10 +3002,25 @@ function applyEra(val,debutYear){
   return Math.round(val*eraFactor(debutYear)*10)/10;
 }
 
+function getPlayerPrimaryTeam(p){
+  // For active players, use current team
+  if(!p.retired)return p.team||p.primaryTeam;
+  // For historical players, compute team with most seasons from raw data
+  const raw=window._FULL_PLAYER_DATA&&window._FULL_PLAYER_DATA.find(x=>x.player_name===p.name);
+  if(raw&&raw.seasons&&raw.seasons.length){
+    const counts={};
+    raw.seasons.forEach(s=>{counts[s.team]=(counts[s.team]||0)+1;});
+    return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+  }
+  return p.primaryTeam||p.team;
+}
 function getPlayerColors(p){
-  const team=p.primaryTeam||p.team;
+  const team=getPlayerPrimaryTeam(p);
   const colors=TEAM_COLORS[team];
-  return colors?colors[0]:null;
+  if(colors)return colors;
+  // fallback: try p.team directly
+  const fallback=TEAM_COLORS[p.team]||TEAM_COLORS[p.primaryTeam];
+  return fallback||null;
 }
 
 function setEraMode(adj){
@@ -2895,7 +3048,7 @@ function initPickers(){
     sel.innerHTML=
       '<option value="">— Select player —</option>'+
       '<optgroup label="Current Season ('+current.length+')">'+mkOpts(current)+'</optgroup>'+
-      '<optgroup label="All-Time Legends">'+mkOpts(legends)+'</optgroup>';
+      '<optgroup label="All-Time Players">'+mkOpts(legends)+'</optgroup>';
   });
   // Default: LeBron vs Michael Jordan
   const names=DATA.players.map(p=>p.name);
@@ -2911,8 +3064,10 @@ function updateComparison(){
   const nA=document.getElementById('picker-a').value,nB=document.getElementById('picker-b').value;
   const pA=nA?DATA.players.find(p=>p.name===nA):null;
   const pB=nB?DATA.players.find(p=>p.name===nB):null;
-  const colA=pA?(getPlayerColors(pA)||NEUTRAL_COLOR):NEUTRAL_COLOR;
-  const colB=pB?(getPlayerColors(pB)||NEUTRAL_COLOR_B):NEUTRAL_COLOR_B;
+  const colorsA=pA?getPlayerColors(pA):null;
+  const colorsB=pB?getPlayerColors(pB):null;
+  const colA=colorsA?colorsA[0]:NEUTRAL_COLOR;
+  const colB=colorsB?colorsB[0]:NEUTRAL_COLOR_B;
   updatePreview('prev-a',nA,colA);updatePreview('prev-b',nB,colB);
   if(!nA||!nB||nA===nB){
     document.getElementById('cmp-prompt').style.display='block';
@@ -2993,17 +3148,23 @@ function renderBanner(id,p,adv,col,align){
     </div></div>`;
 }
 
-function renderRadar(pA,pB,aA,aB){
+function renderRadar(pA,pB,aA,aB,colA,colB){
+  colA=colA||NEUTRAL_COLOR;colB=colB||NEUTRAL_COLOR_B;
+  function hexToRgba(hex,a){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  const fillA=hexToRgba(colA,.12),fillB=hexToRgba(colB,.12);
   const nm=(v,mn,mx)=>Math.max(0,Math.min(100,Math.round(((v-mn)/(mx-mn))*100)));
   const cats=['Scoring','Playmaking','Rebounding','Efficiency','Defense','Volume'];
   const vA=[nm(pA.pts,18,35),nm(pA.ast,3,12),nm(pA.reb,3,14),nm(aA.ts,54,68),nm(aA.bpm,2,12),nm(aA.usg,24,37)];
   const vB=[nm(pB.pts,18,35),nm(pB.ast,3,12),nm(pB.reb,3,14),nm(aB.ts,54,68),nm(aB.bpm,2,12),nm(aB.usg,24,37)];
   Plotly.newPlot('radar',[
     {type:'scatterpolar',r:[...vA,vA[0]],theta:[...cats,cats[0]],fill:'toself',
-      fillcolor:'rgba(79,158,255,.1)',line:{color:'#4F9EFF',width:2},name:pA.name.split(' ').pop(),
+      fillcolor:fillA,line:{color:colA,width:2},name:pA.name.split(' ').pop(),
       hovertemplate:'%{theta}: %{r}<extra></extra>'},
     {type:'scatterpolar',r:[...vB,vB[0]],theta:[...cats,cats[0]],fill:'toself',
-      fillcolor:'rgba(245,166,35,.1)',line:{color:'#F5A623',width:2},name:pB.name.split(' ').pop(),
+      fillcolor:fillB,line:{color:colB,width:2},name:pB.name.split(' ').pop(),
       hovertemplate:'%{theta}: %{r}<extra></extra>'},
   ],{
     paper_bgcolor:'transparent',plot_bgcolor:'transparent',
@@ -3016,17 +3177,19 @@ function renderRadar(pA,pB,aA,aB){
   },{responsive:true,displayModeBar:false});
 }
 
-function renderBars(id,rows,nA,nB){
+function renderBars(id,rows,nA,nB,colA,colB){
+  colA=colA||NEUTRAL_COLOR;colB=colB||NEUTRAL_COLOR_B;
   const lA=nA.split(' ').pop(),lB=nB.split(' ').pop();
-  document.getElementById(id).innerHTML=rows.map(([lbl,vA,vB,mx,sfx=''])=>{
+  const html=rows.map(([lbl,vA,vB,mx,sfx=''])=>{
     const pA=Math.round((vA/mx)*100),pB=Math.round((vB/mx)*100),win=vA>=vB;
     return `<div class="cmprow">
       <div class="cmplbl">${lbl}</div>
       <div class="cmpbs">
-        <div class="cmpbw"><div class="cmpbn" style="color:#4F9EFF">${lA}</div><div class="cmpbt"><div class="cmpbf" style="width:0%;background:#4F9EFF;opacity:${win?1:.35}" data-t="${pA}%"></div></div><div class="cmpbv" style="color:${win?'#4F9EFF':'var(--t2)'}">${vA}${sfx}</div></div>
-        <div class="cmpbw"><div class="cmpbn" style="color:#F5A623">${lB}</div><div class="cmpbt"><div class="cmpbf" style="width:0%;background:#F5A623;opacity:${!win?1:.35}" data-t="${pB}%"></div></div><div class="cmpbv" style="color:${!win?'#F5A623':'var(--t2)'}">${vB}${sfx}</div></div>
+        <div class="cmpbw"><div class="cmpbn" style="color:${colA}">${lA}</div><div class="cmpbt"><div class="cmpbf" style="width:0%;background:${colA};opacity:${win?1:.35}" data-t="${pA}%"></div></div><div class="cmpbv" style="color:${win?colA:'var(--t2)'}">${vA}${sfx}</div></div>
+        <div class="cmpbw"><div class="cmpbn" style="color:${colB}">${lB}</div><div class="cmpbt"><div class="cmpbf" style="width:0%;background:${colB};opacity:${!win?1:.35}" data-t="${pB}%"></div></div><div class="cmpbv" style="color:${!win?colB:'var(--t2)'}">${vB}${sfx}</div></div>
       </div></div>`;
   }).join('');
+  _setHtml(document.getElementById(id),html);
   setTimeout(()=>document.querySelectorAll(`#${id} .cmpbf`).forEach(el=>{el.style.width=el.dataset.t}),80);
 }
 
@@ -3282,12 +3445,15 @@ async function renderPlayoff(){
   function poList(data,id){
     document.getElementById(id).innerHTML=data.map((t,i)=>{
       const col=t.pct>=90?'var(--green)':t.pct>=60?'var(--gold)':'var(--red)';
-      const label=i<6?'Playoff':i<8?'Play-In':'Eliminated';
-      const lc=i<6?'var(--green)':i<8?'var(--gold)':'var(--t2)';
-      return `<div class="po-row">
+      const isClinched=t.pct>=97;
+      const label=i<6?(isClinched?'Clinched':'Playoff'):i<10?'Play-In':'Eliminated';
+      const lc=i<6?(isClinched?'var(--green)':'var(--blue)'):i<10?'var(--gold)':'var(--t2)';
+      const badge=i<6?(isClinched?'<span style="font-size:9px;background:rgba(0,200,150,.15);color:var(--green);border-radius:4px;padding:1px 4px;margin-left:4px">&#10003;</span>':''):
+                  i<10?'<span style="font-size:9px;background:rgba(245,166,35,.15);color:var(--gold);border-radius:4px;padding:1px 4px;margin-left:4px">P-IN</span>':'';
+      return `<div class="po-row" style="${i===5?'border-bottom:2px dashed rgba(0,200,150,.3);margin-bottom:4px;padding-bottom:4px':i===9?'border-bottom:2px dashed rgba(245,166,35,.3);margin-bottom:4px;padding-bottom:4px':''}">
         <div class="po-seed">${i+1}</div>
-        <div class="po-team">${t.team}</div>
-        <div style="font-size:10px;font-weight:700;color:${lc};width:52px;flex-shrink:0;text-align:center">${label}</div>
+        <div class="po-team">${t.team}${badge}</div>
+        <div style="font-size:10px;font-weight:700;color:${lc};width:60px;flex-shrink:0;text-align:center">${label}</div>
         <div class="po-pct-bar"><div class="po-pct-fill" style="width:0%;background:${col}" data-t="${t.pct}%"></div></div>
         <div class="po-pct-val" style="color:${col}">${t.pct}%</div>
       </div>`;
@@ -3716,22 +3882,27 @@ function renderInjuries(games){
 
 // ─── CLV SUMMARY (called from loadDashboardData so it populates regardless of tab order) ───
 function updateCLVSummary(){
-  const vb=window.VALUE_BETS||[];
   const clvMean=document.getElementById('clv-mean');
   const clvRate=document.getElementById('clv-pos-rate');
   const clvGames=document.getElementById('clv-games');
   const clvBadge=document.getElementById('clv-edge-badge');
-  if(!vb.length){
-    if(clvMean)clvMean.textContent='N/A';if(clvRate)clvRate.textContent='N/A';
-    if(clvGames)clvGames.textContent='0';if(clvBadge){clvBadge.textContent='No Data';clvBadge.className='badge o';}
+  const d=window.CLV_DATA;
+  if(!d||d.games_tracked===0){
+    if(clvMean)clvMean.textContent='N/A';
+    if(clvRate)clvRate.textContent='N/A';
+    if(clvGames)clvGames.textContent='0';
+    if(clvBadge){clvBadge.textContent='No Data';clvBadge.className='badge o';}
     return;
   }
-  const avgEdge=(vb.reduce((a,b)=>a+b.edge_pct,0)/vb.length*100).toFixed(1);
-  const posRate=(vb.filter(b=>b.edge_pct>0).length/vb.length*100).toFixed(0);
-  if(clvMean)clvMean.textContent='+'+avgEdge+'%';
-  if(clvRate)clvRate.textContent=posRate+'%';
-  if(clvGames)clvGames.textContent=vb.length;
-  if(clvBadge){clvBadge.textContent=Number(posRate)>50?'Edge Confirmed':'Tracking';clvBadge.className=Number(posRate)>50?'badge g':'badge o';}
+  const mean=d.mean_clv!=null?(d.mean_clv>=0?'+':'')+d.mean_clv.toFixed(2):'N/A';
+  const rate=d.pos_rate!=null?d.pos_rate.toFixed(1)+'%':'N/A';
+  if(clvMean)clvMean.textContent=mean;
+  if(clvRate)clvRate.textContent=rate;
+  if(clvGames)clvGames.textContent=d.games_tracked;
+  if(clvBadge){
+    clvBadge.textContent=d.edge_confirmed?'Edge Confirmed':d.games_with_clv>0?'Tracking':'Awaiting Close';
+    clvBadge.className=d.edge_confirmed?'badge g':'badge o';
+  }
 }
 
 // ─── GAME TICKER ───
@@ -3757,7 +3928,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -3772,7 +3943,10 @@ async function loadDashboardData(){
       fetch('data/performance.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch('data/line_movement.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/player_props.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/clv_summary.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
+    // Store full player records for detail modal (season-by-season data)
+    if(playerJson&&playerJson.players)window._FULL_PLAYER_DATA=playerJson.players;
     // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
     if(playerJson&&playerJson.players&&playerJson.players.length){
       const legendNames=new Set(LEGENDS.map(l=>l.name));
@@ -3906,6 +4080,7 @@ async function loadDashboardData(){
     // ── Wire player_props.json -> Props tab ──
     window.PLAYER_PROPS=Array.isArray(propsJson)?propsJson:[];
     renderProps();
+    if(clvJson)window.CLV_DATA=clvJson;
     updateCLVSummary();
     if(meta.exported_at){
       const d=new Date(meta.exported_at);
