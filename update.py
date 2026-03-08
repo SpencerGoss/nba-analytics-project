@@ -340,6 +340,8 @@ def main() -> None:
             ("build_performance", "Performance history"),
             ("build_accuracy_history", "Accuracy history"),
             ("build_line_movement", "Line movement"),
+            ("build_sharp_money", "Sharp money signals"),
+            ("build_bet_tracker", "Bet tracker export"),
             # Props after odds fetch
             ("build_props", "Player props"),
             # CLV tracking
@@ -416,6 +418,8 @@ def builders_only() -> None:
         ("build_performance", "Performance history"),
         ("build_accuracy_history", "Accuracy history"),
         ("build_line_movement", "Line movement"),
+        ("build_sharp_money", "Sharp money signals"),
+        ("build_bet_tracker", "Bet tracker export"),
         ("build_props", "Player props"),
         ("build_clv", "CLV summary"),
         ("build_player_comparison", "Player comparison"),

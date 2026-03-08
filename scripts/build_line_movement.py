@@ -3,7 +3,7 @@ build_line_movement.py  --  produce dashboard/data/line_movement.json
 
 Reads opening vs closing spreads from predictions_history.db (clv_tracking
 table if present, else game_predictions) and optionally from
-data/processed/game_lines.csv if it exists.
+data/odds/game_lines.csv if it exists.
 
 Movement classification:
   |movement| >= 1.5  -> "sharp_action"
@@ -12,9 +12,14 @@ Movement classification:
 
 Direction convention:
   movement = closing_spread - opening_spread
-  movement < 0  (spread grew toward home) -> "toward_home"
-  movement > 0  (spread shrank)           -> "toward_away"
+  movement < 0  (spread grew toward home) -> "home"
+  movement > 0  (spread shrank)           -> "away"
   movement == 0                           -> "no_movement"
+
+Output fields per record match the dashboard contract:
+  opening_spread, current_spread, movement, direction, movement_label,
+  opening_moneyline, current_moneyline, steam_move, reverse_line_move,
+  classification, interpretation
 """
 
 from __future__ import annotations
@@ -30,7 +35,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 DB_PATH = PROJECT_ROOT / "database" / "predictions_history.db"
-GAME_LINES_CSV = PROJECT_ROOT / "data" / "processed" / "game_lines.csv"
+GAME_LINES_CSV = PROJECT_ROOT / "data" / "odds" / "game_lines.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "line_movement.json"
 
 SHARP_THRESHOLD = 1.5
@@ -52,10 +57,21 @@ def _classify(movement: float) -> str:
 
 def _direction(movement: float) -> str:
     if movement < -0.05:
-        return "toward_home"
+        return "home"
     if movement > 0.05:
-        return "toward_away"
+        return "away"
     return "no_movement"
+
+
+def _movement_label(home: str, away: str, movement: float, opening: float, closing: float) -> str:
+    """Human-readable label like 'BOS -0.5' or 'MIA +0.5'."""
+    if abs(movement) < 0.05:
+        return "No movement"
+    if movement < 0:
+        # Spread grew toward home team (home favored more)
+        return f"{home} {closing:+.1f}"
+    # Spread shrank toward away team (away getting better number)
+    return f"{away} {abs(movement):+.1f}"
 
 
 def _interpretation(home: str, away: str, movement: float, opening: float, closing: float) -> str:
@@ -126,11 +142,17 @@ def load_from_db() -> pd.DataFrame:
 
 
 def load_from_csv() -> pd.DataFrame:
-    """Load game_lines.csv if it exists."""
+    """Load game_lines.csv if it exists and is non-empty."""
     if not GAME_LINES_CSV.exists():
         return pd.DataFrame()
-    df = pd.read_csv(GAME_LINES_CSV)
-    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
+    try:
+        df = pd.read_csv(GAME_LINES_CSV)
+    except Exception:
+        return pd.DataFrame()
+    if df.empty or len(df.columns) == 0:
+        return pd.DataFrame()
+    if "game_date" in df.columns:
+        df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     return df
 
 
@@ -188,6 +210,11 @@ def build_line_movement(
                     "current_spread": closing,
                     "movement": movement,
                     "direction": _direction(movement),
+                    "movement_label": _movement_label(home, away, movement, opening, closing),
+                    "opening_moneyline": None,
+                    "current_moneyline": None,
+                    "steam_move": abs(movement) >= SHARP_THRESHOLD,
+                    "reverse_line_move": False,
                     "classification": _classify(movement),
                     "interpretation": _interpretation(home, away, movement, opening, closing),
                 })
@@ -212,7 +239,14 @@ def build_line_movement(
                     continue
                 opening = float(row["opening_spread"])
 
-                # Closing spread may be NULL for pending games — show opening line
+                # Pull moneylines if available in this table
+                opening_ml = (
+                    int(row["opening_home_ml"])
+                    if "opening_home_ml" in row.index and not pd.isna(row["opening_home_ml"])
+                    else None
+                )
+
+                # Closing spread may be NULL for pending games -- show opening line
                 if pd.isna(row["closing_spread"]):
                     results.append({
                         "home_team": home,
@@ -222,6 +256,11 @@ def build_line_movement(
                         "current_spread": opening,
                         "movement": 0.0,
                         "direction": "no_movement",
+                        "movement_label": "No movement",
+                        "opening_moneyline": opening_ml,
+                        "current_moneyline": opening_ml,
+                        "steam_move": False,
+                        "reverse_line_move": False,
                         "classification": "stable",
                         "interpretation": (
                             f"Opening line {opening:+.1f} -- game not yet closed"
@@ -240,6 +279,11 @@ def build_line_movement(
                     "current_spread": closing,
                     "movement": movement,
                     "direction": _direction(movement),
+                    "movement_label": _movement_label(home, away, movement, opening, closing),
+                    "opening_moneyline": opening_ml,
+                    "current_moneyline": opening_ml,
+                    "steam_move": abs(movement) >= SHARP_THRESHOLD,
+                    "reverse_line_move": False,
                     "classification": _classify(movement),
                     "interpretation": _interpretation(home, away, movement, opening, closing),
                 })
@@ -257,7 +301,7 @@ def build_line_movement(
                 seen.add(key)
 
                 implied_spread = _prob_to_spread(float(row["home_win_prob"]))
-                # With only one prob, opening == closing -> movement = 0
+                # With only one prob, opening == closing -- movement = 0
                 results.append({
                     "home_team": home,
                     "away_team": away,
@@ -266,6 +310,11 @@ def build_line_movement(
                     "current_spread": implied_spread,
                     "movement": 0.0,
                     "direction": "no_movement",
+                    "movement_label": "No movement",
+                    "opening_moneyline": None,
+                    "current_moneyline": None,
+                    "steam_move": False,
+                    "reverse_line_move": False,
                     "classification": "stable",
                     "interpretation": (
                         f"No historical line data -- implied spread {implied_spread:+.1f} "

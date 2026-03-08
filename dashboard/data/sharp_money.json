@@ -1,0 +1,108 @@
+[
+  {
+    "home_team": "DET",
+    "away_team": "BKN",
+    "game_date": "2026-03-07",
+    "sharp_score": 43,
+    "sharp_side": "DET",
+    "sharp_rating": "LEAN",
+    "edge_pct": null,
+    "model_confidence": 88.5,
+    "situational_advantage": "HOME_HOT",
+    "key_factors": [
+      "Strong model confidence (88%)",
+      "Home team (DET) on hot streak",
+      "Away team (BKN) cold streak"
+    ],
+    "fade_alert": false,
+    "kelly_fraction": null
+  },
+  {
+    "home_team": "MIL",
+    "away_team": "UTA",
+    "game_date": "2026-03-07",
+    "sharp_score": 42,
+    "sharp_side": "MIL",
+    "sharp_rating": "LEAN",
+    "edge_pct": null,
+    "model_confidence": 86.3,
+    "situational_advantage": "HOME_REST_ADV",
+    "key_factors": [
+      "Strong model confidence (86%)",
+      "Away team (UTA) cold streak",
+      "MIL rest advantage"
+    ],
+    "fade_alert": false,
+    "kelly_fraction": null
+  },
+  {
+    "home_team": "OKC",
+    "away_team": "GSW",
+    "game_date": "2026-03-07",
+    "sharp_score": 36,
+    "sharp_side": "OKC",
+    "sharp_rating": "LEAN",
+    "edge_pct": null,
+    "model_confidence": 77.5,
+    "situational_advantage": "HOME_REST_ADV",
+    "key_factors": [
+      "Strong model confidence (78%)",
+      "Home team (OKC) on hot streak",
+      "OKC rest advantage"
+    ],
+    "fade_alert": false,
+    "kelly_fraction": null
+  },
+  {
+    "home_team": "ATL",
+    "away_team": "PHI",
+    "game_date": "2026-03-07",
+    "sharp_score": 34,
+    "sharp_side": "PHI",
+    "sharp_rating": "LEAN",
+    "edge_pct": 21.51,
+    "model_confidence": 50.0,
+    "situational_advantage": null,
+    "key_factors": [
+      "High model edge (21.5%)"
+    ],
+    "fade_alert": false,
+    "kelly_fraction": null
+  },
+  {
+    "home_team": "MIN",
+    "away_team": "ORL",
+    "game_date": "2026-03-07",
+    "sharp_score": 32,
+    "sharp_side": "MIN",
+    "sharp_rating": "LEAN",
+    "edge_pct": null,
+    "model_confidence": 86.3,
+    "situational_advantage": "HOME_HOT",
+    "key_factors": [
+      "Strong model confidence (86%)",
+      "Home team (MIN) on hot streak"
+    ],
+    "fade_alert": false,
+    "kelly_fraction": null
+  },
+  {
+    "home_team": "MEM",
+    "away_team": "LAC",
+    "game_date": "2026-03-07",
+    "sharp_score": 16,
+    "sharp_side": "MEM",
+    "sharp_rating": "LEAN",
+    "edge_pct": null,
+    "model_confidence": 77.5,
+    "situational_advantage": "HOME_REST_ADV",
+    "key_factors": [
+      "Strong model confidence (78%)",
+      "Home team (MEM) cold streak",
+      "MEM rest advantage",
+      "Away B2B"
+    ],
+    "fade_alert": false,
+    "kelly_fraction": null
+  }
+]
