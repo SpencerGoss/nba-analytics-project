@@ -3176,6 +3176,57 @@ function showGameDetail(home,away){
     });
     html+='</div></div></div>';
   }
+  // game total (over/under)
+  var gameTotEntry=(window.GAME_TOTALS||[]).find(function(g){return g.home_team===home&&g.away_team===away;});
+  if(gameTotEntry&&gameTotEntry.model_total){
+    html+='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Projected Total</div>';
+    html+='<div style="background:var(--b0);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">';
+    html+='<div><div style="font-size:10px;color:var(--t2);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">Model Total</div>';
+    html+='<div style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--gold)">'+gameTotEntry.model_total.toFixed(1)+'</div></div>';
+    if(gameTotEntry.book_total){
+      var edge=gameTotEntry.edge!=null?gameTotEntry.edge.toFixed(1):null;
+      var edgeColor=edge&&parseFloat(edge)>0?'var(--green)':edge&&parseFloat(edge)<0?'var(--red)':'var(--t2)';
+      html+='<div><div style="font-size:10px;color:var(--t2);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">Book Total</div>';
+      html+='<div style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--t1)">'+gameTotEntry.book_total.toFixed(1)+'</div></div>';
+      if(edge)html+='<div><div style="font-size:10px;color:var(--t2);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">Edge</div><div style="font-family:var(--fm);font-size:16px;font-weight:700;color:'+edgeColor+'">'+(parseFloat(edge)>0?'+':'')+edge+'</div></div>';
+      if(gameTotEntry.recommendation)html+='<div style="margin-left:auto"><span style="font-size:11px;font-weight:800;letter-spacing:.5px;padding:4px 10px;border-radius:8px;background:rgba(0,200,150,.12);color:var(--green)">'+esc(gameTotEntry.recommendation)+'</span></div>';
+    } else {
+      html+='<div style="font-size:11px;color:var(--t2)">No book total posted yet</div>';
+    }
+    var paceNote='';
+    if(gameTotEntry.home_pace_roll10&&gameTotEntry.away_pace_roll10){
+      var avgPace=((gameTotEntry.home_pace_roll10+gameTotEntry.away_pace_roll10)/2).toFixed(1);
+      paceNote='Avg pace: '+avgPace+' poss/game';
+    }
+    if(paceNote)html+='<div style="width:100%;font-size:11px;color:var(--t2);padding-top:8px;border-top:1px solid var(--b1)">'+esc(paceNote)+'</div>';
+    html+='</div></div>';
+  }
+  // team recent form (from trends.json)
+  var trends=window.TEAM_TRENDS||{};
+  var hTrend=trends[home]||null;
+  var aTrend=trends[away]||null;
+  if(hTrend||aTrend){
+    html+='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Recent Form</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    [[away,aTrend],[home,hTrend]].forEach(function(item){
+      var teamAbbr=item[0],tr=item[1];
+      if(!tr)return;
+      var offColor=parseFloat(tr.trend_offense||0)>0?'var(--green)':'var(--red)';
+      var defColor=parseFloat(tr.trend_defense||0)<0?'var(--green)':'var(--red)';
+      var strCol=tr.streak>0?'var(--green)':'var(--red)';
+      var strLabel=tr.streak>0?'W'+tr.streak:'L'+Math.abs(tr.streak);
+      html+='<div style="background:var(--b0);border-radius:10px;padding:12px 14px">';
+      html+='<div style="font-size:11px;font-weight:800;color:var(--t0);margin-bottom:8px">'+esc(teamAbbr)+'</div>';
+      html+='<div style="display:flex;flex-direction:column;gap:5px">';
+      html+='<div style="font-size:11px;color:var(--t2)">L10: <span style="font-weight:700;color:var(--t1)">'+esc(tr.last10_su||'--')+'</span></div>';
+      html+='<div style="font-size:11px;color:var(--t2)">Home: <span style="font-weight:700;color:var(--t1)">'+esc(tr.home_record||'--')+'</span></div>';
+      html+='<div style="font-size:11px;color:var(--t2)">Away: <span style="font-weight:700;color:var(--t1)">'+esc(tr.away_record||'--')+'</span></div>';
+      html+='<div style="font-size:11px;color:var(--t2)">Streak: <span style="font-weight:700;color:'+strCol+'">'+esc(strLabel)+'</span></div>';
+      if(tr.trend_offense)html+='<div style="font-size:11px;color:var(--t2)">Off trend: <span style="font-weight:700;color:'+offColor+'">'+(parseFloat(tr.trend_offense)>0?'+':'')+tr.trend_offense+' pts/g</span></div>';
+      html+='</div></div>';
+    });
+    html+='</div></div>';
+  }
   // injuries
   var impactCols={'high':'var(--red)','medium':'var(--gold)','low':'var(--t2)'};
   if(injData){
@@ -4988,7 +5039,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,playerDetailJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,playerDetailJson,teamTrendsJson,totalsJson]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -5007,6 +5058,8 @@ async function loadDashboardData(){
       fetch('data/bet_tracker.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/sharp_money.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/player_detail.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('data/trends.json').then(r=>r.ok?r.json():{}).catch(()=>({})),
+      fetch('data/totals.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
     ]);
     // Store full player records for detail modal (season-by-season data)
     if(playerJson&&playerJson.players)window._FULL_PLAYER_DATA=playerJson.players;
@@ -5177,6 +5230,9 @@ async function loadDashboardData(){
       if(titleEl)titleEl.textContent=steamMoves.length+' Steam Move'+(steamMoves.length>1?'s':'')+' Detected';
       if(descEl)descEl.textContent='Sharp money moving lines on '+steamMoves.map(g=>g.away_team+' @ '+g.home_team).join(', ');
     }
+    // ── Wire trends.json and totals.json for game detail modal ──
+    window.TEAM_TRENDS=teamTrendsJson||{};
+    window.GAME_TOTALS=Array.isArray(totalsJson)?totalsJson:[];
     // ── Wire sharp_money.json -> Sharp Money tab ──
     window.SHARP_MONEY=Array.isArray(sharpMoney)?sharpMoney:[];
     renderSharpMoney();
