@@ -117,10 +117,10 @@ class TestClassify:
 
 class TestDirection:
     def test_toward_home_negative_movement(self):
-        assert _direction(-1.0) == "toward_home"
+        assert _direction(-1.0) == "home"
 
     def test_toward_away_positive_movement(self):
-        assert _direction(1.0) == "toward_away"
+        assert _direction(1.0) == "away"
 
     def test_no_movement_at_zero(self):
         assert _direction(0.0) == "no_movement"
@@ -178,12 +178,12 @@ class TestBuildLineMovement:
     def test_direction_toward_home(self):
         csv_df = _spread_df([{"opening_spread": -5.0, "closing_spread": -7.0}])
         result = build_line_movement(db_df=pd.DataFrame(), csv_df=csv_df)
-        assert result[0]["direction"] == "toward_home"
+        assert result[0]["direction"] == "home"
 
     def test_direction_toward_away(self):
         csv_df = _spread_df([{"opening_spread": -7.0, "closing_spread": -5.0}])
         result = build_line_movement(db_df=pd.DataFrame(), csv_df=csv_df)
-        assert result[0]["direction"] == "toward_away"
+        assert result[0]["direction"] == "away"
 
     def test_direction_no_movement(self):
         csv_df = _spread_df([{"opening_spread": -6.5, "closing_spread": -6.5}])

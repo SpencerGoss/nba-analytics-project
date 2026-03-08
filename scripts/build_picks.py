@@ -234,7 +234,7 @@ def _build_pick_row(
     pred: dict,
     team_names: dict[str, str],
     lines: dict[tuple[str, str], dict],
-    margin_lookup: dict[tuple[str, str, str], float | None],
+    margin_lookup: dict[tuple[str, str, str], float | None] | None = None,
 ) -> dict:
     """Convert a DB prediction row into the todays_picks.json schema."""
     home = pred["home_team"]
@@ -274,7 +274,7 @@ def _build_pick_row(
     )
 
     # Projected margin: pull from margin_lookup keyed by (home, away, game_date)
-    projected_margin: float | None = margin_lookup.get((home, away, game_date))
+    projected_margin: float | None = (margin_lookup or {}).get((home, away, game_date))
 
     return {
         "game_date": game_date,
