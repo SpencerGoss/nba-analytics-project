@@ -7,25 +7,16 @@
 **Duplicated Error Handling and Logging: RESOLVED**
 - **RESOLVED (2026-03-05):** `src/data/api_client.py` created with shared `fetch_with_retry()`, `HEADERS`, and retry config. All 19 data-fetching scripts now import from it. No script defines its own retry logic.
 
-**Shot Chart API Bottleneck:**
+**Shot Chart API Bottleneck: PARTIALLY RESOLVED**
 - Issue: `src/data/get_shot_chart.py` makes one API call per player per season (~11,000 calls, 3-4 hours runtime)
-- Files: `src/data/get_shot_chart.py` lines 38-40
-- Impact: Feature is documented as "missing" in memory and production hasn't built this dataset
-- Current state: Unscheduled because execution time is prohibitive; cannot run daily with `update.py`
-- Fix approach: Either (a) batch shot chart ingestion into a separate weekly/monthly task with its own scheduler, or (b) implement an incremental fetch that only pulls new seasons/players since last run
+- **RESOLVED (2026-03-08):** Added per-season incremental skip — if `data/raw/shot_chart/shot_chart_{season_code}.csv` already exists, that season is skipped entirely. Re-runs only fetch missing seasons.
+- Remaining: Still a one-time 3-4h cost for full historical fetch; excluded from daily pipeline by design.
 
-**Preprocessing Always Rebuilds All CSVs:**
-- Issue: `src/processing/preprocessing.py` line 58-331 rebuilds ALL processed CSVs from scratch every time
-- Files: `src/processing/preprocessing.py`
-- Impact: `update.py` calls `run_preprocessing()` daily even when only 1-2 seasons' raw data changed; this reprocesses 25+ seasons of existing data
-- Fix approach: Make preprocessing incremental — only rebuild CSVs for seasons where raw files are newer than processed output; fall back to full rebuild only if schema changes detected
+**Preprocessing Always Rebuilds All CSVs: RESOLVED**
+- **RESOLVED (2026-03-08):** `_needs_rebuild(raw_path, out_path)` helper added to `preprocessing.py`. Skips rebuild when output CSV exists and is newer than raw input. `_coerce_int_col()` helper replaces 24 silent `.astype(int)` calls with `pd.to_numeric(errors='coerce')` + explicit WARN log.
 
-**Inconsistent Data Type Coercion:**
-- Issue: Type conversions happen at preprocessing time without validation
-- Files: `src/processing/preprocessing.py` lines 70-93, 100-156, etc.
-- Example: `df["player_id"].astype(int)` will silently fail if any `NaN` values exist; `astype(float)` then `astype(int)` masks the issue
-- Impact: Silent data corruption; bad rows dropped without logging
-- Fix approach: Use `pd.to_numeric(errors='coerce')` with explicit logging of rows with null values; raise error if unexpected nulls are found
+**Inconsistent Data Type Coercion: RESOLVED**
+- **RESOLVED (2026-03-08):** `_coerce_int_col(df, col)` helper added to `src/processing/preprocessing.py`. All player_id, game_id, team_id, season, from_season, to_season columns now use coerce-with-logging instead of silent `.astype(int)`. 24 call sites converted.
 
 ## Known Bugs
 
@@ -60,17 +51,12 @@
 
 ## Performance Bottlenecks
 
-**Shot Chart API Ingestion (3-4 hours):**
-- Problem: ~11,000 API calls at 0.8s throttle with 3 retries = prohibitive daily cost
-- Files: `src/data/get_shot_chart.py` lines 38-90
-- Cause: One call per player per season; nba_api `ShotChartDetail` endpoint cannot batch
-- Improvement path: (a) Implement incremental fetch (skip players already in processed CSV), (b) reduce time window to last 5 seasons (covering current stars only), (c) fetch shot charts on-demand during model evaluation rather than daily
+**Shot Chart API Ingestion (3-4 hours): PARTIALLY RESOLVED**
+- **RESOLVED (2026-03-08):** Per-season incremental skip added — already-fetched seasons are skipped on re-run. One-time cost is still 3-4h; subsequent runs are instant for fetched seasons.
+- Remaining improvement: per-player incrementalism within a season (skip players already in CSV).
 
-**Preprocessing Reprocesses Entire History Daily:**
-- Problem: `update.py` → `run_preprocessing()` rebuilds 25+ seasons' CSVs every day even when only current season changed
-- Files: `src/processing/preprocessing.py` lines 58-331
-- Cause: No incremental merge logic; concatenates all raw files and writes full processed output
-- Improvement path: Implement seasonal chunking — detect which raw folders have new/modified files, reprocess only those seasons, append to existing processed CSVs; full rebuild only on schema migration
+**Preprocessing Reprocesses Entire History Daily: RESOLVED**
+- **RESOLVED (2026-03-08):** `_needs_rebuild()` helper skips seasons where output CSV is already up-to-date. See Tech Debt section above.
 
 **Duplicate Column Cleaning Across All Tables:**
 - Problem: `clean_columns()` called 25+ times per preprocessing run; does string operations on 100,000+ rows
