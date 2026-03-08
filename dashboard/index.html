@@ -133,6 +133,37 @@ body.light .bgl::after{opacity:.015}
 /* adjust main content for ticker */
 .wrap{padding-top:120px!important}
 
+/* ── BET TRACKER TABLE ── */
+.bt-table{width:100%;border-collapse:collapse;font-size:13px}
+.bt-table th{background:rgba(255,255,255,.04);padding:8px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--t2);text-transform:uppercase;border-bottom:1px solid var(--b0)}
+.bt-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.bt-result-win{color:var(--green);font-weight:700;font-family:var(--fm)}
+.bt-result-loss{color:#ef4444;font-weight:700;font-family:var(--fm)}
+.bt-result-pending{color:var(--t2);font-style:italic}
+.bt-summary-bar{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.bt-stat{background:var(--card);border-radius:12px;padding:14px 18px;flex:1;min-width:100px}
+.bt-stat-label{font-size:10px;color:var(--t2);font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.bt-stat-val{font-family:var(--fm);font-size:22px;font-weight:800;margin-top:4px}
+
+/* ── SHARP MONEY CARDS ── */
+.sm-card{background:var(--card);border-radius:14px;padding:16px;border:1px solid var(--b0);margin-bottom:12px}
+.sm-card.strong{border-color:rgba(0,200,150,.3);background:rgba(0,200,150,.04)}
+.sm-card.moderate{border-color:rgba(245,166,35,.25)}
+.sm-score-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.07);margin:8px 0;overflow:hidden}
+.sm-score-fill{height:100%;border-radius:3px;transition:width 600ms ease}
+.sm-score-fill.strong{background:var(--green)}
+.sm-score-fill.moderate{background:var(--gold)}
+.sm-score-fill.lean{background:rgba(255,255,255,.2)}
+.sm-factors{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.sm-factor{background:rgba(255,255,255,.06);border-radius:100px;padding:3px 10px;font-size:10px;font-weight:600;color:var(--t1)}
+
+/* ── PICK CARD ENHANCEMENTS ── */
+.phc-margin{font-size:12px;color:var(--gold);font-weight:600;margin-top:4px;font-family:var(--fm)}
+.phc-kelly{background:rgba(0,200,150,.08);border:1px solid rgba(0,200,150,.2);border-radius:8px;padding:6px 10px;margin-top:8px;display:flex;align-items:center;justify-content:space-between}
+.phc-kelly-label{font-size:10px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.phc-kelly-val{font-family:var(--fm);font-size:14px;font-weight:800;color:var(--green)}
+.phc-ctx-summary{font-size:11px;color:var(--t2);font-weight:500;line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
+
 /* ── CLV SUMMARY ── */
 .clv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
 @media(max-width:768px){.clv-grid{grid-template-columns:1fr}}
@@ -1606,6 +1637,8 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 <!-- BET TRACKER (betting tab) -->
 <section id="page-bet-tracker" class="page">
   <div class="ph"><h1 class="pt">Bet Tracker</h1><p class="pd">Log your bets and track bankroll performance over time &mdash; stored locally in your browser</p></div>
+  <!-- Model picks summary (from bet_tracker.json) -->
+  <div id="bt-tracker-summary" style="margin-bottom:24px"></div>
   <!-- Stats Row -->
   <div class="sgrid" id="bt-stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
     <div class="sc accent-green"><span class="sl">Total Bets</span><span class="sv g" id="btt-total">0</span><span class="schange">logged</span></div>
@@ -2123,10 +2156,11 @@ function _buildPickCard(p){
   const edgePct=p.edge_pct!=null?(p.edge_pct*100).toFixed(1):null;
   const spreadStr=p.spread!=null?(p.spread>0?'+'+p.spread:String(p.spread)):'--';
 
-  // Confidence level + color coding (green=high, yellow=medium, gray=low)
+  // Confidence level + color coding — use confidence_tier from data if available
   const conf=Math.max(homePct,awayPct);
-  const confCls=conf>=70?'conf-high':conf>=60?'conf-med':'conf-low';
-  const confColor=conf>=70?'var(--green)':conf>=60?'var(--gold)':'rgba(255,255,255,.4)';
+  const tierFromData=p.confidence_tier||null;
+  const confCls=tierFromData==='HIGH'?'conf-high':tierFromData==='MEDIUM'?'conf-med':tierFromData==='LOW'?'conf-low':(conf>=70?'conf-high':conf>=60?'conf-med':'conf-low');
+  const confColor=confCls==='conf-high'?'var(--green)':confCls==='conf-med'?'var(--gold)':'rgba(255,255,255,.4)';
 
   // Recommended bet type
   const pickTeam=esc(p.ats_pick||p.predicted_winner||'--');
@@ -2142,6 +2176,13 @@ function _buildPickCard(p){
   const d=new Date(p.game_date);
   const dateStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 
+  // Projected margin
+  const margTeam=p.home_win_prob>=0.5?p.home_team:p.away_team;
+  const projMarginHtml=p.projected_margin!=null
+    ? '<div class="phc-margin">Proj. Margin: '+esc(margTeam)+' +'+(Math.abs(p.projected_margin)).toFixed(1)+'</div>'
+    : '';
+  // Context summary
+  const ctxSummary=p._context_summary?'<div class="phc-ctx-summary">'+esc(p._context_summary)+'</div>':'';
   const oneLiner=p._one_liner?'<div class="phc-one-liner">'+esc(p._one_liner)+'</div>':'';
   const badgeBlock=(p._sitflags&&p._sitflags.length)
     ? '<div class="phc-badges">'+p._sitflags.map(_sitBadge).join('')+'</div>'
@@ -2162,6 +2203,10 @@ function _buildPickCard(p){
   if(b2bNote.trim()){dhItems+='<div class="phc-dh-item b2b-flag" style="grid-column:1/-1"><span>'+esc(b2bNote.trim())+'</span></div>';}
   else if(formNote){dhItems+='<div class="phc-dh-item" style="grid-column:1/-1"><span>'+esc(formNote)+'</span></div>';}
   const decisionHelper='<div class="phc-decision-helper">'+dhItems+'</div>';
+  // Kelly fraction row
+  const kellyHtml=p.kelly_fraction!=null
+    ? '<div class="phc-kelly"><span class="phc-kelly-label">Kelly Size</span><span class="phc-kelly-val">'+(p.kelly_fraction*100).toFixed(1)+'% of bankroll</span></div>'
+    : '';
 
   const awUrl=teamLogoUrl(p.away_team);const hmUrl=teamLogoUrl(p.home_team);
   const awLogoTag=awUrl?`<img src="${awUrl}" width="16" height="16" alt="${esc(p.away_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';\
@@ -2197,8 +2242,11 @@ function _buildPickCard(p){
     '<div class="phc-ats">'+ \
       '<span class="phc-ats-pick">ATS: <strong>'+pickTeam+' '+esc(spreadStr)+'</strong></span>'+ \
     '</div>'+ \
+    projMarginHtml+ \
     oneLiner+ \
+    ctxSummary+ \
     decisionHelper+ \
+    kellyHtml+ \
     badgeBlock+ \
   '</div>';
 }
@@ -2275,6 +2323,7 @@ function buildHeroSection(picks, valueBets, explainers, contexts){
       edge_pct:edgePct,
       _one_liner:ex?ex.one_liner:'',
       _sitflags:ctx?ctx.situational_flags:[],
+      _context_summary:ctx?ctx.context_summary:null,
       _filter:'ats',
     });
   });
@@ -2499,7 +2548,7 @@ function _activateBettingTab(tabId, pillEl){
   if(tabId==='valuebets')renderValueBets();
   if(tabId==='sharp')renderSharpMoney();
   if(tabId==='props')renderProps();
-  if(tabId==='tracker')btRender();
+  if(tabId==='tracker'){btRender();renderBetTracker();}
 }
 
 let _btDropOpen=false;
@@ -4013,51 +4062,139 @@ function _setHtml(el,html){
 function renderSharpMoney(){
   const container=document.getElementById('sharp-money-container');
   if(!container)return;
-  const data=window.LINE_MOVEMENT||[];
+  const smData=window.SHARP_MONEY||[];
+  const lineData=window.LINE_MOVEMENT||[];
+
+  // ── Sharp Money signals section ──
+  let smHtml='';
+  if(smData.length){
+    const sortedSm=[...smData].sort((a,b)=>(b.sharp_score||0)-(a.sharp_score||0));
+    const smCards=sortedSm.map(g=>{
+      const score=g.sharp_score||0;
+      const rating=(g.sharp_rating||'LEAN').toLowerCase();
+      const cardCls='sm-card'+(rating==='strong'?' strong':rating==='moderate'?' moderate':'');
+      const fillCls='sm-score-fill '+(rating==='strong'?'strong':rating==='moderate'?'moderate':'lean');
+      const ratingColor=rating==='strong'?'var(--green)':rating==='moderate'?'var(--gold)':'var(--t2)';
+      const factors=(g.key_factors||[]).map(f=>'<span class="sm-factor">'+esc(f)+'</span>').join('');
+      const kelly=g.kelly_fraction!=null?'<span style="font-size:11px;color:var(--green);font-family:var(--fm);font-weight:700">Kelly: '+(g.kelly_fraction*100).toFixed(1)+'%</span>':'';
+      return '<div class="'+cardCls+'">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<div style="font-size:14px;font-weight:700;color:var(--t0)">'+esc(g.away_team)+' @ '+esc(g.home_team)+'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:11px;font-weight:800;color:'+ratingColor+'">'+esc(g.sharp_rating||'LEAN')+'</span>'
+        +kelly
+        +'</div></div>'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--t2)">'
+        +'<span>Sharp side: <strong style="color:var(--t0)">'+esc(g.sharp_side||'--')+'</strong></span>'
+        +'<span>Score: <strong style="color:'+ratingColor+';font-family:var(--fm)">'+score+'</strong>/100</span></div>'
+        +'<div class="sm-score-bar"><div class="'+fillCls+'" style="width:'+score+'%"></div></div>'
+        +(g.situational_advantage?'<div style="font-size:11px;color:var(--t2);margin-bottom:6px">Situation: <strong style="color:var(--t1)">'+esc(g.situational_advantage.replace(/_/g,' '))+'</strong></div>':'')
+        +(factors?'<div class="sm-factors">'+factors+'</div>':'')
+        +'</div>';
+    }).join('');
+    smHtml='<div style="margin-bottom:28px">'
+      +'<div style="font-size:13px;font-weight:700;color:var(--t0);margin-bottom:14px">'+sortedSm.length+' sharp signal'+(sortedSm.length!==1?'s':'')+' today</div>'
+      +smCards+'</div>';
+  } else {
+    smHtml='<div class="tab-placeholder" style="margin-bottom:28px">'
+      +'<div class="tp-icon">&#128200;</div>'
+      +'<div class="tp-title">No sharp signals today</div>'
+      +'<div class="tp-desc">Check back when today\'s lines are posted</div>'
+      +'</div>';
+  }
+
+  // ── Line Movement section ──
+  let lmHtml='';
+  if(lineData.length){
+    const classColor={sharp_action:'var(--green)',moderate_move:'var(--gold)',stable:'var(--t2)',reverse_line_movement:'var(--purple)'};
+    const classLabel={sharp_action:'Sharp Action',moderate_move:'Moderate Move',stable:'Stable',reverse_line_movement:'Reverse Line'};
+    const maxMove=lineData.reduce((mx,g)=>Math.max(mx,Math.abs(g.movement||0)),0);
+    const steamCount=lineData.filter(g=>Math.abs(g.movement||0)>=1.5).length;
+    const mostMoved=lineData.find(g=>Math.abs(g.movement||0)===maxMove);
+    const lmSummary='<div class="sgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">'
+      +'<div class="sc accent-green"><span class="sl">Games Tracked</span><span class="sv g">'+lineData.length+'</span><span class="schange">Today\'s slate</span></div>'
+      +'<div class="sc accent-gold"><span class="sl">Steam Moves</span><span class="sv o">'+steamCount+'</span><span class="schange">&ge;1.5 pt move</span></div>'
+      +'<div class="sc accent-blue"><span class="sl">Biggest Move</span><span class="sv b">'+(maxMove>0?'+':'')+maxMove.toFixed(1)+'</span><span class="schange">'+(mostMoved?esc(mostMoved.away_team)+' @ '+esc(mostMoved.home_team):'--')+'</span></div>'
+      +'</div>';
+    const lmRows=lineData.map(g=>{
+      const mv=g.movement||0;
+      const movStr=(mv>0?'+':'')+mv.toFixed(1);
+      const isSteam=g.steam_move||Math.abs(mv)>=1.5;
+      const isReverse=g.reverse_line_move||false;
+      const isFlat=mv===0;
+      const col=classColor[g.classification]||'var(--t2)';
+      const lbl=classLabel[g.classification]||esc(g.classification||'');
+      const dirArrow=mv>0?'&#9650;':mv<0?'&#9660;':'&#9644;';
+      const movCol=isFlat?'var(--t2)':mv>0?'var(--green)':'var(--red)';
+      const fmt=v=>(v!=null?(v>0?'+':'')+v:'--');
+      const barPct=maxMove>0?Math.min(100,Math.abs(mv)/maxMove*100):0;
+      const badges=(isSteam?'<span class="badge g" style="font-size:9px;letter-spacing:.5px">STEAM</span>':'')
+        +(isReverse?'<span class="badge" style="font-size:9px;letter-spacing:.5px;background:var(--purple-d);color:var(--purple)">REVERSE LINE</span>':'');
+      return '<div class="card'+(isSteam?' card-value':'')+'" style="margin-bottom:12px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="font-size:14px;font-weight:700;color:var(--t0)">'+esc(g.away_team)+' @ '+esc(g.home_team)+'</div>'
+        +badges
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<span style="font-size:11px;font-weight:700;color:'+col+';padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.05)">'+lbl+'</span>'
+        +'<span style="font-size:11px;color:var(--t2)">'+esc(g.game_date||'')+'</span>'
+        +'</div></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:10px">'
+        +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Opening</div><div style="font-size:18px;font-weight:700;color:var(--t1);font-family:var(--fm)">'+fmt(g.opening_spread)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Current</div><div style="font-size:18px;font-weight:700;color:var(--t0);font-family:var(--fm)">'+fmt(g.current_spread)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Move</div><div style="font-size:18px;font-weight:700;color:'+movCol+';font-family:var(--fm)">'+(isFlat?'&#9644; Flat':dirArrow+' '+movStr)+'</div></div>'
+        +'</div>'
+        +(barPct>0?'<div style="height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:10px"><div style="height:100%;width:'+barPct.toFixed(0)+'%;border-radius:4px;background:'+movCol+';transition:width 600ms cubic-bezier(.16,1,.3,1)"></div></div>':'')
+        +(g.interpretation?'<div style="font-size:12px;color:var(--t1);border-top:1px solid var(--b0);padding-top:8px">'+esc(g.interpretation)+'</div>':'')
+        +'</div>';
+    }).join('');
+    lmHtml='<div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--t0);margin-bottom:14px">Line Movement</div>'
+      +lmSummary+lmRows+'</div>';
+  } else if(!smData.length){
+    lmHtml='<div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">No Line Data Today</div><div class="tp-desc">Line movement data will appear once odds are posted for today\'s games. Check back closer to tip-off.</div></div>';
+  }
+  _setHtml(container,smHtml+lmHtml);
+}
+
+// ─── BET TRACKER (data-driven summary from bet_tracker.json) ───
+function renderBetTracker(){
+  // Only render the summary panel — the user's local bet log is managed by btRender()
+  const data=window.BET_TRACKER_DATA||[];
+  const panel=document.getElementById('bt-tracker-summary');
+  if(!panel)return;
   if(!data.length){
-    _setHtml(container,'<div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">No Line Data Today</div><div class="tp-desc">Line movement data will appear once odds are posted for today\'s games. Check back closer to tip-off.</div></div>');
+    _setHtml(panel,'');
     return;
   }
-  const classColor={sharp_action:'var(--green)',moderate_move:'var(--gold)',stable:'var(--t2)',reverse_line_movement:'var(--purple)'};
-  const classLabel={sharp_action:'Sharp Action',moderate_move:'Moderate Move',stable:'Stable',reverse_line_movement:'Reverse Line'};
-  const steamCount=data.filter(g=>Math.abs(g.movement||0)>=1.5).length;
-  const maxMove=data.reduce((mx,g)=>Math.max(mx,Math.abs(g.movement||0)),0);
-  const mostMoved=data.find(g=>Math.abs(g.movement||0)===maxMove);
-  const summary='<div class="sgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">'
-    +'<div class="sc accent-green"><span class="sl">Games Tracked</span><span class="sv g">'+data.length+'</span><span class="schange">Today\'s slate</span></div>'
-    +'<div class="sc accent-gold"><span class="sl">Steam Moves</span><span class="sv o">'+steamCount+'</span><span class="schange">&ge;1.5 pt move</span></div>'
-    +'<div class="sc accent-blue"><span class="sl">Biggest Move</span><span class="sv b">'+(maxMove>0?'+':'')+maxMove.toFixed(1)+'</span><span class="schange">'+(mostMoved?esc(mostMoved.away_team)+' @ '+esc(mostMoved.home_team):'--')+'</span></div>'
+  const wins=data.filter(d=>d.result==='WIN').length;
+  const losses=data.filter(d=>d.result==='LOSS').length;
+  const pending=data.filter(d=>!d.result||d.result==='pending').length;
+  const avgEdge=data.filter(d=>d.edge_pct!=null).reduce((s,d)=>s+d.edge_pct,0)/(data.filter(d=>d.edge_pct!=null).length||1);
+  const summaryBar='<div class="bt-summary-bar">'
+    +'<div class="bt-stat"><div class="bt-stat-label">Record</div><div class="bt-stat-val" style="color:var(--green)">'+wins+'-'+losses+'</div></div>'
+    +'<div class="bt-stat"><div class="bt-stat-label">Pending</div><div class="bt-stat-val" style="color:var(--t1)">'+pending+'</div></div>'
+    +'<div class="bt-stat"><div class="bt-stat-label">Avg Edge</div><div class="bt-stat-val" style="color:var(--gold)">'+avgEdge.toFixed(1)+'%</div></div>'
+    +'<div class="bt-stat"><div class="bt-stat-label">Total</div><div class="bt-stat-val">'+data.length+'</div></div>'
     +'</div>';
-  const rows=data.map(g=>{
-    const mv=g.movement||0;
-    const movStr=(mv>0?'+':'')+mv.toFixed(1);
-    const isSteam=Math.abs(mv)>=1.5;
-    const col=classColor[g.classification]||'var(--t2)';
-    const lbl=classLabel[g.classification]||g.classification;
-    const dirArrow=mv>0?'&#9650;':mv<0?'&#9660;':'&#9644;';
-    const movCol=mv===0?'var(--t2)':mv>0?'var(--green)':'var(--red)';
-    const fmt=v=>(v>0?'+':'')+v;
-    const barPct=maxMove>0?Math.min(100,Math.abs(mv)/maxMove*100):0;
-    return '<div class="card'+(isSteam?' card-value':'')+'" style="margin-bottom:12px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-      +'<div style="display:flex;align-items:center;gap:10px">'
-      +'<div style="font-size:14px;font-weight:700;color:var(--t0)">'+esc(g.away_team)+' @ '+esc(g.home_team)+'</div>'
-      +(isSteam?'<span class="badge g" style="font-size:9px;letter-spacing:.5px">STEAM</span>':'')
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:10px">'
-      +'<span style="font-size:11px;font-weight:700;color:'+col+';padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.05)">'+lbl+'</span>'
-      +'<span style="font-size:11px;color:var(--t2)">'+esc(g.game_date)+'</span>'
-      +'</div></div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:10px">'
-      +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Opening</div><div style="font-size:18px;font-weight:700;color:var(--t1);font-family:var(--fm)">'+fmt(g.opening_spread)+'</div></div>'
-      +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Current</div><div style="font-size:18px;font-weight:700;color:var(--t0);font-family:var(--fm)">'+fmt(g.current_spread)+'</div></div>'
-      +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Move</div><div style="font-size:18px;font-weight:700;color:'+movCol+';font-family:var(--fm)">'+dirArrow+' '+movStr+'</div></div>'
-      +'</div>'
-      +(barPct>0?'<div style="height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:10px"><div style="height:100%;width:'+barPct.toFixed(0)+'%;border-radius:4px;background:'+movCol+';transition:width 600ms cubic-bezier(.16,1,.3,1)"></div></div>':'')
-      +'<div style="font-size:12px;color:var(--t1);border-top:1px solid var(--b0);padding-top:8px">'+esc(g.interpretation)+'</div>'
-      +'</div>';
+  const rows=data.map(d=>{
+    const resCls=d.result==='WIN'?'bt-result-win':d.result==='LOSS'?'bt-result-loss':'bt-result-pending';
+    const resLabel=d.result==='WIN'?'WIN':d.result==='LOSS'?'LOSS':'Pending';
+    const edgeStr=d.edge_pct!=null?d.edge_pct.toFixed(1)+'%':'--';
+    return '<tr>'
+      +'<td style="color:var(--t2);font-family:var(--fm);font-size:12px">'+esc(d.game_date||'')+'</td>'
+      +'<td style="color:var(--t0);font-weight:600">'+esc((d.away_team||'')+' @ '+(d.home_team||''))+'</td>'
+      +'<td style="color:var(--gold);font-family:var(--fm);font-weight:700">'+esc(d.ats_pick||d.predicted_winner||'--')+'</td>'
+      +'<td style="font-family:var(--fm)">'+esc(d.spread||'--')+'</td>'
+      +'<td style="font-family:var(--fm);color:var(--green)">'+edgeStr+'</td>'
+      +'<td><span class="'+resCls+'">'+resLabel+'</span></td>'
+      +'</tr>';
   }).join('');
-  _setHtml(container,summary+rows);
+  const table='<div class="tw"><table class="bt-table">'
+    +'<thead><tr><th>Date</th><th>Matchup</th><th>Pick</th><th>Spread</th><th>Edge</th><th>Result</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>';
+  _setHtml(panel,summaryBar+table);
 }
 
 // ─── DEEP DIVE — MATCHUPS ───
@@ -4652,7 +4789,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -4668,6 +4805,8 @@ async function loadDashboardData(){
       fetch('data/line_movement.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/player_props.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/clv_summary.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('data/bet_tracker.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/sharp_money.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
     ]);
     // Store full player records for detail modal (season-by-season data)
     if(playerJson&&playerJson.players)window._FULL_PLAYER_DATA=playerJson.players;
@@ -4808,7 +4947,12 @@ async function loadDashboardData(){
     }
     // ── Wire line_movement.json -> Sharp Money tab ──
     window.LINE_MOVEMENT=lineMovJson;
+    // ── Wire sharp_money.json -> Sharp Money tab ──
+    window.SHARP_MONEY=Array.isArray(sharpMoney)?sharpMoney:[];
     renderSharpMoney();
+    // ── Wire bet_tracker.json -> Bet Tracker tab ──
+    window.BET_TRACKER_DATA=Array.isArray(betTracker)?betTracker:[];
+    renderBetTracker();
     // ── Wire player_props.json -> Props tab ──
     window.PLAYER_PROPS=Array.isArray(propsJson)?propsJson:[];
     renderProps();
@@ -5865,6 +6009,15 @@ function btClearAll(){
   if(!confirm('Clear all bets? This cannot be undone.'))return;
   btSave([]);btRender();
 }
+
+// ─── KEYBOARD NAVIGATION ───
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea,select'))return;
+  if(e.altKey||e.ctrlKey||e.metaKey)return;
+  const map={t:'today',p:'players',m:'teams',h:'h2h',s:'standings',i:'injuries',r:'rankings',y:'history'};
+  const page=map[e.key.toLowerCase()];
+  if(page)showFreeTab(page);
+});
 </script>
 
 </body>
