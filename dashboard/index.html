@@ -1150,7 +1150,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
         <button id="era-btn-adj" onclick="setEraMode(true)">Era-Adjusted</button>
       </div>
     </div>
-    <p class="era-footnote" id="era-footnote">Era-adjusted: scoring stats normalized to the modern scoring environment (baseline 14.5 PPG). Ratios (FG%, 3P%) are not adjusted.</p>
+    <p class="era-footnote" id="era-footnote">Era-adjusted: scoring stats normalized to the modern era (team avg 111.8 PPG). Players from lower-scoring eras get a slight boost; modern players are unchanged. Ratios (FG%, 3P%) are not adjusted.</p>
     <div id="cmp-prompt" class="card" style="text-align:center;padding:48px;color:var(--t2)"><div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">Select two players to compare</div><div style="font-size:12px">Radar chart, stats, and shooting breakdown will appear here</div></div>
     <div id="cmp-content" style="display:none">
       <div class="card" style="margin-bottom:16px;padding:18px 22px"><div style="display:flex;align-items:center;justify-content:space-between;gap:18px"><div id="ban-a" style="flex:1"></div><div style="font-size:11px;font-weight:800;color:var(--t2);letter-spacing:.5px;flex-shrink:0">VS</div><div id="ban-b" style="flex:1;text-align:right"></div></div></div>
@@ -1258,8 +1258,8 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   </div>
   <div class="tab-content active" id="standings-tab-conf">
     <div class="g2" style="margin-top:4px">
-      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Eastern Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">&#8597;</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div></div>
-      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Western Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">&#8597;</span></th><th>GB</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div></div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Eastern Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">&#8597;</span></th><th>GB</th><th>L10</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div></div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Western Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">&#8597;</span></th><th>GB</th><th>L10</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div></div>
     </div>
   </div>
   <div class="tab-content" id="standings-tab-scores">
@@ -2608,7 +2608,7 @@ function renderPlayersTable(){
         ${headshot(p.nbaId,p.ini,36)}
         <div>
           <span style="font-family:var(--f);font-weight:600;font-size:13px">${esc(p.name)}</span>
-          ${p.retired?'<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--purple);margin-left:6px;vertical-align:middle">Legend</span>':''}
+          ${p.retired?'<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--purple);margin-left:6px;vertical-align:middle">Retired</span>':''}
         </div>
       </td>
       <td style="${pSort==='pts'?'color:var(--gold);font-weight:700':''}">${p.pts}</td>
@@ -2616,7 +2616,7 @@ function renderPlayersTable(){
       <td style="${pSort==='ast'?'color:var(--gold);font-weight:700':''}">${p.ast}</td>
       <td style="${pSort==='fg'?'color:var(--gold);font-weight:700':''}">${p.fg}%</td>
       <td style="${pSort==='thr'?'color:var(--gold);font-weight:700':''}">${p.thr}%</td>
-      <td><span class="tpill">${esc(p.team)}</span></td>
+      <td><div style="display:flex;align-items:center;gap:4px">${(()=>{const lu=teamLogoByAbbr(p.team||p.primaryTeam);return lu?`<img src="${lu}" width="18" height="18" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'" alt=""/>`:'';})()}<span class="tpill">${esc(p.team||p.primaryTeam)}</span></div></td>
     </tr>`).join('');
   _setHtml(document.getElementById('players-tb'),tbRows);
   // 6. Show-more footer button
@@ -2641,6 +2641,9 @@ function closePlayerModal(){
   document.getElementById('player-modal').style.display='none';
   document.getElementById('player-modal-backdrop').style.display='none';
 }
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&document.getElementById('player-modal').style.display!=='none')closePlayerModal();
+});
 
 function showPlayerDetail(name){
   const p=DATA.players.find(x=>x.name===name);
@@ -2674,10 +2677,33 @@ function showPlayerDetail(name){
         const border=tc?tc[0]+'55':'var(--b1)';
         const txt=tc?tc[0]:col;
         const yr=st.seasons.length>1?st.seasons[0].slice(0,4)+'-'+st.seasons[st.seasons.length-1].slice(5):st.seasons[0].slice(0,4);
-        return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:10px;background:${bg};border:1px solid ${border}"><span style="font-size:12px;font-weight:700;color:${txt}">${esc(st.team)}</span><span style="font-size:11px;color:var(--t2)">${yr}</span></div>`;
+        const stLogo=teamLogoByAbbr(st.team);
+        const stLogoTag=stLogo?`<img src="${stLogo}" width="18" height="18" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'" alt=""/>`:'';
+        return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:10px;background:${bg};border:1px solid ${border}">${stLogoTag}<span style="font-size:12px;font-weight:700;color:${txt}">${esc(st.team)}</span><span style="font-size:11px;color:var(--t2)">${yr}</span></div>`;
       }).join('')+'</div></div>';
 
     // Season-by-season table
+    // Build career totals row (GP-weighted averages)
+    const validSeasons=raw.seasons.filter(s=>s.gp>0);
+    const totalGP=validSeasons.reduce((a,s)=>a+(s.gp||0),0);
+    const wAvg=(field)=>{
+      const segs=validSeasons.filter(s=>s[field]!=null);
+      if(!segs.length)return null;
+      const gp=segs.reduce((a,s)=>a+(s.gp||0),0);
+      return gp?segs.reduce((a,s)=>a+(s[field]||0)*(s.gp||0),0)/gp:null;
+    };
+    const careerRow=`<tr style="border-top:2px solid var(--b1);font-weight:700;background:${col}0D">
+      <td style="padding:5px 8px;color:${col};font-size:11px;letter-spacing:.4px;text-transform:uppercase">Career</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t2)">—</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${totalGP}</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${wAvg('pts')!=null?wAvg('pts').toFixed(1):'-'}</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${wAvg('reb')!=null?wAvg('reb').toFixed(1):'-'}</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${wAvg('ast')!=null?wAvg('ast').toFixed(1):'-'}</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${wAvg('fg_pct')!=null?(wAvg('fg_pct')*100).toFixed(1)+'%':'-'}</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${wAvg('fg3_pct')!=null?(wAvg('fg3_pct')*100).toFixed(1)+'%':'-'}</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${wAvg('ft_pct')!=null?(wAvg('ft_pct')*100).toFixed(1)+'%':'-'}</td>
+      <td style="padding:5px 8px;text-align:center;color:var(--t0)">${wAvg('ts_pct')!=null?(wAvg('ts_pct')*100).toFixed(1)+'%':'-'}</td>
+    </tr>`;
     careerSeasonHtml='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Season-by-Season</div>'+
       '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
       '<thead><tr style="border-bottom:1px solid var(--b0)">'+
@@ -2689,6 +2715,7 @@ function showPlayerDetail(name){
       '<th style="padding:5px 8px;color:var(--t2);font-weight:700">AST</th>'+
       '<th style="padding:5px 8px;color:var(--t2);font-weight:700">FG%</th>'+
       '<th style="padding:5px 8px;color:var(--t2);font-weight:700">3P%</th>'+
+      '<th style="padding:5px 8px;color:var(--t2);font-weight:700">FT%</th>'+
       '<th style="padding:5px 8px;color:var(--t2);font-weight:700">TS%</th>'+
       '</tr></thead><tbody>'+
       raw.seasons.map((s,i)=>{
@@ -2704,18 +2731,37 @@ function showPlayerDetail(name){
           <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.ast!=null?s.ast.toFixed(1):'-'}</td>
           <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.fg_pct!=null?(s.fg_pct*100).toFixed(1)+'%':'-'}</td>
           <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.fg3_pct!=null?(s.fg3_pct*100).toFixed(1)+'%':'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.ft_pct!=null?(s.ft_pct*100).toFixed(1)+'%':'-'}</td>
           <td style="padding:5px 8px;text-align:center;color:var(--t1)">${s.ts_pct!=null?(s.ts_pct*100).toFixed(1)+'%':'-'}</td>
         </tr>`;
       }).join('')+
+      careerRow+
       '</tbody></table></div></div>';
   }
 
-  // Career averages cards
+  // Career averages cards — compute pct stats from seasons if available
   const ca=raw?raw.career_avgs:{pts:p.pts,reb:p.reb,ast:p.ast};
-  const caHtml='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;margin-bottom:18px">'+
-    [['PTS',ca.pts,'pts'],['REB',ca.reb,'reb'],['AST',ca.ast,'ast'],['STL',ca.stl,'stl'],['BLK',ca.blk,'blk']].filter(([,v])=>v!=null&&v>0).map(([lbl,v])=>
+  const _wAvgPct=(field)=>{
+    if(!raw||!raw.seasons)return null;
+    const segs=raw.seasons.filter(s=>(s.gp||0)>0&&s[field]!=null);
+    if(!segs.length)return null;
+    const gp=segs.reduce((a,s)=>a+(s.gp||0),0);
+    return gp?segs.reduce((a,s)=>a+(s[field]||0)*(s.gp||0),0)/gp:null;
+  };
+  const careerFgPct=_wAvgPct('fg_pct');
+  const careerFtPct=_wAvgPct('ft_pct');
+  const careerTsPct=_wAvgPct('ts_pct');
+  const statCards=[
+    ['PTS',ca.pts,null],['REB',ca.reb,null],['AST',ca.ast,null],
+    ['STL',ca.stl,null],['BLK',ca.blk,null],
+    ['FG%',careerFgPct!=null?+(careerFgPct*100).toFixed(1):null,'pct'],
+    ['FT%',careerFtPct!=null?+(careerFtPct*100).toFixed(1):null,'pct'],
+    ['TS%',careerTsPct!=null?+(careerTsPct*100).toFixed(1):null,'pct'],
+  ].filter(([,v])=>v!=null&&v>0);
+  const caHtml='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px;margin-bottom:18px">'+
+    statCards.map(([lbl,v,type])=>
       `<div style="text-align:center;padding:10px 6px;background:${col}11;border:1px solid ${col}33;border-radius:12px">
-        <div style="font-family:var(--fm);font-size:20px;font-weight:800;color:${col}">${v!=null?Number(v).toFixed(1):'-'}</div>
+        <div style="font-family:var(--fm);font-size:${type==='pct'?'16':'20'}px;font-weight:800;color:${col}">${v!=null?(type==='pct'?v+'%':Number(v).toFixed(1)):'-'}</div>
         <div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-top:3px">${lbl}</div>
       </div>`
     ).join('')+'</div>';
@@ -2765,12 +2811,16 @@ function renderStandings(){
       const vb=s.key==='pct'?b.w/(b.w+b.l):s.key==='l'?b.l:b.w;
       return (va-vb)*s.dir;
     });
-    document.getElementById(id).innerHTML=data.map((t,i)=>{
+    const html=data.map((t,i)=>{
       const pct=(t.w/(t.w+t.l)).toFixed(3);
-      const sc=t.streak.startsWith('W')?'var(--green)':'var(--red)';
+      const sc=t.streak&&t.streak.startsWith('W')?'var(--green)':'var(--red)';
+      const l10=t.last10||'--';
+      const l10wins=parseInt(l10)||0;
+      const l10c=l10wins>=7?'var(--green)':l10wins>=5?'var(--t1)':'var(--red)';
       const border=i===5?'border-bottom:2px solid rgba(245,166,35,.2);':'';
-      return `<tr style="${border}"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${t.team}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${t.streak}</td></tr>`;
+      return `<tr style="${border}"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${esc(t.team_name||t.team)}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${esc(t.streak||'--')}</td></tr>`;
     }).join('');
+    _setHtml(document.getElementById(id),html);
   }
   conf(DATA.east,'east-tb','east');conf(DATA.west,'west-tb','west');
 }
@@ -4977,21 +5027,24 @@ function renderSeasonHistory(season){
     +'<td style="color:var(--red)">'+t.l+'</td>'
     +'<td>'+(t.pct*1000/10).toFixed(1)+'%</td>'
     +'</tr>').join('');
+  const _histLogo=(abbr)=>{const u=teamLogoByAbbr(abbr);return u?'<img src="'+u+'" width="16" height="16" style="object-fit:contain;vertical-align:middle;margin-right:4px;flex-shrink:0" onerror="this.style.display=\'none\'" alt=""/>':'';};
   const gRows=games.map(g=>{
     const hWin=g.winner===g.home;
+    const margin=g.home_pts!=null&&g.away_pts!=null?Math.abs(g.home_pts-g.away_pts):null;
     return '<tr>'
-      +'<td>'+esc(g.date)+'</td>'
-      +'<td style="font-weight:'+(hWin?'700':'400')+';color:'+(hWin?'var(--t0)':'var(--t2)')+'">'+esc(g.home)+'</td>'
-      +'<td style="font-weight:'+(!hWin?'700':'400')+';color:'+(!hWin?'var(--t0)':'var(--t2)')+'">'+esc(g.away)+'</td>'
-      +'<td style="font-family:var(--fm);font-weight:700">'+(g.home_pts!=null?g.home_pts:'--')+'</td>'
-      +'<td style="font-family:var(--fm);font-weight:700">'+(g.away_pts!=null?g.away_pts:'--')+'</td>'
+      +'<td style="color:var(--t2);font-size:12px">'+esc(g.date)+'</td>'
+      +'<td style="font-weight:'+(hWin?'700':'400')+';color:'+(hWin?'var(--t0)':'var(--t2)')+';white-space:nowrap">'+_histLogo(g.home_abbr)+esc(g.home)+'</td>'
+      +'<td style="font-weight:'+(!hWin?'700':'400')+';color:'+(!hWin?'var(--t0)':'var(--t2)')+';white-space:nowrap">'+_histLogo(g.away_abbr)+esc(g.away)+'</td>'
+      +'<td style="font-family:var(--fm);font-weight:'+(hWin?'700':'400')+';color:'+(hWin?'var(--green)':'var(--t2)')+'">'+(g.home_pts!=null?g.home_pts:'--')+'</td>'
+      +'<td style="font-family:var(--fm);font-weight:'+(!hWin?'700':'400')+';color:'+(!hWin?'var(--green)':'var(--t2)')+'">'+(g.away_pts!=null?g.away_pts:'--')+'</td>'
+      +'<td style="font-family:var(--fm);color:var(--t2);font-size:11px">'+(margin!=null?'+'+margin:'--')+'</td>'
       +'</tr>';
   }).join('');
   const html='<div class="g2" style="gap:16px;align-items:start">'
-    +'<div class="card"><div class="sh" style="margin-bottom:14px"><div class="st">Standings</div><div class="ss">'+standings.length+' teams</div></div>'
+    +'<div class="card"><div class="sh" style="margin-bottom:14px"><div class="st">Final Standings</div><div class="ss">'+standings.length+' teams</div></div>'
     +'<div class="tw"><table><thead><tr><th>#</th><th>Team</th><th style="color:var(--green)">W</th><th style="color:var(--red)">L</th><th>PCT</th></tr></thead><tbody>'+stRows+'</tbody></table></div></div>'
     +'<div class="card"><div class="sh" style="margin-bottom:14px"><div class="st">Game Log</div><div class="ss">Most recent '+games.length+' games</div></div>'
-    +'<div class="tw"><table><thead><tr><th>Date</th><th>Home</th><th>Away</th><th>H Pts</th><th>A Pts</th></tr></thead><tbody>'+gRows+'</tbody></table></div></div>'
+    +'<div class="tw"><table><thead><tr><th>Date</th><th>Home</th><th>Away</th><th>H Pts</th><th>A Pts</th><th>Margin</th></tr></thead><tbody>'+gRows+'</tbody></table></div></div>'
     +'</div>';
   _setHtml(body,html);
 }

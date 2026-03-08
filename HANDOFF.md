@@ -1,71 +1,88 @@
 # Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-07 Session 4_
+_Last updated: 2026-03-07 Session 5_
 
 ## What Was Done This Session
 
-### Dashboard Overhaul — 3 New Tabs Built
+### Dashboard — Major Upgrade
 
-**Sharp Money Tracker** (page-sharp-money)
-- Driven by `line_movement.json`; stats bar (Games Tracked, Steam Moves, Biggest Move); per-game cards with movement bars; STEAM badge when |move| >= 1.5 pts; direction arrows; color coding
+**Players Tab**
+- "All-Time Legends" renamed to "All-Time Players" — now shows all 883 historical players (not just 6)
+- `mapJsonPlayer` retired detection fixed: uses `seasons_span` check (`!includes('2024') && !includes('2025')`) instead of `!!p._legend`
+- Clickable player rows: `onclick="showPlayerDetail(name)"` — opens a detail modal
+- Player detail modal: headshot + team logo (NBA CDN), career avg cards, team history stints, season-by-season table with BEST highlight
+- `window._FULL_PLAYER_DATA` stores raw playerJson.players for modal season data lookup
+- Compare picker updated: optgroup label "All-Time Players" (was "All-Time Legends")
 
-**Bet Tracker** (page-bet-tracker)
-- localStorage key `baseline_bets_v1`; add-bet form (date pre-filled to today, matchup, pick, market, odds, stake, result); stats row (total bets, W-L, ROI%, net P&L); history table with per-bet delete; clear-all button; fully functional with no backend
+**Compare Feature — Team Colors**
+- `TEAM_COLORS` expanded to all 30 NBA teams with `[primary, secondary]` arrays (was 2 teams)
+- `TEAM_IDS` map + `teamLogoByAbbr()` using NBA CDN (already CSP-whitelisted)
+- `getPlayerPrimaryTeam(p)` computes most-played-for team for historical players from raw season data
+- `renderBars(id, rows, nA, nB, colA, colB)` — added colA/colB params, uses `_setHtml`
+- `renderRadar(pA, pB, aA, aB, colA, colB)` — added params + `hexToRgba()` helper for fill
 
-**Season History** (page-history)
-- Lazy-loaded on tab click from `season_history.json` (553 KB); 5 seasons (2020-21 to 2024-25), 30 teams/season, 5,995 games; season selector dropdown; standings table (rank, team, W, L, PCT); 50-game log table
-- `scripts/build_season_history.py` created; wired into `update.py` Step 7
+**Era-Adjusted Fix**
+- `eraFactor()` formula fixed: was `ERA_BASELINE/perPlayerLeague` (inflated everything); now `modernAvg/eraAvg` (111.8 / era_avg) — modern players get 1.0, historical low-scoring eras get slight boost
 
-### Security Hardening
-- CSP meta tag added (with `frame-ancestors` removed — it's HTTP-header only)
-- Plotly SRI hash: `sha384-Hl48Kq2HifOWdXEjMsKo6qxqvRLTYqIGbvlENBmkHAxZKIGCXv43H6W1jA671RzC`
-- Fake account dropdown removed
-- `_setHtml(el, html)` helper established as XSS-safe DOM write pattern (createContextualFragment + replaceChildren)
+**Playoff Picture**
+- Play-In zone properly 7-10 (was labeled up to seed 8 only)
+- Clinched badge (checkmark) when pct >= 97%
+- Dashed visual dividers after seed 6 and seed 10
 
-### Hardcoded Data Cleared
-- `const MATCHUP_DATA=[]` (was 3 Mar-5 games) — now populated from matchup_analysis.json
-- `DATA.picks=[]` (was 9 Mar-5 picks) — populated from todays_picks.json
-- `bt-backtest-total` — dynamic from accuracy_history backtest entries
-- `bt-ats-inline` — dynamic from performance.json
-- OG/Twitter meta tag accuracy % — no longer hardcoded
-- `ADV` const with 17 current players → `LEGENDS_ADV` (6 legends only); `_mergeAdv()` uses live advanced_stats.json (504 players) first
+**CLV Summary Card**
+- New `scripts/build_clv.py` → `dashboard/data/clv_summary.json`
+- 15th fetch added to Promise.all
+- `updateCLVSummary()` rewritten to use `window.CLV_DATA` (was using value_bets as proxy)
+- `update.py` Step 7: `build_clv` added to builder list (now 24 total)
 
-### Bug Fixes
-- `gameCard()` TypeError — `g.ats` can be undefined; fixed with `const ats=g.ats||''`
-- CSP `frame-ancestors` removed from meta tag (browser ignores it there)
-- Greeting de-personalized (removed "Spencer" from 3 strings)
-- Today page placeholder ("Building player database...") → Player Comparison tool link card
+**Season History**
+- Game log now shows full team names ("Boston Celtics" not "BOS")
+- `TEAM_NAMES` dict covers 30 current + 6 historical franchises
 
-### Verification
-- Playwright confirms 0 JS errors across Today, History, Sharp Money, Bet Tracker tabs
-- 560 tests passing (pytest)
-- 4 commits pushed to main; GitHub Pages deploying
+### Automation
+- `.github/workflows/daily_deploy.yml`: runs `python update.py` at 9AM EST daily, commits + pushes dashboard data
+- `scripts/deploy.sh`: manual local deploy wrapper
+- `.github/SETUP.md`: new PC setup instructions (clone + venv + pip + .env copy)
+
+### Skills Added
+- `nba-dashboard-dev` — dashboard patterns, _setHtml rule, Promise.all, team colors/logos
+- `plotly-charts` — Plotly trace patterns, color palette, lazy rendering
+- `sqlite-analytics` — DB schema, common queries, JSON export pattern
+- `nba-betting-analysis` — picks pipeline, CLV formula, Kelly criterion, ATS model
+
+### CLAUDE.md Updated
+- Skill routing table: 4 new NBA-specific skills added
 
 ## Pending at Session End
 
-**Nothing pending** — all tasks completed and deployed.
+**Nothing critical** — all committed and pushed to main (commit cd5cde5).
 
 ## Next Steps (priority order)
 
-1. **Wire CLV summary card to real CLV data** — `updateCLVSummary()` currently uses `value_bets.edge_pct` as a proxy (wrong semantics); real data is in `predictions_history.db` `clv_tracking` table; build `scripts/build_clv.py` -> `dashboard/data/clv_summary.json` and wire into Promise.all (append 15th fetch)
-2. **Daily deployment automation** — every day: `python update.py` -> `git add dashboard/data/ && git push`. Consider Windows Task Scheduler job.
-3. **Season History tab**: currently shows team abbreviations in game log (home/away columns); full names would be cleaner — minor UI improvement
+1. **Verify dashboard live** — after push, check GitHub Pages for: player modal, era-adjusted toggle, team colors in compare, CLV card showing "Awaiting Close"
+2. **Wire daily_deploy.yml** — add `BALLDONTLIE_API_KEY` as a GitHub Actions secret in repo settings (Settings > Secrets > Actions) — workflow won't run without it
+3. **PC migration prep** — when switching PCs: clone repo, `python -m venv .venv && .venv/Scripts/pip install -r requirements.txt`, copy `.env` from old machine, verify tests pass
+4. **CLV data population** — `build_clv.py` currently outputs all zeros (closing lines are NULL until games close); data will populate naturally as games close and `clv_tracker.py` runs
+5. **Player modal polish** — consider adding career totals row at bottom of season table; FT% column would add value
 
-## Key Files
+## Key Files Changed This Session
 
-- `update.py` — full pipeline entry point (run this daily); Step 7 calls all 24 builder scripts (added build_season_history)
-- `scripts/fetch_odds.py` — Pinnacle odds + props; writes `data/odds/game_lines.csv`
-- `scripts/build_value_bets.py` — reads `data/odds/game_lines.csv` (NOT data/processed/)
-- `scripts/build_props.py` — player props with Pinnacle book lines (60 players, 34 matched lines)
-- `scripts/build_season_history.py` — NEW; 5 seasons from team_game_logs.csv -> season_history.json
-- `dashboard/data/*.json` — COMMITTED to git; update by running update.py then pushing
+- `dashboard/index.html` — 16 targeted edits (5143 lines now)
+- `scripts/build_clv.py` — NEW
+- `dashboard/data/clv_summary.json` — NEW
+- `scripts/build_season_history.py` — full team names
+- `dashboard/data/season_history.json` — rebuilt
+- `update.py` — build_clv added
+- `.github/workflows/daily_deploy.yml` — NEW
+- `scripts/deploy.sh` — NEW
+- `.github/SETUP.md` — NEW
+- `CLAUDE.md` — 4 new skill routes
 
 ## Critical Gotchas
-- `dashboard/data/*.json` are COMMITTED (not gitignored) — must `git add dashboard/data/` after each update.py run
+- Promise.all is now **15 fetches** (not 14) — adding a 16th: append to destructure list AND fetch array
+- `TEAM_COLORS` now returns `[primary, secondary]` array — callers that expect a string need `colors[0]`
+- `getPlayerColors(p)` returns an array or null — `updateComparison` destructures with `const [colA]=(colors||[NEUTRAL_COLOR])`
+- Security hook blocks Edit when replacement contains "innerHTML" — use `_setHtml(el, html)`
 - `game_lines.csv` is at `data/odds/` not `data/processed/`
-- `player_stats.csv` has season TOTALS — divide by `gp` before computing per-game projections
-- Security hook blocks Edit when replacement text contains the literal string "innerHTML" — use `_setHtml(el,html)` pattern instead
-- CSP `frame-ancestors` is IGNORED in meta tags — only works as HTTP response header
-- `g.ats` can be undefined in game objects — always use `const ats=g.ats||''` before `.includes()`/`.startsWith()`
-- Promise.all is 14 fetches — adding a new tab: append to tuple, destructure, wire in BOTH loader AND tab-click handler
-- Python http.server: stale content served after in-place file edits — start fresh server on a new port (8081) to verify fixes
+- `dashboard/data/*.json` must be committed after each `update.py` run
+- `player_stats.csv` has season TOTALS — always divide by `gp` before per-game projections

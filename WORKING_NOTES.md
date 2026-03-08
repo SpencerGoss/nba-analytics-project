@@ -7,10 +7,13 @@
 - NBA API `format="mixed"` in ALL pd.to_datetime() on game_date; no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526 (all other CSVs: `season=202526`)
 - Pinnacle guest API (league 487, no auth); pipeline is CSV-based; `database/nba.db` empty/legacy; only `predictions_history.db` active; run tests: `.venv/Scripts/python.exe -m pytest tests/ -q`
 - Any col with `_roll` auto-captured by `roll_cols`; never also add to `context_cols` -- duplicates cause ValueError; `closing_spread` can be NULL in `predictions_history.db` before games close -- always guard with `pd.isna()` before `float()`
-- Dashboard Promise.all loads 14 JSON files; data-dependent UI must be wired in the loader callback (not tab-click handlers); security hook blocks Edit containing "innerHTML" -- use `_setHtml(el,html)` pattern (createContextualFragment + replaceChildren) for all dynamic DOM writes
+- Dashboard Promise.all loads 15 JSON files (added clv_summary.json); data-dependent UI must be wired in the loader callback (not tab-click handlers); security hook blocks Edit containing "innerHTML" -- use `_setHtml(el,html)` pattern for all dynamic DOM writes; standings uses _setHtml now too
+- Player modal: season table has FT% + career totals row (GP-weighted); career avg cards show FG%/FT%/TS% via _wAvgPct() from raw seasons; team history stints show logos; Escape key closes modal; "Retired" replaces "Legend" badge
+- Season history: game log has team logos (home_abbr/away_abbr fields), winner scores in green, margin column; standings labeled "Final Standings"; team names are full names (winner field matches home/away full names)
+- Standings table: L10 column added (color: green>=7, neutral=5-6, red<5); full team names via t.team_name||t.team; standings JSON has team_name, last10, streak, home_record, away_record, ats_record fields
 - NBA API `LeagueDashPlayerStats` only covers ~1996-97+; pre-1996 legends use `_inject_legends()` with curated career stats; `dashboard/data/*.json` are NOW COMMITTED to git (not gitignored) -- GitHub Pages deploy has no build step, so JSON must be committed for live site to show real data
 - Optuna HPO: gradient_boosting wins (0.7406 AUC, do not replace without beating 0.74); NBAEnsemble blends all 3 models (win_prob=0.5, ats_prob=0.3, margin_signal=0.2); ensemble_config.json in models/artifacts/
-- update.py Step 7 calls all 23 builder scripts in dependency order; `game_lines.csv` is written to `data/odds/` NOT `data/processed/` -- build_value_bets.py and anything reading odds lines must use `data/odds/game_lines.csv`
+- update.py Step 7 calls all 24 builder scripts in dependency order (added build_clv); `game_lines.csv` is written to `data/odds/` NOT `data/processed/` -- build_value_bets.py and anything reading odds lines must use `data/odds/game_lines.csv`
 - `fetch_historical_players.py` flush: use `first_write` alone -- `first_write and i <= len(frames)` breaks when early seasons fail (i >> len(frames), header never written)
 
 ## Domain Notes
@@ -132,8 +135,17 @@
 [2026-03-07] [model] INSIGHT: NBAEnsemble (src/models/ensemble.py) loads all 3 models via `NBAEnsemble.load()`; weights win_prob=0.5, ats_prob=0.3, margin_signal=0.2; `ensemble_config.json` confirms `margin_model_present: true`.
 [2026-03-07] [model] WHY: Ensemble is additive -- any missing model defaults to zero contribution; always load config.json first to verify all 3 are present before relying on ensemble output.
 
-[2026-03-07] [dashboard] INSIGHT: Promise.all extended to 14 fetches (todays_picks, accuracy_history, value_bets, meta, matchup_explainers, team_context, player_comparison, live_scores, standings, advanced_stats, matchup_analysis, performance, line_movement, player_props); all data-dependent sections now wired.
-[2026-03-07] [dashboard] WHY: Adding a new tab/section: (1) add fetch to Promise.all tuple, (2) destructure the result, (3) call render in the Promise.all callback AND in the tab-click handler (double-wire to handle both load order cases).
+[2026-03-07] [dashboard] INSIGHT: Promise.all extended to 15 fetches (added clv_summary.json as 15th); `window._FULL_PLAYER_DATA` now stores raw playerJson.players for detail modal season-by-season lookup.
+[2026-03-07] [dashboard] WHY: Adding a new fetch: append to both destructure list AND fetch array; wire window.X=json in callback before any render function that needs it.
+
+[2026-03-07] [dashboard] INSIGHT: eraFactor() formula was inverted -- original `ERA_BASELINE/perPlayerLeague` inflated ALL eras rather than normalizing to modern. Fix: `return modernAvg/eraAvg` where modernAvg=ERA_LEAGUE_AVG[2020]=111.8. Modern players now get factor 1.0; low-scoring eras get slight boost.
+[2026-03-07] [dashboard] WHY: ERA_BASELINE (14.5) was an arbitrary constant; dividing by it made 1990s players score 38+ PPG era-adjusted. The correct normalization anchors to the modern (2020s) scoring environment.
+
+[2026-03-07] [dashboard] INSIGHT: renderBars() and renderRadar() both accepted colA/colB params in the caller but NOT in their own signatures -- hardcoded #4F9EFF/#F5A623 regardless of team. Fixed by adding params + defaults to both function signatures.
+[2026-03-07] [dashboard] WHY: JS silently ignores extra positional args; the team colors were computed correctly in updateComparison() but never reached the render functions. Always check that function signatures match call sites when colors look wrong.
+
+[2026-03-07] [dashboard] INSIGHT: mapJsonPlayer set `retired: !!p._legend` -- only the 6 hand-injected pre-1996 legends returned retired=true; 883 historical players from NBA API had retired=false, making "All-Time Players" filter show only 6 entries.
+[2026-03-07] [dashboard] WHY: Fix: `retired: !spanStr.includes('2024')&&!spanStr.includes('2025')` -- anyone not active in the last 2 seasons is treated as historical. TEAM_COLORS now covers all 30 teams; getPlayerPrimaryTeam() computes most-played-for team from raw seasons array for retired players.
 
 [2026-03-07] [dashboard] INSIGHT: Security hook (PreToolUse) blocks any Edit call whose replacement text contains the substring "innerHTML" -- even in comments or journal entries embedded in the replacement.
 [2026-03-07] [dashboard] WHY: Workaround: choose anchor strings (old_string) that end BEFORE the innerHTML line so new_string doesn't need to contain it; or rephrase to "direct DOM insertion". The hook checks new_string content, not intent.
