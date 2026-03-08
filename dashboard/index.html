@@ -1400,8 +1400,8 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   </div>
   <div class="tab-content active" id="standings-tab-conf">
     <div class="g2" style="margin-top:4px">
-      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Eastern Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">&#8597;</span></th><th>GB</th><th>L10</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div></div>
-      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Western Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">&#8597;</span></th><th>GB</th><th>L10</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div></div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Eastern Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">&#8597;</span></th><th>GB</th><th>Home</th><th>Away</th><th>L10</th><th>Streak</th></tr></thead><tbody id="east-tb"></tbody></table></div></div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="confh">Western Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">&#8597;</span></th><th>GB</th><th>Home</th><th>Away</th><th>L10</th><th>Streak</th></tr></thead><tbody id="west-tb"></tbody></table></div></div>
     </div>
   </div>
   <div class="tab-content" id="standings-tab-scores">
@@ -3704,7 +3704,7 @@ function renderStandings(){
       const l10c=l10wins>=7?'var(--green)':l10wins>=5?'var(--t1)':'var(--red)';
       const border=i===5?'border-bottom:2px solid rgba(245,166,35,.2);':'';
       const safeAbbrS=esc(t.abbr||t.team||'');
-      return `<tr style="${border}cursor:pointer" onclick="showTeamDetail('${safeAbbrS}')" title="Click for team detail"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${esc(t.team_name||t.team)}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${esc(t.streak||'--')}</td></tr>`;
+      return `<tr style="${border}cursor:pointer" onclick="showTeamDetail('${safeAbbrS}')" title="Click for team detail"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${esc(t.team_name||t.team)}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:var(--t2);font-size:12px">${esc(t.home_record||'--')}</td><td style="color:var(--t2);font-size:12px">${esc(t.away_record||'--')}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${esc(t.streak||'--')}</td></tr>`;
     }).join('');
     _setHtml(document.getElementById(id),html);
   }
@@ -5112,7 +5112,7 @@ async function loadDashboardData(){
           const n=parseInt(rawStreak,10);
           streak=n<0?'L'+Math.abs(n):'W'+(n||1);
         }
-        return {team:t.team_name||t.team,abbr:t.team,w:t.w,l:t.l,gb:gb,streak:streak,last10:t.last10||null};
+        return {team:t.team_name||t.team,abbr:t.team,w:t.w,l:t.l,gb:gb,streak:streak,last10:t.last10||null,home_record:t.home_record||null,away_record:t.away_record||null};
       }
       if(standingsJson.east&&standingsJson.east.length)DATA.east=standingsJson.east.map(mapStandingRow);
       if(standingsJson.west&&standingsJson.west.length)DATA.west=standingsJson.west.map(mapStandingRow);
