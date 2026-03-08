@@ -3472,7 +3472,137 @@ function showPlayerDetail(name){
     }
   }catch(e){}
 
-  const fullHtml=headerHtml+caHtml+teamHistoryHtml+careerSeasonHtml+similarHtml;
+  // ── Rich detail sections from player_detail.json ──
+  const det=window._PLAYER_DETAIL&&window._PLAYER_DETAIL.players&&window._PLAYER_DETAIL.players[name];
+  let shootingSplitsHtml='';
+  let clutchHtml='';
+  let last5Html='';
+  let propTrendsHtml='';
+
+  if(det){
+    // Shooting Splits — FG%, FG3%, FT% bars from season_stats
+    const ss=det.season_stats||{};
+    const sp=det.shooting_splits||{};
+    const fmtPct=(v)=>v!=null?(v*100).toFixed(1)+'%':'-';
+    const bar=(pct,clr)=>{
+      const w=pct!=null?Math.round(pct*100):0;
+      return `<div style="height:6px;border-radius:3px;background:var(--b0);overflow:hidden;margin-top:4px"><div style="height:100%;width:${w}%;background:${clr};border-radius:3px"></div></div>`;
+    };
+    const splitRows=[
+      ['FG%', ss.fg_pct, col, 'Overall field goal %'],
+      ['3P%', ss.fg3_pct, 'var(--purple)', '3-point %'],
+      ['FT%', ss.ft_pct, 'var(--green)', 'Free throw %'],
+    ].filter(([,v])=>v!=null);
+    const ptsRows=[
+      ['2PT share', sp.pct_pts_2pt, col],
+      ['3PT share', sp.pct_pts_3pt, 'var(--purple)'],
+      ['FT share', sp.pct_pts_ft, 'var(--green)'],
+      ['Paint share', sp.pct_pts_paint, 'var(--gold)'],
+    ].filter(([,v])=>v!=null);
+    if(splitRows.length||ptsRows.length){
+      const splitCols=splitRows.map(([lbl,v,clr])=>
+        `<div style="flex:1;min-width:80px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:11px;color:var(--t2);font-weight:700">${lbl}</span>
+            <span style="font-size:14px;font-weight:800;color:${clr}">${fmtPct(v)}</span>
+          </div>${bar(v,clr)}
+        </div>`
+      ).join('');
+      const ptsCols=ptsRows.map(([lbl,v,clr])=>
+        `<div style="flex:1;min-width:80px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:11px;color:var(--t2);font-weight:700">${lbl}</span>
+            <span style="font-size:14px;font-weight:800;color:${clr}">${fmtPct(v)}</span>
+          </div>${bar(v,clr)}
+        </div>`
+      ).join('');
+      shootingSplitsHtml=`<div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Shooting Splits</div>
+        ${splitCols?`<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">${splitCols}</div>`:''}
+        ${ptsCols?`<div style="display:flex;flex-wrap:wrap;gap:12px">${ptsCols}</div>`:''}
+      </div>`;
+    }
+
+    // Clutch Stats
+    const cl=det.clutch_stats||{};
+    if(cl.ppg!=null||cl.fg_pct!=null||cl.plus_minus_pg!=null){
+      const pmSign=(cl.plus_minus_pg||0)>=0?'+':'';
+      const pmColor=(cl.plus_minus_pg||0)>=0?'var(--green)':'var(--red)';
+      const clutchCards=[
+        cl.ppg!=null?`<div style="text-align:center;padding:10px 14px;background:${col}11;border:1px solid ${col}33;border-radius:12px"><div style="font-size:18px;font-weight:800;color:${col}">${cl.ppg.toFixed(1)}</div><div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-top:2px">PTS</div></div>`:null,
+        cl.fg_pct!=null?`<div style="text-align:center;padding:10px 14px;background:var(--b0);border:1px solid var(--b1);border-radius:12px"><div style="font-size:18px;font-weight:800;color:var(--t0)">${(cl.fg_pct*100).toFixed(1)}%</div><div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-top:2px">FG%</div></div>`:null,
+        cl.plus_minus_pg!=null?`<div style="text-align:center;padding:10px 14px;background:${pmColor}18;border:1px solid ${pmColor}44;border-radius:12px"><div style="font-size:18px;font-weight:800;color:${pmColor}">${pmSign}${cl.plus_minus_pg.toFixed(1)}</div><div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-top:2px">+/-</div></div>`:null,
+        cl.gp!=null?`<div style="text-align:center;padding:10px 14px;background:var(--b0);border:1px solid var(--b1);border-radius:12px"><div style="font-size:18px;font-weight:800;color:var(--t1)">${cl.gp}</div><div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-top:2px">GP</div></div>`:null,
+      ].filter(Boolean).join('');
+      clutchHtml=`<div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Clutch Stats <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0">(last 5 min, &le;5 pts)</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">${clutchCards}</div>
+      </div>`;
+    }
+
+    // Last 5 Games
+    const l5=det.last_5_games||[];
+    if(l5.length){
+      const l5Rows=l5.map(g=>{
+        const wl=g.result==='W';
+        const rc=wl?'var(--green)':'var(--red)';
+        return `<tr style="border-bottom:1px solid var(--b0)">
+          <td style="padding:5px 8px;color:var(--t2);font-size:11px">${esc(g.date||'')}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--t1)">vs ${esc(g.opp||'')}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:var(--t0)">${g.pts!=null?g.pts:'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${g.reb!=null?g.reb:'-'}</td>
+          <td style="padding:5px 8px;text-align:center;color:var(--t1)">${g.ast!=null?g.ast:'-'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--t2)">${g.fg_pct!=null?(g.fg_pct*100).toFixed(0)+'%':'-'}</td>
+          <td style="padding:5px 8px;text-align:center"><span style="font-size:11px;font-weight:800;color:${rc};padding:1px 6px;border-radius:5px;background:${rc}18">${esc(g.result||'')}</span></td>
+        </tr>`;
+      }).join('');
+      last5Html=`<div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Last 5 Games</div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="border-bottom:1px solid var(--b0)">
+            <th style="text-align:left;padding:5px 8px;color:var(--t2);font-weight:700">Date</th>
+            <th style="padding:5px 8px;color:var(--t2);font-weight:700">Opp</th>
+            <th style="padding:5px 8px;color:var(--t2);font-weight:700">PTS</th>
+            <th style="padding:5px 8px;color:var(--t2);font-weight:700">REB</th>
+            <th style="padding:5px 8px;color:var(--t2);font-weight:700">AST</th>
+            <th style="padding:5px 8px;color:var(--t2);font-weight:700">FG%</th>
+            <th style="padding:5px 8px;color:var(--t2);font-weight:700">Result</th>
+          </tr></thead>
+          <tbody>${l5Rows}</tbody>
+        </table></div>
+      </div>`;
+    }
+
+    // Prop Trends
+    const pt=det.prop_trends||{};
+    const trendIcon=(t)=>t==='up'?'&#8593;':t==='down'?'&#8595;':'&#8212;';
+    const trendColor=(t)=>t==='up'?'var(--green)':t==='down'?'var(--red)':'var(--t2)';
+    const propCats=[
+      ['PTS', pt.pts_last5_avg, pt.pts_season_avg, pt.pts_trend],
+      ['REB', pt.reb_last5_avg, pt.reb_season_avg, pt.reb_trend],
+      ['AST', pt.ast_last5_avg, pt.ast_season_avg, pt.ast_trend],
+    ].filter(([,l5v])=>l5v!=null);
+    if(propCats.length){
+      const propCards=propCats.map(([lbl,l5v,szn,trend])=>{
+        const tc=trendColor(trend);
+        const ti=trendIcon(trend);
+        return `<div style="flex:1;min-width:90px;padding:12px;background:${col}0D;border:1px solid ${col}22;border-radius:12px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:6px">${lbl}</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <span style="font-size:20px;font-weight:800;color:${col}">${l5v!=null?l5v.toFixed(1):'-'}</span>
+            <span style="font-size:11px;color:${tc};font-weight:700">${ti}</span>
+          </div>
+          <div style="font-size:11px;color:var(--t2);margin-top:3px">L5 avg${szn!=null?' &middot; szn: '+szn.toFixed(1):''}</div>
+        </div>`;
+      }).join('');
+      propTrendsHtml=`<div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Prop Trends (Last 5)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">${propCards}</div>
+      </div>`;
+    }
+  }
+
+  const fullHtml=headerHtml+caHtml+shootingSplitsHtml+clutchHtml+last5Html+propTrendsHtml+teamHistoryHtml+careerSeasonHtml+similarHtml;
   _setHtml(document.getElementById('pm-content'),fullHtml);
   document.getElementById('player-modal').style.display='block';
   document.getElementById('player-modal-backdrop').style.display='block';
@@ -4789,7 +4919,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,playerDetailJson]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -4807,9 +4937,12 @@ async function loadDashboardData(){
       fetch('data/clv_summary.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch('data/bet_tracker.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/sharp_money.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch('data/player_detail.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
     // Store full player records for detail modal (season-by-season data)
     if(playerJson&&playerJson.players)window._FULL_PLAYER_DATA=playerJson.players;
+    // Store rich player detail data (shooting splits, clutch, last-5, prop trends)
+    if(playerDetailJson&&playerDetailJson.players)window._PLAYER_DETAIL=playerDetailJson;
     // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
     if(playerJson&&playerJson.players&&playerJson.players.length){
       const legendNames=new Set(LEGENDS.map(l=>l.name));
