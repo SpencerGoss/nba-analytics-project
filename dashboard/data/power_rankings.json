@@ -422,5 +422,5 @@
     }
   ],
   "method": "Composite score (0-100) = Net Rtg L20 (35%) + Net Rtg L10 (25%) + Pythagorean Win% L20 (20%) + Season Win% (20%). Emphasises recent 20-game form while anchoring on full-season record. Rank delta = position change vs prior 10-game window.",
-  "last_updated": "2026-03-08T01:48:17.745657+00:00"
+  "last_updated": "2026-03-08T02:00:30.797218+00:00"
 }

@@ -1260,6 +1260,26 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <div id="pm-content" style="padding:20px 22px"></div>
 </div>
 
+<!-- GAME DETAIL MODAL -->
+<div id="game-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:902;backdrop-filter:blur(4px)" onclick="closeGameModal()"></div>
+<div id="game-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:903;width:min(94vw,680px);max-height:88vh;overflow-y:auto;background:var(--card);border:1px solid var(--b1);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.65)">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--b0);position:sticky;top:0;background:var(--card);z-index:1">
+    <div style="font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--t0)" id="gm-title">Game Detail</div>
+    <button onclick="closeGameModal()" style="background:none;border:1px solid var(--b1);border-radius:8px;padding:5px 10px;color:var(--t2);cursor:pointer;font-size:13px">&#10005;</button>
+  </div>
+  <div id="gm-content" style="padding:20px 22px"></div>
+</div>
+
+<!-- TEAM DETAIL MODAL -->
+<div id="team-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:902;backdrop-filter:blur(4px)" onclick="closeTeamModal()"></div>
+<div id="team-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:903;width:min(94vw,660px);max-height:88vh;overflow-y:auto;background:var(--card);border:1px solid var(--b1);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.65)">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--b0);position:sticky;top:0;background:var(--card);z-index:1">
+    <div style="font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--t0)" id="tm-title">Team Detail</div>
+    <button onclick="closeTeamModal()" style="background:none;border:1px solid var(--b1);border-radius:8px;padding:5px 10px;color:var(--t2);cursor:pointer;font-size:13px">&#10005;</button>
+  </div>
+  <div id="tm-content" style="padding:20px 22px"></div>
+</div>
+
 <!-- TEAMS (free) -->
 <section id="page-teams" class="page">
   <div class="ph"><h1 class="pt">Teams</h1><p class="pd">Conference standings · recent form · matchup tools</p></div>
@@ -1401,10 +1421,10 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)">Score Formula</div>
     <div style="font-size:11px;color:var(--t1);background:var(--card);border:1px solid var(--b0);border-radius:8px;padding:4px 10px">
-      Net Rtg L10 <span style="color:var(--green);font-weight:700">40%</span>
-      &nbsp;+&nbsp; Net Rtg Season <span style="color:var(--blue);font-weight:700">20%</span>
-      &nbsp;+&nbsp; Pythagorean Win% <span style="color:var(--gold);font-weight:700">25%</span>
-      &nbsp;+&nbsp; Form Win% <span style="color:var(--purple);font-weight:700">15%</span>
+      Net Rtg L20 <span style="color:var(--green);font-weight:700">35%</span>
+      &nbsp;+&nbsp; Net Rtg L10 <span style="color:var(--blue);font-weight:700">25%</span>
+      &nbsp;+&nbsp; Pyth Win% L20 <span style="color:var(--gold);font-weight:700">20%</span>
+      &nbsp;+&nbsp; Season Win% <span style="color:var(--purple);font-weight:700">20%</span>
       &nbsp;&rarr; normalised 0–100
     </div>
   </div>
@@ -1422,7 +1442,8 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
             <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">#</th>
             <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Team</th>
             <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap;min-width:140px">Score</th>
-            <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Net Rtg</th>
+            <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 20 games">Net Rtg L20</th>
+            <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 10 games">Net Rtg L10</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Last 10</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Trend</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">vs Last Wk</th>
@@ -2102,6 +2123,17 @@ function _buildPickCard(p){
   const edgePct=p.edge_pct!=null?(p.edge_pct*100).toFixed(1):null;
   const spreadStr=p.spread!=null?(p.spread>0?'+'+p.spread:String(p.spread)):'--';
 
+  // Confidence level + color coding (green=high, yellow=medium, gray=low)
+  const conf=Math.max(homePct,awayPct);
+  const confCls=conf>=70?'conf-high':conf>=60?'conf-med':'conf-low';
+  const confColor=conf>=70?'var(--green)':conf>=60?'var(--gold)':'rgba(255,255,255,.4)';
+
+  // Recommended bet type
+  const pickTeam=esc(p.ats_pick||p.predicted_winner||'--');
+  let betRec=isValue?'Moneyline':'Spread';
+  if(conf>=75){betRec='Both';}
+  else if(conf>=70&&isValue){betRec='Both';}
+
   let marketPill='<span class="phc-pill pill-ats">ATS</span>';
   const edgePill=isValue&&edgePct
     ? '<span class="vb-edge '+(parseFloat(edgePct)>=10?'hi':'md')+'">+'+edgePct+'%</span>'
@@ -2115,32 +2147,59 @@ function _buildPickCard(p){
     ? '<div class="phc-badges">'+p._sitflags.map(_sitBadge).join('')+'</div>'
     : '';
 
+  // Decision helper: situational flags
+  const flags=p._sitflags||[];
+  const hasHomB2B=flags.includes('HOME_B2B');
+  const hasAwB2B=flags.includes('AWAY_B2B');
+  const homeHot=flags.includes('HOME_HOT');
+  const awayHot=flags.includes('AWAY_HOT');
+  const injImpact=flags.filter(f=>f.includes('COLD')||f.includes('INJ')).length>0?'Yes':'None';
+  const b2bNote=(hasHomB2B?'Home B2B ':'')+( hasAwB2B?'Away B2B':'');
+  const formNote=homeHot?'Home hot streak':(awayHot?'Away hot streak':'');
+  let dhItems='<div class="phc-dh-item"><span>Confidence</span><strong style="color:'+confColor+'">'+conf+'%</strong></div>';
+  dhItems+='<div class="phc-dh-item"><span>Bet Type</span><strong>'+esc(betRec)+'</strong></div>';
+  dhItems+='<div class="phc-dh-item"><span>Injury Impact</span><strong>'+esc(injImpact)+'</strong></div>';
+  if(b2bNote.trim()){dhItems+='<div class="phc-dh-item b2b-flag" style="grid-column:1/-1"><span>'+esc(b2bNote.trim())+'</span></div>';}
+  else if(formNote){dhItems+='<div class="phc-dh-item" style="grid-column:1/-1"><span>'+esc(formNote)+'</span></div>';}
+  const decisionHelper='<div class="phc-decision-helper">'+dhItems+'</div>';
+
   const awUrl=teamLogoUrl(p.away_team);const hmUrl=teamLogoUrl(p.home_team);
-  const awLogoTag=awUrl?`<img src="${awUrl}" width="16" height="16" alt="${esc(p.away_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
-  const hmLogoTag=hmUrl?`<img src="${hmUrl}" width="16" height="16" alt="${esc(p.home_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
-  return '<div class="phc'+(isValue?' card-value':'')+'">'+
-    '<div class="phc-header">'+
-      '<div>'+
-        '<div class="phc-teams" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+awLogoTag+esc(p.away_team)+' @ '+hmLogoTag+esc(p.home_team)+'</div>'+
-        '<div class="phc-date">'+esc(dateStr)+'</div>'+
-      '</div>'+
-      '<div class="phc-pills">'+marketPill+edgePill+'</div>'+
-    '</div>'+
-    '<div class="prob-split-wrap">'+
-      '<div class="prob-split-labels">'+
-        '<span class="home-side">'+esc(p.home_team)+' '+homePct+'%</span>'+
-        '<span class="away-side">'+awayPct+'% '+esc(p.away_team)+'</span>'+
-      '</div>'+
-      '<div class="prob-split-bar">'+
-        '<div class="prob-split-home" style="width:'+homePct+'%"></div>'+
-        '<div class="prob-split-away" style="width:'+awayPct+'%"></div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="phc-ats">'+
-      '<span class="phc-ats-pick">ATS: <strong>'+esc(p.ats_pick||p.predicted_winner||'--')+' '+esc(spreadStr)+'</strong></span>'+
-    '</div>'+
-    oneLiner+
-    badgeBlock+
+  const awLogoTag=awUrl?`<img src="${awUrl}" width="16" height="16" alt="${esc(p.away_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';\
+  const hmLogoTag=hmUrl?`<img src="${hmUrl}" width="16" height="16" alt="${esc(p.home_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';\
+
+  // Spread line prominently displayed
+  const spreadLineHtml=spreadStr!=='--'?'<span class="phc-spread-line">'+pickTeam+' '+esc(spreadStr)+'</span>':'';
+
+  return '<div class="phc '+confCls+(isValue?' card-value':'')+'">'+ \
+    '<div class="phc-header">'+ \
+      '<div>'+ \
+        '<div class="phc-teams" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+awLogoTag+esc(p.away_team)+' @ '+hmLogoTag+esc(p.home_team)+'</div>'+ \
+        '<div class="phc-date">'+esc(dateStr)+'</div>'+ \
+      '</div>'+ \
+      '<div class="phc-pills">'+marketPill+edgePill+'</div>'+ \
+    '</div>'+ \
+    (spreadLineHtml||betRec? \
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">'+ \
+        (spreadLineHtml||'<span></span>')+ \
+        '<span class="phc-bet-rec">'+esc(betRec)+'</span>'+ \
+      '</div>':'')+\
+    '<div class="prob-split-wrap">'+ \
+      '<div class="prob-split-labels">'+ \
+        '<span class="home-side">'+esc(p.home_team)+' '+homePct+'%</span>'+ \
+        '<span class="away-side">'+awayPct+'% '+esc(p.away_team)+'</span>'+ \
+      '</div>'+ \
+      '<div class="prob-split-bar">'+ \
+        '<div class="prob-split-home" style="width:'+homePct+'%"></div>'+ \
+        '<div class="prob-split-away" style="width:'+awayPct+'%"></div>'+ \
+      '</div>'+ \
+    '</div>'+ \
+    '<div class="phc-conf-bar-wrap"><div class="phc-conf-bar '+confCls+'" style="width:0%" data-conf="'+conf+'"></div></div>'+ \
+    '<div class="phc-ats">'+ \
+      '<span class="phc-ats-pick">ATS: <strong>'+pickTeam+' '+esc(spreadStr)+'</strong></span>'+ \
+    '</div>'+ \
+    oneLiner+ \
+    decisionHelper+ \
+    badgeBlock+ \
   '</div>';
 }
 
@@ -2239,6 +2298,7 @@ function buildHeroSection(picks, valueBets, explainers, contexts){
   if(grid)grid.style.display='';
 
   _applyFilterSort();
+  renderTodayBettingSummary(_heroPicks,valueBets);
 
   const sub=document.getElementById('dash-games-subtitle');
   if(sub){
@@ -3395,11 +3455,31 @@ function renderStandings(){
       const l10wins=parseInt(l10)||0;
       const l10c=l10wins>=7?'var(--green)':l10wins>=5?'var(--t1)':'var(--red)';
       const border=i===5?'border-bottom:2px solid rgba(245,166,35,.2);':'';
-      return `<tr style="${border}cursor:pointer" onclick="showTeamDetail('"+esc(t.abbr||t.team||"")+"')" title="Click for team detail"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${esc(t.team_name||t.team)}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${esc(t.streak||'--')}</td></tr>`;
+      const safeAbbrS=esc(t.abbr||t.team||'');
+      return `<tr style="${border}cursor:pointer" onclick="showTeamDetail('${safeAbbrS}')" title="Click for team detail"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${esc(t.team_name||t.team)}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${esc(t.streak||'--')}</td></tr>`;
     }).join('');
     _setHtml(document.getElementById(id),html);
   }
   conf(DATA.east,'east-tb','east');conf(DATA.west,'west-tb','west');
+}
+
+// ─── TODAY BETTING SUMMARY ───
+function renderTodayBettingSummary(picks,valueBets){
+  const strip=document.getElementById('today-bet-summary');
+  if(!strip)return;
+  const strongN=picks.filter(p=>p.conf>=65).length;
+  const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setEl('tbs-picks-count',strongN);
+  if(valueBets&&valueBets.length){
+    const best=valueBets.reduce((a,b)=>b.edge_pct>a.edge_pct?b:a,valueBets[0]);
+    setEl('tbs-best-bet',(best.recommended_side||best.home_team));
+    const totalEdge=valueBets.reduce((s,b)=>s+b.edge_pct,0);
+    setEl('tbs-total-edge','+'+(totalEdge*100).toFixed(1)+'%');
+  } else {
+    setEl('tbs-best-bet','None');
+    setEl('tbs-total-edge','--');
+  }
+  strip.style.display='';
 }
 
 // ─── PICKS ───
@@ -4301,6 +4381,14 @@ function renderValueBets(){
       const d=new Date(b.game_date);
       const ds=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 
+      // Kelly fraction: simplified half-Kelly (edge / (1-market_prob)) * 0.5
+      const kellyRaw=b.market_prob>0&&b.market_prob<1?(b.edge_pct/(1-b.market_prob))*0.5:null;
+      const kellyPct=kellyRaw!=null?(Math.max(0,kellyRaw)*100).toFixed(1):null;
+      let kellyHtml='';
+      if(kellyPct!==null){
+        const kellyNote=parseFloat(kellyPct)<1?'Small edge — consider skipping':parseFloat(kellyPct)>=5?'Strong edge — worth sizing up':'Moderate edge';
+        kellyHtml='<div class="vb-kelly-row"><span class="vb-kelly-label">Suggested Size</span><span class="vb-kelly-val">'+kellyPct+'%</span><span class="vb-kelly-note">of bankroll (half-Kelly)</span><span style="font-size:10px;color:var(--t2);margin-left:auto">'+esc(kellyNote)+'</span></div>';
+      }
       // Bullets from explainers
       let bulletsHtml='';
       if(ex&&ex.bullets&&ex.bullets.length){
@@ -4351,6 +4439,7 @@ function renderValueBets(){
           <span style="font-family:var(--fm);font-size:20px;font-weight:700;color:var(--green);letter-spacing:-.5px">+${edge}%</span>
           <span style="font-size:11px;color:var(--t2)">model vs market</span>
         </div>
+        ${kellyHtml}
         ${bulletsHtml}
       `);
       // Share button row
@@ -4405,7 +4494,9 @@ function initInjuries(){
     .then(data=>{
       _injuriesLoaded=true;
       _injuriesLoading=false;
-      renderInjuries(Array.isArray(data)?data:[]);
+      const injArr=Array.isArray(data)?data:[];
+      window.INJURIES_DATA=injArr;
+      renderInjuries(injArr);
     })
     .catch(err=>{
       _injuriesLoading=false;
@@ -4641,6 +4732,7 @@ async function loadDashboardData(){
     window.ADVANCED_STATS=(advStats&&advStats.players)?advStats.players:{};
     window._VB_EXPLAINERS=explainers;
     if(picks.length){
+      window._RAW_PICKS=picks;
       DATA.picks=picks.map(p=>{
         const conf=Math.round(Math.max(p.home_win_prob||0,p.away_win_prob||0)*100);
         const d=new Date(p.game_date);
@@ -5150,6 +5242,7 @@ if ('serviceWorker' in navigator) {
       .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
       .then(data => {
         _h2hData = Array.isArray(data) ? data : [];
+        window.H2H_DATA = _h2hData;
         _h2hLoaded = true;
         _h2hLoading = false;
 
@@ -5251,32 +5344,47 @@ if ('serviceWorker' in navigator) {
     // Table rows
     const tbody = document.getElementById('rk-tbody');
     if (tbody) {
-      tbody.innerHTML = rankings.map(function(r, i) {
-        const rowBg   = i % 2 === 0 ? '' : 'background:rgba(255,255,255,.02)';
-        const netColor = _netRtgColor(r.net_rating);
-        const netSign  = r.net_rating >= 0 ? '+' : '';
-        return '<tr style="border-bottom:1px solid var(--b0);' + rowBg + '">'
+      const rowsHtml = rankings.map(function(r, i) {
+        const rowBg      = i % 2 === 0 ? '' : 'background:rgba(255,255,255,.02)';
+        const net20Color = _netRtgColor(r.net_rating);
+        const net10Val   = r.net_rating_l10 != null ? r.net_rating_l10 : r.net_rating;
+        const net10Color = _netRtgColor(net10Val);
+        const net20Sign  = r.net_rating >= 0 ? '+' : '';
+        const net10Sign  = net10Val >= 0 ? '+' : '';
+        const rd = r.rank_delta != null ? r.rank_delta : (r.prev_rank - r.rank);
+        let rdHtml;
+        if (rd > 0)      rdHtml = '<span style="color:var(--green);font-size:11px;font-weight:700">+' + rd + '</span>';
+        else if (rd < 0) rdHtml = '<span style="color:var(--red);font-size:11px;font-weight:700">' + rd + '</span>';
+        else             rdHtml = '<span style="color:var(--t2);font-size:11px">&#8212;</span>';
+        return '<tr style="border-bottom:1px solid var(--b0);' + rowBg + ';cursor:pointer"'
+          + ' onclick="showFreeTab(\'teams\')" title="View Teams tab">'
           + '<td style="padding:11px 16px;font-family:var(--fm);font-size:13px;font-weight:700;color:var(--t2);text-align:left">' + r.rank + '</td>'
           + '<td style="padding:11px 16px;text-align:left;white-space:nowrap">'
           +   '<div style="font-weight:700;color:var(--t0)">' + r.team + '</div>'
           +   '<div style="font-size:11px;color:var(--t2)">' + r.team_name + '</div>'
           + '</td>'
           + '<td style="padding:11px 16px;min-width:140px">' + _scoreBar(r.composite_score) + '</td>'
-          + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + netColor + '">' + netSign + r.net_rating.toFixed(1) + '</td>'
+          + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + net20Color + '">' + net20Sign + r.net_rating.toFixed(1) + '</td>'
+          + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:12px;color:' + net10Color + '">' + net10Sign + net10Val.toFixed(1) + '</td>'
           + '<td style="padding:11px 16px;text-align:center;font-family:var(--fm);font-size:12px;color:var(--t1)">' + r.last10_record + '</td>'
           + '<td style="padding:11px 16px;text-align:center">' + _trendArrow(r.trend) + '</td>'
-          + '<td style="padding:11px 16px;text-align:center">' + _rankDelta(r.rank, r.prev_rank) + '</td>'
+          + '<td style="padding:11px 16px;text-align:center">' + rdHtml + '</td>'
           + '</tr>';
       }).join('');
+      _setHtml(tbody, rowsHtml);
     }
 
-    // Divergence callout — teams where |rank - prevRank| >= 4
-    const divergent = rankings.filter(function(r) { return Math.abs(r.rank - r.prev_rank) >= 4; });
+    // Divergence callout -- teams where |rank_delta| >= 4
+    const divergent = rankings.filter(function(r) {
+      const rd = r.rank_delta != null ? r.rank_delta : (r.prev_rank - r.rank);
+      return Math.abs(rd) >= 4;
+    });
     const divEl   = document.getElementById('rk-divergence');
     const divList = document.getElementById('rk-divergence-list');
     if (divEl && divList && divergent.length) {
-      divList.innerHTML = divergent.map(function(r) {
-        const moved    = r.prev_rank - r.rank;
+      const divHtml = divergent.map(function(r) {
+        const rd       = r.rank_delta != null ? r.rank_delta : (r.prev_rank - r.rank);
+        const moved    = rd;
         const dir      = moved > 0 ? 'rose' : 'fell';
         const col      = moved > 0 ? 'var(--green)' : 'var(--red)';
         const arrow    = moved > 0 ? '&#8593;' : '&#8595;';
@@ -5289,12 +5397,13 @@ if ('serviceWorker' in navigator) {
           +   '<span style="color:' + col + ';font-size:13px;font-weight:800">' + arrow + ' ' + abs + ' spots</span>'
           + '</div>'
           + '<div style="font-size:12px;color:var(--t2)">'
-          +   'Model rank ' + dir + ' from <strong style="color:var(--t1)">#' + r.prev_rank + '</strong> last week &nbsp;&middot;&nbsp;'
-          +   ' Net Rtg <strong style="color:' + netColor + '">' + netSign + r.net_rating.toFixed(1) + '</strong> &nbsp;&middot;&nbsp;'
+          +   'Rank ' + dir + ' from <strong style="color:var(--t1)">#' + r.prev_rank + '</strong> last window &nbsp;&middot;&nbsp;'
+          +   ' Net Rtg L20 <strong style="color:' + netColor + '">' + netSign + r.net_rating.toFixed(1) + '</strong> &nbsp;&middot;&nbsp;'
           +   ' Last 10: <strong style="color:var(--t1)">' + r.last10_record + '</strong>'
           + '</div>'
           + '</div>';
       }).join('');
+      _setHtml(divList, divHtml);
       divEl.style.display = '';
     }
 
