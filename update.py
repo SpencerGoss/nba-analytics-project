@@ -348,6 +348,7 @@ def main() -> None:
             ("build_clv", "CLV summary"),
             # Heavy -- run last
             ("build_player_comparison", "Player comparison"),
+            ("build_player_detail", "Player detail stats"),
             ("build_season_history", "Season history"),
         ]
 
@@ -423,6 +424,7 @@ def builders_only() -> None:
         ("build_props", "Player props"),
         ("build_clv", "CLV summary"),
         ("build_player_comparison", "Player comparison"),
+        ("build_player_detail", "Player detail stats"),
         ("build_season_history", "Season history"),
     ]
 
