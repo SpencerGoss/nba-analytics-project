@@ -12,7 +12,7 @@ End-to-end NBA analytics system: data ingestion → feature engineering → game
 - Tests: 573 passing (29 new in build_line_movement; NULL guard fix)
 - Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
 - **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv populates live with NBA moneylines + spreads
-- **Dashboard v3:** full Linear/Coinbase redesign; live at https://spencergoss.github.io/nba-analytics-project/; 9 tabs fully operational: Today, Players (1,710 players + legends), Teams, H2H, Standings, Injuries, Rankings, History (5 seasons), Betting Tools (Picks, Value Bets, Props, Sharp Money Tracker, Performance, Bet Tracker); CSP + SRI security hardening; no hardcoded data (all 23 JSON files from `update.py` Step 7)
+- **Dashboard v3 (Sessions 5+6 polish):** full Linear/Coinbase redesign; live at https://spencergoss.github.io/nba-analytics-project/; 9 tabs fully operational: Today, Players (883 all-time + clickable modal with career stats/FT%/logos), Teams, H2H, Standings (L10 col, full names), Injuries, Rankings, History (5 seasons, winner coloring, margin col), Betting Tools (Picks/Value Bets/Props/Sharp Money/Performance/Bet Tracker); CSP + SRI; no hardcoded data (23 JSON files from `update.py` Step 7); GitHub Actions daily deploy wired
 - **HPO result:** Optuna 100 trials — LightGBM 0.7116, XGBoost 0.7115 — both lose to gradient_boosting (0.7406); production model unchanged
 
 ## Key Links

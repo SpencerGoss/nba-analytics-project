@@ -2,19 +2,16 @@
 
 ## Core Insights (loaded by session-kickoff)
 
-- `shift(1)` before ALL rolling features -- data leakage kills model validity; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out
-- ALL inference loads `game_outcome_model_calibrated.pkl`; sys.path must include PROJECT_ROOT; update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`
-- NBA API `format="mixed"` in ALL pd.to_datetime() on game_date; no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526 (all other CSVs: `season=202526`)
-- Pinnacle guest API (league 487, no auth); pipeline is CSV-based; `database/nba.db` empty/legacy; only `predictions_history.db` active; run tests: `.venv/Scripts/python.exe -m pytest tests/ -q`
-- Any col with `_roll` auto-captured by `roll_cols`; never also add to `context_cols` -- duplicates cause ValueError; `closing_spread` can be NULL in `predictions_history.db` before games close -- always guard with `pd.isna()` before `float()`
-- Dashboard Promise.all loads 15 JSON files (added clv_summary.json); data-dependent UI must be wired in the loader callback (not tab-click handlers); security hook blocks Edit containing "innerHTML" -- use `_setHtml(el,html)` pattern for all dynamic DOM writes; standings uses _setHtml now too
-- Player modal: season table has FT% + career totals row (GP-weighted); career avg cards show FG%/FT%/TS% via _wAvgPct() from raw seasons; team history stints show logos; Escape key closes modal; "Retired" replaces "Legend" badge
-- Season history: game log has team logos (home_abbr/away_abbr fields), winner scores in green, margin column; standings labeled "Final Standings"; team names are full names (winner field matches home/away full names)
-- Standings table: L10 column added (color: green>=7, neutral=5-6, red<5); full team names via t.team_name||t.team; standings JSON has team_name, last10, streak, home_record, away_record, ats_record fields
-- NBA API `LeagueDashPlayerStats` only covers ~1996-97+; pre-1996 legends use `_inject_legends()` with curated career stats; `dashboard/data/*.json` are NOW COMMITTED to git (not gitignored) -- GitHub Pages deploy has no build step, so JSON must be committed for live site to show real data
-- Optuna HPO: gradient_boosting wins (0.7406 AUC, do not replace without beating 0.74); NBAEnsemble blends all 3 models (win_prob=0.5, ats_prob=0.3, margin_signal=0.2); ensemble_config.json in models/artifacts/
-- update.py Step 7 calls all 24 builder scripts in dependency order (added build_clv); `game_lines.csv` is written to `data/odds/` NOT `data/processed/` -- build_value_bets.py and anything reading odds lines must use `data/odds/game_lines.csv`
-- `fetch_historical_players.py` flush: use `first_write` alone -- `first_write and i <= len(frames)` breaks when early seasons fail (i >> len(frames), header never written)
+- [model] `shift(1)` before ALL rolling features; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out from CV
+- [model] ALL inference loads `game_outcome_model_calibrated.pkl`; sys.path must include PROJECT_ROOT; update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`
+- [model] Optuna HPO done: gradient_boosting wins (AUC 0.7406, do not replace); NBAEnsemble blends 3 models (win=0.5/ats=0.3/margin=0.2); margin Ridge MAE 10.574
+- [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526; player_stats.csv stores TOTALS -- divide by gp
+- [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols -- causes ValueError; `closing_spread` can be NULL before games close -- guard with pd.isna() before float()
+- [pipeline] update.py Step 7 calls all 24 builders; `game_lines.csv` at `data/odds/` (NOT data/processed/); `dashboard/data/*.json` COMMITTED to git (GitHub Pages has no build step)
+- [dashboard] Promise.all has 15 fetches; data-dependent UI in loader callback (NOT tab-click handlers); ALL dynamic DOM writes use `_setHtml(el,html)` -- security hook blocks "innerHTML" in any Edit replacement text
+- [dashboard] Player modal: season table FT% + GP-weighted career totals (wAvg/wAvgPct); career cards FG%/FT%/TS%; standings: L10 col (green>=7/red<5) + full names via t.team_name; season history: winner scores colored green, margin col, logos via home_abbr/away_abbr
+- [infra] Pinnacle guest API (league 487, no auth, free); only predictions_history.db active (nba.db empty/legacy); Playwright Chrome fails on Windows if Chrome already running -- use grep for verification instead
+- [data] NBA API LeagueDashPlayerStats only ~1996-97+; pre-1996 legends use _inject_legends(); fetch_historical_players.py flush: use `first_write` alone (not `first_write and i <= len(frames)`) -- i >> len when early seasons fail
 
 ## Domain Notes
 
