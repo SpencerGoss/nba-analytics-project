@@ -1118,6 +1118,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     <button class="bt-pill" onclick="showBettingTab('sharp',this)" id="btp-sharp">Sharp Money</button>
     <button class="bt-pill" onclick="showBettingTab('performance',this)" id="btp-performance">Performance</button>
     <button class="bt-pill" onclick="showBettingTab('tracker',this)" id="btp-tracker">Bet Tracker</button>
+    <button class="bt-pill" onclick="showBettingTab('linemovement',this)" id="btp-linemovement">Line Movement</button>
   </div>
 </div>
 
@@ -1700,6 +1701,12 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   </div>
 </section>
 
+<!-- LINE MOVEMENT (betting tab) -->
+<section id="page-bet-linemovement" class="page">
+  <div class="ph"><h1 class="pt">Line Movement</h1><p class="pd">Opening vs. current spreads, steam moves, and reverse line movement</p></div>
+  <div id="line-movement-container"></div>
+</section>
+
 <!-- DEEP DIVE (preserved) -->
 <section id="page-deep" class="page">
   <div class="ph"><h1 class="pt">Deep Dive</h1><p class="pd">Beyond the box score</p></div>
@@ -2209,45 +2216,45 @@ function _buildPickCard(p){
     : '';
 
   const awUrl=teamLogoUrl(p.away_team);const hmUrl=teamLogoUrl(p.home_team);
-  const awLogoTag=awUrl?`<img src="${awUrl}" width="16" height="16" alt="${esc(p.away_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';\
-  const hmLogoTag=hmUrl?`<img src="${hmUrl}" width="16" height="16" alt="${esc(p.home_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';\
+  const awLogoTag=awUrl?`<img src="${awUrl}" width="16" height="16" alt="${esc(p.away_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
+  const hmLogoTag=hmUrl?`<img src="${hmUrl}" width="16" height="16" alt="${esc(p.home_team)}" style="object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'"/>`:'';
 
   // Spread line prominently displayed
   const spreadLineHtml=spreadStr!=='--'?'<span class="phc-spread-line">'+pickTeam+' '+esc(spreadStr)+'</span>':'';
 
-  return '<div class="phc '+confCls+(isValue?' card-value':'')+'">'+ \
-    '<div class="phc-header">'+ \
-      '<div>'+ \
-        '<div class="phc-teams" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+awLogoTag+esc(p.away_team)+' @ '+hmLogoTag+esc(p.home_team)+'</div>'+ \
-        '<div class="phc-date">'+esc(dateStr)+'</div>'+ \
-      '</div>'+ \
-      '<div class="phc-pills">'+marketPill+edgePill+'</div>'+ \
-    '</div>'+ \
-    (spreadLineHtml||betRec? \
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">'+ \
-        (spreadLineHtml||'<span></span>')+ \
-        '<span class="phc-bet-rec">'+esc(betRec)+'</span>'+ \
-      '</div>':'')+\
-    '<div class="prob-split-wrap">'+ \
-      '<div class="prob-split-labels">'+ \
-        '<span class="home-side">'+esc(p.home_team)+' '+homePct+'%</span>'+ \
-        '<span class="away-side">'+awayPct+'% '+esc(p.away_team)+'</span>'+ \
-      '</div>'+ \
-      '<div class="prob-split-bar">'+ \
-        '<div class="prob-split-home" style="width:'+homePct+'%"></div>'+ \
-        '<div class="prob-split-away" style="width:'+awayPct+'%"></div>'+ \
-      '</div>'+ \
-    '</div>'+ \
-    '<div class="phc-conf-bar-wrap"><div class="phc-conf-bar '+confCls+'" style="width:0%" data-conf="'+conf+'"></div></div>'+ \
-    '<div class="phc-ats">'+ \
-      '<span class="phc-ats-pick">ATS: <strong>'+pickTeam+' '+esc(spreadStr)+'</strong></span>'+ \
-    '</div>'+ \
-    projMarginHtml+ \
-    oneLiner+ \
-    ctxSummary+ \
-    decisionHelper+ \
-    kellyHtml+ \
-    badgeBlock+ \
+  return '<div class="phc '+confCls+(isValue?' card-value':'')+'">'+ 
+    '<div class="phc-header">'+ 
+      '<div>'+ 
+        '<div class="phc-teams" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+awLogoTag+esc(p.away_team)+' @ '+hmLogoTag+esc(p.home_team)+'</div>'+ 
+        '<div class="phc-date">'+esc(dateStr)+'</div>'+ 
+      '</div>'+ 
+      '<div class="phc-pills">'+marketPill+edgePill+'</div>'+ 
+    '</div>'+ 
+    (spreadLineHtml||betRec? 
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">'+ 
+        (spreadLineHtml||'<span></span>')+ 
+        '<span class="phc-bet-rec">'+esc(betRec)+'</span>'+ 
+      '</div>':'')+
+    '<div class="prob-split-wrap">'+ 
+      '<div class="prob-split-labels">'+ 
+        '<span class="home-side">'+esc(p.home_team)+' '+homePct+'%</span>'+ 
+        '<span class="away-side">'+awayPct+'% '+esc(p.away_team)+'</span>'+ 
+      '</div>'+ 
+      '<div class="prob-split-bar">'+ 
+        '<div class="prob-split-home" style="width:'+homePct+'%"></div>'+ 
+        '<div class="prob-split-away" style="width:'+awayPct+'%"></div>'+ 
+      '</div>'+ 
+    '</div>'+ 
+    '<div class="phc-conf-bar-wrap"><div class="phc-conf-bar '+confCls+'" style="width:0%" data-conf="'+conf+'"></div></div>'+ 
+    '<div class="phc-ats">'+ 
+      '<span class="phc-ats-pick">ATS: <strong>'+pickTeam+' '+esc(spreadStr)+'</strong></span>'+ 
+    '</div>'+ 
+    projMarginHtml+ 
+    oneLiner+ 
+    ctxSummary+ 
+    decisionHelper+ 
+    kellyHtml+ 
+    badgeBlock+ 
   '</div>';
 }
 
@@ -2461,7 +2468,7 @@ function headshot(nbaId, ini, size=36) {
 // All page IDs that map to free tabs
 const FREE_TABS = ['today','players','teams','h2h','standings','injuries','rankings','history','deep'];
 // Betting tab ids
-const BET_TABS  = ['picks','valuebets','props','sharp','performance','tracker'];
+const BET_TABS  = ['picks','valuebets','props','sharp','performance','tracker','linemovement'];
 
 let _activeBetTab = null;
 
@@ -2530,7 +2537,7 @@ function _activateBettingTab(tabId, pillEl){
   const bBtn=document.getElementById('nb-betting');
   if(bBtn)bBtn.classList.add('active');
   const bLbl=document.getElementById('nb-betting-label');
-  const tabLabels={picks:'Picks',valuebets:'Value Bets',props:'Props',sharp:'Sharp Money',performance:'Performance',tracker:'Bet Tracker'};
+  const tabLabels={picks:'Picks',valuebets:'Value Bets',props:'Props',sharp:'Sharp Money',performance:'Performance',tracker:'Bet Tracker',linemovement:'Line Movement'};
   if(bLbl)bLbl.textContent='Betting: '+(tabLabels[tabId]||tabId)+' ▾';
   // Update pill active state
   BET_TABS.forEach(t=>{
@@ -2549,6 +2556,7 @@ function _activateBettingTab(tabId, pillEl){
   if(tabId==='sharp')renderSharpMoney();
   if(tabId==='props')renderProps();
   if(tabId==='tracker'){btRender();renderBetTracker();}
+  if(tabId==='linemovement')renderLineMovement();
 }
 
 let _btDropOpen=false;
@@ -2753,7 +2761,7 @@ function buildFeaturedMatchupComparison(picks){
     playerBlock(homeP,home,false)+
   '</div>'+
   '<div class="mmc-footer">'+
-    '<button onclick="showFreeTab('players')" style="font-size:11px;color:var(--t2);cursor:pointer;background:none;border:none;font-family:var(--f);padding:0">Full Comparison Tool -&gt;</button>'+
+    '<button onclick="showFreeTab(\'players\')" style="font-size:11px;color:var(--t2);cursor:pointer;background:none;border:none;font-family:var(--f);padding:0">Full Comparison Tool -&gt;</button>'+
   '</div>';
   _setHtml(el,html);
 }
@@ -4286,6 +4294,60 @@ function renderSharpMoney(){
     lmHtml='<div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">No Line Data Today</div><div class="tp-desc">Line movement data will appear once odds are posted for today\'s games. Check back closer to tip-off.</div></div>';
   }
   _setHtml(container,smHtml+lmHtml);
+}
+
+function renderLineMovement(){
+  const container=document.getElementById('line-movement-container');
+  if(!container)return;
+  const lineData=window.LINE_MOVEMENT||[];
+  const classColor={sharp_action:'var(--green)',moderate_move:'var(--gold)',stable:'var(--t2)',reverse_line_movement:'var(--purple)'};
+  const classLabel={sharp_action:'Sharp Action',moderate_move:'Moderate Move',stable:'Stable',reverse_line_movement:'Reverse Line'};
+  let html='';
+  if(lineData.length){
+    const maxMove=lineData.reduce((mx,g)=>Math.max(mx,Math.abs(g.movement||0)),0);
+    const steamCount=lineData.filter(g=>Math.abs(g.movement||0)>=1.5).length;
+    const mostMoved=lineData.find(g=>Math.abs(g.movement||0)===maxMove);
+    html='<div class="sgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">'
+      +'<div class="sc accent-green"><span class="sl">Games Tracked</span><span class="sv g">'+lineData.length+'</span><span class="schange">Today\'s slate</span></div>'
+      +'<div class="sc accent-gold"><span class="sl">Steam Moves</span><span class="sv o">'+steamCount+'</span><span class="schange">&ge;1.5 pt move</span></div>'
+      +'<div class="sc accent-blue"><span class="sl">Biggest Move</span><span class="sv b">'+(maxMove>0?'+':'')+maxMove.toFixed(1)+'</span><span class="schange">'+(mostMoved?esc(mostMoved.away_team)+' @ '+esc(mostMoved.home_team):'--')+'</span></div>'
+      +'</div>';
+    const fmt=v=>(v!=null?(v>0?'+':'')+v:'--');
+    html+=lineData.map(g=>{
+      const mv=g.movement||0;
+      const movStr=(mv>0?'+':'')+mv.toFixed(1);
+      const isSteam=g.steam_move||Math.abs(mv)>=1.5;
+      const isReverse=g.reverse_line_move||false;
+      const isFlat=mv===0;
+      const col=classColor[g.classification]||'var(--t2)';
+      const lbl=classLabel[g.classification]||esc(g.classification||'');
+      const dirArrow=mv>0?'&#9650;':mv<0?'&#9660;':'&#9644;';
+      const movCol=isFlat?'var(--t2)':mv>0?'var(--green)':'var(--red)';
+      const barPct=maxMove>0?Math.min(100,Math.abs(mv)/maxMove*100):0;
+      const badges=(isSteam?'<span class="badge g" style="font-size:9px;letter-spacing:.5px">STEAM</span>':'')
+        +(isReverse?'<span class="badge" style="font-size:9px;letter-spacing:.5px;background:var(--purple-d);color:var(--purple)">REVERSE LINE</span>':'');
+      return '<div class="card'+(isSteam?' card-value':'')+'" style="margin-bottom:12px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="font-size:14px;font-weight:700;color:var(--t0)">'+esc(g.away_team)+' @ '+esc(g.home_team)+'</div>'
+        +badges+'</div>'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<span style="font-size:11px;font-weight:700;color:'+col+';padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.05)">'+lbl+'</span>'
+        +'<span style="font-size:11px;color:var(--t2)">'+esc(g.game_date||'')+'</span>'
+        +'</div></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:10px">'
+        +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Opening</div><div style="font-size:18px;font-weight:700;color:var(--t1);font-family:var(--fm)">'+fmt(g.opening_spread)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Current</div><div style="font-size:18px;font-weight:700;color:var(--t0);font-family:var(--fm)">'+fmt(g.current_spread)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Move</div><div style="font-size:18px;font-weight:700;color:'+movCol+';font-family:var(--fm)">'+(isFlat?'&#9644; Flat':dirArrow+' '+movStr)+'</div></div>'
+        +'</div>'
+        +(barPct>0?'<div style="height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:10px"><div style="height:100%;width:'+barPct.toFixed(0)+'%;border-radius:4px;background:'+movCol+';transition:width 600ms cubic-bezier(.16,1,.3,1)"></div></div>':'')
+        +(g.interpretation?'<div style="font-size:12px;color:var(--t1);border-top:1px solid var(--b0);padding-top:8px">'+esc(g.interpretation)+'</div>':'')
+        +'</div>';
+    }).join('');
+  } else {
+    html='<div class="tab-placeholder"><div class="tp-icon">&#128202;</div><div class="tp-title">No Line Data Today</div><div class="tp-desc">Line movement data will appear once odds are posted for today\'s games. Check back closer to tip-off.</div></div>';
+  }
+  _setHtml(container,html);
 }
 
 // ─── BET TRACKER (data-driven summary from bet_tracker.json) ───
@@ -5842,10 +5904,10 @@ function buildTeamsOverview(){
   }
   const e=document.getElementById('teams-east-tb');
   const w=document.getElementById('teams-west-tb');
-  if(e&&DATA.east.length)e.innerHTML=DATA.east.map(row).join('');
-  if(w&&DATA.west.length)w.innerHTML=DATA.west.map(row).join('');
+  if(e&&DATA.east&&DATA.east.length){const f=document.createRange().createContextualFragment(DATA.east.map(row).join(''));e.replaceChildren(f);}
+  if(w&&DATA.west&&DATA.west.length){const f=document.createRange().createContextualFragment(DATA.west.map(row).join(''));w.replaceChildren(f);}
 }
-buildTeamsOverview();
+if(typeof DATA!=='undefined')buildTeamsOverview();
 
 function buildTeamsForm(){
   const grid=document.getElementById('teams-form-grid');

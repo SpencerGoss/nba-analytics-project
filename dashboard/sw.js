@@ -1,4 +1,4 @@
-const CACHE = 'baseline-v1';
+const CACHE = 'baseline-v2';
 const ASSETS = ['./','./index.html','./data/todays_picks.json','./data/value_bets.json','./data/meta.json'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))));
 self.addEventListener('fetch', e => e.respondWith(
