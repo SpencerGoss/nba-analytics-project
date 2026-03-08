@@ -39,6 +39,11 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Screenshots (Playwright test artifacts)
+*.png
+*.jpg
+*.jpeg
+
 # Logs
 logs/
 *.log

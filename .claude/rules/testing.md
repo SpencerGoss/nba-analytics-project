@@ -4,7 +4,7 @@
 
 ## Framework
 pytest. Run with: `pytest -v` or `python -m pytest tests/ -q`
-Current baseline: 115 tests passing (as of 2026-03-05).
+Current baseline: 560 tests passing (as of 2026-03-08).
 
 ## Coverage Target
 80%+ for any new module added in v2.0.
@@ -18,6 +18,11 @@ Current baseline: 115 tests passing (as of 2026-03-05).
 - `tests/test_get_injury_data.py` — injury report fetcher
 - `tests/test_get_lineup_data.py` — lineup data fetcher
 - `tests/test_lineup_features.py` — lineup feature engineering
+- `tests/test_build_picks.py` — picks builder (margin, kelly, confidence)
+- `tests/test_build_game_context.py` — situational flags, rest/streaks
+- `tests/test_build_line_movement.py` — spread movement, sharp classification
+- `tests/test_build_player_comparison.py` — player comparison JSON
+- `tests/test_power_rankings.py` — power rankings algorithm
 - New tests go in `tests/` with `test_<module_name>.py` naming
 
 ## What to Test

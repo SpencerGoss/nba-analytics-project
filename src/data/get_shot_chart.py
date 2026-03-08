@@ -29,6 +29,11 @@ def get_shot_chart(start_year=2000, end_year=2024):
             print(f"No player stats file for {season}. Run get_player_stats.py first. Skipping.")
             continue
 
+        output_path = f"data/raw/shot_chart/shot_chart_{season_code}.csv"
+        if os.path.exists(output_path):
+            print(f"  SKIP: {season} already fetched -> {output_path}")
+            continue
+
         players_df = pd.read_csv(raw_path)
         player_ids = players_df["PLAYER_ID"].unique()
 
@@ -61,7 +66,6 @@ def get_shot_chart(start_year=2000, end_year=2024):
 
         if season_shots:
             combined = pd.concat(season_shots, ignore_index=True)
-            output_path = f"data/raw/shot_chart/shot_chart_{season_code}.csv"
             combined.to_csv(output_path, index=False)
             print(f"  Saved {season} ({len(combined)} shots)")
         else:
