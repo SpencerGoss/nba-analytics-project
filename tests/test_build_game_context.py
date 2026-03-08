@@ -251,6 +251,7 @@ class TestSituationalFlags:
             home_b2b=False, away_b2b=False,
             home_rest=2, away_rest=2,
             home_l10="7-3", away_l10="5-5",
+            home_l7="5-2", away_l7="4-3",
         )
         assert "HOME_HOT" in flags
         assert "HOME_COLD" not in flags
@@ -270,34 +271,38 @@ class TestSituationalFlags:
             home_b2b=False, away_b2b=False,
             home_rest=4, away_rest=2,
             home_l10="5-5", away_l10="5-5",
+            home_l7="4-3", away_l7="4-3",
         )
-        assert "HOME_REST_ADV" in flags
-        assert "AWAY_REST_ADV" not in flags
+        assert "REST_ADV_HOME" in flags
+        assert "REST_ADV_AWAY" not in flags
 
     def test_away_rest_adv(self):
         flags = situational_flags(
             home_b2b=False, away_b2b=False,
             home_rest=2, away_rest=5,
             home_l10="5-5", away_l10="5-5",
+            home_l7="4-3", away_l7="4-3",
         )
-        assert "AWAY_REST_ADV" in flags
-        assert "HOME_REST_ADV" not in flags
+        assert "REST_ADV_AWAY" in flags
+        assert "REST_ADV_HOME" not in flags
 
     def test_no_rest_adv_when_equal(self):
         flags = situational_flags(
             home_b2b=False, away_b2b=False,
             home_rest=3, away_rest=3,
             home_l10="5-5", away_l10="5-5",
+            home_l7="4-3", away_l7="4-3",
         )
         # Neither gets REST_ADV when equal
-        assert "HOME_REST_ADV" not in flags
-        assert "AWAY_REST_ADV" not in flags
+        assert "REST_ADV_HOME" not in flags
+        assert "REST_ADV_AWAY" not in flags
 
     def test_no_flags_neutral_game(self):
         flags = situational_flags(
             home_b2b=False, away_b2b=False,
             home_rest=2, away_rest=2,
             home_l10="5-5", away_l10="5-5",
+            home_l7="4-3", away_l7="4-3",
         )
         assert flags == []
 
@@ -306,6 +311,7 @@ class TestSituationalFlags:
             home_b2b=True, away_b2b=True,
             home_rest=1, away_rest=1,
             home_l10="8-2", away_l10="2-8",
+            home_l7="6-1", away_l7="1-6",
         )
         assert "HOME_B2B" in flags
         assert "AWAY_B2B" in flags
