@@ -2721,7 +2721,9 @@ function gameCard(g){
   const tlsH=homeLogoUrl
     ?`<div class="tls" style="background:transparent;border-color:var(--b0)"><img src="${homeLogoUrl}" width="20" height="20" alt="${esc(g.home)}" style="object-fit:contain" onerror="this.parentElement.textContent='${esc(g.home)}'"/></div>`
     :`<div class="tls">${esc(g.home)}</div>`;
-  return `<div class="gc${g.status==='live'?' live':''}" role="article">
+  const safeHome=esc(g.home).replace(/'/g,"&#39;");
+  const safeAway=esc(g.away).replace(/'/g,"&#39;");
+  return `<div class="gc${g.status==='live'?' live':''}" role="article" style="cursor:pointer" onclick="showGameDetail('${safeHome}','${safeAway}')" title="Click for game details">
     <div class="gs ${g.status}">
       ${g.status==='live'?`<span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2.4s ease-in-out infinite"></span>`:''}
       ${g.status==='live'?g.q:g.status==='final'?'Final':g.q}
@@ -2731,6 +2733,7 @@ function gameCard(g){
       <div class="gtr"><div class="gti">${tlsH}<div><div class="tn">${esc(g.home)}</div><div class="tr">${esc(g.hR)}</div></div></div>${g.hS!=null?`<span class="gsc ${hC}">${g.hS}</span>`:''}</div>
     </div>
     <div class="gm"><span class="gmt">${esc(g.spread)}</span><span class="ab" style="background:${col}18;color:${col}">${esc(ats)}</span></div>
+    <div style="font-size:10px;color:var(--t2);text-align:center;margin-top:4px;letter-spacing:.3px">Tap for details</div>
   </div>`;
 }
 
