@@ -17,6 +17,7 @@ import argparse
 import glob
 import logging
 import os
+from pathlib import Path
 from typing import Callable
 
 import pandas as pd
@@ -33,6 +34,25 @@ logger = logging.getLogger(__name__)
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
+
+
+def _coerce_int_col(df: pd.DataFrame, col: str) -> None:
+    """Coerce column to int, logging any rows that become NaN and dropping them."""
+    before = len(df)
+    df[col] = pd.to_numeric(df[col], errors="coerce")
+    lost = df[col].isna().sum()
+    if lost:
+        print(f"  WARN: {lost}/{before} rows have non-numeric {col}")
+    df.dropna(subset=[col], inplace=True)
+    df[col] = df[col].astype(int)
+
+
+def _needs_rebuild(raw_path: Path, out_path: Path) -> bool:
+    """Return True if out_path is missing or older than raw_path."""
+    if not out_path.exists():
+        return True
+    return raw_path.stat().st_mtime > out_path.stat().st_mtime
+
 
 def clean_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Standardize all column names to lowercase_underscore format."""
@@ -256,55 +276,55 @@ def _process_seasonal_table(
 
 def _transform_player_stats(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["player_id"] = df["player_id"].astype(int)
-    df["team_id"]   = df["team_id"].astype(int)
-    df["age"]       = df["age"].astype(float)
-    df["gp"]        = df["gp"].astype(int)
-    df["w"]         = df["w"].astype(int)
-    df["l"]         = df["l"].astype(int)
+    _coerce_int_col(df, "player_id")
+    _coerce_int_col(df, "team_id")
+    df["age"] = df["age"].astype(float)
+    df["gp"]  = df["gp"].astype(int)
+    df["w"]   = df["w"].astype(int)
+    df["l"]   = df["l"].astype(int)
     return df
 
 
 def _transform_player_stats_advanced(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["player_id"] = df["player_id"].astype(int)
-    df["team_id"]   = df["team_id"].astype(int)
-    df["age"]       = df["age"].astype(float)
-    df["gp"]        = df["gp"].astype(int)
+    _coerce_int_col(df, "player_id")
+    _coerce_int_col(df, "team_id")
+    df["age"] = df["age"].astype(float)
+    df["gp"]  = df["gp"].astype(int)
     return df
 
 
 def _transform_player_stats_age(df: pd.DataFrame) -> pd.DataFrame:
     """For clutch, scoring, playoffs with player_id+team_id+age."""
     df = clean_columns(df)
-    df["player_id"] = df["player_id"].astype(int)
-    df["team_id"]   = df["team_id"].astype(int)
-    df["age"]       = df["age"].astype(float)
+    _coerce_int_col(df, "player_id")
+    _coerce_int_col(df, "team_id")
+    df["age"] = df["age"].astype(float)
     return df
 
 
 def _transform_player_game_logs(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["player_id"] = df["player_id"].astype(int)
-    df["team_id"]   = df["team_id"].astype(int)
-    df["game_id"]   = df["game_id"].astype(int)
+    _coerce_int_col(df, "player_id")
+    _coerce_int_col(df, "team_id")
+    _coerce_int_col(df, "game_id")
     df["game_date"] = pd.to_datetime(df["game_date"])
     return df
 
 
 def _transform_team_stats(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["team_id"] = df["team_id"].astype(int)
-    df["gp"]      = df["gp"].astype(int)
-    df["w"]       = df["w"].astype(int)
-    df["l"]       = df["l"].astype(int)
+    _coerce_int_col(df, "team_id")
+    df["gp"] = df["gp"].astype(int)
+    df["w"]  = df["w"].astype(int)
+    df["l"]  = df["l"].astype(int)
     return df
 
 
 def _transform_team_game_logs(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["team_id"]   = df["team_id"].astype(int)
-    df["game_id"]   = df["game_id"].astype(int)
+    _coerce_int_col(df, "team_id")
+    _coerce_int_col(df, "game_id")
     df["game_date"] = pd.to_datetime(df["game_date"])
     return df
 
@@ -320,29 +340,29 @@ def _transform_standings(df: pd.DataFrame) -> pd.DataFrame:
         "losses":   "l",
         "winpct":   "w_pct",
     })
-    df["team_id"] = df["team_id"].astype(int)
-    df["w"]       = df["w"].astype(int)
-    df["l"]       = df["l"].astype(int)
+    _coerce_int_col(df, "team_id")
+    df["w"] = df["w"].astype(int)
+    df["l"] = df["l"].astype(int)
     return df
 
 
 def _transform_player_hustle(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["player_id"] = df["player_id"].astype(int)
-    df["team_id"]   = df["team_id"].astype(int)
+    _coerce_int_col(df, "player_id")
+    _coerce_int_col(df, "team_id")
     return df
 
 
 def _transform_team_hustle(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["team_id"] = df["team_id"].astype(int)
+    _coerce_int_col(df, "team_id")
     return df
 
 
 def _transform_player_bio(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
-    df["player_id"] = df["player_id"].astype(int)
-    df["team_id"]   = df["team_id"].astype(int)
+    _coerce_int_col(df, "player_id")
+    _coerce_int_col(df, "team_id")
     return df
 
 
@@ -364,11 +384,11 @@ def _transform_lineup_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = clean_columns(df)
     if "team_id" in df.columns:
-        df["team_id"] = df["team_id"].astype(int)
+        _coerce_int_col(df, "team_id")
     if "gp" in df.columns:
         df["gp"] = df["gp"].astype(int)
     if "season" in df.columns:
-        df["season"] = df["season"].astype(int)
+        _coerce_int_col(df, "season")
     return df
 
 
@@ -447,9 +467,9 @@ def _process_players(full_rebuild: bool) -> None:
         "from_year":                  "from_season",
         "to_year":                    "to_season",
     })
-    df["player_id"]   = df["player_id"].astype(int)
-    df["from_season"] = df["from_season"].astype(int)
-    df["to_season"]   = df["to_season"].astype(int)
+    _coerce_int_col(df, "player_id")
+    _coerce_int_col(df, "from_season")
+    _coerce_int_col(df, "to_season")
     df = df.drop_duplicates(subset=["player_id"])
     df.to_csv(processed_path, index=False)
     logger.info("players: %s rows", f"{len(df):,}")
@@ -473,7 +493,7 @@ def _process_teams(full_rebuild: bool) -> None:
     df = pd.read_csv(raw_path)
     df = clean_columns(df)
     df = df.rename(columns={"id": "team_id"})
-    df["team_id"] = df["team_id"].astype(int)
+    _coerce_int_col(df, "team_id")
     df = df.drop_duplicates(subset=["team_id"])
     df.to_csv(processed_path, index=False)
     logger.info("teams: %s rows", f"{len(df):,}")
