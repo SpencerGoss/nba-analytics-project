@@ -50,6 +50,7 @@
 
 [2026-03-05] [features] INSIGHT: Unicode arrows (→) in Python print() raise UnicodeEncodeError on Windows cp1252 terminals — use ASCII -> instead
 [2026-03-05] [features] WHY: Windows default console encoding is cp1252 which cannot encode \u2192; affects any print() with non-ASCII chars regardless of source file encoding
+[2026-03-08] [features] NOTE: Two remaining instances found and fixed — get_player_positions.py:237, era_labels.py:221 (commit 7a15c69)
 
 ### [injury]
 
@@ -91,7 +92,19 @@
 [2026-03-07] [pipeline] INSIGHT: `build_picks.py` was reading `data/processed/game_lines.csv` but the file lives at `data/odds/game_lines.csv` (written by fetch_odds.py) -- caused spread/ATS fields to always be null in todays_picks.json. Fixed by updating GAME_LINES_CSV constant.
 [2026-03-07] [pipeline] WHY: fetch_odds.py writes to data/odds/ to separate raw API output from pipeline-processed data; build_picks.py referenced the wrong directory.
 
+### [ci]
+
+[2026-03-08] [ci] INSIGHT: GitHub Actions CI needs `mkdir -p database data/odds data/processed data/raw data/features logs` before running update.py — sqlite3.connect() silently fails if parent dir is missing
+[2026-03-08] [ci] WHY: data/ and database/ are in .gitignore; CI starts with an empty workspace; SQLite only auto-creates the DB file, not its parent directory
+[2026-03-08] [ci] INSIGHT: model artifacts (*.pkl) are NOT in git; CI runs without them — predictions are empty but CI won't crash (all model loads are wrapped in try/except). Dashboard data updates (standings, players, etc.) still deploy correctly.
+[2026-03-08] [ci] WHY: Acceptable tradeoff — model artifacts are trained manually and stored locally; daily CI job value is refreshing game data + standings, not retraining models
+[2026-03-08] [ci] INSIGHT: builder scripts with sys.exit(1) when CSV missing will cause subprocess WARN (caught by update.py wrapper) but not a pipeline crash — changed all to graceful returns so CI doesn't emit false error logs
+[2026-03-08] [ci] WHY: build_standings, build_season_history, build_streaks, build_playoff_odds, build_game_context, build_props, build_player_comparison all patched (commit 43b3af1)
+
 ### [dashboard]
+
+[2026-03-08] [dashboard] INSIGHT: mapStandingRow() was not passing `last10` field through to renderStandings() — L10 column always showed '--' despite standings.json containing the data
+[2026-03-08] [dashboard] WHY: mapStandingRow() returned a new object mapping only selected fields; `last10` was omitted; fixed by adding `last10:t.last10||null` to the return object (commit 71b62fa)
 
 [2026-03-06] [dashboard] INSIGHT: build_dashboard.py reads nba1.html (template) and applies regex replacements sequentially; new sections must match the post-replacement state of html, not the original template.
 [2026-03-06] [dashboard] WHY: Each section sees html after all previous sections; e.g. "66.2%" must be matched (not "68.9%") because section 11 already replaced it.

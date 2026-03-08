@@ -1,97 +1,74 @@
 [
   {
-    "home_team": "BOS",
-    "away_team": "DAL",
-    "game_date": "2026-03-06",
+    "home_team": "MIN",
+    "away_team": "ORL",
+    "game_date": "2026-03-07",
     "bullets": [
-      "Dallas Mavericks playing 2nd game in 2 nights -- fatigue factor",
+      "Orlando Magic playing 2nd game in 2 nights -- fatigue factor",
       "Model shows strong home advantage -- 86.3% win probability vs N/A implied by the line",
-      "Boston Celtics is 7-3 in their last 10 games",
-      "Dallas Mavericks has struggled recently -- only 2 wins in their last 10 games"
+      "Minnesota Timberwolves is 7-3 in their last 10 games",
+      "Orlando Magic has struggled recently -- only 3 wins in their last 10 games"
     ],
-    "recommended_side": "BOS",
-    "one_liner": "Model projects Boston Celtics to win with 86.3% probability"
+    "recommended_side": "MIN",
+    "one_liner": "Model projects Minnesota Timberwolves to win with 86.3% probability"
   },
   {
-    "home_team": "CHA",
-    "away_team": "MIA",
-    "game_date": "2026-03-06",
-    "bullets": [
-      "Miami Heat playing 2nd game in 2 nights -- fatigue factor",
-      "Charlotte Hornets is 7-3 in their last 10 games"
-    ],
-    "recommended_side": "MIA",
-    "one_liner": "Model projects Miami Heat to win with 66.5% probability"
-  },
-  {
-    "home_team": "HOU",
-    "away_team": "POR",
-    "game_date": "2026-03-06",
+    "home_team": "DET",
+    "away_team": "BKN",
+    "game_date": "2026-03-07",
     "bullets": [
       "Model shows strong home advantage -- 88.5% win probability vs N/A implied by the line",
-      "Houston Rockets outperforms Portland Trail Blazers by 11.4 points per 100 possessions in net rating",
-      "Pythagorean win% gap favors Houston Rockets (60.6% vs 47.1%)"
+      "Detroit Pistons is 7-3 in their last 10 games",
+      "Brooklyn Nets has struggled recently -- only 2 wins in their last 10 games",
+      "Detroit Pistons outperforms Brooklyn Nets by 17.7 points per 100 possessions in net rating"
     ],
-    "recommended_side": "HOU",
-    "one_liner": "Model projects Houston Rockets to win with 88.5% probability"
+    "recommended_side": "DET",
+    "one_liner": "Model projects Detroit Pistons to win with 88.5% probability"
   },
   {
-    "home_team": "DEN",
-    "away_team": "NYK",
-    "game_date": "2026-03-06",
+    "home_team": "ATL",
+    "away_team": "PHI",
+    "game_date": "2026-03-07",
     "bullets": [
-      "Model projects Denver Nuggets as 55.1% favorites -- market implies N/A",
-      "Recent form: Denver Nuggets 5-5 L10 vs New York Knicks 6-4 L10"
+      "Model edge of 21.5% -- significantly above our threshold for value bets",
+      "Recent form: Atlanta Hawks 5-5 L10 vs Philadelphia 76ers 6-4 L10"
     ],
-    "recommended_side": "DEN",
-    "one_liner": "Model projects Denver Nuggets to win with 55.1% probability"
+    "recommended_side": "PHI",
+    "one_liner": "Philadelphia 76ers is undervalued -- books give them 28.5% but our model says 50.0%"
   },
   {
-    "home_team": "PHX",
-    "away_team": "NOP",
-    "game_date": "2026-03-06",
-    "bullets": [
-      "New Orleans Pelicans playing 2nd game in 2 nights -- fatigue factor",
-      "Model shows strong home advantage -- 86.3% win probability vs N/A implied by the line"
-    ],
-    "recommended_side": "PHX",
-    "one_liner": "Model projects Phoenix Suns to win with 86.3% probability"
-  },
-  {
-    "home_team": "SAS",
+    "home_team": "MEM",
     "away_team": "LAC",
-    "game_date": "2026-03-06",
+    "game_date": "2026-03-07",
     "bullets": [
-      "San Antonio Spurs is 9-1 in their last 10 games",
-      "San Antonio Spurs outperforms Los Angeles Clippers by 7.9 points per 100 possessions in net rating",
-      "Pythagorean win% gap favors San Antonio Spurs (78.0% vs 61.6%)"
+      "Model shows strong home advantage -- 77.5% win probability vs N/A implied by the line",
+      "Los Angeles Clippers has struggled recently -- only 2 wins in their last 10 games"
     ],
-    "recommended_side": "SAS",
-    "one_liner": "Model projects San Antonio Spurs to win with 53.4% probability"
+    "recommended_side": "MEM",
+    "one_liner": "Model projects Memphis Grizzlies to win with 77.5% probability"
   },
   {
-    "home_team": "LAL",
-    "away_team": "IND",
-    "game_date": "2026-03-06",
+    "home_team": "MIL",
+    "away_team": "UTA",
+    "game_date": "2026-03-07",
     "bullets": [
-      "Indiana Pacers has struggled recently -- only 2 wins in their last 10 games",
-      "Los Angeles Lakers outperforms Indiana Pacers by 13.9 points per 100 possessions in net rating",
-      "Pythagorean win% gap favors Los Angeles Lakers (54.5% vs 24.7%)"
-    ],
-    "recommended_side": "IND",
-    "one_liner": "Model projects Indiana Pacers to win with 66.5% probability"
-  },
-  {
-    "home_team": "BOS",
-    "away_team": "DAL",
-    "game_date": "2026-03-06",
-    "bullets": [
-      "Dallas Mavericks playing 2nd game in 2 nights -- fatigue factor",
       "Model shows strong home advantage -- 86.3% win probability vs N/A implied by the line",
-      "Boston Celtics is 7-3 in their last 10 games",
-      "Dallas Mavericks has struggled recently -- only 2 wins in their last 10 games"
+      "Utah Jazz has struggled recently -- only 3 wins in their last 10 games"
     ],
-    "recommended_side": "BOS",
-    "one_liner": "Model projects Boston Celtics to win with 86.3% probability"
+    "recommended_side": "MIL",
+    "one_liner": "Model projects Milwaukee Bucks to win with 86.3% probability"
+  },
+  {
+    "home_team": "OKC",
+    "away_team": "GSW",
+    "game_date": "2026-03-07",
+    "bullets": [
+      "Model shows strong home advantage -- 77.5% win probability vs N/A implied by the line",
+      "Oklahoma City Thunder is 9-1 in their last 10 games",
+      "Oklahoma City Thunder outperforms Golden State Warriors by 12.8 points per 100 possessions in net rating",
+      "Pythagorean win% gap favors Oklahoma City Thunder (80.7% vs 52.8%)"
+    ],
+    "recommended_side": "OKC",
+    "one_liner": "Model projects Oklahoma City Thunder to win with 77.5% probability"
   }
 ]
