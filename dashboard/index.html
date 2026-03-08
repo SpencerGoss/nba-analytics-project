@@ -1178,6 +1178,11 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
       <span class="tbs-lbl">Total Edge</span>
     </div>
   </div>
+  <div id="steam-alert" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.25);margin-bottom:16px">
+    <span style="font-size:18px">&#9889;</span>
+    <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--gold)" id="steam-alert-title">Steam Moves Detected</div><div style="font-size:11px;color:var(--t1)" id="steam-alert-desc">Sharp money moving lines today</div></div>
+    <button onclick="showBettingTab('linemovement',null)" style="margin-left:auto;padding:5px 12px;border-radius:8px;border:1px solid rgba(245,166,35,0.3);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)">View -&gt;</button>
+  </div>
   <div class="dl">
     <div class="dm">
       <div class="card" style="margin-bottom:14px">
@@ -1477,6 +1482,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
             <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 20 games">Net Rtg L20</th>
             <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 10 games">Net Rtg L10</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Last 10</th>
+            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Record over last 20 games">Last 20</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Trend</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">vs Last Wk</th>
           </tr>
@@ -2790,6 +2796,7 @@ function gameCard(g){
       <div class="gtr"><div class="gti">${tlsH}<div><div class="tn">${esc(g.home)}</div><div class="tr">${esc(g.hR)}</div></div></div>${g.hS!=null?`<span class="gsc ${hC}">${g.hS}</span>`:''}</div>
     </div>
     <div class="gm"><span class="gmt">${esc(g.spread)}</span><span class="ab" style="background:${col}18;color:${col}">${esc(ats)}</span></div>
+    ${(()=>{const gPick=(DATA.picks||[]).find(p=>p.home_team===g.home&&p.away_team===g.away);const hProb=gPick?Math.round((gPick.home_win_prob||0.5)*100):null;const aProb=gPick?(100-hProb):null;const isVal=gPick&&gPick.value_bet;const inj=(window.INJURIES_DATA||[]).find(d=>d.home_team===g.home&&d.away_team===g.away);const highOut=inj?[...(inj.home_injuries||[]),...(inj.away_injuries||[])].filter(p=>p.impact==='high'&&p.status==='OUT'):[];return (hProb?`<div style="display:flex;height:3px;border-radius:2px;overflow:hidden;margin:6px 4px 2px;gap:1px"><div style="width:${aProb}%;background:rgba(79,158,255,0.7);border-radius:2px 0 0 2px"></div><div style="width:${hProb}%;background:rgba(0,200,150,0.7);border-radius:0 2px 2px 0"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--t2);padding:0 4px;letter-spacing:.2px"><span>${esc(g.away)} ${aProb}%</span><span>${hProb}% ${esc(g.home)}</span></div>`:'')+( highOut.length?`<div style="font-size:9px;color:var(--red);text-align:center;margin-top:4px;padding:2px 6px;border-radius:4px;background:rgba(255,92,92,0.08)">&#9888; ${highOut.length} key player${highOut.length>1?'s':''} out</div>`:'')+( isVal?`<div style="font-size:9px;font-weight:800;color:var(--green);text-align:center;margin-top:3px;letter-spacing:.6px">&#9733; VALUE BET</div>`:'');})()}
     <div style="font-size:10px;color:var(--t2);text-align:center;margin-top:4px;letter-spacing:.3px">Tap for details</div>
   </div>`;
 }
@@ -5139,9 +5146,37 @@ async function loadDashboardData(){
       if(streak)setEl('bt-streak',(streak.type==='W'?'W':'L')+streak.length);
       const bestStreak=p.best_streak;
       if(bestStreak)setEl('bt-best-streak','W'+bestStreak.length+' best');
+      // ── Wire performance data to Today tab Model Record sidebar ──
+      const todayRecEl=document.querySelector('#page-today [data-count-str="67-55"]');
+      const todayL10El=document.querySelector('#page-today [data-count-str="7-3"]');
+      const todayBadgeEl=document.querySelector('#page-today .badge.g');
+      if(todayRecEl&&p.total_games){
+        const w=Math.round((p.season_accuracy||0)*p.total_games);
+        const l=p.total_games-w;
+        todayRecEl.textContent=w+'-'+l;
+      }
+      if(todayL10El&&p.current_streak){
+        const s=p.current_streak;
+        todayL10El.textContent=(s.type==='W'?'W':'L')+s.length+' streak';
+        const parentDiv=todayL10El.parentElement;
+        if(parentDiv){const changeEl=parentDiv.querySelector('.schange');if(changeEl)changeEl.textContent=s.type==='W'?'On a hot streak':'Cold stretch';}
+      }
+      if(todayBadgeEl&&p.season_accuracy){todayBadgeEl.textContent=(p.season_accuracy*100).toFixed(1)+'% ATS';}
     }
     // ── Wire line_movement.json -> Sharp Money tab ──
     window.LINE_MOVEMENT=lineMovJson;
+    // ── Steam alert on Today tab ──
+    const steamMoves=Array.isArray(lineMovJson)?lineMovJson.filter(g=>g.steam_move||Math.abs(g.movement||0)>=1.5):[];
+    const steamEl=document.getElementById('steam-alert');
+    if(steamEl&&steamMoves.length>0){
+      steamEl.style.display='flex';
+      steamEl.style.alignItems='center';
+      steamEl.style.gap='10px';
+      const titleEl=document.getElementById('steam-alert-title');
+      const descEl=document.getElementById('steam-alert-desc');
+      if(titleEl)titleEl.textContent=steamMoves.length+' Steam Move'+(steamMoves.length>1?'s':'')+' Detected';
+      if(descEl)descEl.textContent='Sharp money moving lines on '+steamMoves.map(g=>g.away_team+' @ '+g.home_team).join(', ');
+    }
     // ── Wire sharp_money.json -> Sharp Money tab ──
     window.SHARP_MONEY=Array.isArray(sharpMoney)?sharpMoney:[];
     renderSharpMoney();
@@ -5709,6 +5744,7 @@ if ('serviceWorker' in navigator) {
           + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + net20Color + '">' + net20Sign + r.net_rating.toFixed(1) + '</td>'
           + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:12px;color:' + net10Color + '">' + net10Sign + net10Val.toFixed(1) + '</td>'
           + '<td style="padding:11px 16px;text-align:center;font-family:var(--fm);font-size:12px;color:var(--t1)">' + r.last10_record + '</td>'
+          + '<td style="padding:11px 16px;text-align:center;font-family:var(--fm);font-size:12px;color:var(--t2)">' + (r.last20_record||'—') + '</td>'
           + '<td style="padding:11px 16px;text-align:center">' + _trendArrow(r.trend) + '</td>'
           + '<td style="padding:11px 16px;text-align:center">' + rdHtml + '</td>'
           + '</tr>';
