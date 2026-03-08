@@ -68,7 +68,7 @@ Invoke: `performance-tuning` skill
 Invoke: `dependency-management` skill
 
 ### Context window filling up
-Invoke: `context-rescue` skill
+Invoke: `context-budget-checkpoint` skill (proactive at 70%) or `context-rescue` skill (emergency)
 
 ### Add a new data provider or API client
 Invoke: `nba-backfill` skill (data ingestion) + `env-config` skill (secrets)

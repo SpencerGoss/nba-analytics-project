@@ -75,6 +75,9 @@
 [2026-03-05] [skills] INSIGHT: gsd:* skills removed from this project — replace with: `spec-driven-dev` (planning), `nba-feature-dev` (executing), `session-wrap-up` (milestone close)
 [2026-03-05] [skills] WHY: gsd skill family deprecated; workflow now uses spec-driven-dev -> tdd-workflow -> code-review-session -> session-wrap-up pipeline
 
+[2026-03-08] [skills] INSIGHT: New skills added — `context-budget-checkpoint` (proactive at 70%), `decision-log` (architecture choices → DECISIONS.md), `regression-test-automation` (post-retrain validation), `batch-data-processing` (large ETL jobs), `alert-configuration` (pipeline monitoring), `session-intent-setter` (goal-locking), `skill-extractor` (capture workarounds), `prompt-autopsy` (diagnose wrong output), `rule-freshness-audit` (prune CLAUDE.md), `weekly-review` (meta-maintenance).
+[2026-03-08] [skills] WHY: These fill gaps in previous workflow: context-rescue was reactive only; no decision persistence existed (DECISIONS.md now created); regression validation was manual after retrains; large NBA backfill jobs had no chunking/retry pattern.
+
 ### [clv]
 
 [2026-03-06] [clv] INSIGHT: CLV formula is `opening_spread - closing_spread` (positive = we got a better/easier line than market settled). Do NOT invert.

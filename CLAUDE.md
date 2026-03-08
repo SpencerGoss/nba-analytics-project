@@ -14,19 +14,12 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
 
 ## Key Paths
-- `src/data/` — NBA API fetchers | `src/features/` — feature engineering
-- `src/models/` — models + calibration | `src/processing/` — preprocessing
-- `src/validation/` — data integrity validation
-- `src/models/value_bet_detector.py` — value bet detection (kelly_fraction field)
-- `src/models/clv_tracker.py` — CLV tracking (opening/closing line, edge flag)
-- `scripts/build_player_comparison.py` — player comparison JSON (1,710 players + legend injection for Jordan/Bird/Magic/Kareem/Kobe/Wilt)
+- `src/data/` — fetchers | `src/features/` — engineering | `src/models/` — models+calibration | `src/processing/` — preprocessing | `src/validation/` — integrity
+- `src/models/value_bet_detector.py` — kelly_fraction | `src/models/clv_tracker.py` — CLV | `src/models/ensemble.py` — NBAEnsemble (win=0.5/ats=0.3/margin=0.2)
 - `scripts/build_value_bets.py` — reads `data/odds/game_lines.csv` (NOT data/processed/); columns: game_date, home_market_prob
-- `scripts/build_season_history.py` — 5-season standings + game log -> season_history.json (553 KB, lazy-loaded)
-- `src/models/ensemble.py` — NBAEnsemble: loads all 3 models; weights win=0.5/ats=0.3/margin=0.2; `ensemble_config.json`
 - `dashboard/data/*.json` — COMMITTED to git (GitHub Pages has no build step); push after update.py
-- `data/raw/`, `data/processed/`, `data/features/` — pipeline stages
-- `models/artifacts/` — trained model PKLs (gitignored)
-- `.planning/codebase/CONCERNS.md` — known bugs
+- `data/raw/`, `data/processed/`, `data/features/` — pipeline stages | `models/artifacts/` — PKLs (gitignored)
+- `.planning/codebase/CONCERNS.md` — known bugs | `DECISIONS.md` — architectural decisions (consult before re-opening settled questions)
 
 ## Hard Rules (never violate)
 - Never commit `.env`
@@ -42,14 +35,12 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use -> instead
 - Any feature col with `_roll` in name is auto-captured by `roll_cols` in build_matchup_dataset(); never also add to `context_cols` -- duplicates cause ValueError
 - CLV formula: `clv = opening_spread - closing_spread` (positive = better line than closing); do NOT invert; `closing_spread` is NULL in DB until game closes — always guard with `pd.isna()` before `float()` cast
-- Dashboard: always use `.venv/Scripts/python.exe` for ML scripts (system Python lacks optuna/lightgbm); HPO flag is `--trials N` not `--n-trials N`
-- `calibration.py`/`ats_model.py` need sys.path set before running as scripts; use python -c workaround
+- Dashboard: always use `.venv/Scripts/python.exe` for ML scripts (lacks optuna/lightgbm); HPO flag is `--trials N`; `calibration.py`/`ats_model.py` need sys.path set — use python -c workaround
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
-- Dashboard JS: data-dependent UI must be in Promise.all loader (not tab-click handlers); all dynamic DOM writes use `_setHtml(el,html)` (createContextualFragment+replaceChildren) — security hook blocks Edit when replacement contains "innerHTML"
-- Always guard `g.ats||''` before `.includes()`/`.startsWith()` in gameCard — matchup_analysis can omit ats field; CSP `frame-ancestors` is ignored in meta tags (HTTP header only)
-- `game_lines.csv` is at `data/odds/game_lines.csv` (not data/processed/); written by `scripts/fetch_odds.py` with columns `date`, `home_moneyline` — build_value_bets.py converts to `game_date`+`home_market_prob`
-- `player_stats.csv` stores season TOTALS not per-game averages — always divide by `gp` before computing projections
-- `update.py` Step 7 calls all 24 builder scripts; to deploy: run `python update.py` then `git add dashboard/data/ && git push`
+- Dashboard JS: data-dependent UI must be in Promise.all loader (not tab-click handlers); all dynamic DOM writes use `_setHtml(el,html)` — security hook blocks Edit when replacement contains "innerHTML"
+- Always guard `g.ats||''` before `.includes()`/`.startsWith()` in gameCard — ats field can be absent; CSP `frame-ancestors` is ignored in meta tags (HTTP header only)
+- `game_lines.csv` at `data/odds/` (NOT data/processed/); fetch_odds.py writes columns `date`+`home_moneyline`; build_value_bets.py converts to `game_date`+`home_market_prob`
+- `player_stats.csv` stores season TOTALS — divide by `gp` before projections; Step 7 calls all 24 builders; deploy: `python update.py` then `git add dashboard/data/ && git push`
 
 ## Skill Routing (auto-trigger — no prompting needed)
 
@@ -60,8 +51,9 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Start of any work session | `session-kickoff` |
 | Resume after context compaction | `continue` |
 | End of session | `session-wrap-up` → logs `project-journal` + runs `git-workflow` |
-| Context window filling up | `context-rescue` |
+| Context at 70%+ | `context-budget-checkpoint` (proactive) / `context-rescue` (emergency) |
 | Switching to/from Claude.ai | `handoff-bridge` |
+| Starting session with a specific goal | `session-intent-setter` |
 | Capture non-obvious insight / debug finding | `working-memory` |
 
 ### NBA-Specific
@@ -75,6 +67,9 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Adding/modifying Plotly charts | `plotly-charts` |
 | Querying or extending predictions_history.db | `sqlite-analytics` |
 | Picks, value bets, CLV, Kelly, ATS analysis | `nba-betting-analysis` |
+| Large data job needs chunking / retry | `batch-data-processing` |
+| After pipeline change or model retrain | `regression-test-automation` |
+| Setting up pipeline monitoring / alerting | `alert-configuration` |
 
 ### Development
 
@@ -84,18 +79,13 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Implementing any feature or fix (TDD) | `tdd-workflow` |
 | Something is broken — read CONCERNS.md first | `debug-session` |
 | Code review after writing code | `code-review-session` |
-| Requesting a code review (superpowers) | `superpowers:requesting-code-review` |
 | Testing the dashboard / UI | `webapp-testing` |
+| Making an architectural decision | `decision-log` → writes to `DECISIONS.md` |
+| After completing a non-trivial workaround | `skill-extractor` |
+| Wrong Claude output / bad response | `prompt-autopsy` |
+| Brainstorm / parallel agents / verify complete | `superpowers:brainstorming` / `superpowers:dispatching-parallel-agents` / `superpowers:verification-before-completion` |
 
-### Planning / Reasoning
-
-| Situation | Skill |
-|-----------|-------|
-| Brainstorming approach / architecture | `superpowers:brainstorming` |
-| Before claiming work is complete | `superpowers:verification-before-completion` |
-| Independent tasks that can run in parallel | `superpowers:dispatching-parallel-agents` |
-
-### Git / DevOps
+### Git / DevOps / Maintenance
 
 | Situation | Skill |
 |-----------|-------|
@@ -103,10 +93,8 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | Before pushing to GitHub (secret scan) | `security-audit` |
 | Adding a new API key or secret | `env-config` |
 | Adding or upgrading Python packages | `dependency-management` |
+| CLAUDE.md feeling stale or bloated | `rule-freshness-audit` |
+| Weekly meta-review | `weekly-review` |
 
 ## See Also
-- `AI_INDEX.md` — task routing | `ARCHITECTURE.md` — system structure
-- `AGENTS.md` — agent roles and all skills | `CONTEXT.md` — constraints and gotchas
-- `HANDOFF.md` — session state | `WORKING_NOTES.md` — persistent insights (create if missing)
-- `PROJECT_JOURNAL.md` / `PROJECT_OVERVIEW.md` — history and current state
-- Global rules: `~/.claude/rules/common/` — code-style, testing, security (auto-loaded globally)
+`AI_INDEX.md` (task routing) | `ARCHITECTURE.md` | `AGENTS.md` | `CONTEXT.md` | `DECISIONS.md` | `HANDOFF.md` | `WORKING_NOTES.md` | `PROJECT_JOURNAL.md` | Global rules: `~/.claude/rules/common/`
