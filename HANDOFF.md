@@ -1,8 +1,36 @@
 # Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-07 Session 5_
+_Last updated: 2026-03-07 Session 6_
 
-## What Was Done This Session
+## What Was Done This Session (Session 6)
+
+### Dashboard — Polish (commit ce8c230)
+
+**Player Modal**
+- Season table: added FT% column + Career Totals row (GP-weighted averages for all stats)
+- Career avg cards: now shows FG%, FT%, TS% via `_wAvgPct()` from season data
+- Team history stints: team logos added to each badge
+- Escape key closes the modal
+
+**Standings Table**
+- Added L10 (Last 10 games) column with color coding (green>=7, red<5)
+- Full team names shown instead of abbreviations
+- Migrated `renderStandings` to `_setHtml()` (was direct DOM mutation)
+
+**Players Table**
+- Team logos added next to team abbreviation pill
+- "Legend" badge renamed to "Retired"
+
+**Season History Game Log**
+- Team logos via `home_abbr`/`away_abbr` fields
+- Winner scores in green, loser muted
+- Margin column added; header changed to "Final Standings"
+
+**Other**
+- Era-adjusted footnote updated to accurate 111.8 PPG description
+- 560 tests passing; committed ce8c230 and pushed
+
+## What Was Done — Session 5
 
 ### Dashboard — Major Upgrade
 
@@ -55,15 +83,14 @@ _Last updated: 2026-03-07 Session 5_
 
 ## Pending at Session End
 
-**Nothing critical** — all committed and pushed to main (commit cd5cde5).
+**Nothing critical** — all committed and pushed to main (commit ce8c230).
 
 ## Next Steps (priority order)
 
-1. **Verify dashboard live** — after push, check GitHub Pages for: player modal, era-adjusted toggle, team colors in compare, CLV card showing "Awaiting Close"
-2. **Wire daily_deploy.yml** — add `BALLDONTLIE_API_KEY` as a GitHub Actions secret in repo settings (Settings > Secrets > Actions) — workflow won't run without it
-3. **PC migration prep** — when switching PCs: clone repo, `python -m venv .venv && .venv/Scripts/pip install -r requirements.txt`, copy `.env` from old machine, verify tests pass
-4. **CLV data population** — `build_clv.py` currently outputs all zeros (closing lines are NULL until games close); data will populate naturally as games close and `clv_tracker.py` runs
-5. **Player modal polish** — consider adding career totals row at bottom of season table; FT% column would add value
+1. **Wire daily_deploy.yml** — add `BALLDONTLIE_API_KEY` as a GitHub Actions secret: repo Settings > Secrets > Actions > New secret. Workflow won't run without it.
+2. **PC migration** — when switching PCs: clone repo, `python -m venv .venv && .venv/Scripts/pip install -r requirements.txt`, copy `.env` from old machine, run pytest to verify (560 tests should pass)
+3. **CLV data population** — currently outputs zeros (closing_spread NULL until games close); will populate naturally as clv_tracker.py runs via fetch_odds.py after game closings
+4. **Verify GitHub Pages** — after push check: player modal FT%+career totals, team logos in players list, L10 in standings, Escape-to-close modal
 
 ## Key Files Changed This Session
 
