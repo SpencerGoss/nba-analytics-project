@@ -55,6 +55,8 @@ def _make_features(n_games: int = 20, teams: list[str] | None = None) -> pd.Data
     rows = []
     for team in teams:
         for i in range(n_games):
+            cum_wins = (i + 1) // 2
+            cum_losses = (i + 1) - cum_wins
             rows.append(
                 {
                     "team_abbreviation": team,
@@ -65,9 +67,11 @@ def _make_features(n_games: int = 20, teams: list[str] | None = None) -> pd.Data
                     "net_rtg_game_roll20": float(i) * 0.3,
                     "pythagorean_win_pct_roll10": 0.55 if team == "OKC" else 0.50,
                     "win_pct_roll10": 0.60 if team == "OKC" else 0.48,
+                    "win_pct_roll20": 0.60 if team == "OKC" else 0.48,
                     "win": 1 if i % 2 == 0 else 0,
-                    "cum_wins": i // 2,
-                    "cum_losses": i - i // 2,
+                    "cum_wins": cum_wins,
+                    "cum_losses": cum_losses,
+                    "cum_win_pct": cum_wins / max(cum_wins + cum_losses, 1),
                 }
             )
     return pd.DataFrame(rows)
@@ -81,25 +85,32 @@ def _make_team_names(teams: list[str]) -> dict[str, str]:
 # Unit tests
 # ---------------------------------------------------------------------------
 
+def _rankings(result) -> list:
+    """Extract rankings list from either a plain list or envelope dict."""
+    if isinstance(result, dict):
+        return result.get("rankings", [])
+    return result
+
+
 class TestBuildPowerRankings:
     def test_returns_list(self):
         features = _make_features()
         names = _make_team_names(["OKC", "BOS", "MIL"])
         result = build_power_rankings(features, names)
-        assert isinstance(result, list)
+        assert isinstance(_rankings(result), list)
 
     def test_team_count(self):
         teams = ["OKC", "BOS", "MIL"]
         features = _make_features(teams=teams)
         names = _make_team_names(teams)
         result = build_power_rankings(features, names)
-        assert len(result) == len(teams)
+        assert len(_rankings(result)) == len(teams)
 
     def test_required_fields_present(self):
         features = _make_features()
         names = _make_team_names(["OKC", "BOS", "MIL"])
         result = build_power_rankings(features, names)
-        for entry in result:
+        for entry in _rankings(result):
             missing = REQUIRED_FIELDS - set(entry.keys())
             assert not missing, f"Missing fields: {missing}"
 
@@ -108,7 +119,7 @@ class TestBuildPowerRankings:
         features = _make_features(teams=teams)
         names = _make_team_names(teams)
         result = build_power_rankings(features, names)
-        ranks = [e["rank"] for e in result]
+        ranks = [e["rank"] for e in _rankings(result)]
         assert ranks == list(range(1, len(teams) + 1)), f"Non-sequential ranks: {ranks}"
 
     def test_no_duplicate_teams(self):
@@ -116,14 +127,14 @@ class TestBuildPowerRankings:
         features = _make_features(teams=teams)
         names = _make_team_names(teams)
         result = build_power_rankings(features, names)
-        team_abbrs = [e["team"] for e in result]
+        team_abbrs = [e["team"] for e in _rankings(result)]
         assert len(team_abbrs) == len(set(team_abbrs)), "Duplicate team abbreviations in output"
 
     def test_composite_score_in_range(self):
         features = _make_features()
         names = _make_team_names(["OKC", "BOS", "MIL"])
         result = build_power_rankings(features, names)
-        for entry in result:
+        for entry in _rankings(result):
             score = entry["composite_score"]
             assert 0.0 <= score <= 100.0, f"composite_score={score} out of [0,100]"
 
@@ -131,14 +142,14 @@ class TestBuildPowerRankings:
         features = _make_features()
         names = _make_team_names(["OKC", "BOS", "MIL"])
         result = build_power_rankings(features, names)
-        for entry in result:
+        for entry in _rankings(result):
             assert entry["trend"] in VALID_TRENDS, f"Invalid trend: {entry['trend']}"
 
     def test_prev_rank_is_int(self):
         features = _make_features()
         names = _make_team_names(["OKC", "BOS", "MIL"])
         result = build_power_rankings(features, names)
-        for entry in result:
+        for entry in _rankings(result):
             assert isinstance(entry["prev_rank"], int), f"prev_rank type: {type(entry['prev_rank'])}"
 
     def test_best_team_ranked_first(self):
@@ -146,13 +157,13 @@ class TestBuildPowerRankings:
         features = _make_features()
         names = _make_team_names(["OKC", "BOS", "MIL"])
         result = build_power_rankings(features, names)
-        assert result[0]["team"] == "OKC"
+        assert _rankings(result)[0]["team"] == "OKC"
 
     def test_last10_record_format(self):
         features = _make_features()
         names = _make_team_names(["OKC", "BOS", "MIL"])
         result = build_power_rankings(features, names)
-        for entry in result:
+        for entry in _rankings(result):
             rec = entry["last10_record"]
             parts = rec.split("-")
             assert len(parts) == 2, f"Bad record format: {rec}"
@@ -163,24 +174,24 @@ class TestBuildPowerRankings:
             columns=[
                 "team_abbreviation", "game_date", "season",
                 "net_rtg_game_roll5", "net_rtg_game_roll10", "net_rtg_game_roll20",
-                "pythagorean_win_pct_roll10", "win_pct_roll10",
-                "win", "cum_wins", "cum_losses",
+                "pythagorean_win_pct_roll10", "win_pct_roll10", "win_pct_roll20",
+                "win", "cum_wins", "cum_losses", "cum_win_pct",
             ]
         )
         result = build_power_rankings(empty, {})
-        assert result == []
+        assert _rankings(result) == []
 
     def test_team_name_populated(self):
         features = _make_features(teams=["OKC"])
         names = {"OKC": "Oklahoma City Thunder"}
         result = build_power_rankings(features, names)
-        assert result[0]["team_name"] == "Oklahoma City Thunder"
+        assert _rankings(result)[0]["team_name"] == "Oklahoma City Thunder"
 
     def test_team_name_fallback_to_abbr(self):
         """If team not in names dict, should fall back to abbreviation."""
         features = _make_features(teams=["OKC"])
         result = build_power_rankings(features, {})
-        assert result[0]["team_name"] == "OKC"
+        assert _rankings(result)[0]["team_name"] == "OKC"
 
 
 # ---------------------------------------------------------------------------
@@ -198,12 +209,13 @@ class TestPowerRankingsIntegration:
         features = load_features()
         team_names = load_team_names()
         result = build_power_rankings(features, team_names)
+        rankings = _rankings(result)
 
-        assert len(result) == 30, f"Expected 30 teams, got {len(result)}"
-        ranks = [e["rank"] for e in result]
+        assert len(rankings) == 30, f"Expected 30 teams, got {len(rankings)}"
+        ranks = [e["rank"] for e in rankings]
         assert ranks == list(range(1, 31))
 
-        for entry in result:
+        for entry in rankings:
             missing = REQUIRED_FIELDS - set(entry.keys())
             assert not missing, f"Missing fields on {entry['team']}: {missing}"
             assert 0.0 <= entry["composite_score"] <= 100.0
