@@ -67,10 +67,10 @@
   ],
   "roi_by_market": {
     "ML": {
-      "bets": 17,
-      "wins": 10,
-      "win_pct": 0.5882,
-      "roi_pct": 12.3
+      "bets": 0,
+      "wins": 0,
+      "win_pct": null,
+      "roi_pct": null
     },
     "ATS": {
       "bets": 0,
@@ -91,38 +91,7 @@
     "has_edge": false,
     "sample_size": 0
   },
-  "calibration": [
-    {
-      "confidence_bucket": "50-55%",
-      "predicted_pct": 0.5342,
-      "actual_pct": 1.0,
-      "n": 1
-    },
-    {
-      "confidence_bucket": "55-60%",
-      "predicted_pct": 0.5738,
-      "actual_pct": 0.0,
-      "n": 2
-    },
-    {
-      "confidence_bucket": "60-65%",
-      "predicted_pct": 0.6128,
-      "actual_pct": 0.0,
-      "n": 1
-    },
-    {
-      "confidence_bucket": "65-70%",
-      "predicted_pct": 0.6835,
-      "actual_pct": 0.5,
-      "n": 6
-    },
-    {
-      "confidence_bucket": "80%+",
-      "predicted_pct": 0.8852,
-      "actual_pct": 0.8571,
-      "n": 7
-    }
-  ],
+  "calibration": [],
   "current_streak": {
     "type": "W",
     "length": 1
@@ -131,5 +100,5 @@
     "type": "W",
     "length": 5
   },
-  "last_updated": "2026-03-08T01:48:30Z"
+  "last_updated": "2026-03-08T14:54:37Z"
 }

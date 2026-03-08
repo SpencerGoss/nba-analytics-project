@@ -1,1 +1,112 @@
-[]
+[
+  {
+    "home_team": "SAS",
+    "away_team": "HOU",
+    "game_date": "2026-03-09",
+    "opening_spread": -7.5,
+    "current_spread": -7.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -7.5 -- game not yet closed"
+  },
+  {
+    "home_team": "SAC",
+    "away_team": "CHI",
+    "game_date": "2026-03-09",
+    "opening_spread": -2.0,
+    "current_spread": -2.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -2.0 -- game not yet closed"
+  },
+  {
+    "home_team": "POR",
+    "away_team": "IND",
+    "game_date": "2026-03-09",
+    "opening_spread": -11.0,
+    "current_spread": -11.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -11.0 -- game not yet closed"
+  },
+  {
+    "home_team": "PHX",
+    "away_team": "CHA",
+    "game_date": "2026-03-09",
+    "opening_spread": 2.0,
+    "current_spread": 2.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line +2.0 -- game not yet closed"
+  },
+  {
+    "home_team": "MIL",
+    "away_team": "ORL",
+    "game_date": "2026-03-09",
+    "opening_spread": 1.5,
+    "current_spread": 1.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line +1.5 -- game not yet closed"
+  },
+  {
+    "home_team": "TOR",
+    "away_team": "DAL",
+    "game_date": "2026-03-08",
+    "opening_spread": -12.5,
+    "current_spread": -12.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -12.5 -- game not yet closed"
+  },
+  {
+    "home_team": "NOP",
+    "away_team": "WAS",
+    "game_date": "2026-03-08",
+    "opening_spread": -12.5,
+    "current_spread": -12.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -12.5 -- game not yet closed"
+  },
+  {
+    "home_team": "MIA",
+    "away_team": "DET",
+    "game_date": "2026-03-08",
+    "opening_spread": -3.0,
+    "current_spread": -3.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -3.0 -- game not yet closed"
+  },
+  {
+    "home_team": "LAL",
+    "away_team": "NYK",
+    "game_date": "2026-03-08",
+    "opening_spread": 1.0,
+    "current_spread": 1.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line +1.0 -- game not yet closed"
+  },
+  {
+    "home_team": "CLE",
+    "away_team": "BOS",
+    "game_date": "2026-03-08",
+    "opening_spread": -3.5,
+    "current_spread": -3.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "classification": "stable",
+    "interpretation": "Opening line -3.5 -- game not yet closed"
+  }
+]
