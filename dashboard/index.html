@@ -1183,6 +1183,16 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--gold)" id="steam-alert-title">Steam Moves Detected</div><div style="font-size:11px;color:var(--t1)" id="steam-alert-desc">Sharp money moving lines today</div></div>
     <button onclick="showBettingTab('linemovement',null)" style="margin-left:auto;padding:5px 12px;border-radius:8px;border:1px solid rgba(245,166,35,0.3);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)">View -&gt;</button>
   </div>
+  <!-- BEST PICK OF THE DAY (populated by JS if picks exist) -->
+  <div id="best-pick-callout" style="display:none;margin-bottom:16px;border-radius:14px;background:linear-gradient(135deg,rgba(0,200,150,.09),rgba(79,158,255,.07));border:1px solid rgba(0,200,150,.2);padding:16px 18px">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green);margin-bottom:8px">&#11088; Pick of the Day</div>
+    <div id="bpd-matchup" style="font-size:16px;font-weight:700;color:var(--t0);margin-bottom:4px">-</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div id="bpd-pick" style="font-size:13px;color:var(--t1)">-</div>
+      <div id="bpd-conf" style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(0,200,150,.12);color:var(--green)">-</div>
+      <button onclick="showBettingTab('picks',null)" style="margin-left:auto;padding:5px 13px;border-radius:8px;border:1px solid rgba(0,200,150,.3);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)">See all picks -&gt;</button>
+    </div>
+  </div>
   <div class="dl">
     <div class="dm">
       <div class="card" style="margin-bottom:14px">
@@ -3704,7 +3714,7 @@ function renderStandings(){
       const l10c=l10wins>=7?'var(--green)':l10wins>=5?'var(--t1)':'var(--red)';
       const border=i===5?'border-bottom:2px solid rgba(245,166,35,.2);':'';
       const safeAbbrS=esc(t.abbr||t.team||'');
-      return `<tr style="${border}cursor:pointer" onclick="showTeamDetail('${safeAbbrS}')" title="Click for team detail"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px">${esc(t.team_name||t.team)}</td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:var(--t2);font-size:12px">${esc(t.home_record||'--')}</td><td style="color:var(--t2);font-size:12px">${esc(t.away_record||'--')}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${esc(t.streak||'--')}</td></tr>`;
+      return `<tr style="${border}cursor:pointer" onclick="showTeamDetail('${safeAbbrS}')" title="Click for team detail"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px"><div style="display:flex;align-items:center;gap:7px">${(()=>{const lUrl=teamLogoUrl(t.abbr||t.team||'');return lUrl?`<img src="${lUrl}" width="18" height="18" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'" alt=""/>`:'';})()} ${esc(t.team_name||t.team)}</div></td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:var(--t2);font-size:12px">${esc(t.home_record||'--')}</td><td style="color:var(--t2);font-size:12px">${esc(t.away_record||'--')}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${esc(t.streak||'--')}</td></tr>`;
     }).join('');
     _setHtml(document.getElementById(id),html);
   }
@@ -5149,6 +5159,29 @@ async function loadDashboardData(){
       buildHeroSection(picks, valueBets, explainers, contexts);
       buildTodayGamesStrip(picks);
       buildFeaturedMatchupComparison(picks);
+      // ── Best Pick of the Day callout ──
+      const bpdEl = document.getElementById('best-pick-callout');
+      if(bpdEl && Array.isArray(picks) && picks.length){
+        const upcoming = picks.filter(p => !p.result);
+        if(upcoming.length){
+          const best = upcoming.reduce((a,b) => {
+            const aScore = (a.model_confidence||0) + (a.value_bet ? 15 : 0);
+            const bScore = (b.model_confidence||0) + (b.value_bet ? 15 : 0);
+            return bScore > aScore ? b : a;
+          }, upcoming[0]);
+          const matchupStr = (best.away_team||'') + ' @ ' + (best.home_team||'');
+          const pickTeam = best.ats_pick || best.predicted_winner || '--';
+          const confPct = best.model_confidence ? best.model_confidence + '% confidence' : '';
+          const isVal = best.value_bet ? ' · \u2605 VALUE' : '';
+          const bpdM = document.getElementById('bpd-matchup');
+          const bpdP = document.getElementById('bpd-pick');
+          const bpdC = document.getElementById('bpd-conf');
+          if(bpdM) bpdM.textContent = matchupStr;
+          if(bpdP) bpdP.textContent = 'Pick: ' + pickTeam + (best.spread ? ' ' + best.spread : '');
+          if(bpdC) bpdC.textContent = confPct + isVal;
+          bpdEl.style.display = 'block';
+        }
+      }
     }
     // ── Wire matchup_analysis.json -> MATCHUP_DATA ──
     window.MATCHUP_JSON=matchupJson;
@@ -5793,8 +5826,11 @@ if ('serviceWorker' in navigator) {
           + ' onclick="showFreeTab(\'teams\')" title="View Teams tab">'
           + '<td style="padding:11px 16px;font-family:var(--fm);font-size:13px;font-weight:700;color:var(--t2);text-align:left">' + r.rank + '</td>'
           + '<td style="padding:11px 16px;text-align:left;white-space:nowrap">'
-          +   '<div style="font-weight:700;color:var(--t0)">' + r.team + '</div>'
-          +   '<div style="font-size:11px;color:var(--t2)">' + r.team_name + '</div>'
+          +   '<div style="display:flex;align-items:center;gap:8px">'
+          +   (function(){var lU=teamLogoUrl(r.team);return lU?'<img src="'+lU+'" width="22" height="22" style="object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'" alt=""/>':'';}())
+          +   '<div><div style="font-weight:700;color:var(--t0)">' + r.team + '</div>'
+          +   '<div style="font-size:11px;color:var(--t2)">' + r.team_name + '</div></div>'
+          +   '</div>'
           + '</td>'
           + '<td style="padding:11px 16px;min-width:140px">' + _scoreBar(r.composite_score) + '</td>'
           + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + net20Color + '">' + net20Sign + r.net_rating.toFixed(1) + '</td>'
