@@ -381,5 +381,79 @@ def main() -> None:
         raise SystemExit(1) from error
 
 
+def builders_only() -> None:
+    """CI-safe mode: skip NBA API fetch, run only Step 7 builder scripts.
+
+    stats.nba.com blocks GitHub Actions datacenter IPs, so Steps 1-6 cannot
+    run in CI. This mode rebuilds dashboard JSONs from whatever committed/cached
+    data is available and is called by the GitHub Actions workflow.
+    """
+    import subprocess
+    start_time = datetime.now()
+    print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] Running builders-only mode (CI)...")
+
+    _PYTHON = Path(sys.executable)
+    _SCRIPTS_DIR = Path(__file__).parent / "scripts"
+
+    _BUILDERS = [
+        ("backfill_outcomes", "Backfill prediction outcomes"),
+        ("fetch_odds", "Fetch sportsbook odds"),
+        ("build_picks", "Today's picks"),
+        ("build_value_bets", "Value bets"),
+        ("build_standings", "Standings"),
+        ("build_injuries", "Injury report"),
+        ("build_power_rankings", "Power rankings"),
+        ("build_h2h", "Head-to-head"),
+        ("build_streaks", "Hot/cold streaks"),
+        ("build_advanced_stats", "Advanced stats"),
+        ("build_live_scores", "Live scores"),
+        ("build_playoff_odds", "Playoff odds"),
+        ("build_trends", "Trends"),
+        ("build_totals", "Totals"),
+        ("build_game_context", "Game context"),
+        ("build_explainers", "Explainers"),
+        ("build_matchup_analysis", "Matchup analysis"),
+        ("build_performance", "Performance history"),
+        ("build_accuracy_history", "Accuracy history"),
+        ("build_line_movement", "Line movement"),
+        ("build_props", "Player props"),
+        ("build_clv", "CLV summary"),
+        ("build_player_comparison", "Player comparison"),
+        ("build_season_history", "Season history"),
+    ]
+
+    for script_name, label in _BUILDERS:
+        script_path = _SCRIPTS_DIR / f"{script_name}.py"
+        if not script_path.exists():
+            print(f"  [{label}] skipped (script not found)")
+            continue
+        try:
+            result = subprocess.run(
+                [str(_PYTHON), str(script_path)],
+                capture_output=True, text=True, timeout=180,
+                cwd=str(Path(__file__).parent)
+            )
+            if result.returncode == 0:
+                print(f"  [{label}] OK")
+            else:
+                print(f"  [{label}] WARN: {result.stderr.strip()[-200:] if result.stderr else 'non-zero exit'}")
+        except subprocess.TimeoutExpired:
+            print(f"  [{label}] WARN: timed out after 180s")
+        except Exception as build_err:
+            print(f"  [{label}] WARN: {build_err}")
+
+    elapsed = datetime.now() - start_time
+    total_seconds = int(elapsed.total_seconds())
+    print(f"\nBuilders-only complete in {total_seconds // 60}m {total_seconds % 60}s")
+
+
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--builders-only", action="store_true",
+                        help="Skip NBA API fetch; only run dashboard builder scripts (CI mode)")
+    args = parser.parse_args()
+    if args.builders_only:
+        builders_only()
+    else:
+        main()

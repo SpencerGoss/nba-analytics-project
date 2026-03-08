@@ -4,6 +4,10 @@ name: Daily Dashboard Update
 # All github.* context values used (github.repository) are repository metadata,
 # not untrusted external input (no issue/PR/comment bodies, no head refs).
 # Secrets are passed only via env:, never interpolated into run: strings.
+#
+# NOTE: stats.nba.com blocks GitHub Actions datacenter IPs.
+# Step 1 (NBA API fetch) always fails in CI -- this is expected and harmless.
+# CI value: rebuilds dashboard JSONs from committed processed CSVs and deploys.
 
 on:
   schedule:
@@ -39,13 +43,14 @@ jobs:
       - name: Ensure runtime directories exist
         run: mkdir -p database data/odds data/processed data/raw data/features logs
 
-      - name: Run pipeline
-        timeout-minutes: 30
+      - name: Fetch odds and run builders
+        continue-on-error: true
+        timeout-minutes: 10
         env:
           BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
           VALUE_BET_THRESHOLD: '0.05'
         run: |
-          python update.py
+          python update.py --builders-only
 
       - name: Commit dashboard data if changed
         run: |
