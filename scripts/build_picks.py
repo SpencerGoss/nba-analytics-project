@@ -30,6 +30,8 @@ GAME_LINES_CSV = PROJECT_ROOT / "data" / "odds" / "game_lines.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "todays_picks.json"
 
 TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
+MATCHUP_CSV = PROJECT_ROOT / "data" / "features" / "game_matchup_features.csv"
+ARTIFACTS_DIR = PROJECT_ROOT / "models" / "artifacts"
 
 
 # ---------------------------------------------------------------------------
@@ -95,14 +97,149 @@ def _load_game_lines(target_date: str) -> dict[tuple[str, str], dict]:
     return result
 
 
+def _build_margin_lookup(
+    preds: list[dict],
+) -> dict[tuple[str, str, str], float | None]:
+    """
+    Attempt to produce a projected_margin for each prediction by running the
+    NBAEnsemble margin model on the most-recent matchup features.
+
+    Returns a dict keyed by (home_team, away_team, game_date) -> float | None.
+    Returns an all-None dict (gracefully) if the margin model or feature CSV is
+    unavailable -- callers treat None as "not available".
+    """
+    result: dict[tuple[str, str, str], float | None] = {
+        (p["home_team"], p["away_team"], p.get("game_date", "")): None
+        for p in preds
+    }
+
+    if not MATCHUP_CSV.exists():
+        print("  WARN: matchup features CSV not found -- projected_margin will be null")
+        return result
+
+    margin_pkl = ARTIFACTS_DIR / "margin_model.pkl"
+    if not margin_pkl.exists():
+        print("  INFO: margin_model.pkl not found -- projected_margin will be null")
+        return result
+
+    try:
+        import warnings
+
+        # Load ensemble through src module (handles its own artifact loading)
+        from src.models.ensemble import NBAEnsemble
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ensemble = NBAEnsemble.load(ARTIFACTS_DIR)
+
+        if ensemble.margin_model is None:
+            print("  INFO: ensemble margin model not available -- projected_margin will be null")
+            return result
+
+        matchup_df = pd.read_csv(MATCHUP_CSV, low_memory=False)
+        matchup_df["game_date"] = pd.to_datetime(
+            matchup_df["game_date"], format="mixed"
+        ).dt.date.astype(str)
+
+        # Build most-recent-row index per (home_team, away_team)
+        latest = (
+            matchup_df.sort_values("game_date")
+            .groupby(["home_team", "away_team"], sort=False)
+            .last()
+            .reset_index()
+        )
+        feat_index: dict[tuple[str, str], pd.Series] = {}
+        for _, row in latest.iterrows():
+            feat_index[(str(row["home_team"]), str(row["away_team"]))] = row
+
+        for p in preds:
+            home = p["home_team"]
+            away = p["away_team"]
+            game_date = p.get("game_date", "")
+            key = (home, away, game_date)
+
+            feat_row = feat_index.get((home, away))
+            if feat_row is None:
+                continue
+
+            margin_feats = ensemble.margin_feats
+            if margin_feats is not None:
+                X = pd.DataFrame([feat_row]).reindex(columns=margin_feats).fillna(0)
+            else:
+                X = pd.DataFrame([feat_row]).fillna(0)
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                margin_val = float(ensemble.margin_model.predict(X)[0])
+
+            result[key] = round(margin_val, 2)
+
+        n_filled = sum(1 for v in result.values() if v is not None)
+        print(f"  Projected margins computed for {n_filled}/{len(preds)} games")
+
+    except Exception as exc:
+        print(f"  WARN: margin model inference failed ({exc}) -- projected_margin will be null")
+
+    return result
+
+
+def _compute_kelly_fraction(
+    edge_pct: float | None,
+    market_prob: float | None,
+    ats_pick: str,
+    home: str,
+    home_prob: float,
+) -> float | None:
+    """
+    Half-Kelly sizing: kelly = (p * b - (1 - p)) / b * 0.5
+    where p = model win prob for the bet side,
+          b = (1 - market_prob) / market_prob (decimal odds - 1).
+    Returns None if inputs are missing or market_prob is degenerate.
+    Returns 0.0 if Kelly is negative (no edge).
+    """
+    if edge_pct is None or market_prob is None:
+        return None
+
+    market_prob_f = float(market_prob)
+    if market_prob_f <= 0.0 or market_prob_f >= 1.0:
+        return None
+
+    # Determine model probability for the bet side
+    if ats_pick == home:
+        p = home_prob
+        q = market_prob_f
+    else:
+        p = 1.0 - home_prob
+        q = 1.0 - market_prob_f
+
+    if q <= 0.0 or q >= 1.0:
+        return None
+
+    b = (1.0 - q) / q
+    kelly = (p * b - (1.0 - p)) / b
+    return round(max(0.0, 0.5 * kelly), 4)
+
+
+def _confidence_tier(home_prob: float, predicted_winner: str, home: str) -> str:
+    """Classify model confidence into HIGH / MEDIUM / LOW based on win probability."""
+    winner_prob = home_prob if predicted_winner == home else 1.0 - home_prob
+    if winner_prob >= 0.70:
+        return "HIGH"
+    if winner_prob >= 0.60:
+        return "MEDIUM"
+    return "LOW"
+
+
 def _build_pick_row(
     pred: dict,
     team_names: dict[str, str],
     lines: dict[tuple[str, str], dict],
+    margin_lookup: dict[tuple[str, str, str], float | None],
 ) -> dict:
     """Convert a DB prediction row into the todays_picks.json schema."""
     home = pred["home_team"]
     away = pred["away_team"]
+    game_date = pred.get("game_date", "")
     home_prob = float(pred.get("home_win_prob") or 0.0)
     away_prob = float(pred.get("away_win_prob") or 0.0)
 
@@ -129,8 +266,18 @@ def _build_pick_row(
     else:
         ats_pick = predicted_winner
 
+    # Derived enrichment fields
+    kelly = _compute_kelly_fraction(edge_pct, market_prob, ats_pick, home, home_prob)
+    tier = _confidence_tier(home_prob, predicted_winner, home)
+    model_confidence = round(
+        home_prob * 100 if predicted_winner == home else away_prob * 100
+    )
+
+    # Projected margin: pull from margin_lookup keyed by (home, away, game_date)
+    projected_margin: float | None = margin_lookup.get((home, away, game_date))
+
     return {
-        "game_date": pred.get("game_date", ""),
+        "game_date": game_date,
         "home_team": home,
         "away_team": away,
         "home_team_name": team_names.get(home, home),
@@ -142,6 +289,10 @@ def _build_pick_row(
         "spread": spread,
         "value_bet": value_bet,
         "edge_pct": edge_pct,
+        "kelly_fraction": kelly,
+        "projected_margin": projected_margin,
+        "confidence_tier": tier,
+        "model_confidence": model_confidence,
         "model_name": pred.get("model_name") or pred.get("model_artifact", "unknown"),
         "created_at": pred.get("created_at", datetime.now(timezone.utc).isoformat()),
     }
@@ -204,7 +355,9 @@ def build_picks(
     else:
         print("  No game_lines.csv data -- odds fields will be null")
 
-    picks = [_build_pick_row(p, team_names, lines) for p in preds]
+    margin_lookup = _build_margin_lookup(preds)
+
+    picks = [_build_pick_row(p, team_names, lines, margin_lookup) for p in preds]
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:

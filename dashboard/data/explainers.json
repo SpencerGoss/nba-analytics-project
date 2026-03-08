@@ -10,7 +10,8 @@
       "Orlando Magic has struggled recently -- only 3 wins in their last 10 games"
     ],
     "recommended_side": "MIN",
-    "one_liner": "Model projects Minnesota Timberwolves to win with 86.3% probability"
+    "one_liner": "Model projects Minnesota Timberwolves to win with 86.3% probability (model projects home win by 10.4)",
+    "confidence_explanation": "Model favors Minnesota Timberwolves with 86% confidence based on net rating advantage of +9.8 pts/100; pythagorean win% gap +18.8%"
   },
   {
     "home_team": "DET",
@@ -23,7 +24,8 @@
       "Detroit Pistons outperforms Brooklyn Nets by 17.7 points per 100 possessions in net rating"
     ],
     "recommended_side": "DET",
-    "one_liner": "Model projects Detroit Pistons to win with 88.5% probability"
+    "one_liner": "Model projects Detroit Pistons to win with 88.5% probability (model projects home win by 9.6)",
+    "confidence_explanation": "Model favors Detroit Pistons with 88% confidence based on net rating advantage of +17.7 pts/100; pythagorean win% gap +24.6%"
   },
   {
     "home_team": "ATL",
@@ -34,7 +36,8 @@
       "Recent form: Atlanta Hawks 5-5 L10 vs Philadelphia 76ers 6-4 L10"
     ],
     "recommended_side": "PHI",
-    "one_liner": "Philadelphia 76ers is undervalued -- books give them 28.5% but our model says 50.0%"
+    "one_liner": "Philadelphia 76ers is undervalued -- books give them 28.5% but our model says 50.0% (model projects home win by 2.8)",
+    "confidence_explanation": "Model favors Philadelphia 76ers with 50% confidence based on net rating disadvantage of -2.8 pts/100; pythagorean win% gap -7.6%"
   },
   {
     "home_team": "MEM",
@@ -45,7 +48,8 @@
       "Los Angeles Clippers has struggled recently -- only 2 wins in their last 10 games"
     ],
     "recommended_side": "MEM",
-    "one_liner": "Model projects Memphis Grizzlies to win with 77.5% probability"
+    "one_liner": "Model projects Memphis Grizzlies to win with 77.5% probability (model projects home win by 3.7)",
+    "confidence_explanation": "Model favors Memphis Grizzlies with 78% confidence based on net rating advantage of +4.2 pts/100; pythagorean win% gap +9.4%"
   },
   {
     "home_team": "MIL",
@@ -56,7 +60,8 @@
       "Utah Jazz has struggled recently -- only 3 wins in their last 10 games"
     ],
     "recommended_side": "MIL",
-    "one_liner": "Model projects Milwaukee Bucks to win with 86.3% probability"
+    "one_liner": "Model projects Milwaukee Bucks to win with 86.3% probability (model projects home win by 12.3)",
+    "confidence_explanation": "Model favors Milwaukee Bucks with 86% confidence based on net rating advantage of +3.2 pts/100; recent form 2-8 vs 3-7 (L10)"
   },
   {
     "home_team": "OKC",
@@ -69,6 +74,7 @@
       "Pythagorean win% gap favors Oklahoma City Thunder (80.7% vs 52.8%)"
     ],
     "recommended_side": "OKC",
-    "one_liner": "Model projects Oklahoma City Thunder to win with 77.5% probability"
+    "one_liner": "Model projects Oklahoma City Thunder to win with 77.5% probability (model projects home win by 5.2)",
+    "confidence_explanation": "Model favors Oklahoma City Thunder with 78% confidence based on net rating advantage of +12.8 pts/100; pythagorean win% gap +27.9%"
   }
 ]

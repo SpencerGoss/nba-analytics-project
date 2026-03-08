@@ -359,6 +359,8 @@ def generate_one_liner(
     home_prob: float = pick.get("home_win_prob", 0.5)
     away_prob: float = pick.get("away_win_prob", 1.0 - home_prob)
     market_prob: float | None = value_bet["market_prob"] if value_bet else None
+    spread: float | None = pick.get("spread")
+    projected_margin: float | None = pick.get("projected_margin")
 
     if recommended_side == pick["home_team"]:
         rec_name = home_name
@@ -369,15 +371,22 @@ def generate_one_liner(
 
     model_pct = _pct(rec_model_prob)
 
+    # Build spread/margin suffix for extra context
+    margin_suffix = ""
+    if projected_margin is not None:
+        direction = "by" if projected_margin >= 0 else "by"
+        margin_suffix = f" (model projects home win by {abs(projected_margin):.1f})"
+    elif spread is not None:
+        margin_suffix = f" (line: {spread:+.1f})"
+
     if market_prob is not None:
         # market_prob from value_bets is always for the recommended side
         market_pct = _pct(market_prob)
         return (
             f"{rec_name} is undervalued -- books give them {market_pct}"
-            f" but our model says {model_pct}"
+            f" but our model says {model_pct}{margin_suffix}"
         )
 
-    spread = pick.get("spread")
     if spread is not None:
         # Positive spread = home is favored; invert for away
         implied_home = _spread_implied_prob(spread)
@@ -392,10 +401,79 @@ def generate_one_liner(
             implied_str = "N/A"
         return (
             f"{rec_name} is undervalued -- books imply {implied_str}"
-            f" but our model says {model_pct}"
+            f" but our model says {model_pct}{margin_suffix}"
         )
 
-    return f"Model projects {rec_name} to win with {model_pct} probability"
+    base = f"Model projects {rec_name} to win with {model_pct} probability"
+    return base + margin_suffix if margin_suffix else base
+
+
+def generate_confidence_explanation(
+    pick: dict[str, Any],
+    features: "pd.Series | None",
+    recommended_side: str,
+) -> str:
+    """
+    Generate a short plain-English explanation of why the model has this
+    confidence level (e.g. net rating gap, pythagorean win%, recent form).
+    """
+    home = pick["home_team"]
+    home_name = pick.get("home_team_name", home)
+    away_name = pick.get("away_team_name", pick["away_team"])
+    home_prob: float = pick.get("home_win_prob", 0.5)
+    away_prob: float = pick.get("away_win_prob", 1.0 - home_prob)
+    confidence_tier: str = pick.get("confidence_tier", "")
+
+    if recommended_side == home:
+        rec_name = home_name
+        rec_prob = home_prob
+    else:
+        rec_name = away_name
+        rec_prob = away_prob
+
+    tier_label = confidence_tier.upper() if confidence_tier else "MEDIUM"
+    model_pct = f"{rec_prob * 100:.0f}%"
+
+    # Start with the base confidence statement
+    base = f"Model favors {rec_name} with {model_pct} confidence"
+
+    if features is None:
+        return f"{base} ({tier_label.lower()} confidence, no feature detail available)"
+
+    # Attempt to add a primary driver
+    driver_parts: list[str] = []
+
+    # Net rating differential
+    net_col = "diff_net_rtg_game_roll10"
+    if net_col in features.index and pd.notna(features[net_col]):
+        nr = float(features[net_col])
+        if abs(nr) >= 2.0:
+            sign_txt = "advantage" if nr > 0 else "disadvantage"
+            driver_parts.append(f"net rating {sign_txt} of {nr:+.1f} pts/100")
+
+    # Pythagorean win% gap
+    pyth_col = "diff_pythagorean_win_pct_roll10"
+    if pyth_col in features.index and pd.notna(features[pyth_col]):
+        pv = float(features[pyth_col])
+        if abs(pv) >= 0.05:
+            driver_parts.append(f"pythagorean win% gap {pv:+.1%}")
+
+    # Recent form (L10)
+    h_l10_col = "home_win_pct_roll10"
+    a_l10_col = "away_win_pct_roll10"
+    if h_l10_col in features.index and a_l10_col in features.index:
+        h_w10 = features[h_l10_col]
+        a_w10 = features[a_l10_col]
+        if pd.notna(h_w10) and pd.notna(a_w10):
+            hw = round(float(h_w10) * 10)
+            aw = round(float(a_w10) * 10)
+            driver_parts.append(f"recent form {hw}-{10-hw} vs {aw}-{10-aw} (L10)")
+
+    if driver_parts:
+        driver_str = "; ".join(driver_parts[:2])
+        return f"{base} based on {driver_str}"
+
+    return f"{base} ({tier_label.lower()} confidence)"
 
 
 # ---------------------------------------------------------------------------
@@ -440,6 +518,9 @@ def build_explainers(
 
         bullets = generate_bullets(pick, features, value_bet, context)
         one_liner = generate_one_liner(pick, recommended_side, value_bet)
+        confidence_explanation = generate_confidence_explanation(
+            pick, features, recommended_side
+        )
 
         results.append(
             {
@@ -449,6 +530,7 @@ def build_explainers(
                 "bullets": bullets,
                 "recommended_side": recommended_side,
                 "one_liner": one_liner,
+                "confidence_explanation": confidence_explanation,
             }
         )
 
@@ -487,6 +569,7 @@ def main() -> None:
         for b in ex["bullets"]:
             print(f"    - {b}")
         print(f"    -> {ex['one_liner']}")
+        print(f"    confidence: {ex['confidence_explanation']}")
 
 
 if __name__ == "__main__":

@@ -9,13 +9,17 @@
     "away_rest_days": 2,
     "home_last10": "8-2",
     "away_last10": "6-4",
+    "home_last7": "6-1",
+    "away_last7": "4-3",
     "home_streak": 2,
     "away_streak": 2,
     "home_season_home_record": "22-11",
     "away_season_away_record": "14-17",
     "situational_flags": [
-      "HOME_HOT"
-    ]
+      "HOME_HOT",
+      "INJ_IMPACT_AWAY"
+    ],
+    "context_summary": "Minnesota Timberwolves rested (2d). Orlando Magic rested (2d). Minnesota Timberwolves 8-2 in last 10. Orlando Magic 6-4 in last 10. key Orlando Magic player(s) out."
   },
   {
     "home_team": "DET",
@@ -27,14 +31,16 @@
     "away_rest_days": 2,
     "home_last10": "7-3",
     "away_last10": "0-10",
+    "home_last7": "4-3",
+    "away_last7": "0-7",
     "home_streak": 2,
     "away_streak": -8,
     "home_season_home_record": "23-7",
     "away_season_away_record": "7-25",
     "situational_flags": [
-      "HOME_HOT",
       "AWAY_COLD"
-    ]
+    ],
+    "context_summary": "Detroit Pistons rested (2d). Brooklyn Nets rested (2d). Detroit Pistons 7-3 in last 10. Brooklyn Nets 0-10 in last 10."
   },
   {
     "home_team": "ATL",
@@ -46,11 +52,17 @@
     "away_rest_days": 3,
     "home_last10": "6-4",
     "away_last10": "4-6",
+    "home_last7": "6-1",
+    "away_last7": "4-3",
     "home_streak": 4,
     "away_streak": -1,
     "home_season_home_record": "14-16",
     "away_season_away_record": "17-12",
-    "situational_flags": []
+    "situational_flags": [
+      "HOME_HOT",
+      "INJ_IMPACT_AWAY"
+    ],
+    "context_summary": "Atlanta Hawks rested (3d). Philadelphia 76ers rested (3d). Atlanta Hawks 6-4 in last 10. Philadelphia 76ers 4-6 in last 10. key Philadelphia 76ers player(s) out."
   },
   {
     "home_team": "MEM",
@@ -62,15 +74,19 @@
     "away_rest_days": 1,
     "home_last10": "3-7",
     "away_last10": "5-5",
+    "home_last7": "2-5",
+    "away_last7": "3-4",
     "home_streak": -3,
     "away_streak": -1,
     "home_season_home_record": "11-18",
     "away_season_away_record": "14-19",
     "situational_flags": [
       "AWAY_B2B",
-      "HOME_REST_ADV",
-      "HOME_COLD"
-    ]
+      "REST_ADV_HOME",
+      "HOME_COLD",
+      "INJ_IMPACT_HOME"
+    ],
+    "context_summary": "Memphis Grizzlies rested (3d). Los Angeles Clippers on back-to-back. Memphis Grizzlies 3-7 in last 10. Los Angeles Clippers 5-5 in last 10. key Memphis Grizzlies player(s) out."
   },
   {
     "home_team": "MIL",
@@ -82,14 +98,19 @@
     "away_rest_days": 2,
     "home_last10": "5-5",
     "away_last10": "3-7",
+    "home_last7": "2-5",
+    "away_last7": "1-6",
     "home_streak": -3,
     "away_streak": 1,
     "home_season_home_record": "14-16",
     "away_season_away_record": "8-23",
     "situational_flags": [
-      "HOME_REST_ADV",
-      "AWAY_COLD"
-    ]
+      "HOME_COLD",
+      "AWAY_COLD",
+      "INJ_IMPACT_HOME",
+      "INJ_IMPACT_AWAY"
+    ],
+    "context_summary": "Milwaukee Bucks rested (3d). Utah Jazz rested (2d). Milwaukee Bucks 5-5 in last 10. Utah Jazz 3-7 in last 10. key Milwaukee Bucks player(s) out. key Utah Jazz player(s) out."
   },
   {
     "home_team": "OKC",
@@ -101,13 +122,17 @@
     "away_rest_days": 2,
     "home_last10": "8-2",
     "away_last10": "4-6",
+    "home_last7": "6-1",
+    "away_last7": "3-4",
     "home_streak": 3,
     "away_streak": 2,
     "home_season_home_record": "25-6",
     "away_season_away_record": "13-17",
     "situational_flags": [
-      "HOME_REST_ADV",
-      "HOME_HOT"
-    ]
+      "HOME_HOT",
+      "INJ_IMPACT_HOME",
+      "INJ_IMPACT_AWAY"
+    ],
+    "context_summary": "Oklahoma City Thunder rested (3d). Golden State Warriors rested (2d). Oklahoma City Thunder 8-2 in last 10. Golden State Warriors 4-6 in last 10. key Oklahoma City Thunder player(s) out. key Golden State Warriors player(s) out."
   }
 ]
