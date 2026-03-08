@@ -173,8 +173,8 @@ def build_playoff_odds(
     season: int = CURRENT_SEASON,
 ) -> dict:
     if not logs_path.exists():
-        print(f"ERROR: team_game_logs not found: {logs_path}")
-        sys.exit(1)
+        print(f"WARN: team_game_logs not found: {logs_path} -- skipping playoff odds build")
+        return {}
 
     print(f"Loading game logs from {logs_path} ...")
     df = pd.read_csv(logs_path)

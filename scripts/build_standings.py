@@ -220,8 +220,8 @@ def build_standings(
 ) -> dict:
     """Main entry point. Returns the standings dict (also writes JSON)."""
     if not logs_path.exists():
-        print(f"ERROR: team_game_logs not found: {logs_path}")
-        sys.exit(1)
+        print(f"WARN: team_game_logs not found: {logs_path} -- skipping standings build")
+        return {}
 
     print(f"Loading game logs from {logs_path} ...")
     logs = load_season_logs(season)

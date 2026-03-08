@@ -244,8 +244,8 @@ def build_streaks(
 ) -> dict:
     # ---- Team logs ----
     if not team_logs_path.exists():
-        print(f"ERROR: team_game_logs not found: {team_logs_path}")
-        sys.exit(1)
+        print(f"WARN: team_game_logs not found: {team_logs_path} -- skipping streaks build")
+        return {}
 
     print(f"Loading team game logs from {team_logs_path} ...")
     tdf = pd.read_csv(team_logs_path)

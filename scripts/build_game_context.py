@@ -262,11 +262,11 @@ def build_game_context(
 ) -> list[dict]:
     """Main entry point. Returns the list of context dicts (also writes JSON)."""
     if not picks_path.exists():
-        print(f"ERROR: picks file not found: {picks_path}")
-        sys.exit(1)
+        print(f"WARN: picks file not found: {picks_path} -- skipping game context build")
+        return []
     if not logs_path.exists():
-        print(f"ERROR: team_game_logs not found: {logs_path}")
-        sys.exit(1)
+        print(f"WARN: team_game_logs not found: {logs_path} -- skipping game context build")
+        return []
 
     with open(picks_path, encoding="utf-8") as f:
         picks = json.load(f)

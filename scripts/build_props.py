@@ -248,8 +248,11 @@ def main() -> None:
     log.info("Loading data...")
     games = load_todays_games()
     if not games:
-        log.error("No games found in todays_picks.json — aborting")
-        sys.exit(1)
+        log.warning("No games found in todays_picks.json -- writing empty player_props.json")
+        out = PROJECT_ROOT / "dashboard" / "data" / "player_props.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text("[]", encoding="utf-8")
+        return
 
     logs = load_player_logs()
     current_season = int(logs["season"].max())

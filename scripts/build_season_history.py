@@ -86,8 +86,8 @@ def season_label(code: int) -> str:
 
 def load_logs() -> pd.DataFrame:
     if not DATA_PATH.exists():
-        print(f"ERROR: Data file not found: {DATA_PATH}")
-        sys.exit(1)
+        print(f"WARN: Data file not found: {DATA_PATH} -- skipping season history build")
+        return pd.DataFrame()
 
     df = pd.read_csv(DATA_PATH, dtype={"season": int, "season_id": str})
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
@@ -199,6 +199,9 @@ def build_output(df: pd.DataFrame) -> dict:
 def main() -> None:
     print("Building season_history.json ...")
     df = load_logs()
+    if df.empty:
+        print("WARN: No data loaded -- skipping season_history.json write")
+        return
     print(f"Loaded {len(df):,} rows from team_game_logs.csv")
 
     filtered = filter_seasons(df)

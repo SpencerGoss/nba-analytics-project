@@ -530,7 +530,11 @@ def run(min_seasons: int = DEFAULT_MIN_SEASONS,
         min_career_games: int = DEFAULT_MIN_CAREER_GAMES) -> dict:
     """Execute the full build. Returns summary dict for logging."""
     print("build_player_comparison: loading player data...")
-    players = _load_players(PLAYERS_CSV)
+    try:
+        players = _load_players(PLAYERS_CSV)
+    except FileNotFoundError as exc:
+        print(f"WARN: {exc} -- skipping player_comparison.json write")
+        return {"players": 0, "seasons": 0}
     print(f"  {len(players):,} player-season rows across "
           f"{players['season_str'].nunique()} seasons")
 
