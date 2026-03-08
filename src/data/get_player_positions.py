@@ -234,7 +234,7 @@ def get_player_positions(
     print(f"{'='*50}")
 
     final.to_csv(OUTPUT_PATH, index=False)
-    print(f"\nSaved {len(final):,} players → {OUTPUT_PATH}")
+    print(f"\nSaved {len(final):,} players -> {OUTPUT_PATH}")
 
     return final
 

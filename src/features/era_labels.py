@@ -218,7 +218,7 @@ if __name__ == "__main__":
     for _, row in ERA_DEFINITIONS.iterrows():
         end_label = "present" if row["era_end"] == 999999 else str(row["era_end"])
         print(f"\nEra {row['era_num']}: {row['era_name']}")
-        print(f"  Seasons : {row['era_start']} → {end_label}")
+        print(f"  Seasons : {row['era_start']} -> {end_label}")
         print(f"  Anchor  : {row['rule_anchor']}")
         print(f"  Summary : {row['description'][:100]}...")
 
