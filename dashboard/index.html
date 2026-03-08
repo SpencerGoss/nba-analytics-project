@@ -288,6 +288,7 @@ html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var
 
 /* ── INNER TABS ── */
 .tab-bar{display:flex;align-items:center;gap:4px;margin-bottom:24px;flex-wrap:wrap}
+@media(max-width:768px){.tab-bar{position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}}
 .tab{
   padding:6px 14px;border-radius:var(--r-pill);
   border:1px solid transparent;background:transparent;cursor:pointer;
@@ -398,6 +399,7 @@ html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:1024px){.g2,.g3{grid-template-columns:1fr}}
+@media(max-width:480px){.gg,.g3{grid-template-columns:1fr!important}}
 
 /* ── TABLES ── */
 .tw{overflow-x:auto}
@@ -460,6 +462,7 @@ tbody tr:last-child td{border-bottom:none}
 }
 .gc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.06)}
 .gc.live{border-color:rgba(0,200,150,.18);background:rgba(0,200,150,.025)}
+@media(hover:none){.gc:active{transform:scale(0.98);opacity:.85}}
 
 .gs{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
 .gs.live{color:var(--green);text-shadow:0 0 8px rgba(0,200,150,.3)}.gs.final{color:var(--t2)}.gs.upcoming{color:var(--blue)}
@@ -950,6 +953,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 .tip-title{font-weight:700;color:var(--t0);display:block;margin-bottom:4px;font-size:11px}
 
 /* ── MOBILE BOTTOM NAV ── */
+@media(max-width:540px){.hide-mobile{display:none}}
 @media(max-width:768px){
   .nav{display:none}
   .mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(8,9,14,.96);backdrop-filter:blur(32px);border-top:1px solid var(--b0);padding:8px 4px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
@@ -1234,6 +1238,9 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <div class="tab-bar">
     <button class="tab active" data-tab="stats" onclick="switchTab('players','stats')">Stats</button>
     <button class="tab" data-tab="compare" onclick="switchTab('players','compare'); initPickers()">Compare</button>
+    <button class="tab" data-tab="pts" onclick="switchTab('players','pts')">Points</button>
+    <button class="tab" data-tab="reb" onclick="switchTab('players','reb')">Rebounds</button>
+    <button class="tab" data-tab="ast" onclick="switchTab('players','ast')">Assists</button>
   </div>
   <div class="tab-content active" id="players-tab-stats">
     <!-- Status filter chips: unified list - All / Active / Retired / Current Season -->
@@ -1298,6 +1305,15 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
       </div>
       <div class="card"><div class="sh"><div class="st">Shooting by Zone</div><div class="ss">FG% at rim, paint, mid-range, 3-pointers</div></div><div id="shoot-chart" style="height:250px"></div></div>
     </div>
+  </div>
+  <div class="tab-content" id="players-tab-pts">
+    <div id="leaders-pts-container"><div style="text-align:center;padding:48px;color:var(--t2);font-size:13px">Loading points leaders...</div></div>
+  </div>
+  <div class="tab-content" id="players-tab-reb">
+    <div id="leaders-reb-container"><div style="text-align:center;padding:48px;color:var(--t2);font-size:13px">Loading rebounds leaders...</div></div>
+  </div>
+  <div class="tab-content" id="players-tab-ast">
+    <div id="leaders-ast-container"><div style="text-align:center;padding:48px;color:var(--t2);font-size:13px">Loading assists leaders...</div></div>
   </div>
   <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="rankings-footer-ts">Stats through Mar 5, 2026</span> &#183; Season 2025-26</p>
 </section>
@@ -1505,12 +1521,12 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
             <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">#</th>
             <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Team</th>
             <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap;min-width:140px">Score</th>
-            <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 20 games">Net Rtg L20</th>
+            <th class="hide-mobile" style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 20 games">Net Rtg L20</th>
             <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 10 games">Net Rtg L10</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Last 10</th>
-            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Record over last 20 games">Last 20</th>
+            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Record over last 20 games">Last 20</th>
             <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Trend</th>
-            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">vs Last Wk</th>
+            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">vs Last Wk</th>
           </tr>
         </thead>
         <tbody id="rk-tbody"></tbody>
@@ -3152,6 +3168,19 @@ function showGameDetail(home,away){
     html+='<div style="height:100%;border-radius:8px;background:var(--green);width:'+hPct+'%;float:right;transition:width 600ms cubic-bezier(.16,1,.3,1)"></div>';
     html+='</div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700"><span style="color:var(--blue)">'+aPct+'%</span><span style="color:var(--green)">'+hPct+'%</span></div>';
+    // consensus check
+    var vbMatch=(window.VALUE_BETS||[]).find(function(v){return(v.home_team===home&&v.away_team===away)||(v.home_team===away&&v.away_team===home);});
+    var hasDivergence=vbMatch&&(vbMatch.edge_pct||0)>0.08;
+    if(hasDivergence){
+      html+='<div style="margin-top:12px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:9px;background:rgba(245,166,35,.10);border:1px solid rgba(245,166,35,.28)">';
+      html+='<span style="font-size:15px">&#9888;</span>';
+      html+='<div><div style="font-size:11px;font-weight:800;color:var(--gold);letter-spacing:.3px">Consensus Check</div>';
+      html+='<div style="font-size:11px;color:var(--t1);margin-top:1px">Model diverges from market &mdash; potential edge detected ('+((vbMatch.edge_pct||0)*100).toFixed(1)+'%)</div></div></div>';
+    } else {
+      html+='<div style="margin-top:12px;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:9px;background:rgba(255,255,255,.04)">';
+      html+='<span style="font-size:13px;color:var(--t2)">&#10003;</span>';
+      html+='<div style="font-size:11px;color:var(--t2)"><span style="font-weight:700;color:var(--t1)">Consensus Check</span> &mdash; Model aligns with market</div></div>';
+    }
     html+='</div></div>';
   }
   // records and form
@@ -3830,7 +3859,7 @@ function renderPicks(){
       <div class="cl"><span>Confidence</span><span style="color:${p.tier==='hi'?'var(--green)':'var(--gold)'};font-weight:700;font-family:var(--fm)">${p.conf}%</span></div>
       <div class="cb"><div class="cf ${p.tier}" style="width:0%" data-t="${p.conf}"></div></div>
       <div style="font-size:11px;color:var(--t2);margin-top:7px;font-weight:500">${p.reason}</div>
-      ${p.kelly!=null?`<div style="font-size:10px;color:var(--green);margin-top:5px;font-family:var(--fm);font-weight:600">Kelly: ${(p.kelly*100).toFixed(1)}% of bankroll</div>`:''}
+      ${(()=>{const kf=p.kelly_fraction!=null?p.kelly_fraction:(p.kelly!=null?p.kelly:null);if(kf==null||kf<=0)return '';const kPct=(kf*100).toFixed(1);const kColor=kf>=0.05?'var(--green)':kf>=0.02?'var(--gold)':'#888';const kBg=kf>=0.05?'rgba(0,200,150,.13)':kf>=0.02?'rgba(245,166,35,.13)':'rgba(128,128,128,.1)';return '<div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px"><span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)">Kelly</span><span style="font-size:10px;font-weight:800;font-family:var(--fm);color:'+kColor+';background:'+kBg+';border-radius:5px;padding:1px 6px">'+kPct+'%</span></div>';})()}
     </div>`;
   }).join('');
   setTimeout(()=>{
@@ -4352,6 +4381,52 @@ function renderProps(){
     return;
   }
   grid.innerHTML=html;
+}
+
+// ─── LEAGUE LEADERS ───
+function buildLeagueLeaders(){
+  const STAT_CONFIGS = [
+    {stat:'pts', label:'Points',    unit:'PPG', containerId:'leaders-pts-container', color:'var(--gold)'},
+    {stat:'reb', label:'Rebounds',  unit:'RPG', containerId:'leaders-reb-container', color:'var(--blue)'},
+    {stat:'ast', label:'Assists',   unit:'APG', containerId:'leaders-ast-container', color:'var(--green)'},
+  ];
+  const pool = DATA.players || [];
+  const hasStat = s => pool.some(p => (p[s] || 0) > 0);
+  STAT_CONFIGS.forEach(cfg => {
+    const el = document.getElementById(cfg.containerId);
+    if (!el) return;
+    if (!hasStat(cfg.stat)) {
+      _setHtml(el, '<div style="text-align:center;padding:48px;color:var(--t2);font-size:13px">Stat leaders require player_stats.json with pts/reb/ast fields.</div>');
+      return;
+    }
+    const sorted = [...pool]
+      .filter(p => (p[cfg.stat] || 0) > 0)
+      .sort((a, b) => (b[cfg.stat] || 0) - (a[cfg.stat] || 0))
+      .slice(0, 15);
+    const maxVal = sorted.length ? (sorted[0][cfg.stat] || 1) : 1;
+    const rows = sorted.map((p, i) => {
+      const val = (p[cfg.stat] || 0).toFixed(1);
+      const barPct = Math.round(((p[cfg.stat] || 0) / maxVal) * 100);
+      const rankStyle = i === 0 ? 'color:var(--gold);font-weight:800' : i < 3 ? 'color:var(--t0);font-weight:700' : 'color:var(--t2);font-weight:600';
+      const teamStr = p.team && p.team !== 'N/A' ? '<span style="font-size:11px;color:var(--t2);margin-left:6px;font-family:var(--fm)">' + esc(p.team) + '</span>' : '';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--b0)">' +
+        '<span style="width:22px;text-align:right;font-size:13px;font-family:var(--fm);flex-shrink:0;' + rankStyle + '">' + (i + 1) + '</span>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px">' +
+            '<span style="font-size:14px;font-weight:700;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(p.name) + '</span>' +
+            teamStr +
+          '</div>' +
+          '<div style="height:4px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden">' +
+            '<div style="height:100%;border-radius:4px;width:' + barPct + '%;background:' + cfg.color + ';transition:width 600ms cubic-bezier(.16,1,.3,1)"></div>' +
+          '</div>' +
+        '</div>' +
+        '<span style="font-size:18px;font-weight:800;font-family:var(--fm);color:' + cfg.color + ';flex-shrink:0;letter-spacing:-.5px">' + val + '</span>' +
+        '<span style="font-size:10px;color:var(--t2);font-weight:600;flex-shrink:0;margin-left:-6px">' + cfg.unit + '</span>' +
+      '</div>';
+    }).join('');
+    const title = '<div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px;letter-spacing:.3px">' + cfg.label + ' Leaders &mdash; Top 15</div>';
+    _setHtml(el, '<div class="card" style="padding:16px 20px">' + title + rows + '</div>');
+  });
 }
 
 // ─── SHARP MONEY / LINE MOVEMENT ───
@@ -5190,6 +5265,8 @@ async function loadDashboardData(){
     enrichPlayerTs();
     initPlayerSeasonDropdown();
     initPlayerTeamDropdown();
+    // ── Build league leader boards (pts/reb/ast) ──
+    buildLeagueLeaders();
     // ── Populate DATA.games from live_scores.json ──
     // Handle both bare array format and {games:[...], exported_at:"..."} dict format
     const _liveGames=Array.isArray(liveScores)?liveScores:(liveScores&&liveScores.games?liveScores.games:[]);
@@ -5547,6 +5624,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   }, 120);
   // Inject static tooltips after all renders complete
   setTimeout(injectTooltips, 200);
+  // Swipe hint — show once on mobile for first-time visitors
+  if(window.innerWidth <= 768 && !localStorage.getItem('swipe-hint-shown')){
+    const _sh=document.getElementById('swipe-hint');
+    if(_sh){
+      _sh.style.display='block';
+      localStorage.setItem('swipe-hint-shown','1');
+      setTimeout(()=>{_sh.style.display='none';},3000);
+    }
+  }
 });
 
 // ─── SERVICE WORKER (PWA) ───
@@ -5929,12 +6015,12 @@ if ('serviceWorker' in navigator) {
           +   '</div>'
           + '</td>'
           + '<td style="padding:11px 16px;min-width:140px">' + _scoreBar(r.composite_score) + '</td>'
-          + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + net20Color + '">' + net20Sign + r.net_rating.toFixed(1) + '</td>'
+          + '<td class="hide-mobile" style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + net20Color + '">' + net20Sign + r.net_rating.toFixed(1) + '</td>'
           + '<td style="padding:11px 16px;text-align:right;font-family:var(--fm);font-size:12px;color:' + net10Color + '">' + net10Sign + net10Val.toFixed(1) + '</td>'
           + '<td style="padding:11px 16px;text-align:center;font-family:var(--fm);font-size:12px;color:var(--t1)">' + r.last10_record + '</td>'
-          + '<td style="padding:11px 16px;text-align:center;font-family:var(--fm);font-size:12px;color:var(--t2)">' + (r.last20_record||'—') + '</td>'
+          + '<td class="hide-mobile" style="padding:11px 16px;text-align:center;font-family:var(--fm);font-size:12px;color:var(--t2)">' + (r.last20_record||'—') + '</td>'
           + '<td style="padding:11px 16px;text-align:center">' + _trendArrow(r.trend) + '</td>'
-          + '<td style="padding:11px 16px;text-align:center">' + rdHtml + '</td>'
+          + '<td class="hide-mobile" style="padding:11px 16px;text-align:center">' + rdHtml + '</td>'
           + '</tr>';
       }).join('');
       _setHtml(tbody, rowsHtml);
@@ -6037,6 +6123,7 @@ if ('serviceWorker' in navigator) {
     Injuries
   </button>
 </nav>
+<div id="swipe-hint" style="text-align:center;font-size:10px;color:var(--t2);padding:2px;display:none">&#8592; swipe to navigate &#8594;</div>
 <!-- ── BETTING TOOLS DRAWER ── -->
 <div id="bt-backdrop" onclick="closeBettingDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;backdrop-filter:blur(2px)"></div>
 <aside id="bt-drawer" style="position:fixed;top:0;right:0;width:360px;max-width:100vw;height:100%;background:var(--bg2);border-left:1px solid var(--b1);z-index:200;transform:translateX(100%);transition:transform 280ms cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;overflow:hidden">
