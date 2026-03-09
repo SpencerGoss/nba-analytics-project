@@ -228,3 +228,41 @@ class TestFetchAllPages:
             )
 
         assert result == []
+
+
+# ── _build_headers ────────────────────────────────────────────────────────────
+
+
+class TestBuildHeaders:
+
+    def test_authorization_key_set(self):
+        """Authorization header must equal the provided API key."""
+        headers = _build_headers("my-secret-key")
+        assert headers["Authorization"] == "my-secret-key"
+
+    def test_accept_header_is_json(self):
+        """Accept header must be application/json."""
+        headers = _build_headers("any-key")
+        assert headers["Accept"] == "application/json"
+
+    def test_returns_dict(self):
+        """Return value must be a plain dict."""
+        result = _build_headers("k")
+        assert isinstance(result, dict)
+
+    def test_both_keys_present(self):
+        """Returned dict must contain exactly Authorization and Accept."""
+        headers = _build_headers("key")
+        assert "Authorization" in headers
+        assert "Accept" in headers
+
+    def test_different_keys_passed_through(self):
+        """Each unique key string is stored verbatim in Authorization."""
+        for key in ["abc", "Bearer token123", "a" * 64]:
+            h = _build_headers(key)
+            assert h["Authorization"] == key
+
+    def test_empty_string_key_stored(self):
+        """An empty string API key is stored as-is (caller's responsibility)."""
+        headers = _build_headers("")
+        assert headers["Authorization"] == ""
