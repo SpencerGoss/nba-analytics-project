@@ -12,6 +12,10 @@ from scripts.build_streaks import (
     _compute_home_away,
     _compute_hot_players,
     _compute_cold_players,
+    MIN_GAMES,
+    LAST_N,
+    HOT_DELTA,
+    COLD_FG_DELTA,
 )
 
 
@@ -175,6 +179,101 @@ def test_team_streak_schema():
     assert "team" in row
     assert "streak" in row
     assert isinstance(row["streak"], int)
+
+
+def test_team_streak_mixed_case_wl():
+    """WL values like 'w' or 'W' should both work correctly."""
+    df = _make_team_df([
+        ("NYK", "2026-01-01", "w", "NYK vs. BOS", 100, 80, 20),
+        ("NYK", "2026-01-02", "W", "NYK @ MIA", 110, 85, 20),
+    ])
+    results = _compute_team_streaks(df)
+    nyk = next(r for r in results if r["team"] == "NYK")
+    assert nyk["streak"] == 2
+
+
+def test_compute_home_away_only_home_games():
+    """Team with only home games: away_pct should be 0 (no away games)."""
+    df = _make_team_df([
+        ("IND", "2026-01-01", "W", "IND vs. MIL", 108, 82, 18),
+        ("IND", "2026-01-02", "L", "IND vs. CLE", 95, 79, 17),
+    ])
+    results = _compute_home_away(df)
+    ind = next((r for r in results if r["team"] == "IND"), None)
+    if ind:
+        assert ind["away_pct"] == 0
+
+
+def test_hot_players_detected_when_above_hot_delta():
+    """Player with last-5 avg > season avg by > HOT_DELTA is flagged."""
+    # Season avg: 10 pts (below threshold unless we set avg high enough)
+    # Use 10 games at 12 pts (season avg=12), then 5 games at 25 pts (last5 avg=25)
+    # delta = 25 - 12 = 13 > HOT_DELTA (5.0)
+    records = (
+        [(1, "Hot Guy", "OKC", f"2026-01-{i+1:02d}", 12, 12, 3)
+         for i in range(10)]
+        + [(1, "Hot Guy", "OKC", f"2026-01-{i+11:02d}", 25, 12, 3)
+           for i in range(5)]
+    )
+    df = _make_player_df(records)
+    results = _compute_hot_players(df)
+    assert len(results) >= 1
+    assert results[0]["name"] == "Hot Guy"
+
+
+def test_hot_players_schema():
+    """Each hot player dict must have name, team, sub, stat fields."""
+    records = (
+        [(1, "Star", "BOS", f"2026-01-{i+1:02d}", 10, 5, 2) for i in range(10)]
+        + [(1, "Star", "BOS", f"2026-01-{i+11:02d}", 30, 8, 4) for i in range(5)]
+    )
+    df = _make_player_df(records)
+    results = _compute_hot_players(df)
+    for player in results:
+        assert "name" in player
+        assert "team" in player
+        assert "sub" in player
+        assert "stat" in player
+        assert not any(k.startswith("_") for k in player)
+
+
+def test_cold_players_detected_when_below_cold_delta():
+    """Player with last-5 FG% much lower than season avg is flagged."""
+    # 10 games at 50% FG, then 5 games at 30% FG
+    # delta = (30 - 50) = -20 pp < COLD_FG_DELTA (-5.0 pp)
+    records = (
+        [(2, "Cold Guy", "DET", f"2026-01-{i+1:02d}", 15, 10, 3)
+         for i in range(10)]
+        + [(2, "Cold Guy", "DET", f"2026-01-{i+11:02d}", 8, 10, 3)
+           for i in range(5)]
+    )
+    # Need fga, fgm, fg_pct — manually build
+    rows = []
+    for pid, name, team, date, pts, reb, ast in records[:10]:
+        rows.append({
+            "player_id": pid, "player_name": name, "team_abbreviation": team,
+            "game_date": date, "pts": pts, "reb": reb, "ast": ast,
+            "fga": 10, "fgm": 5, "fg_pct": 0.50, "min": 30.0,
+        })
+    for pid, name, team, date, pts, reb, ast in records[10:]:
+        rows.append({
+            "player_id": pid, "player_name": name, "team_abbreviation": team,
+            "game_date": date, "pts": pts, "reb": reb, "ast": ast,
+            "fga": 10, "fgm": 3, "fg_pct": 0.30, "min": 30.0,
+        })
+    df = pd.DataFrame(rows)
+    results = _compute_cold_players(df)
+    assert len(results) >= 1
+    assert results[0]["name"] == "Cold Guy"
+
+
+def test_hot_players_excludes_too_few_games():
+    """Player with fewer than MIN_GAMES games is not included."""
+    records = [(1, "Bench", "MIA", f"2026-01-{i+1:02d}", 30, 5, 2)
+               for i in range(MIN_GAMES - 1)]
+    df = _make_player_df(records)
+    results = _compute_hot_players(df)
+    assert len(results) == 0
 
 
 def test_home_away_schema():
