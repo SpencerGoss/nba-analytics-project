@@ -151,3 +151,59 @@ def test_normalize_row_fg_pct_rounded():
     result = _normalize_game_row(row)
     # FG_PCT is stored with 4 decimal places
     assert result["fg_pct"] == pytest.approx(0.4667)
+
+
+def test_normalize_row_three_point_stats():
+    """fg3m, fg3a, fg3_pct must all be present and correctly extracted."""
+    row = _make_row({
+        "Game_ID": "g001", "GAME_DATE": "2025-01-01", "MATCHUP": "LAL vs. GSW",
+        "WL": "W", "MIN": 32, "PTS": 20, "REB": 4, "AST": 5, "STL": 1,
+        "BLK": 1, "TOV": 2, "FGM": 8, "FGA": 16, "FG_PCT": 0.5,
+        "FG3M": 3, "FG3A": 7, "FG3_PCT": 0.4286, "FTM": 1, "FTA": 2,
+        "FT_PCT": 0.5, "PLUS_MINUS": 4,
+    })
+    result = _normalize_game_row(row)
+    assert result["fg3m"] == 3
+    assert result["fg3a"] == 7
+    assert result["fg3_pct"] == pytest.approx(0.4286, abs=0.0001)
+
+
+def test_normalize_row_free_throw_stats():
+    """ftm, fta, ft_pct must all be present."""
+    row = _make_row({
+        "Game_ID": "g001", "GAME_DATE": "2025-01-01", "MATCHUP": "BOS vs. PHI",
+        "WL": "W", "MIN": 35, "PTS": 28, "REB": 8, "AST": 3, "STL": 2,
+        "BLK": 0, "TOV": 3, "FGM": 10, "FGA": 20, "FG_PCT": 0.5,
+        "FG3M": 2, "FG3A": 6, "FG3_PCT": 0.333, "FTM": 6, "FTA": 8,
+        "FT_PCT": 0.75, "PLUS_MINUS": 10,
+    })
+    result = _normalize_game_row(row)
+    assert result["ftm"] == 6
+    assert result["fta"] == 8
+    assert result["ft_pct"] == pytest.approx(0.75, abs=0.0001)
+
+
+def test_normalize_row_pts_rounded_to_integer():
+    """PTS (integer stat) must be rounded to 0 decimals."""
+    row = _make_row({
+        "Game_ID": "g001", "GAME_DATE": "2025-01-01", "MATCHUP": "OKC vs. LAL",
+        "WL": "W", "PTS": 25.9,  # should round to 26
+    })
+    result = _normalize_game_row(row)
+    assert result["pts"] == 26
+
+
+def test_normalize_row_game_id_fallback():
+    """When Game_ID is absent, game_id from lowercase fallback must be used."""
+    row = _make_row({
+        "game_id": "fallback_id", "GAME_DATE": "2025-01-01", "MATCHUP": "OKC vs. LAL",
+        "WL": "W",
+    })
+    result = _normalize_game_row(row)
+    assert result["game_id"] == "fallback_id"
+
+
+def test_available_seasons_includes_lockout_season():
+    """2011-12 lockout season must be included as available."""
+    seasons = available_seasons("2010-11", "2012-13")
+    assert "2011-12" in seasons
