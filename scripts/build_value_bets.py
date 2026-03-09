@@ -2,7 +2,7 @@
 build_value_bets.py -- regenerate dashboard/data/value_bets.json
 
 Reads predictions from database/predictions_history.db and game odds from
-data/processed/game_lines.csv.
+data/odds/game_lines.csv.
 
 A game is a value bet when: model_prob - market_prob > 0.05 (5% edge).
 

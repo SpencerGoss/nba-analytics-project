@@ -2978,26 +2978,26 @@ function gameCard(g){
 }
 
 function renderGames(){
-  document.getElementById('dash-games').innerHTML=DATA.games.slice(0,3).map(gameCard).join('');
-  document.getElementById('all-games').innerHTML=DATA.games.map(gameCard).join('');
+  const _dg=document.getElementById('dash-games');if(_dg)_setHtml(_dg,DATA.games.slice(0,3).map(gameCard).join(''));
+  const _ag=document.getElementById('all-games');if(_ag)_setHtml(_ag,DATA.games.map(gameCard).join(''));
 }
 function filterGames(type,btn){
   document.querySelectorAll('[onclick^="filterGames"]').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   const list=type==='all'?DATA.games:DATA.games.filter(g=>g.status===type);
-  document.getElementById('all-games').innerHTML=list.length?list.map(gameCard).join(''):`<p style="color:var(--t2);padding:20px;font-size:13px">No games match this filter.</p>`;
+  {const _ag=document.getElementById('all-games');if(_ag)_setHtml(_ag,list.length?list.map(gameCard).join(''):`<p style="color:var(--t2);padding:20px;font-size:13px">No games match this filter.</p>`);}
 }
 
 // ─── LEADERS ───
 function renderLeaders(){
   const top=[...DATA.players].sort((a,b)=>b.pts-a.pts).slice(0,5);
-  document.getElementById('dash-leaders').innerHTML=top.map((p,i)=>`
+  {const _dl=document.getElementById('dash-leaders');if(_dl)_setHtml(_dl,top.map((p,i)=>`
     <tr>
       <td><span class="rn">${i+1}</span></td>
       <td class="nc">${headshot(p.nbaId,p.ini,28)}<span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name.split(' ').pop()}</span></td>
       <td style="color:var(--gold);font-weight:700">${p.pts}</td>
       <td style="color:${i<2?'var(--green)':'var(--t2)'};font-size:11px">${i<2?'↑ Top 2':''}</td>
-    </tr>`).join('');
+    </tr>`).join(''));}
 }
 
 // ─── PLAYERS TABLE — clickable stat headers, headshots, filters ───
@@ -4301,7 +4301,7 @@ let parlaySelected=new Set();
 function renderParlay(){
   const el=document.getElementById('parlay-games');
   if(!el)return;
-  el.innerHTML=DATA.picks.map((p,i)=>{
+  _setHtml(el,DATA.picks.map((p,i)=>{
     const prob=p.conf/100;
     const odds=probToAmerican(prob);
     return `<div class="par-game" id="par-${i}" onclick="toggleParlay(${i})">
@@ -4314,7 +4314,7 @@ function renderParlay(){
       </div>
       <div class="par-odds">${odds}</div>
     </div>`;
-  }).join('');
+  }).join(''));
   updateParlaySlip();
 }
 function toggleParlay(i){
@@ -4341,11 +4341,11 @@ function updateParlaySlip(){
   }
   const avgConf=n===0?0:Math.round([...parlaySelected].reduce((a,i)=>a+DATA.picks[i].conf,0)/n);
   if(parConf)parConf.textContent=n>0?avgConf+'%':'—';
-  if(parLegsList)parLegsList.innerHTML=[...parlaySelected].map(i=>`
+  if(parLegsList)_setHtml(parLegsList,[...parlaySelected].map(i=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.12);border-radius:8px;font-size:12px">
       <span style="font-weight:600">${DATA.picks[i].matchup}</span>
       <span style="font-family:var(--fm);color:var(--green)">${DATA.picks[i].pick} ${DATA.picks[i].spread}</span>
-    </div>`).join('');
+    </div>`).join(''));
 }
 
 // ─── COMPARE ───
@@ -4456,10 +4456,10 @@ function initPickers(){
   ['picker-a','picker-b'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel)return;
-    sel.innerHTML=
+    _setHtml(sel,
       '<option value="">— Select player —</option>'+
       '<optgroup label="Current Season ('+current.length+')">'+mkOpts(current)+'</optgroup>'+
-      '<optgroup label="All-Time Players">'+mkOpts(legends)+'</optgroup>';
+      '<optgroup label="All-Time Players">'+mkOpts(legends)+'</optgroup>');
   });
   // Default: LeBron vs Michael Jordan
   const names=DATA.players.map(p=>p.name);
@@ -5224,7 +5224,8 @@ function selectMatchup(i){
 function drawMatchup(i){
   const m=MATCHUP_DATA[i];
   const ec=t=>t===m.edge?'var(--green)':'var(--t0)';
-  document.getElementById('matchup-content').innerHTML=`
+  const _mc=document.getElementById('matchup-content');if(!_mc)return;
+  _setHtml(_mc,`
     <div class="card" style="margin-bottom:14px">
       <div class="mu-vs">
         <div class="mu-team"><div class="mu-name" style="color:${ec(m.away)}">${m.away}</div><div class="mu-rec">${m.awayRec} · Away</div></div>
@@ -5251,7 +5252,7 @@ function drawMatchup(i){
           </div>`;
         }).join('')}
       </div>
-    </div>`;
+    </div>`);
 }
 
 // ─── DEEP DIVE — PLAYOFF ───
@@ -5291,7 +5292,8 @@ async function renderPlayoff(){
     }
   }catch(e){console.warn('playoff_odds.json load failed, using fallback:',e);}
   function poList(data,id){
-    document.getElementById(id).innerHTML=data.map((t,i)=>{
+    const _pl=document.getElementById(id);if(!_pl)return;
+    _setHtml(_pl,data.map((t,i)=>{
       const col=t.pct>=90?'var(--green)':t.pct>=60?'var(--gold)':'var(--red)';
       const isClinched=t.pct>=97;
       const label=i<6?(isClinched?'Clinched':'Playoff'):i<10?'Play-In':'Eliminated';
@@ -5305,7 +5307,7 @@ async function renderPlayoff(){
         <div class="po-pct-bar"><div class="po-pct-fill" style="width:0%;background:${col}" data-t="${t.pct}%"></div></div>
         <div class="po-pct-val" style="color:${col}">${t.pct}%</div>
       </div>`;
-    }).join('');
+    }).join(''));
   }
   poList(eastOdds,'po-east-list');poList(westOdds,'po-west-list');
   setTimeout(()=>document.querySelectorAll('.po-pct-fill').forEach(el=>{el.style.width=el.dataset.t}),100);
@@ -5381,7 +5383,7 @@ async function renderStreaks(){
     if(_ht){_setT('home-hot-team',_ht.team);_setT('home-hot-team-sub','W'+_ht.streak+' streak \u00b7 Hottest in the NBA');}
     if(_ct&&_ct.streak<0){_setT('home-cold-team',_ct.team);_setT('home-cold-team-sub','L'+Math.abs(_ct.streak)+' streak \u00b7 Coldest in the NBA');}
   }
-  document.getElementById("hot-players").innerHTML=hot.map(p=>`
+  {const _hp=document.getElementById("hot-players");if(_hp)_setHtml(_hp,hot.map(p=>`
     <div class="streak-card hot">
       <div style="width:32px;height:32px;border-radius:10px;background:var(--green-d);border:1px solid rgba(0,200,150,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
@@ -5391,8 +5393,8 @@ async function renderStreaks(){
         <div class="streak-sub">${esc(p.sub)}</div>
       </div>
       <div class="streak-badge" style="color:var(--green)">${esc(p.stat)}</div>
-    </div>`).join("");
-  document.getElementById("cold-players").innerHTML=cold.map(p=>`
+    </div>`).join(""));}
+  {const _cp=document.getElementById("cold-players");if(_cp)_setHtml(_cp,cold.map(p=>`
     <div class="streak-card cold">
       <div style="width:32px;height:32px;border-radius:10px;background:var(--blue-d);border:1px solid rgba(79,158,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
@@ -5402,7 +5404,7 @@ async function renderStreaks(){
         <div class="streak-sub">${esc(p.sub)}</div>
       </div>
       <div class="streak-badge" style="color:var(--blue)">${esc(p.stat)}</div>
-    </div>`).join("");
+    </div>`).join(""));}
 
   const teams=teamStreaks.map(t=>t.team);
   const streaks=teamStreaks.map(t=>t.streak);
@@ -5457,11 +5459,20 @@ function renderShotMaps(){
     hovertemplate:'<b>%{y}</b><br>%{x:.2f} pts/attempt (est.)<extra></extra>'
   }],{...ML({y:{},x:{range:[.9,1.5]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
 
-  Plotly.newPlot('shot-zone-chart',[
-    {x:["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"],y:[24, 7, 10, 34, 12],type:'bar',name:'Luka',marker:{color:'rgba(245,166,35,.7)',line:{width:0}},hovertemplate:'Luka -- %{x}: %{y}%<extra></extra>'},
-    {x:["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"],y:[33, 7, 18, 16, 13],type:'bar',name:'SGA',marker:{color:'rgba(0,200,150,.65)',line:{width:0}},hovertemplate:'SGA -- %{x}: %{y}%<extra></extra>'},
-    {x:["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"],y:[24, 11, 12, 35, 9],type:'bar',name:'Edwards',marker:{color:'rgba(79,158,255,.65)',line:{width:0}},hovertemplate:'Edwards -- %{x}: %{y}%<extra></extra>'},
-  ],{...ML({y:{ticksuffix:'%'}}),barmode:'group',bargap:.25,bargroupgap:.08,
+  // Shot zone chart — illustrative distribution using current season top scorers
+  const _szColors=['rgba(245,166,35,.7)','rgba(0,200,150,.65)','rgba(79,158,255,.65)'];
+  const _szZones=["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"];
+  // Default distributions by scoring profile (placeholder until shot chart API is integrated)
+  const _szDefaults=[[26,8,10,32,12],[31,9,16,18,14],[22,10,12,38,10]];
+  const _szPlayers=DATA.players.filter(p=>!p.retired).sort((a,b)=>b.pts-a.pts).slice(0,3);
+  const _szTraces=_szPlayers.map((p,i)=>{
+    const short=p.name.split(' ').pop();
+    const adv=window.ADVANCED_STATS&&window.ADVANCED_STATS[p.name];
+    // Use live shot distribution if available, else illustrative default
+    const dist=(adv&&adv.shot_zones)||_szDefaults[i];
+    return {x:_szZones,y:dist,type:'bar',name:short,marker:{color:_szColors[i],line:{width:0}},hovertemplate:'<b>'+short+'</b> -- %{x}: %{y}%<extra></extra>'};
+  });
+  Plotly.newPlot('shot-zone-chart',_szTraces,{...ML({y:{ticksuffix:'%'}}),barmode:'group',bargap:.25,bargroupgap:.08,
     legend:{font:{color:'#8892AA',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'}},
     {responsive:true,displayModeBar:false});
 }
@@ -5472,9 +5483,9 @@ function toggleTheme(){
   localStorage.setItem('nba-theme',light?'light':'dark');
   const icon=document.getElementById('theme-icon');
   if(icon){
-    icon.innerHTML=light
+    _setHtml(icon,light
       ?'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
-      :'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+      :'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>');
   }
 }
 
@@ -5704,7 +5715,7 @@ function initInjuries(){
     .catch(err=>{
       _injuriesLoading=false;
       if(container){
-        container.innerHTML='<div class="data-error"><div class="de-icon">\u26a0</div><div class="de-msg">Could not load injury data</div><div class="de-sub">Run <code>python scripts/build_injuries.py</code> then refresh. ('+String(err)+')</div></div>';
+        _setHtml(container,'<div class="data-error"><div class="de-icon">\u26a0</div><div class="de-msg">Could not load injury data</div><div class="de-sub">Run <code>python scripts/build_injuries.py</code> then refresh. ('+String(err)+')</div></div>');
       }
     });
 }
@@ -5872,7 +5883,7 @@ function renderTicker(){
     return `<span class="t-item">${awayLogo}<span>${esc(g.away)}</span><span class="t-sep">@</span>${homeLogo}<span>${esc(g.home)}</span>${score?` ${score}`:''}${pickStr} ${st}</span><span class="t-dot"></span>`;
   }).join('');
   // Duplicate for seamless loop
-  track.innerHTML=items+items;
+  _setHtml(track,items+items);
   ticker.style.display='flex';
 }
 
@@ -6365,8 +6376,8 @@ if ('serviceWorker' in navigator) {
     const opts = NBA_TEAMS.map(t =>
       `<option value="${t.abbr}">${t.abbr} &mdash; ${t.name}</option>`
     ).join('');
-    selA.innerHTML = opts;
-    selB.innerHTML = opts;
+    _setHtml(selA, opts);
+    _setHtml(selB, opts);
     if (defaultA) selA.value = defaultA;
     if (defaultB) selB.value = defaultB;
   }
@@ -6822,11 +6833,11 @@ if ('serviceWorker' in navigator) {
       .catch(function(err) {
         _rkLoading = false;
         const loading = document.getElementById('rk-loading');
-        if (loading) loading.innerHTML = '<div style="text-align:center;padding:40px">'
+        if (loading) _setHtml(loading, '<div style="text-align:center;padding:40px">'
           + '<div style="font-size:28px;margin-bottom:12px">&#9888;</div>'
           + '<div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px">Could not load rankings data</div>'
           + '<div style="font-size:12px;color:var(--t2)">Run <code>python scripts/build_power_rankings.py</code> then refresh. (' + err + ')</div>'
-          + '</div>';
+          + '</div>');
       });
   };
 })();
@@ -7134,7 +7145,7 @@ function calcEdge(){
   else verdict=`The book is overvaluing this team by <strong>${Math.abs(edge)}%</strong>. Consider fading or skipping this one.`;
   document.getElementById('ec-edge-val').textContent=(pos?'+':'')+edge+'%';
   document.getElementById('ec-edge-val').style.color=pos?'var(--green)':'var(--red)';
-  document.getElementById('ec-verdict').innerHTML=verdict;
+  {const _ev=document.getElementById('ec-verdict');if(_ev)_setHtml(_ev,verdict);}
   res.style.display='block';
 }
 
