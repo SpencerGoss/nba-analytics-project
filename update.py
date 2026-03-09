@@ -368,7 +368,7 @@ def main() -> None:
                 else:
                     print(f"  [{label}] WARN: {result.stderr.strip()[-200:] if result.stderr else 'non-zero exit'}")
             except subprocess.TimeoutExpired:
-                print(f"  [{label}] WARN: timed out after 120s")
+                print(f"  [{label}] WARN: timed out after 180s")
             except Exception as build_err:
                 print(f"  [{label}] WARN: {build_err}")
 

@@ -3559,9 +3559,25 @@ function showTeamDetail(abbr){
   backdropEl.style.display='block';
 }
 
+// Lazy-load player_detail.json (1.5MB) on first player modal open
+let _playerDetailLoading=false;
+function _loadPlayerDetail(callback){
+  if(window._PLAYER_DETAIL){callback();return;}
+  if(_playerDetailLoading){setTimeout(()=>_loadPlayerDetail(callback),100);return;}
+  _playerDetailLoading=true;
+  fetch('data/player_detail.json').then(r=>r.ok?r.json():null).then(d=>{
+    if(d&&d.players)window._PLAYER_DETAIL=d;
+    _playerDetailLoading=false;
+    callback();
+  }).catch(()=>{_playerDetailLoading=false;callback();});
+}
 function showPlayerDetail(name){
   const p=DATA.players.find(x=>x.name===name);
   if(!p)return;
+  // Open modal immediately with available data, then enhance with lazy-loaded detail
+  _loadPlayerDetail(()=>_renderPlayerDetail(name,p));
+}
+function _renderPlayerDetail(name,p){
   const raw=window._FULL_PLAYER_DATA&&window._FULL_PLAYER_DATA.find(x=>x.player_name===name);
   const primaryTeam=getPlayerPrimaryTeam(p);
   const colors=getPlayerColors(p);
@@ -3887,7 +3903,7 @@ function renderStandings(){
       return (va-vb)*s.dir;
     });
     const html=data.map((t,i)=>{
-      const pct=(t.w/(t.w+t.l)).toFixed(3);
+      const pct=((t.w+t.l)>0?(t.w/(t.w+t.l)):0).toFixed(3);
       const streakValS=t.streak||'--';
       const sc=t.streak&&t.streak.startsWith('W')?'var(--green)':'var(--red)';
       const streakNumS=parseInt((t.streak||'').slice(1))||0;
@@ -3899,7 +3915,7 @@ function renderStandings(){
       const safeAbbrS=esc(t.abbr||t.team||'');
       return `<tr style="${border}cursor:pointer" onclick="showTeamDetail('${safeAbbrS}')" title="Click for team detail"><td><span class="rn">${i+1}</span></td><td style="font-family:var(--f);font-weight:600;min-width:150px;font-size:13px"><div style="display:flex;align-items:center;gap:7px">${(()=>{const lUrl=teamLogoUrl(t.abbr||t.team||'');return lUrl?`<img src="${lUrl}" width="18" height="18" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'" alt=""/>`:'';})()} ${esc(t.team_name||t.team)}</div></td><td style="${s.key==='w'?'color:var(--gold);font-weight:700':''}">${t.w}</td><td style="${s.key==='l'?'color:var(--gold);font-weight:700':''}">${t.l}</td><td style="${s.key==='pct'?'color:var(--gold);font-weight:700':''}">${pct}</td><td style="color:var(--t2)">${t.gb}</td><td style="color:var(--t2);font-size:12px">${esc(t.home_record||'--')}</td><td style="color:var(--t2);font-size:12px">${esc(t.away_record||'--')}</td><td style="color:${l10c};font-weight:700;font-family:var(--fm)">${esc(l10)}</td><td style="color:${sc};font-weight:700;font-family:var(--fm)">${streakArrowS}${esc(streakValS)}</td></tr>`;
     }).join('');
-    _setHtml(document.getElementById(id),html);
+    {const _el=document.getElementById(id);if(_el)_setHtml(_el,html);}
   }
   conf(DATA.east,'east-tb','east');conf(DATA.west,'west-tb','west');
 }
@@ -5890,7 +5906,7 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,playerDetailJson,teamTrendsJson,totalsJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson]=await Promise.all([
       fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
@@ -5908,14 +5924,13 @@ async function loadDashboardData(){
       fetch('data/clv_summary.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch('data/bet_tracker.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
       fetch('data/sharp_money.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/player_detail.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      // player_detail.json (1.5MB) is lazy-loaded on first player modal open
       fetch('data/trends.json').then(r=>r.ok?r.json():{}).catch(()=>({})),
       fetch('data/totals.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
     ]);
     // Store full player records for detail modal (season-by-season data)
     if(playerJson&&playerJson.players)window._FULL_PLAYER_DATA=playerJson.players;
-    // Store rich player detail data (shooting splits, clutch, last-5, prop trends)
-    if(playerDetailJson&&playerDetailJson.players)window._PLAYER_DETAIL=playerDetailJson;
+    // player_detail.json is lazy-loaded on first player modal open (see _loadPlayerDetail)
     // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
     if(playerJson&&playerJson.players&&playerJson.players.length){
       const legendNames=new Set(LEGENDS.map(l=>l.name));
