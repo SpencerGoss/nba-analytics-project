@@ -261,3 +261,38 @@ def test_build_live_scores_with_games(tmp_path):
         data = json.load(f)
     assert len(data["games"]) == 1
     assert data["games"][0]["home_team"] == "LAC"
+
+
+# ---------------------------------------------------------------------------
+# _status_label
+# ---------------------------------------------------------------------------
+
+def test_status_label_pregame():
+    from scripts.fetch_live_scores import _status_label
+    assert _status_label(1) == "Pre-Game"
+
+
+def test_status_label_in_progress():
+    from scripts.fetch_live_scores import _status_label
+    assert _status_label(2) == "In Progress"
+
+
+def test_status_label_final():
+    from scripts.fetch_live_scores import _status_label
+    assert _status_label(3) == "Final"
+
+
+def test_status_label_unknown_code():
+    from scripts.fetch_live_scores import _status_label
+    assert _status_label(99) == "Unknown"
+
+
+def test_status_label_zero_is_unknown():
+    from scripts.fetch_live_scores import _status_label
+    assert _status_label(0) == "Unknown"
+
+
+def test_status_label_returns_string():
+    from scripts.fetch_live_scores import _status_label
+    result = _status_label(1)
+    assert isinstance(result, str)

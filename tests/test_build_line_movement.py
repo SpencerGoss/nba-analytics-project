@@ -31,6 +31,8 @@ from scripts.build_line_movement import (
     _classify,
     _direction,
     _interpretation,
+    _prob_to_spread,
+    _movement_label,
     build_line_movement,
 )
 
@@ -277,3 +279,56 @@ class TestLineMovementIntegration:
         for entry in result:
             missing = REQUIRED_FIELDS - set(entry.keys())
             assert not missing
+
+
+# ---------------------------------------------------------------------------
+# _prob_to_spread
+# ---------------------------------------------------------------------------
+
+class TestProbToSpread:
+    def test_50pct_gives_zero(self):
+        """50% win probability -> 0 spread."""
+        result = _prob_to_spread(0.5)
+        assert result == pytest.approx(0.0, abs=0.1)
+
+    def test_high_prob_gives_negative_spread(self):
+        """Team with higher prob -> negative spread (favored)."""
+        result = _prob_to_spread(0.7)
+        assert result < 0
+
+    def test_low_prob_gives_positive_spread(self):
+        """Team with lower prob -> positive spread (underdog)."""
+        result = _prob_to_spread(0.3)
+        assert result > 0
+
+    def test_returns_float(self):
+        result = _prob_to_spread(0.6)
+        assert isinstance(result, float)
+
+    def test_rounded_to_1_decimal(self):
+        result = _prob_to_spread(0.55)
+        assert result == round(result, 1)
+
+    def test_symmetry(self):
+        """_prob_to_spread(p) + _prob_to_spread(1-p) should be ~0."""
+        result = _prob_to_spread(0.65) + _prob_to_spread(0.35)
+        assert result == pytest.approx(0.0, abs=0.1)
+
+
+# ---------------------------------------------------------------------------
+# _movement_label
+# ---------------------------------------------------------------------------
+
+class TestMovementLabel:
+    def test_returns_string(self):
+        result = _movement_label("LAL", "GSW", 2.0, -3.5, -5.5)
+        assert isinstance(result, str)
+
+    def test_nonempty_when_movement_present(self):
+        result = _movement_label("LAL", "GSW", 3.0, -3.0, -6.0)
+        assert result  # truthy — not empty
+
+    def test_stable_when_no_movement(self):
+        """Zero movement -> stable label."""
+        result = _movement_label("LAL", "GSW", 0.0, -3.5, -3.5)
+        assert result  # should still produce something

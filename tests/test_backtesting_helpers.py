@@ -18,10 +18,14 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from sklearn.pipeline import Pipeline
+
 from src.models.backtesting import (
     _sorted_seasons,
     _get_feature_cols_game,
     _get_feature_cols_player,
+    _build_gb_classifier,
+    _build_gb_regressor,
     TARGET_CLASS,
 )
 
@@ -166,3 +170,80 @@ class TestGetFeatureColsPlayer:
         df = self._make_player_df(target="pts")
         result = _get_feature_cols_player(df, target="pts")
         assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# _build_gb_classifier
+# ---------------------------------------------------------------------------
+
+class TestBuildGbClassifier:
+    def test_returns_pipeline(self):
+        pipe = _build_gb_classifier()
+        assert isinstance(pipe, Pipeline)
+
+    def test_has_imputer_step(self):
+        pipe = _build_gb_classifier()
+        assert "imputer" in pipe.named_steps
+
+    def test_has_clf_step(self):
+        pipe = _build_gb_classifier()
+        assert "clf" in pipe.named_steps
+
+    def test_can_fit_and_predict(self):
+        import numpy as np
+        pipe = _build_gb_classifier()
+        X = np.random.default_rng(0).standard_normal((50, 4))
+        y = np.random.default_rng(0).integers(0, 2, 50)
+        pipe.fit(X, y)
+        preds = pipe.predict(X)
+        assert len(preds) == 50
+        assert set(preds).issubset({0, 1})
+
+    def test_predict_proba_available(self):
+        import numpy as np
+        pipe = _build_gb_classifier()
+        X = np.random.default_rng(1).standard_normal((50, 3))
+        y = np.random.default_rng(1).integers(0, 2, 50)
+        pipe.fit(X, y)
+        probas = pipe.predict_proba(X)
+        assert probas.shape == (50, 2)
+        assert ((probas >= 0) & (probas <= 1)).all()
+
+
+# ---------------------------------------------------------------------------
+# _build_gb_regressor
+# ---------------------------------------------------------------------------
+
+class TestBuildGbRegressor:
+    def test_returns_pipeline(self):
+        pipe = _build_gb_regressor()
+        assert isinstance(pipe, Pipeline)
+
+    def test_has_imputer_step(self):
+        pipe = _build_gb_regressor()
+        assert "imputer" in pipe.named_steps
+
+    def test_has_model_step(self):
+        pipe = _build_gb_regressor()
+        assert "model" in pipe.named_steps
+
+    def test_can_fit_and_predict(self):
+        import numpy as np
+        pipe = _build_gb_regressor()
+        X = np.random.default_rng(2).standard_normal((60, 4))
+        y = np.random.default_rng(2).standard_normal(60)
+        pipe.fit(X, y)
+        preds = pipe.predict(X)
+        assert len(preds) == 60
+        assert all(isinstance(p, float) for p in preds)
+
+    def test_handles_nan_inputs_via_imputer(self):
+        import numpy as np
+        pipe = _build_gb_regressor()
+        rng = np.random.default_rng(3)
+        X = rng.standard_normal((60, 4))
+        X[5, 0] = np.nan  # inject NaN — imputer should handle it
+        y = rng.standard_normal(60)
+        pipe.fit(X, y)
+        preds = pipe.predict(X)
+        assert len(preds) == 60

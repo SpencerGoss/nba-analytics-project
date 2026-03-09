@@ -70,3 +70,33 @@ class TestFriendlyFeatureName:
         assert result.lower().startswith("hm ")
         assert "%" in result
         assert "(L10)" in result
+
+    def test_diff_feature_no_team_prefix(self):
+        """diff_ features have no home/away prefix — no HM or AW in result."""
+        result = _friendly_feature_name("diff_net_rtg_roll5")
+        assert "Hm" not in result
+        assert "Aw" not in result
+        assert "(L5)" in result
+
+    def test_away_win_pct_roll20(self):
+        """away_win_pct_roll20 should start with aw, contain % and (L20)."""
+        result = _friendly_feature_name("away_win_pct_roll20")
+        assert result.lower().startswith("aw ")
+        assert "%" in result
+        assert "(L20)" in result
+
+    def test_no_trailing_underscore_residue(self):
+        """Result must not contain trailing or double spaces from underscore replacement."""
+        result = _friendly_feature_name("home_net_rating")
+        assert "  " not in result
+
+    def test_non_empty_output(self):
+        """Output must never be an empty string."""
+        for col in ("a", "x_y", "diff_pts"):
+            result = _friendly_feature_name(col)
+            assert result  # truthy
+
+    def test_home_star_player_out(self):
+        """home_star_player_out should start with hm."""
+        result = _friendly_feature_name("home_star_player_out")
+        assert result.lower().startswith("hm ")
