@@ -24,9 +24,15 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.build_power_rankings import (
     CURRENT_SEASON,
+    COMPOSITE_MIN,
+    COMPOSITE_MAX,
     build_power_rankings,
     load_features,
     load_team_names,
+    _normalise,
+    _compute_composite,
+    _record_str,
+    _safe_float,
 )
 
 REQUIRED_FIELDS = {
@@ -192,6 +198,91 @@ class TestBuildPowerRankings:
         features = _make_features(teams=["OKC"])
         result = build_power_rankings(features, {})
         assert _rankings(result)[0]["team_name"] == "OKC"
+
+
+# ---------------------------------------------------------------------------
+# _normalise
+# ---------------------------------------------------------------------------
+
+class TestNormalise:
+    def test_midpoint_returns_50(self):
+        assert _normalise(0.0, -10.0, 10.0) == pytest.approx(50.0)
+
+    def test_lo_returns_0(self):
+        assert _normalise(-10.0, -10.0, 10.0) == pytest.approx(0.0)
+
+    def test_hi_returns_100(self):
+        assert _normalise(10.0, -10.0, 10.0) == pytest.approx(100.0)
+
+    def test_clamped_below_lo(self):
+        assert _normalise(-20.0, -10.0, 10.0) == pytest.approx(0.0)
+
+    def test_clamped_above_hi(self):
+        assert _normalise(20.0, -10.0, 10.0) == pytest.approx(100.0)
+
+    def test_equal_lo_hi_returns_50(self):
+        assert _normalise(5.0, 5.0, 5.0) == pytest.approx(50.0)
+
+
+# ---------------------------------------------------------------------------
+# _compute_composite
+# ---------------------------------------------------------------------------
+
+class TestComputeComposite:
+    def test_average_team_near_zero(self):
+        """A league-average team (50% win pct, 0 net) should return ~0."""
+        result = _compute_composite(0.0, 0.0, 0.5, 0.5)
+        assert result == pytest.approx(0.0, abs=0.01)
+
+    def test_dominant_team_positive(self):
+        """Elite team: high net rating, high win pct -> positive composite."""
+        result = _compute_composite(10.0, 12.0, 0.75, 0.70)
+        assert result > 0.0
+
+    def test_terrible_team_negative(self):
+        """Weak team: negative net rating, low win pct -> negative composite."""
+        result = _compute_composite(-10.0, -8.0, 0.25, 0.30)
+        assert result < 0.0
+
+
+# ---------------------------------------------------------------------------
+# _record_str
+# ---------------------------------------------------------------------------
+
+class TestRecordStr:
+    def test_basic_format(self):
+        assert _record_str(30, 10) == "30-10"
+
+    def test_all_wins(self):
+        assert _record_str(82, 0) == "82-0"
+
+    def test_all_losses(self):
+        assert _record_str(0, 82) == "0-82"
+
+
+# ---------------------------------------------------------------------------
+# _safe_float
+# ---------------------------------------------------------------------------
+
+class TestSafeFloat:
+    def test_valid_float(self):
+        assert _safe_float(1.5) == pytest.approx(1.5)
+
+    def test_none_returns_default(self):
+        assert _safe_float(None) == pytest.approx(0.0)
+
+    def test_nan_returns_default(self):
+        import math
+        assert _safe_float(float("nan")) == pytest.approx(0.0)
+
+    def test_string_number(self):
+        assert _safe_float("3.14") == pytest.approx(3.14)
+
+    def test_invalid_string_returns_default(self):
+        assert _safe_float("abc") == pytest.approx(0.0)
+
+    def test_custom_default(self):
+        assert _safe_float(None, default=-1.0) == pytest.approx(-1.0)
 
 
 # ---------------------------------------------------------------------------
