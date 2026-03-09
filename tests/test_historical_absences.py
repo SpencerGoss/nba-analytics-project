@@ -277,3 +277,76 @@ class TestOutputFile:
             assert col in loaded.columns, (
                 f"Output CSV missing required column: {col}"
             )
+
+
+# ── Test 6: was_absent is binary 0/1 ─────────────────────────────────────────
+
+
+class TestWasAbsentBinary:
+
+    def test_was_absent_only_contains_0_and_1(self, tmp_path):
+        """was_absent must be a binary flag: only values 0 or 1 are valid."""
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+
+        unique_vals = set(result["was_absent"].unique())
+        assert unique_vals.issubset({0, 1}), (
+            f"was_absent contains non-binary values: {unique_vals}"
+        )
+
+    def test_players_who_played_have_was_absent_0(self, tmp_path):
+        """Players with a game log entry (was_absent=0) must be correctly flagged."""
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+
+        present = result[result["was_absent"] == 0]
+        # Every row with was_absent=0 should correspond to a player-game pair
+        # that exists in the original game log. game_ids may be stored with or
+        # without leading zeros so normalize both sides by converting to int.
+        played_keys = set(
+            zip(
+                df["player_id"].astype(int),
+                df["game_id"].astype(str).str.lstrip("0").astype(int),
+            )
+        )
+        for _, row in present.iterrows():
+            normalized_game_id = int(str(row["game_id"]).strip().lstrip("0") or "0")
+            key = (int(row["player_id"]), normalized_game_id)
+            assert key in played_keys, (
+                f"Player {row['player_id']} has was_absent=0 but no game log entry"
+            )
+
+    def test_player_a_absent_game_count(self, tmp_path):
+        """
+        Player A misses games 5, 6, 7 (indices 5,6,7).
+        build_player_absences must produce exactly 3 absent rows for player 101.
+        """
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+
+        player_a_absent = result[
+            (result["player_id"].astype(str) == "101") &
+            (result["was_absent"] == 1)
+        ]
+        assert len(player_a_absent) == 3, (
+            f"Expected exactly 3 absent games for Player A (misses indices 5,6,7), "
+            f"got {len(player_a_absent)}"
+        )

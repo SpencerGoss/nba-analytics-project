@@ -130,3 +130,64 @@ def test_build_history_backtest_supplement():
     assert len(result) > 1
     synthetic = [r for r in result if r.get("backtest")]
     assert len(synthetic) > 0
+
+
+def test_build_history_5_plus_live_rows_no_backtest_supplement():
+    """When 5+ distinct live days exist, no backtest supplement is added."""
+    live = _make_live_df([
+        (f"2026-01-0{i+1}", 0.65, 1) for i in range(5)
+    ])
+    backtest = pd.DataFrame([
+        {"test_season": "202324", "accuracy": 0.67},
+    ])
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=backtest):
+        result = build_history()
+    synthetic = [r for r in result if r.get("backtest")]
+    assert len(synthetic) == 0
+
+
+def test_build_history_perfect_day_accuracy_is_1():
+    """A day where every prediction is correct must have daily_accuracy=1.0."""
+    live = _make_live_df([
+        ("2026-01-05", 0.9, 1),  # home prob > 0.5, home won
+        ("2026-01-05", 0.8, 1),  # home prob > 0.5, home won
+        ("2026-01-05", 0.3, 0),  # home prob < 0.5, away won
+    ])
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=pd.DataFrame()):
+        result = build_history()
+    assert len(result) == 1
+    assert result[0]["daily_accuracy"] == pytest.approx(1.0)
+
+
+def test_build_history_zero_pct_day_accuracy_is_0():
+    """A day where every prediction is wrong must have daily_accuracy=0.0."""
+    live = _make_live_df([
+        ("2026-01-06", 0.9, 0),  # predicted home win, away won
+        ("2026-01-06", 0.8, 0),
+    ])
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=pd.DataFrame()):
+        result = build_history()
+    assert result[0]["daily_accuracy"] == pytest.approx(0.0)
+
+
+def test_build_history_correct_field_is_int():
+    """The 'correct' field in each row should be an integer, not a float."""
+    live = _make_live_df([("2026-02-01", 0.7, 1), ("2026-02-01", 0.4, 0)])
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=pd.DataFrame()):
+        result = build_history()
+    assert isinstance(result[0]["correct"], int)
+    assert isinstance(result[0]["games"], int)
+
+
+def test_build_history_boundary_exactly_half_prob():
+    """home_win_prob=0.5 is treated as predicting home win (>= 0.5 threshold)."""
+    live = _make_live_df([("2026-02-15", 0.5, 1)])  # prob=0.5, home wins -> correct
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=pd.DataFrame()):
+        result = build_history()
+    assert result[0]["correct"] == 1
+    assert result[0]["daily_accuracy"] == pytest.approx(1.0)

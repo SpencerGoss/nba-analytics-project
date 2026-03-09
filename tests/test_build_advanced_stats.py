@@ -145,3 +145,76 @@ class TestDeduplication:
         monkeypatch.setattr(mod, "ADV_CSV", csv)
         result = build_advanced_stats()
         assert result["Traded Player"]["gp"] == 30
+
+
+# ---------------------------------------------------------------------------
+# Rounding
+# ---------------------------------------------------------------------------
+
+class TestRounding:
+    def _row(self, name="Rounding Player", gp=30, **overrides):
+        base = {
+            "player_name": name, "season": CURRENT_SEASON, "gp": gp,
+            "ts_pct": 0.5555, "usg_pct": 0.2345, "off_rating": 115.123,
+            "def_rating": 109.678, "net_rating": 5.445, "efg_pct": 0.5015, "pie": 0.1405,
+        }
+        base.update(overrides)
+        return base
+
+    def test_ts_rounded_to_one_decimal(self, monkeypatch, tmp_path):
+        csv = _make_csv(tmp_path, [self._row()])
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        val = result["Rounding Player"]["ts"]
+        assert val == round(val, 1)
+
+    def test_off_rtg_rounded_to_one_decimal(self, monkeypatch, tmp_path):
+        csv = _make_csv(tmp_path, [self._row()])
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        val = result["Rounding Player"]["off_rtg"]
+        assert val == round(val, 1)
+
+    def test_net_rtg_rounded_to_one_decimal(self, monkeypatch, tmp_path):
+        csv = _make_csv(tmp_path, [self._row()])
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        val = result["Rounding Player"]["net_rtg"]
+        assert val == round(val, 1)
+
+
+# ---------------------------------------------------------------------------
+# Season filter
+# ---------------------------------------------------------------------------
+
+class TestSeasonFilter:
+    def _row(self, name, season, gp=30):
+        return {
+            "player_name": name, "season": season, "gp": gp,
+            "ts_pct": 0.55, "usg_pct": 0.20, "off_rating": 110.0,
+            "def_rating": 108.0, "net_rating": 2.0, "efg_pct": 0.50, "pie": 0.12,
+        }
+
+    def test_prior_season_player_excluded(self, monkeypatch, tmp_path):
+        """Players from a prior season (not CURRENT_SEASON) must not appear."""
+        rows = [
+            self._row("Current Season Player", CURRENT_SEASON),
+            self._row("Old Season Player", CURRENT_SEASON - 1),
+        ]
+        csv = _make_csv(tmp_path, rows)
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        assert "Current Season Player" in result
+        assert "Old Season Player" not in result
+
+    def test_only_current_season_returned(self, monkeypatch, tmp_path):
+        """All returned players belong to the current season."""
+        rows = [
+            self._row(f"Player{i}", CURRENT_SEASON, gp=30) for i in range(3)
+        ] + [
+            self._row(f"OldPlayer{i}", CURRENT_SEASON - 1, gp=40) for i in range(2)
+        ]
+        csv = _make_csv(tmp_path, rows)
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        assert all(k.startswith("Player") for k in result)
