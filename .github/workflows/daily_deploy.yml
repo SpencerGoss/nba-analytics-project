@@ -43,6 +43,10 @@ jobs:
       - name: Ensure runtime directories exist
         run: mkdir -p database data/odds data/processed data/raw data/features logs
 
+      - name: Run test suite
+        timeout-minutes: 5
+        run: python -m pytest tests/ -q --tb=short --no-header
+
       - name: Fetch odds and run builders
         continue-on-error: true
         timeout-minutes: 10
