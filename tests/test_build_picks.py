@@ -245,3 +245,104 @@ def test_build_picks_team_names_populated(tmp_path):
 
     bos_row = next(r for r in result if r["home_team"] == "BOS")
     assert bos_row["home_team_name"] == "Boston Celtics"
+
+
+# ---------------------------------------------------------------------------
+# _compute_kelly_fraction
+# ---------------------------------------------------------------------------
+
+def test_kelly_positive_edge():
+    from scripts.build_picks import _compute_kelly_fraction
+    # Model 70%, market 55% -> positive edge
+    result = _compute_kelly_fraction(0.15, 0.55, "BOS", "BOS", 0.70)
+    assert result is not None
+    assert result > 0.0
+
+
+def test_kelly_zero_when_negative_edge():
+    from scripts.build_picks import _compute_kelly_fraction
+    # Model 45%, market 55% -> negative edge -> 0.0
+    result = _compute_kelly_fraction(-0.10, 0.55, "BOS", "BOS", 0.45)
+    assert result == 0.0
+
+
+def test_kelly_none_when_no_market_prob():
+    from scripts.build_picks import _compute_kelly_fraction
+    result = _compute_kelly_fraction(0.10, None, "BOS", "BOS", 0.65)
+    assert result is None
+
+
+def test_kelly_none_when_no_edge():
+    from scripts.build_picks import _compute_kelly_fraction
+    result = _compute_kelly_fraction(None, 0.55, "BOS", "BOS", 0.65)
+    assert result is None
+
+
+def test_kelly_none_when_market_degenerate():
+    from scripts.build_picks import _compute_kelly_fraction
+    # market_prob of 0 or 1 are degenerate
+    assert _compute_kelly_fraction(0.10, 0.0, "BOS", "BOS", 0.65) is None
+    assert _compute_kelly_fraction(0.10, 1.0, "BOS", "BOS", 0.65) is None
+
+
+def test_kelly_away_side():
+    from scripts.build_picks import _compute_kelly_fraction
+    # Away team is ats_pick -- uses (1 - home_prob) as model prob
+    result = _compute_kelly_fraction(0.15, 0.55, "NYK", "BOS", 0.40)
+    assert result is not None
+    assert result > 0.0
+
+
+def test_kelly_half_kelly():
+    from scripts.build_picks import _compute_kelly_fraction
+    # Full Kelly = (p*b - (1-p)) / b; result should be half of that
+    p = 0.65
+    q = 0.50
+    b = (1 - q) / q  # = 1.0
+    full_kelly = (p * b - (1 - p)) / b  # = 0.30
+    result = _compute_kelly_fraction(0.15, q, "BOS", "BOS", p)
+    assert result == pytest.approx(full_kelly * 0.5, abs=0.001)
+
+
+# ---------------------------------------------------------------------------
+# _confidence_tier
+# ---------------------------------------------------------------------------
+
+def test_confidence_high():
+    from scripts.build_picks import _confidence_tier
+    assert _confidence_tier(0.75, "BOS", "BOS") == "HIGH"
+
+
+def test_confidence_high_away():
+    from scripts.build_picks import _confidence_tier
+    # Away win prob = 1 - 0.25 = 0.75
+    assert _confidence_tier(0.25, "NYK", "BOS") == "HIGH"
+
+
+def test_confidence_medium():
+    from scripts.build_picks import _confidence_tier
+    assert _confidence_tier(0.62, "BOS", "BOS") == "MEDIUM"
+
+
+def test_confidence_low():
+    from scripts.build_picks import _confidence_tier
+    assert _confidence_tier(0.55, "BOS", "BOS") == "LOW"
+
+
+def test_confidence_boundary_70():
+    from scripts.build_picks import _confidence_tier
+    # Exactly 70% -> HIGH
+    assert _confidence_tier(0.70, "BOS", "BOS") == "HIGH"
+
+
+def test_confidence_boundary_60():
+    from scripts.build_picks import _confidence_tier
+    # Exactly 60% -> MEDIUM
+    assert _confidence_tier(0.60, "BOS", "BOS") == "MEDIUM"
+
+
+def test_confidence_returns_string():
+    from scripts.build_picks import _confidence_tier
+    result = _confidence_tier(0.65, "BOS", "BOS")
+    assert isinstance(result, str)
+    assert result in ("HIGH", "MEDIUM", "LOW")
