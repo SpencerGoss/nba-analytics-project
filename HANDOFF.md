@@ -1,15 +1,21 @@
 # Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-08 Session 7 (Ralph loop recovery session)_
+_Last updated: 2026-03-08 Session 8 (Ralph loop continuation)_
 
-## What Was Done This Session (Session 7)
+## What Was Done This Session (Session 8)
+
+### Test Coverage Expansion (+19 new tests, 759 -> 778 passing)
+- **test_build_clv.py** -- added `TestComputeSummaryExtended` (7 tests: edge_confirmed boundary, negative CLV, string skip) and `TestBuildClvWithDB` (5 integration tests with real SQLite)
+- **test_build_bet_tracker.py** -- added `TestBuildBetTrackerWithDB` (7 integration tests: schema, WIN/LOSS/None result, deduplication, away-side win)
+
+## What Was Done This Session (Session 7 - Ralph loop recovery)
 
 ### Context Recovery
 Previous session froze with multiple parallel agents running mid-work. Recovered by:
 - Reading git history and test outputs to determine state
 - Completing in-progress test fixes
 
-### Test Coverage Expansion (+119 new tests, 619 -> 738 passing)
+### Test Coverage Expansion (+140 new tests, 619 -> 759 passing)
 - **test_build_streaks.py** -- fixed `_make_player_df` to include `fg_pct` col (KeyError fix)
 - **test_build_playoff_odds.py** -- relaxed `title_odds_sum` assertion to allow non-100% sums
 - **test_build_accuracy_history.py** -- 9 new tests for `build_history()`

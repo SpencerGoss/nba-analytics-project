@@ -239,3 +239,116 @@ def test_composite_path_sorted_by_composite_score():
     assert result[0]["composite_score"] >= result[1]["composite_score"]
     assert result[0]["composite_score"] == pytest.approx(0.12)
 
+
+# ---------------------------------------------------------------------------
+# no_vig_prob
+# ---------------------------------------------------------------------------
+
+class TestNoVigProb:
+    def test_even_money_both_sides(self):
+        """Standard -110/-110 spread: after vig removal both are 50%."""
+        from src.models.value_bet_detector import no_vig_prob
+        home, away = no_vig_prob(-110, -110)
+        assert home == pytest.approx(0.5, abs=0.001)
+        assert away == pytest.approx(0.5, abs=0.001)
+
+    def test_sums_to_one(self):
+        """No-vig probs must always sum to 1.0."""
+        from src.models.value_bet_detector import no_vig_prob
+        for (home_ml, away_ml) in [(-150, 130), (-200, 170), (110, -130), (-110, -110)]:
+            h, a = no_vig_prob(home_ml, away_ml)
+            assert h + a == pytest.approx(1.0, abs=0.001)
+
+    def test_favourite_has_higher_prob(self):
+        """Heavy home favourite should yield home_prob > away_prob."""
+        from src.models.value_bet_detector import no_vig_prob
+        h, a = no_vig_prob(-300, 250)
+        assert h > a
+
+    def test_none_returns_nan(self):
+        """None moneyline inputs should produce NaN outputs."""
+        import math
+        from src.models.value_bet_detector import no_vig_prob
+        h, a = no_vig_prob(None, -110)
+        assert math.isnan(h) and math.isnan(a)
+
+    def test_nan_returns_nan(self):
+        import math
+        from src.models.value_bet_detector import no_vig_prob
+        h, a = no_vig_prob(float("nan"), -110)
+        assert math.isnan(h) and math.isnan(a)
+
+    def test_positive_away_underdog(self):
+        """Away underdog (+150) should have probability less than 50%."""
+        from src.models.value_bet_detector import no_vig_prob
+        h, a = no_vig_prob(-180, 150)
+        assert h > 0.5
+        assert a < 0.5
+
+    def test_probabilities_in_range(self):
+        """All valid outputs must be in (0, 1)."""
+        from src.models.value_bet_detector import no_vig_prob
+        for ml_pair in [(-110, -110), (-200, 170), (130, -150)]:
+            h, a = no_vig_prob(*ml_pair)
+            assert 0.0 < h < 1.0
+            assert 0.0 < a < 1.0
+
+
+# ---------------------------------------------------------------------------
+# _compute_kelly_fraction
+# ---------------------------------------------------------------------------
+
+class TestComputeKellyFraction:
+    def test_positive_edge_home_side(self):
+        """Model 65%, market 50% -> positive kelly."""
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": 0.65, "market_implied_prob": 0.50, "bet_side": "home"}
+        result = _compute_kelly_fraction(bet)
+        assert result > 0.0
+
+    def test_zero_when_no_edge(self):
+        """Model prob == market prob -> Kelly is 0."""
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": 0.55, "market_implied_prob": 0.55, "bet_side": "home"}
+        result = _compute_kelly_fraction(bet)
+        assert result == 0.0
+
+    def test_zero_when_model_prob_missing(self):
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": None, "market_implied_prob": 0.55, "bet_side": "home"}
+        assert _compute_kelly_fraction(bet) == 0.0
+
+    def test_zero_when_market_prob_missing(self):
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": 0.65, "market_implied_prob": None, "bet_side": "home"}
+        assert _compute_kelly_fraction(bet) == 0.0
+
+    def test_zero_when_market_degenerate(self):
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": 0.65, "market_implied_prob": 1.0, "bet_side": "home"}
+        assert _compute_kelly_fraction(bet) == 0.0
+
+    def test_away_side_flips_probs(self):
+        """Away bet should flip both probabilities for Kelly calculation."""
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        # Away win prob = 1 - 0.35 = 0.65, market away = 1 - 0.50 = 0.50
+        bet = {"model_win_prob": 0.35, "market_implied_prob": 0.50, "bet_side": "away"}
+        result = _compute_kelly_fraction(bet)
+        assert result > 0.0
+
+    def test_half_kelly_scale(self):
+        """Default scale is 0.5 (half Kelly)."""
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        p, q = 0.65, 0.50
+        b = (1 - q) / q
+        full_kelly = (p * b - (1 - p)) / b
+        expected = round(0.5 * full_kelly, 4)
+        bet = {"model_win_prob": p, "market_implied_prob": q, "bet_side": "home"}
+        assert _compute_kelly_fraction(bet) == pytest.approx(expected, abs=0.001)
+
+    def test_result_is_non_negative(self):
+        """Result must always be >= 0."""
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": 0.30, "market_implied_prob": 0.70, "bet_side": "home"}
+        assert _compute_kelly_fraction(bet) >= 0.0
+
