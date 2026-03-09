@@ -266,3 +266,56 @@ def test_build_value_bets_schema(tmp_path):
         "model_prob", "market_prob", "edge_pct", "recommended_side", "created_at",
     }
     assert required_keys.issubset(result[0].keys())
+
+
+# ---------------------------------------------------------------------------
+# _american_to_prob
+# ---------------------------------------------------------------------------
+
+def test_american_to_prob_negative_line():
+    from scripts.build_value_bets import _american_to_prob
+    # -110 (standard vig) -> 110/210 = 0.5238
+    result = _american_to_prob(-110)
+    assert result == pytest.approx(0.5238, abs=0.001)
+
+
+def test_american_to_prob_positive_line():
+    from scripts.build_value_bets import _american_to_prob
+    # +100 (even money) -> 100/200 = 0.5
+    result = _american_to_prob(100)
+    assert result == pytest.approx(0.5, abs=0.001)
+
+
+def test_american_to_prob_big_negative():
+    from scripts.build_value_bets import _american_to_prob
+    # -200 (heavy favourite) -> 200/300 = 0.6667
+    result = _american_to_prob(-200)
+    assert result == pytest.approx(0.6667, abs=0.001)
+
+
+def test_american_to_prob_big_positive():
+    from scripts.build_value_bets import _american_to_prob
+    # +300 (underdog) -> 100/400 = 0.25
+    result = _american_to_prob(300)
+    assert result == pytest.approx(0.25, abs=0.001)
+
+
+def test_american_to_prob_string_input():
+    from scripts.build_value_bets import _american_to_prob
+    # String numbers should work
+    assert _american_to_prob("-110") == pytest.approx(0.5238, abs=0.001)
+
+
+def test_american_to_prob_invalid():
+    from scripts.build_value_bets import _american_to_prob
+    assert _american_to_prob(None) is None
+    assert _american_to_prob("N/A") is None
+
+
+def test_american_to_prob_range():
+    from scripts.build_value_bets import _american_to_prob
+    # All valid moneylines should produce probabilities in (0, 1)
+    for ml in [-500, -200, -110, 100, 200, 500]:
+        result = _american_to_prob(ml)
+        assert result is not None
+        assert 0.0 < result < 1.0
