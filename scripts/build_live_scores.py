@@ -43,7 +43,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 TEAM_LOGS = PROJECT_ROOT / "data" / "processed" / "team_game_logs.csv"
-GAME_LINES = PROJECT_ROOT / "data" / "processed" / "game_lines.csv"
+GAME_LINES = PROJECT_ROOT / "data" / "odds" / "game_lines.csv"
 PREDICTIONS_DB = PROJECT_ROOT / "database" / "predictions_history.db"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "live_scores.json"
 
