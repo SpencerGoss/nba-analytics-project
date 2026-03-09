@@ -159,7 +159,7 @@ def run_game_outcome_backtest(
     print("=" * 65)
 
     df = pd.read_csv(matchup_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df["season"]    = df["season"].astype(str)
     df = df.sort_values("game_date").reset_index(drop=True)
     df = df.dropna(subset=[TARGET_CLASS])           # drop unplayed / future games
@@ -289,7 +289,7 @@ def run_player_model_backtest(
     print("=" * 65)
 
     df = pd.read_csv(player_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df["season"]    = df["season"].astype(str)
     df = df.sort_values("game_date").reset_index(drop=True)
 

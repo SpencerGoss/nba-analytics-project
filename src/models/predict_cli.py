@@ -65,7 +65,7 @@ def _handle_ats(args) -> dict:
         return {"error": f"Matchup features not found at {matchup_path}. Run feature build first."}
 
     df = pd.read_csv(matchup_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
     exact = df[(df["home_team"] == args.home) & (df["away_team"] == args.away)]
     if not exact.empty:

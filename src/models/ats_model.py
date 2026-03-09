@@ -209,7 +209,7 @@ def train_ats_model(
 
     print("\nLoading ATS features...")
     df = pd.read_csv(ats_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
     print(f"  Total games: {len(df):,} | Seasons: {df.season.nunique()}")
 

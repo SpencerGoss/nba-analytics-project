@@ -308,7 +308,7 @@ def _transform_player_game_logs(df: pd.DataFrame) -> pd.DataFrame:
     _coerce_int_col(df, "player_id")
     _coerce_int_col(df, "team_id")
     _coerce_int_col(df, "game_id")
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     return df
 
 
@@ -325,7 +325,7 @@ def _transform_team_game_logs(df: pd.DataFrame) -> pd.DataFrame:
     df = clean_columns(df)
     _coerce_int_col(df, "team_id")
     _coerce_int_col(df, "game_id")
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     return df
 
 
@@ -371,7 +371,7 @@ def _transform_shot_chart(df: pd.DataFrame) -> pd.DataFrame:
     df["player_id"] = df["player_id"].astype(int)
     df["team_id"]   = df["team_id"].astype(int)
     df["game_id"]   = df["game_id"].astype(str)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     return df
 
 

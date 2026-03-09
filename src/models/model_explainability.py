@@ -201,7 +201,7 @@ def explain_game_outcome_model(
     feat_cols = _load_artifact("game_outcome_features.pkl", artifacts_dir)
 
     df = pd.read_csv(matchup_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df["season"]    = df["season"].astype(str)
 
     test = df[df["season"].isin(test_seasons)].copy()
@@ -359,7 +359,7 @@ def explain_player_model(
         if len(sub):
             chunks.append(sub)
     test = pd.concat(chunks, ignore_index=True) if chunks else pd.DataFrame()
-    test["game_date"] = pd.to_datetime(test["game_date"])
+    test["game_date"] = pd.to_datetime(test["game_date"], format="mixed")
     print(f"\nTest set size: {len(test):,} rows")
 
     from sklearn.impute import SimpleImputer
@@ -515,7 +515,7 @@ def explain_prediction(
     feat_cols = _load_artifact("game_outcome_features.pkl", artifacts_dir)
 
     df = pd.read_csv(matchup_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
     home_row = (
         df[df["home_team"] == home_team_abbr]

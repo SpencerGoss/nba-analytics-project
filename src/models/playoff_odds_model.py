@@ -116,7 +116,7 @@ def _load_team_current_features(
     if not os.path.exists(team_features_path):
         return pd.DataFrame()
     df = pd.read_csv(team_features_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     # Most recent game per team
     latest = (
         df.sort_values("game_date")

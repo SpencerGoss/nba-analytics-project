@@ -349,7 +349,7 @@ if DATA_OK:
     # ────────────────────────────────────────────────
     try:
         ats = pd.read_csv(f'{PROJECT_ROOT}/data/features/game_ats_features.csv')
-        ats['game_date'] = pd.to_datetime(ats['game_date'])
+        ats['game_date'] = pd.to_datetime(ats['game_date'], format="mixed")
         ats['month'] = ats['game_date'].dt.to_period('M')
         monthly = ats.groupby('month')['covers_spread'].agg(['mean', 'count']).reset_index()
         monthly = monthly[monthly['count'] >= 20].tail(14)
@@ -487,7 +487,7 @@ if DATA_OK:
     # ────────────────────────────────────────────────
     try:
         gmf = pd.read_csv(f'{PROJECT_ROOT}/data/features/game_matchup_features.csv')
-        gmf['game_date'] = pd.to_datetime(gmf['game_date'])
+        gmf['game_date'] = pd.to_datetime(gmf['game_date'], format="mixed")
 
         conn = sqlite3.connect(f'{PROJECT_ROOT}/database/predictions_history.db')
         preds = pd.read_sql('SELECT * FROM game_predictions ORDER BY game_date DESC', conn)

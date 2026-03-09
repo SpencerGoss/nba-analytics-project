@@ -146,7 +146,7 @@ def train_player_models(
 
     print("\nLoading player game features...")
     df = pd.read_csv(features_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
     print(f"  Total rows: {len(df):,} | Players: {df.player_id.nunique():,} | Seasons: {df.season.nunique()}")
 
@@ -246,7 +246,7 @@ def predict_player_next_game(
 ) -> dict:
     """Predict next-game PTS/REB/AST for a player from latest feature row."""
     df = pd.read_csv(features_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
     player_df = df[df["player_name"] == player_name].sort_values("game_date")
     if player_df.empty:

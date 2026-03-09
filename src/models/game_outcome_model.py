@@ -226,7 +226,7 @@ def train_game_outcome_model(
 
     print("\nLoading matchup features...")
     df = pd.read_csv(matchup_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
     print(f"  Total games: {len(df):,} | Seasons: {df.season.nunique()}")
 
@@ -444,7 +444,7 @@ def predict_game(
         feat_cols = pickle.load(f)
 
     df = pd.read_csv(features_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
     exact = df[(df["home_team"] == home_team_abbr) & (df["away_team"] == away_team_abbr)]
     if not exact.empty:

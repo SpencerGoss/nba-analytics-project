@@ -361,7 +361,7 @@ def run_calibration_analysis(
     feat_cols = _load_features(artifacts_dir)
 
     df = pd.read_csv(matchup_path)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df["season"]    = df["season"].astype(str)
     df = df.sort_values("game_date").reset_index(drop=True)
     df = df.dropna(subset=[TARGET])         # drop unplayed / future games
