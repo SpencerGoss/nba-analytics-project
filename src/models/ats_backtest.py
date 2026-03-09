@@ -291,7 +291,7 @@ def run_ats_backtest(
     # -- Load data ----------------------------------------------------------
     print(f"\nLoading ATS features from {ats_features_path}...")
     df = pd.read_csv(ats_features_path, low_memory=False)
-    df["game_date"] = pd.to_datetime(df["game_date"])
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
     n_total = len(df)
     print(f"  Total games loaded: {n_total:,}")

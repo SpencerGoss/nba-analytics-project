@@ -929,7 +929,7 @@ def build_matchup_dataset(
     print(f"  Home/away matchup join: {_n_meta:,} games -> {len(matchup):,} rows (dropped {_n_meta - len(matchup):,})")
 
     # -- Season-segment context (Phase 4, FR-3.4) --
-    matchup["season_month"] = pd.to_datetime(matchup["game_date"]).dt.month
+    matchup["season_month"] = pd.to_datetime(matchup["game_date"], format="mixed").dt.month
     print(f"  season_month: {matchup['season_month'].nunique()} unique months, "
           f"range {int(matchup['season_month'].min())}-{int(matchup['season_month'].max())}")
 

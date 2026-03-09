@@ -92,7 +92,7 @@ def _load_referee_assignments(referee_data_dir: str) -> pd.DataFrame:
     combined = pd.concat(dfs, ignore_index=True)
 
     # Normalize game_date to datetime then back to string YYYY-MM-DD
-    combined["game_date"] = pd.to_datetime(combined["game_date"]).dt.strftime("%Y-%m-%d")
+    combined["game_date"] = pd.to_datetime(combined["game_date"], format="mixed").dt.strftime("%Y-%m-%d")
 
     # Drop duplicate games (same game_id_bref may appear in overlapping date ranges)
     combined = combined.drop_duplicates(subset=["game_id_bref"])
@@ -152,7 +152,7 @@ def _join_game_fta(long_df: pd.DataFrame, game_logs: pd.DataFrame) -> pd.DataFra
     """
     # Compute average FTA and avg_poss for each game (average home + away values)
     game_logs_clean = game_logs.copy()
-    game_logs_clean["game_date"] = pd.to_datetime(game_logs_clean["game_date"]).dt.strftime("%Y-%m-%d")
+    game_logs_clean["game_date"] = pd.to_datetime(game_logs_clean["game_date"], format="mixed").dt.strftime("%Y-%m-%d")
 
     # Possession estimate (Oliver formula): FGA - OREB + TOV + 0.44 * FTA
     has_poss_cols = all(c in game_logs_clean.columns for c in ["fga", "oreb", "tov", "fta"])
@@ -401,7 +401,7 @@ def build_referee_features(
 
     print(f"Loading team game logs from {team_game_log_path}...")
     game_logs = pd.read_csv(team_game_log_path)
-    game_logs["game_date"] = pd.to_datetime(game_logs["game_date"]).dt.strftime("%Y-%m-%d")
+    game_logs["game_date"] = pd.to_datetime(game_logs["game_date"], format="mixed").dt.strftime("%Y-%m-%d")
 
     # Step 1: Melt referee assignments to long format (one row per game x referee)
     print("Building long-format referee assignments...")
