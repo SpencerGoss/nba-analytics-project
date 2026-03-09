@@ -121,6 +121,7 @@ def _make_player_df(records: list[tuple]) -> pd.DataFrame:
             "ast": ast,
             "fga": 15,    # field goal attempts — required by _compute_cold_players
             "fgm": 6,
+            "fg_pct": 0.400,  # required by _compute_cold_players
             "min": 28.0,
         })
     return pd.DataFrame(rows)
