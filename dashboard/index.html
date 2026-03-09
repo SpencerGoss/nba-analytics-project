@@ -2162,9 +2162,9 @@ function buildSpotlight(valueBets, explainers, contexts){
   const expMatch=explainers.find(e=>e.home_team===top.home_team&&e.away_team===top.away_team)||null;
   const ctxMatch=contexts.find(c=>c.home_team===top.home_team&&c.away_team===top.away_team)||null;
 
-  const modelPct=(top.model_prob*100).toFixed(1);
-  const marketPct=(top.market_prob*100).toFixed(1);
-  const edgePct=(top.edge_pct*100).toFixed(1);
+  const modelPct=((top.model_prob||0)*100).toFixed(1);
+  const marketPct=((top.market_prob||0)*100).toFixed(1);
+  const edgePct=((top.edge_pct||0)*100).toFixed(1);
 
   const el=document.getElementById('hero-spotlight');
   if(!el)return;
@@ -3960,7 +3960,7 @@ function buildInjurySummary(){
   const html=top.map(function(p){
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;border-radius:6px;background:rgba(255,92,92,0.05)">'
       +'<span style="font-size:12px;color:var(--t1)"><span style="font-weight:700;color:var(--t2);font-size:11px;margin-right:6px">'+esc(p.team)+'</span>'+esc(p.name)+'</span>'
-      +'<span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2)">'+p.pts.toFixed(1)+' PPG'
+      +'<span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2)">'+(p.pts!=null?p.pts.toFixed(1):'-')+' PPG'
       +'<span style="background:rgba(255,92,92,0.15);color:var(--red);font-weight:700;padding:1px 6px;border-radius:4px;font-size:10px">OUT</span>'
       +'</span></div>';
   }).join('');
