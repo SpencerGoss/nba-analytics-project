@@ -191,3 +191,64 @@ class TestGetLineupData:
         ]
         for col in required_cols:
             assert col in df.columns, f"Missing required column: {col}"
+
+
+    def test_multiple_teams_all_included(self, tmp_path):
+        """When two teams return data, both appear in the output CSV."""
+        raw = _make_api_frame(gp_values=[10])
+        success_result = {"success": True, "data": raw}
+
+        mock_teams = [
+            {"id": 1610612747, "abbreviation": "LAL"},
+            {"id": 1610612738, "abbreviation": "BOS"},
+        ]
+
+        with (
+            patch("src.data.get_lineup_data._get_all_team_ids", return_value=mock_teams),
+            patch("src.data.get_lineup_data.fetch_with_retry", return_value=success_result),
+            patch("src.data.get_lineup_data.time.sleep"),
+            patch("src.data.get_lineup_data.RAW_LINEUPS_DIR", str(tmp_path)),
+        ):
+            get_lineup_data(start_year=2024, end_year=2024)
+
+        output_file = tmp_path / "lineup_data_202425.csv"
+        df = pd.read_csv(output_file)
+        teams_found = set(df["team_abbreviation"].tolist())
+        assert "LAL" in teams_found
+        assert "BOS" in teams_found
+
+    def test_all_below_min_gp_no_csv_written(self, tmp_path):
+        """When all lineups are below MIN_GAMES_PLAYED, no CSV should be written."""
+        raw = _make_api_frame(gp_values=[MIN_GAMES_PLAYED - 1, MIN_GAMES_PLAYED - 2])
+        success_result = {"success": True, "data": raw}
+
+        mock_teams = [{"id": 1610612747, "abbreviation": "LAL"}]
+
+        with (
+            patch("src.data.get_lineup_data._get_all_team_ids", return_value=mock_teams),
+            patch("src.data.get_lineup_data.fetch_with_retry", return_value=success_result),
+            patch("src.data.get_lineup_data.time.sleep"),
+            patch("src.data.get_lineup_data.RAW_LINEUPS_DIR", str(tmp_path)),
+        ):
+            get_lineup_data(start_year=2024, end_year=2024)
+
+        csv_files = list(tmp_path.glob("lineup_data_*.csv"))
+        assert len(csv_files) == 0
+
+    def test_multi_season_writes_separate_files(self, tmp_path):
+        """get_lineup_data for 2 seasons should write 2 separate CSV files."""
+        raw = _make_api_frame(gp_values=[10])
+        success_result = {"success": True, "data": raw}
+
+        mock_teams = [{"id": 1610612747, "abbreviation": "LAL"}]
+
+        with (
+            patch("src.data.get_lineup_data._get_all_team_ids", return_value=mock_teams),
+            patch("src.data.get_lineup_data.fetch_with_retry", return_value=success_result),
+            patch("src.data.get_lineup_data.time.sleep"),
+            patch("src.data.get_lineup_data.RAW_LINEUPS_DIR", str(tmp_path)),
+        ):
+            get_lineup_data(start_year=2023, end_year=2024)
+
+        csv_files = list(tmp_path.glob("lineup_data_*.csv"))
+        assert len(csv_files) == 2
