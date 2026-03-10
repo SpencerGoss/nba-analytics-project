@@ -100,3 +100,20 @@ class TestFriendlyFeatureName:
         """home_star_player_out should start with hm."""
         result = _friendly_feature_name("home_star_player_out")
         assert result.lower().startswith("hm ")
+
+    def test_no_underscores_in_output(self):
+        """Output must never contain underscores."""
+        for col in ("home_net_rating", "away_win_pct_roll5", "diff_pts_roll10", "days_rest"):
+            result = _friendly_feature_name(col)
+            assert "_" not in result, f"Underscore found in result for {col!r}: {result!r}"
+
+    def test_days_rest_readable(self):
+        """home_days_rest should produce a readable label with no underscores."""
+        result = _friendly_feature_name("home_days_rest")
+        assert "_" not in result
+        assert len(result) > 0
+
+    def test_output_length_reasonable(self):
+        """Output should be at most ~50 chars (no runaway expansion)."""
+        result = _friendly_feature_name("home_win_pct_roll20")
+        assert len(result) <= 50

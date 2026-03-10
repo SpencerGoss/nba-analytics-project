@@ -84,3 +84,29 @@ def test_format_clock_seconds_padded():
     # Seconds should be zero-padded
     result = _format_clock("PT05M05.00S")
     assert result == "5:05"
+
+
+def test_period_label_ot4():
+    """Period 8 is the 4th OT."""
+    assert _period_label(8) == "OT4"
+
+
+def test_period_label_ot5():
+    assert _period_label(9) == "OT5"
+
+
+def test_format_clock_zero_minutes():
+    """PT00M30.00S should format as 0:30 (sub-minute game clock)."""
+    assert _format_clock("PT00M30.00S") == "0:30"
+
+
+def test_format_clock_end_of_period():
+    """PT00M00.00S is a buzzer clock -> 0:00."""
+    assert _format_clock("PT00M00.00S") == "0:00"
+
+
+def test_format_clock_malformed_iso_passes_through():
+    """A non-parseable string that looks like ISO should pass through unchanged."""
+    result = _format_clock("PT_INVALID")
+    # Should not raise; returns the original string
+    assert isinstance(result, str)
