@@ -133,3 +133,36 @@ class TestBinCalibrationStats:
         result = _bin_calibration_stats(y_true, y_prob, n_bins=10)
         # Should be exactly 1 non-empty bin
         assert len(result) == 1
+
+    def test_all_correct_actual_rate_is_one(self):
+        """Bin where all predictions are correct (all y_true=1) -> actual_rate=1.0."""
+        y_prob = np.array([0.65] * 5)
+        y_true = np.array([1] * 5)
+        result = _bin_calibration_stats(y_true, y_prob, n_bins=10)
+        assert result["actual_rate"].iloc[0] == pytest.approx(1.0)
+
+    def test_all_wrong_actual_rate_is_zero(self):
+        """Bin where all y_true=0 -> actual_rate=0.0."""
+        y_prob = np.array([0.75] * 4)
+        y_true = np.array([0] * 4)
+        result = _bin_calibration_stats(y_true, y_prob, n_bins=10)
+        assert result["actual_rate"].iloc[0] == pytest.approx(0.0)
+
+
+class TestExpectedCalibrationErrorAdditional:
+    def test_ece_with_n_bins_1(self):
+        """n_bins=1 puts everything in one bin; ECE = |mean_pred - mean_actual|."""
+        y_prob = np.array([0.7, 0.7, 0.7])
+        y_true = np.array([1, 1, 0])   # actual rate 0.667
+        ece = _expected_calibration_error(y_true, y_prob, n_bins=1)
+        expected = abs(0.7 - (2 / 3))
+        assert ece == pytest.approx(expected, abs=0.001)
+
+    def test_ece_nonnegative_always(self):
+        """ECE must always be >= 0 regardless of inputs."""
+        rng = np.random.default_rng(123)
+        for _ in range(5):
+            y_prob = rng.uniform(0, 1, 50)
+            y_true = (rng.random(50) > 0.5).astype(int)
+            ece = _expected_calibration_error(y_true, y_prob, n_bins=10)
+            assert ece >= 0.0
