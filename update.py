@@ -350,6 +350,8 @@ def main() -> None:
             ("build_player_comparison", "Player comparison"),
             ("build_player_detail", "Player detail stats"),
             ("build_season_history", "Season history"),
+            # Always last -- timestamps the completed run
+            ("build_meta", "Dashboard metadata"),
         ]
 
         for script_name, label in _BUILDERS:
@@ -426,6 +428,7 @@ def builders_only() -> None:
         ("build_player_comparison", "Player comparison"),
         ("build_player_detail", "Player detail stats"),
         ("build_season_history", "Season history"),
+        ("build_meta", "Dashboard metadata"),
     ]
 
     for script_name, label in _BUILDERS:

@@ -6060,8 +6060,13 @@ async function loadDashboardData(){
     if(window.MATCHUP_JSON&&window.MATCHUP_JSON.length){
       MATCHUP_DATA.length=0;
       const allTeams=[...DATA.east,...DATA.west];
+      const fmtR=v=>v!=null?Number(v).toFixed(1):'--';
+      const fmtPct=v=>v!=null?(Number(v)*100).toFixed(1)+'%':'--';
+      const recentFmt=v=>v!==null&&v!==undefined?(+v*100).toFixed(0)+'% W':'-';
       window.MATCHUP_JSON.forEach(m=>{
-        const netDiff=m.home_net_rtg-m.away_net_rtg;
+        const hn=m.home_net_rtg!=null?m.home_net_rtg:0;
+        const an=m.away_net_rtg!=null?m.away_net_rtg:0;
+        const netDiff=hn-an;
         const edge=netDiff>0?m.home_team:m.away_team;
         const edgeMargin=Math.abs(netDiff).toFixed(1);
         const reason=`${edge} has a ${edgeMargin} net rtg advantage -- ${netDiff>0?'home':'away'} team model edge`;
@@ -6069,17 +6074,16 @@ async function loadDashboardData(){
         const aRec=allTeams.find(t=>t.abbr===m.away_team||t.team===m.away_team);
         const homeRec=hRec?hRec.w+'-'+hRec.l:'--';
         const awayRec=aRec?aRec.w+'-'+aRec.l:'--';
-        const recentFmt=v=>v!==null&&v!==undefined?(+v*100).toFixed(0)+'% W':'-';
         MATCHUP_DATA.push({
           label:m.away_team+' @ '+m.home_team,
           away:m.away_team,home:m.home_team,
           awayRec:awayRec,homeRec:homeRec,
           stats:[
-            ['Off Rating (Season)',m.away_ortg.toFixed(1),m.home_ortg.toFixed(1)],
-            ['Def Rating (Season)',m.away_drtg.toFixed(1),m.home_drtg.toFixed(1)],
-            ['Net Rating',m.away_net_rtg.toFixed(1),m.home_net_rtg.toFixed(1)],
-            ['Pace',m.away_pace.toFixed(1),m.home_pace.toFixed(1)],
-            ['3PT Rate',(m.away_fg3_rate*100).toFixed(1)+'%',(m.home_fg3_rate*100).toFixed(1)+'%'],
+            ['Off Rating (Season)',fmtR(m.away_ortg),fmtR(m.home_ortg)],
+            ['Def Rating (Season)',fmtR(m.away_drtg),fmtR(m.home_drtg)],
+            ['Net Rating',fmtR(m.away_net_rtg),fmtR(m.home_net_rtg)],
+            ['Pace',fmtR(m.away_pace),fmtR(m.home_pace)],
+            ['3PT Rate',fmtPct(m.away_fg3_rate),fmtPct(m.home_fg3_rate)],
             ['Recent Form (L5)',recentFmt(m.away_recent_form),recentFmt(m.home_recent_form)],
           ],
           edge:edge,reason:reason,
