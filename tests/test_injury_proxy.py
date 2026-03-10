@@ -22,6 +22,7 @@ from src.features.injury_proxy import (
     STAR_USG_THRESHOLD,
     ROLL_WINDOW,
     build_injury_proxy_features,
+    _aggregate_from_absences_df,
 )
 
 
@@ -376,3 +377,108 @@ class TestInjuryProxyOutputSchema:
 
         assert pd.api.types.is_string_dtype(result["game_id"]), "game_id should be string dtype"
         assert np.issubdtype(result["team_id"].dtype, np.integer), "team_id should be int"
+
+
+# ── _aggregate_from_absences_df ───────────────────────────────────────────────
+
+
+def _make_absences_df(rows: list[dict]) -> pd.DataFrame:
+    """Create a minimal player_absences-style DataFrame."""
+    return pd.DataFrame(rows)
+
+
+class TestAggregateFromAbsencesDf:
+
+    def test_output_schema(self):
+        """Output must contain all required aggregate columns."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 30.0, "usg_pct": 0.20, "was_absent": 0},
+        ])
+        result = _aggregate_from_absences_df(df)
+        for col in ["game_id", "team_id", "total_expected_minutes"]:
+            assert col in result.columns, f"Missing column: {col}"
+
+    def test_no_absences_missing_minutes_is_zero_or_nan(self):
+        """When no player is absent, missing_minutes should be 0 or absent."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 30.0, "usg_pct": 0.20, "was_absent": 0},
+            {"player_id": 2, "team_id": 100, "game_id": "G1",
+             "min_roll5": 25.0, "usg_pct": 0.18, "was_absent": 0},
+        ])
+        result = _aggregate_from_absences_df(df)
+        row = result[result["game_id"] == "G1"]
+        assert len(row) == 1
+        mm = row["missing_minutes"].iloc[0] if "missing_minutes" in row.columns else 0
+        assert pd.isna(mm) or mm == 0.0
+
+    def test_missing_minutes_sums_absent_players(self):
+        """missing_minutes should be sum of min_roll5 for absent players only."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 30.0, "usg_pct": 0.20, "was_absent": 1},
+            {"player_id": 2, "team_id": 100, "game_id": "G1",
+             "min_roll5": 28.0, "usg_pct": 0.18, "was_absent": 0},
+        ])
+        result = _aggregate_from_absences_df(df)
+        row = result[result["game_id"] == "G1"]
+        assert row["missing_minutes"].iloc[0] == pytest.approx(30.0)
+
+    def test_n_missing_rotation_counts_absent_players(self):
+        """n_missing_rotation should be the count of absent player-rows."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 30.0, "usg_pct": 0.20, "was_absent": 1},
+            {"player_id": 2, "team_id": 100, "game_id": "G1",
+             "min_roll5": 25.0, "usg_pct": 0.15, "was_absent": 1},
+            {"player_id": 3, "team_id": 100, "game_id": "G1",
+             "min_roll5": 20.0, "usg_pct": 0.12, "was_absent": 0},
+        ])
+        result = _aggregate_from_absences_df(df)
+        row = result[result["game_id"] == "G1"]
+        assert row["n_missing_rotation"].iloc[0] == 2
+
+    def test_star_player_out_flagged_when_high_usg_absent(self):
+        """star_player_out should be 1 when absent player has usg_pct >= STAR_USG_THRESHOLD."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 35.0, "usg_pct": STAR_USG_THRESHOLD, "was_absent": 1},
+        ])
+        result = _aggregate_from_absences_df(df)
+        row = result[result["game_id"] == "G1"]
+        assert row["star_player_out"].iloc[0] == 1
+
+    def test_star_player_out_zero_when_low_usg_absent(self):
+        """star_player_out should be 0 when absent player has usg_pct < STAR_USG_THRESHOLD."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 20.0, "usg_pct": STAR_USG_THRESHOLD - 0.01, "was_absent": 1},
+        ])
+        result = _aggregate_from_absences_df(df)
+        row = result[result["game_id"] == "G1"]
+        assert row["star_player_out"].iloc[0] == 0
+
+    def test_total_expected_minutes_includes_all_rotation(self):
+        """total_expected_minutes sums min_roll5 for ALL players (absent + present)."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 30.0, "usg_pct": 0.20, "was_absent": 1},
+            {"player_id": 2, "team_id": 100, "game_id": "G1",
+             "min_roll5": 25.0, "usg_pct": 0.18, "was_absent": 0},
+        ])
+        result = _aggregate_from_absences_df(df)
+        row = result[result["game_id"] == "G1"]
+        assert row["total_expected_minutes"].iloc[0] == pytest.approx(55.0)
+
+    def test_multiple_teams_same_game(self):
+        """Two teams in the same game should produce separate rows."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 30.0, "usg_pct": 0.20, "was_absent": 0},
+            {"player_id": 2, "team_id": 200, "game_id": "G1",
+             "min_roll5": 28.0, "usg_pct": 0.18, "was_absent": 0},
+        ])
+        result = _aggregate_from_absences_df(df)
+        assert len(result) == 2
+        assert set(result["team_id"].tolist()) == {100, 200}

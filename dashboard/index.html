@@ -2855,7 +2855,7 @@ function buildFeaturedMatchupComparison(picks){
   }
   function playerBlock(p,teamAbbr,isAway){
     var cls='mmc-player '+(isAway?'away':'home');
-    var displayName=p?p.name.split(' ').pop():'--';
+    var displayName=p&&p.name?p.name.split(' ').pop():'--';
     var rows=statKeys.map(function(k){
       var hi=(p&&isHi(p,k))?'hi':'';
       var val=fmtStat(p,k);
