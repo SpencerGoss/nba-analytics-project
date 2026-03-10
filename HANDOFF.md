@@ -1,6 +1,34 @@
 # Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-08 Session 8 (Ralph loop continuation)_
+_Last updated: 2026-03-09 Session 9 (machine transfer prep + dashboard bugfixes)_
+
+## What Was Done This Session (Session 9)
+
+### Pre-Transfer Checklist
+- **Pushed 16 unpushed commits** to GitHub (remote was stale since Mar 8)
+- Verified all 1164 prior tests still pass; suite now at **1179 passing**
+
+### Bug Fixes
+- **dashboard/index.html:** Added null guards for `matchup_analysis.json` stats wiring.
+  `build_matchup_analysis.py` can return `None` for `ortg/drtg/pace/fg3_rate/net_rtg`
+  when team data is insufficient; the dashboard called `.toFixed(1)` on those directly,
+  which would throw `TypeError`. Fixed with `fmtR(v)` / `fmtPct(v)` helpers.
+- **meta.json stale date:** `exported_at` was hardcoded to 2026-03-07 because no
+  pipeline step wrote it. Created `scripts/build_meta.py` and added `build_meta` as
+  the final step in both `_BUILDERS` lists in `update.py`. Dashboard now shows correct
+  "Updated" date after each pipeline run.
+
+### New Files
+- `scripts/build_meta.py` — writes dashboard/data/meta.json (exported_at, model_version, season)
+- `tests/test_build_meta.py` — 15 tests covering build_meta and _load_model_version
+
+### Machine Transfer Notes
+Local-only files that must be copied to new PC (NOT in git):
+- `models/artifacts/` — 246 MB — all .pkl files (gitignored)
+- `data/raw/` — 263 MB — source-of-truth CSVs (gitignored)
+- `data/odds/` — 16 KB — game_lines.csv, player_props.csv
+- `database/predictions_history.db` — ~36 KB
+- `.env` — BALLDONTLIE_API_KEY
 
 ## What Was Done This Session (Session 8)
 
