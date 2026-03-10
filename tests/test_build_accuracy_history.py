@@ -269,3 +269,35 @@ def test_build_history_backtest_synthetic_accuracy_matches_row():
     synthetic = [r for r in result if r.get("backtest")]
     assert len(synthetic) == 1
     assert synthetic[0]["daily_accuracy"] == pytest.approx(0.671, abs=1e-3)
+
+
+def test_build_history_daily_accuracy_is_float():
+    """daily_accuracy in each row must be a Python float, not int or str."""
+    live = _make_live_df([("2026-01-01", 0.7, 1), ("2026-01-01", 0.6, 0)])
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=pd.DataFrame()):
+        result = build_history()
+    assert isinstance(result[0]["daily_accuracy"], float)
+
+
+def test_build_history_rolling_accuracy_present_in_first_row():
+    """rolling_accuracy must be present in the very first row."""
+    live = _make_live_df([("2026-01-01", 0.8, 1)])
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=pd.DataFrame()):
+        result = build_history()
+    assert "rolling_accuracy" in result[0]
+
+
+def test_build_history_games_always_at_least_one():
+    """Each date row must have at least one game (no zero-game rows)."""
+    live = _make_live_df([
+        ("2026-01-01", 0.7, 1),
+        ("2026-01-02", 0.6, 0),
+        ("2026-01-03", 0.8, 1),
+    ])
+    with patch("scripts.build_accuracy_history.load_live_predictions", return_value=live), \
+         patch("scripts.build_accuracy_history.load_backtest_seasons", return_value=pd.DataFrame()):
+        result = build_history()
+    for row in result:
+        assert row["games"] >= 1

@@ -112,3 +112,25 @@ class TestBuildMetaIntegration:
         t1 = datetime.fromisoformat(r1["exported_at"])
         t2 = datetime.fromisoformat(r2["exported_at"])
         assert t2 >= t1
+
+
+class TestDefaultModelVersion:
+    def test_default_model_version_is_string(self):
+        assert isinstance(DEFAULT_MODEL_VERSION, str)
+
+    def test_default_model_version_nonempty(self):
+        assert len(DEFAULT_MODEL_VERSION) > 0
+
+
+class TestBuildMetaSerializable:
+    def test_all_values_json_serializable(self):
+        """build_meta() result must be JSON-serializable without error."""
+        result = build_meta()
+        json.dumps(result)  # raises if not serializable
+
+    def test_exported_at_timezone_utc(self):
+        """exported_at must carry UTC timezone info."""
+        result = build_meta()
+        dt = datetime.fromisoformat(result["exported_at"])
+        # UTC offset should be 0
+        assert dt.utcoffset().total_seconds() == 0

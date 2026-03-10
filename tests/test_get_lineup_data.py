@@ -252,3 +252,40 @@ class TestGetLineupData:
 
         csv_files = list(tmp_path.glob("lineup_data_*.csv"))
         assert len(csv_files) == 2
+
+
+# ---------------------------------------------------------------------------
+# Additional MIN_GAMES_PLAYED and boundary checks
+# ---------------------------------------------------------------------------
+
+class TestMinGamesPlayedConstant:
+    def test_min_games_played_is_positive_integer(self):
+        """MIN_GAMES_PLAYED must be a positive integer."""
+        assert isinstance(MIN_GAMES_PLAYED, int)
+        assert MIN_GAMES_PLAYED > 0
+
+    def test_exactly_min_gp_is_included(self):
+        """A lineup with exactly MIN_GAMES_PLAYED must be kept (>=, not >)."""
+        raw = _make_api_frame(gp_values=[MIN_GAMES_PLAYED])
+        success_result = {"success": True, "data": raw}
+        with patch("src.data.get_lineup_data.fetch_with_retry", return_value=success_result):
+            result = _fetch_team_lineups(team_id=1, team_abbr="TST", season="2024-25")
+        assert len(result) == 1
+        assert result["gp"].iloc[0] == MIN_GAMES_PLAYED
+
+    def test_fetch_team_lineups_returns_dataframe(self):
+        """Return type must always be a pandas DataFrame."""
+        raw = _make_api_frame(gp_values=[10])
+        success_result = {"success": True, "data": raw}
+        with patch("src.data.get_lineup_data.fetch_with_retry", return_value=success_result):
+            result = _fetch_team_lineups(team_id=1, team_abbr="TST", season="2024-25")
+        assert isinstance(result, pd.DataFrame)
+
+    def test_off_and_def_rating_in_output(self):
+        """off_rating and def_rating must appear in the renamed output columns."""
+        raw = _make_api_frame(gp_values=[8])
+        success_result = {"success": True, "data": raw}
+        with patch("src.data.get_lineup_data.fetch_with_retry", return_value=success_result):
+            result = _fetch_team_lineups(team_id=1, team_abbr="TST", season="2024-25")
+        assert "off_rating" in result.columns
+        assert "def_rating" in result.columns

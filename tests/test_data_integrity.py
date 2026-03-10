@@ -198,6 +198,45 @@ class TestRollingFeatureLeakage:
         _assert_rolling_differs_from_raw(pgf_df, raw_col="ast", roll_col="ast_roll5")
 
 
+# ── Unit tests for _assert_rolling_differs_from_raw helper ───────────────────
+
+
+class TestAssertRollingDiffersHelper:
+    """Unit tests for the internal leakage-check helper (no pipeline files needed)."""
+
+    def test_passes_when_columns_mostly_different(self):
+        """Should not raise when rolling differs from raw in >50% of rows."""
+        df = pd.DataFrame({
+            "pts": [20, 25, 30, 15, 18],
+            "pts_roll5": [15, 16, 17, 18, 19],  # all different
+        })
+        _assert_rolling_differs_from_raw(df, raw_col="pts", roll_col="pts_roll5")
+
+    def test_raises_when_columns_identical(self):
+        """Should raise AssertionError when rolling equals raw in all rows."""
+        df = pd.DataFrame({
+            "pts": [20, 25, 30, 15, 18],
+            "pts_roll5": [20, 25, 30, 15, 18],  # always equal — leakage
+        })
+        with pytest.raises(AssertionError):
+            _assert_rolling_differs_from_raw(df, raw_col="pts", roll_col="pts_roll5")
+
+    def test_skips_when_column_missing(self):
+        """Should skip (not fail) when one column is absent."""
+        df = pd.DataFrame({"pts": [20, 25]})
+        # pts_roll5 is missing — should be skipped
+        with pytest.raises(pytest.skip.Exception):
+            _assert_rolling_differs_from_raw(df, raw_col="pts", roll_col="pts_roll5")
+
+    def test_passes_at_exact_50_percent_threshold(self):
+        """Exactly 50% rows differing meets the min_differ_fraction=0.50 threshold."""
+        df = pd.DataFrame({
+            "pts": [10, 20, 30, 40],
+            "pts_roll5": [10, 20, 99, 99],  # rows 0,1 equal; rows 2,3 differ -> 50%
+        })
+        _assert_rolling_differs_from_raw(df, raw_col="pts", roll_col="pts_roll5")
+
+
 def _assert_rolling_differs_from_raw(
     df: pd.DataFrame, raw_col: str, roll_col: str, min_differ_fraction: float = 0.50
 ) -> None:

@@ -229,3 +229,35 @@ class TestAddAtsEngineeredFeatures:
         result = _add_ats_engineered_features(df)
         expected = 3.5 * 1.0
         assert np.allclose(result["spread_x_home_dog"].dropna(), expected)
+
+    def test_spread_x_home_dog_zero_when_favourite(self):
+        """When home is favourite (home_dog=0), spread_x_home_dog = 0."""
+        df = _make_ats_df()
+        df["home_implied_prob"] = 0.65
+        df["spread"] = 5.0
+        result = _add_ats_engineered_features(df)
+        assert np.allclose(result["spread_x_home_dog"].dropna(), 0.0)
+
+    def test_spread_bucket_is_integer_valued(self):
+        """spread_bucket must contain only integer-like values (0, 1, 2, or 3)."""
+        df = _make_ats_df()
+        df["spread"] = pd.Series([2.0, 4.0, 9.0, 12.0] * 3, index=df.index[:12])
+        result = _add_ats_engineered_features(df.iloc[:12])
+        buckets = result["spread_bucket"].dropna().unique()
+        assert set(buckets).issubset({0, 1, 2, 3})
+
+
+class TestRollingAtsRecordAdditional:
+    def test_single_game_returns_nan(self):
+        """With only one game, shift(1) leaves no prior data -> NaN."""
+        df = _make_team_games("OKC", [1])
+        result = _rolling_ats_record(df, "home_team", window=3)
+        assert len(result) == 1
+        assert np.isnan(result.iloc[0])
+
+    def test_stable_team_converges_to_value(self):
+        """After 10 games all covering, roll3 should converge to 1.0."""
+        df = _make_team_games("SAS", [1] * 12)
+        result = _rolling_ats_record(df, "home_team", window=3)
+        stable = result.dropna()
+        assert np.allclose(stable, 1.0)

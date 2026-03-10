@@ -207,3 +207,36 @@ def test_available_seasons_includes_lockout_season():
     """2011-12 lockout season must be included as available."""
     seasons = available_seasons("2010-11", "2012-13")
     assert "2011-12" in seasons
+
+
+def test_season_str_to_int_post_century():
+    """2000-01 cross-century season must encode correctly."""
+    assert season_str_to_int("2000-01") == 200001
+
+
+def test_season_str_to_int_ancient_season():
+    """1996-97 season (Jordan era) must encode correctly."""
+    assert season_str_to_int("1996-97") == 199697
+
+
+def test_available_seasons_two_consecutive():
+    seasons = available_seasons("2021-22", "2022-23")
+    assert len(seasons) == 2
+    assert "2021-22" in seasons
+    assert "2022-23" in seasons
+
+
+def test_normalize_row_stl_blk_tov():
+    """stl, blk, tov must all appear in normalized output."""
+    row = _make_row({
+        "Game_ID": "g001", "GAME_DATE": "2025-01-01", "MATCHUP": "OKC vs. LAL",
+        "WL": "W", "MIN": 30, "PTS": 20, "REB": 5, "AST": 4,
+        "STL": 2, "BLK": 1, "TOV": 3,
+        "FGM": 8, "FGA": 16, "FG_PCT": 0.5,
+        "FG3M": 2, "FG3A": 5, "FG3_PCT": 0.4, "FTM": 2, "FTA": 3,
+        "FT_PCT": 0.667, "PLUS_MINUS": 5,
+    })
+    result = _normalize_game_row(row)
+    assert result["stl"] == 2
+    assert result["blk"] == 1
+    assert result["tov"] == 3

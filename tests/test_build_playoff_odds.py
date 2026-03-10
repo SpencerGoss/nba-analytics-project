@@ -161,3 +161,41 @@ def test_title_odds_all_teams_have_entry():
     odds = _title_odds_map([conf])
     for team in ["BOS", "NYK", "MIA"]:
         assert team in odds
+
+
+# ─── Additional edge-case tests ───────────────────────────────────────────────
+
+def test_games_behind_returns_float():
+    """_games_behind must always return a float."""
+    result = _games_behind(40, 10, 38, 12)
+    assert isinstance(result, float)
+
+
+def test_playoff_pct_rank_9_playin():
+    """Rank 9 should be in play-in territory (>0% and <100%)."""
+    pct = _playoff_pct(9, 0)
+    assert 0 < pct < 100
+
+
+def test_playoff_pct_rank_11_eliminated():
+    """Rank 11 with 0 GB is outside play-in -> 0%."""
+    assert _playoff_pct(11, 0) == 0.0
+
+
+def test_playoff_pct_returns_float():
+    """_playoff_pct must return a float."""
+    assert isinstance(_playoff_pct(1, 0), float)
+
+
+def test_standings_team_with_no_games():
+    """A team in the conference list with no game log rows should still appear."""
+    logs = _make_logs([("BOS", "W"), ("BOS", "W")])
+    results = _compute_conference_standings(logs, ["BOS", "MIA"])  # MIA has no games
+    teams = [r["abbr"] for r in results]
+    assert "MIA" in teams
+
+
+def test_standings_win_pct_zero_when_no_wins():
+    logs = _make_logs([("DET", "L"), ("DET", "L")])
+    results = _compute_conference_standings(logs, ["DET"])
+    assert results[0]["win_pct"] == 0.0

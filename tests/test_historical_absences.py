@@ -432,3 +432,52 @@ class TestUsgPctMerge:
             assert abs(usg - 0.22) < 0.01, (
                 f"Expected Player A usg_pct=0.22 from advanced stats, got {usg}"
             )
+
+
+# ── Test 9: usg_pct values in valid range ─────────────────────────────────────
+
+
+class TestUsgPctRange:
+
+    def test_usg_pct_in_0_1_range(self, tmp_path):
+        """All usg_pct values in the output must be in [0, 1]."""
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+        valid = result["usg_pct"].dropna()
+        assert (valid >= 0.0).all() and (valid <= 1.0).all(), (
+            "usg_pct contains values outside [0, 1]"
+        )
+
+    def test_player_c_has_zero_absent_rows(self, tmp_path):
+        """Player C plays all 10 games, so was_absent must be 0 for all C rows."""
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+        player_c_absent = result[
+            (result["player_id"].astype(str) == "103") &
+            (result["was_absent"] == 1)
+        ]
+        assert len(player_c_absent) == 0, (
+            f"Player C played all games but has {len(player_c_absent)} absent rows"
+        )
+
+    def test_no_null_player_id_or_game_id(self, tmp_path):
+        """player_id and game_id must not be null in any output row."""
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+        assert result["player_id"].notna().all(), "Null player_id found in output"
+        assert result["game_id"].notna().all(), "Null game_id found in output"

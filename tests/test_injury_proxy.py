@@ -482,3 +482,39 @@ class TestAggregateFromAbsencesDf:
         result = _aggregate_from_absences_df(df)
         assert len(result) == 2
         assert set(result["team_id"].tolist()) == {100, 200}
+
+    def test_missing_usg_pct_column_present(self):
+        """missing_usg_pct must appear in output schema."""
+        df = _make_absences_df([
+            {"player_id": 1, "team_id": 100, "game_id": "G1",
+             "min_roll5": 30.0, "usg_pct": 0.25, "was_absent": 1},
+        ])
+        result = _aggregate_from_absences_df(df)
+        assert "missing_usg_pct" in result.columns
+
+    def test_empty_input_returns_empty_dataframe(self):
+        """Empty absences DataFrame must produce empty output without error."""
+        df = _make_absences_df([])
+        df["player_id"] = pd.Series(dtype=int)
+        df["team_id"] = pd.Series(dtype=int)
+        df["game_id"] = pd.Series(dtype=str)
+        df["min_roll5"] = pd.Series(dtype=float)
+        df["usg_pct"] = pd.Series(dtype=float)
+        df["was_absent"] = pd.Series(dtype=int)
+        result = _aggregate_from_absences_df(df)
+        assert isinstance(result, pd.DataFrame)
+        assert result.empty
+
+
+class TestInjuryProxyConstants:
+    def test_min_rotation_minutes_positive(self):
+        assert MIN_ROTATION_MINUTES > 0
+
+    def test_min_rotation_games_positive(self):
+        assert MIN_ROTATION_GAMES > 0
+
+    def test_star_usg_threshold_between_0_and_1(self):
+        assert 0.0 < STAR_USG_THRESHOLD < 1.0
+
+    def test_roll_window_positive_integer(self):
+        assert isinstance(ROLL_WINDOW, int) and ROLL_WINDOW > 0

@@ -212,3 +212,58 @@ def test_compute_team_trends_all_teams_present():
     result = compute_team_trends(SAMPLE_LOGS, SAMPLE_FEATURES)
     for team in ["LAL", "BOS", "GSW", "MIA"]:
         assert team in result
+
+
+# ---------------------------------------------------------------------------
+# Additional _record_str edge cases
+# ---------------------------------------------------------------------------
+
+def test_record_str_all_wins():
+    from scripts.build_trends import _record_str
+    assert _record_str(10, 0) == "10-0"
+
+
+def test_record_str_all_losses():
+    from scripts.build_trends import _record_str
+    assert _record_str(0, 10) == "0-10"
+
+
+def test_record_str_returns_string():
+    from scripts.build_trends import _record_str
+    result = _record_str(5, 3)
+    assert isinstance(result, str)
+
+
+# ---------------------------------------------------------------------------
+# Additional _fmt_diff edge cases
+# ---------------------------------------------------------------------------
+
+def test_fmt_diff_large_positive():
+    from scripts.build_trends import _fmt_diff
+    assert _fmt_diff(10.0) == "+10.0"
+
+
+def test_fmt_diff_large_negative():
+    from scripts.build_trends import _fmt_diff
+    assert _fmt_diff(-10.0) == "-10.0"
+
+
+# ---------------------------------------------------------------------------
+# Additional compute_team_trends checks
+# ---------------------------------------------------------------------------
+
+def test_compute_team_trends_avg_allowed():
+    from scripts.build_trends import compute_team_trends
+    result = compute_team_trends(SAMPLE_LOGS, SAMPLE_FEATURES)
+    lal = result["LAL"]
+    # LAL opp_pts: BOS scored 100, GSW scored 120, MIA scored 110 -> avg = 110.0
+    expected = round((100 + 120 + 110) / 3, 1)
+    assert lal["last10_avg_allowed"] == expected
+
+
+def test_compute_team_trends_last10_pace():
+    from scripts.build_trends import compute_team_trends
+    result = compute_team_trends(SAMPLE_LOGS, SAMPLE_FEATURES)
+    lal = result["LAL"]
+    # pace_game_roll10 = 98.5 from SAMPLE_FEATURES
+    assert lal["last10_pace"] == 98.5

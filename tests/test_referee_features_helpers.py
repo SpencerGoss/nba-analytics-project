@@ -200,3 +200,45 @@ class TestComputeRefereeRollingStats:
         df = _make_ref_long_df("Dave Evans", [20.0] * 8)
         result = _compute_referee_rolling_stats(df.copy())
         assert len(result) == len(df)
+
+    def test_output_preserves_referee_column(self):
+        """'referee' column must still be present in rolling stats output."""
+        df = _make_ref_long_df("Eve Torres", [18.0] * 6)
+        result = _compute_referee_rolling_stats(df.copy())
+        assert "referee" in result.columns
+
+    def test_rolling_values_are_float(self):
+        """ref_fta_rate_roll10 values (non-null) must be float, not int."""
+        df = _make_ref_long_df("Frank White", [20.0] * 15)
+        result = _compute_referee_rolling_stats(df.copy())
+        non_null = result["ref_fta_rate_roll10"].dropna()
+        assert non_null.dtype == float or np.issubdtype(non_null.dtype, np.floating)
+
+
+class TestMeltToLongFormatAdditional:
+    def _base_row(self, game_id="G001", ref1="Alice Smith",
+                  ref2="Bob Jones", ref3="Carol White"):
+        return {
+            "game_date": "2025-01-01",
+            "game_id_bref": game_id,
+            "home_team": "LAL",
+            "away_team": "GSW",
+            "referee_1": ref1,
+            "referee_2": ref2,
+            "referee_3": ref3,
+        }
+
+    def test_all_three_refs_nan_produces_empty(self):
+        """If all three referee slots are NaN, output should be empty."""
+        row = self._base_row(ref1=None, ref2=None, ref3=None)
+        df = _make_crew_df([row])
+        result = _melt_to_long_format(df)
+        assert result.empty or len(result) == 0
+
+    def test_referee_column_is_string_type(self):
+        """referee column must hold string values (object or StringDtype)."""
+        row = self._base_row()
+        df = _make_crew_df([row])
+        result = _melt_to_long_format(df)
+        dtype = result["referee"].dtype
+        assert dtype == object or pd.api.types.is_string_dtype(dtype)

@@ -166,3 +166,24 @@ class TestGetClvSummary:
         tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)  # no closing
         summary = tracker.get_clv_summary()
         assert summary["n_games"] == 0
+
+    def test_summary_has_required_keys(self, tracker):
+        """get_clv_summary must always return all documented keys."""
+        summary = tracker.get_clv_summary()
+        for key in ("n_games", "mean_clv", "has_edge", "positive_clv_rate", "data"):
+            assert key in summary, f"Missing key: {key}"
+
+    def test_data_row_has_required_fields(self, tracker):
+        """Each entry in summary['data'] must have game_date, home_team, away_team, clv."""
+        tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)
+        tracker.update_closing_line("2026-01-15", "LAL", "GSW", -5.5)
+        summary = tracker.get_clv_summary()
+        row = summary["data"][0]
+        for field in ("game_date", "home_team", "away_team", "clv"):
+            assert field in row, f"Missing field in data row: {field}"
+
+    def test_clv_value_is_float(self, tracker):
+        """CLV returned by update_closing_line must be a float."""
+        tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)
+        clv = tracker.update_closing_line("2026-01-15", "LAL", "GSW", -5.5)
+        assert isinstance(clv, float)

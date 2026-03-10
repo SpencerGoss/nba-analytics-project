@@ -17,7 +17,7 @@ Usage:
 
 import sqlite3
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class CLVTracker:
         Returns:
             True if a new row was inserted, False if row already existed.
         """
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         try:
             with self._connect() as conn:
                 conn.execute(
@@ -124,7 +124,7 @@ class CLVTracker:
         Returns:
             CLV value (float) if successfully computed, else None.
         """
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         try:
             with self._connect() as conn:
                 row = conn.execute(

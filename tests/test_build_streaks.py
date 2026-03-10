@@ -288,3 +288,41 @@ def test_home_away_schema():
         assert "away_pct" in phx
         assert 0 <= phx["home_pct"] <= 100
         assert 0 <= phx["away_pct"] <= 100
+
+
+# ─── constants validation ────────────────────────────────────────────────────
+
+def test_constants_are_positive():
+    assert MIN_GAMES > 0
+    assert LAST_N > 0
+    assert HOT_DELTA > 0
+    assert COLD_FG_DELTA < 0  # COLD_FG_DELTA is a negative threshold
+
+
+def test_constants_are_numeric():
+    assert isinstance(MIN_GAMES, int)
+    assert isinstance(LAST_N, int)
+    assert isinstance(HOT_DELTA, (int, float))
+    assert isinstance(COLD_FG_DELTA, (int, float))
+
+
+def test_cold_players_schema():
+    """Each cold player dict must have name, team, sub, stat fields."""
+    rows = []
+    for i in range(10):
+        rows.append({
+            "player_id": 3, "player_name": "Slumping Sam", "team_abbreviation": "CHA",
+            "game_date": f"2026-01-{i+1:02d}", "pts": 20, "reb": 4, "ast": 3,
+            "fga": 10, "fgm": 5, "fg_pct": 0.50, "min": 30.0,
+        })
+    for i in range(5):
+        rows.append({
+            "player_id": 3, "player_name": "Slumping Sam", "team_abbreviation": "CHA",
+            "game_date": f"2026-01-{i+11:02d}", "pts": 8, "reb": 2, "ast": 1,
+            "fga": 10, "fgm": 3, "fg_pct": 0.30, "min": 30.0,
+        })
+    df = pd.DataFrame(rows)
+    results = _compute_cold_players(df)
+    for player in results:
+        assert "name" in player
+        assert "team" in player

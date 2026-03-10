@@ -232,3 +232,59 @@ def test_build_standings_writes_json(tmp_path):
     assert "last_updated" in data
     assert isinstance(data["east"], list)
     assert isinstance(data["west"], list)
+
+
+# ---------------------------------------------------------------------------
+# Additional _games_behind edge cases
+# ---------------------------------------------------------------------------
+
+def test_games_behind_leader_with_half_game():
+    from scripts.build_standings import _games_behind
+    # Leader 10-2, team 9-2 -> GB = ((10-9)+(2-2))/2 = 0.5
+    assert _games_behind(10, 2, 9, 2) == 0.5
+
+
+def test_games_behind_returns_float():
+    from scripts.build_standings import _games_behind
+    result = _games_behind(10, 2, 8, 4)
+    assert isinstance(result, float)
+
+
+# ---------------------------------------------------------------------------
+# Additional compute_team_record edge cases
+# ---------------------------------------------------------------------------
+
+def test_compute_team_record_all_losses():
+    from scripts.build_standings import compute_team_record
+    bkn_logs = SAMPLE_LOGS[SAMPLE_LOGS["team_abbreviation"] == "BKN"].copy()
+    rec = compute_team_record(bkn_logs)
+    assert rec["w"] == 1
+    assert rec["l"] == 2
+    assert round(rec["win_pct"], 3) == round(1 / 3, 3)
+
+
+def test_compute_team_record_returns_dict():
+    from scripts.build_standings import compute_team_record
+    bos_logs = SAMPLE_LOGS[SAMPLE_LOGS["team_abbreviation"] == "BOS"].copy()
+    rec = compute_team_record(bos_logs)
+    assert isinstance(rec, dict)
+
+
+# ---------------------------------------------------------------------------
+# Additional build_conference_standings checks
+# ---------------------------------------------------------------------------
+
+def test_build_conference_standings_team_name_resolved():
+    """team_name in output should match TEAM_NAMES lookup."""
+    from scripts.build_standings import build_conference_standings, EAST
+    rows = build_conference_standings(SAMPLE_LOGS, TEAM_NAMES, "East", EAST)
+    bos_row = next(r for r in rows if r["team"] == "BOS")
+    assert bos_row["team_name"] == "Boston Celtics"
+
+
+def test_build_conference_standings_sorted_by_win_pct():
+    """Rows must be sorted best-to-worst win_pct (rank 1 has highest win_pct)."""
+    from scripts.build_standings import build_conference_standings, EAST
+    rows = build_conference_standings(SAMPLE_LOGS, TEAM_NAMES, "East", EAST)
+    win_pcts = [r["win_pct"] for r in rows if r["team"] in TEAM_NAMES]
+    assert win_pcts == sorted(win_pcts, reverse=True)
