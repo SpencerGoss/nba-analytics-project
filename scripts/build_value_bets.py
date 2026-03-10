@@ -161,6 +161,11 @@ def _compute_value_bets(
         else:
             continue
 
+        # Half-Kelly criterion: f = 0.5 * (p*b - (1-p)) / b
+        b = market_prob / (1.0 - market_prob) if market_prob < 1.0 else 0.0
+        kelly_raw = (model_prob * b - (1.0 - model_prob)) / b if b > 0 else 0.0
+        kelly_fraction = round(max(0.0, 0.5 * kelly_raw), 4)
+
         value_bets.append({
             "game_date": game_date,
             "home_team": home,
@@ -170,6 +175,7 @@ def _compute_value_bets(
             "model_prob": round(model_prob, 4),
             "market_prob": round(market_prob, 4),
             "edge_pct": round(edge, 4),
+            "kelly_fraction": kelly_fraction,
             "recommended_side": recommended_side,
             "created_at": pred.get("created_at", now_str),
         })

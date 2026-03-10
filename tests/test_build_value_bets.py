@@ -263,7 +263,7 @@ def test_build_value_bets_schema(tmp_path):
     assert len(result) == 1
     required_keys = {
         "game_date", "home_team", "away_team", "home_team_name", "away_team_name",
-        "model_prob", "market_prob", "edge_pct", "recommended_side", "created_at",
+        "model_prob", "market_prob", "edge_pct", "kelly_fraction", "recommended_side", "created_at",
     }
     assert required_keys.issubset(result[0].keys())
 
@@ -319,3 +319,81 @@ def test_american_to_prob_range():
         result = _american_to_prob(ml)
         assert result is not None
         assert 0.0 < result < 1.0
+
+
+# ---------------------------------------------------------------------------
+# kelly_fraction
+# ---------------------------------------------------------------------------
+
+def test_kelly_fraction_is_positive_for_value_bet():
+    """A genuine value bet should produce a positive kelly fraction."""
+    from scripts.build_value_bets import _compute_value_bets
+    predictions = [
+        {
+            "game_date": "2026-03-06",
+            "home_team": "BOS",
+            "away_team": "NYK",
+            "home_win_prob": 0.72,
+            "created_at": "2026-03-06T00:00:00",
+        }
+    ]
+    lines_index = {("2026-03-06", "BOS", "NYK"): {"home_market_prob": 0.60}}
+    result = _compute_value_bets(predictions, lines_index, {}, edge_threshold=0.05)
+    assert len(result) == 1
+    assert result[0]["kelly_fraction"] > 0.0
+
+
+def test_kelly_fraction_is_float():
+    """kelly_fraction must be a float (not None)."""
+    from scripts.build_value_bets import _compute_value_bets
+    predictions = [
+        {
+            "game_date": "2026-03-06",
+            "home_team": "OKC",
+            "away_team": "POR",
+            "home_win_prob": 0.75,
+            "created_at": "2026-03-06T00:00:00",
+        }
+    ]
+    lines_index = {("2026-03-06", "OKC", "POR"): {"home_market_prob": 0.55}}
+    result = _compute_value_bets(predictions, lines_index, {}, edge_threshold=0.05)
+    assert len(result) == 1
+    assert isinstance(result[0]["kelly_fraction"], float)
+
+
+def test_kelly_fraction_half_kelly_formula():
+    """Verify half-Kelly arithmetic: model=0.72, market=0.60 -> b=0.6/0.4=1.5
+    kelly_raw = (0.72*1.5 - 0.28)/1.5 = (1.08-0.28)/1.5 = 0.8/1.5 = 0.5333
+    half_kelly = 0.5 * 0.5333 = 0.2667, rounded to 4dp = 0.2667
+    """
+    from scripts.build_value_bets import _compute_value_bets
+    predictions = [
+        {
+            "game_date": "2026-03-06",
+            "home_team": "BOS",
+            "away_team": "NYK",
+            "home_win_prob": 0.72,
+            "created_at": "2026-03-06T00:00:00",
+        }
+    ]
+    lines_index = {("2026-03-06", "BOS", "NYK"): {"home_market_prob": 0.60}}
+    result = _compute_value_bets(predictions, lines_index, {}, edge_threshold=0.05)
+    assert result[0]["kelly_fraction"] == pytest.approx(0.2667, abs=0.001)
+
+
+def test_kelly_fraction_never_negative():
+    """Kelly should floor at 0 even for a marginal bet just above the edge threshold."""
+    from scripts.build_value_bets import _compute_value_bets
+    predictions = [
+        {
+            "game_date": "2026-03-06",
+            "home_team": "MIL",
+            "away_team": "IND",
+            "home_win_prob": 0.55,
+            "created_at": "2026-03-06T00:00:00",
+        }
+    ]
+    lines_index = {("2026-03-06", "MIL", "IND"): {"home_market_prob": 0.49}}
+    result = _compute_value_bets(predictions, lines_index, {}, edge_threshold=0.05)
+    if result:
+        assert result[0]["kelly_fraction"] >= 0.0
