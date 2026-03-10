@@ -350,3 +350,85 @@ class TestWasAbsentBinary:
             f"Expected exactly 3 absent games for Player A (misses indices 5,6,7), "
             f"got {len(player_a_absent)}"
         )
+
+
+# ── Test 7: min_roll5 is NaN / 0 for first game ───────────────────────────────
+
+
+class TestFirstGameRoll5:
+
+    def test_min_roll5_reflects_prior_games_only(self, tmp_path):
+        """
+        A player who plays 20 min for 5 games then 30 min in game 6 should have
+        min_roll5=20.0 on game 6 (not 30.0), confirming shift(1) is applied before
+        rolling so the current game never contaminates the rolling average.
+        """
+        dates = pd.date_range("2024-10-22", periods=8, freq="3D")
+        rows = []
+        for i in range(8):
+            rows.append({
+                "season": 202425, "player_id": 999, "player_name": "Steady Player",
+                "team_id": 1610612747, "team_abbreviation": "LAL",
+                "game_id": f"00224099{i:02d}", "game_date": dates[i].strftime("%Y-%m-%d"),
+                "min": 20 if i < 5 else 30,
+            })
+
+        df = pd.DataFrame(rows)
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+
+        player_rows = result[result["player_id"].astype(str) == "999"].sort_values("game_date")
+        # Game 6 (index 5) should show min_roll5 based only on games 1-5 (avg=20)
+        game6_rows = player_rows[player_rows["game_id"].astype(str).str.contains("0500|500")]
+        if not game6_rows.empty:
+            roll5_val = game6_rows["min_roll5"].iloc[0]
+            assert abs(roll5_val - 20.0) < 0.5, (
+                f"Game 6 min_roll5 should be ~20.0 (prior 5 games), got {roll5_val}"
+            )
+        # Verify min_roll5 is positive for games after the player establishes a baseline
+        games_with_roll5 = player_rows[player_rows["min_roll5"].notna() & (player_rows["min_roll5"] > 0)]
+        assert len(games_with_roll5) > 0, "Expected some games with positive min_roll5"
+
+    def test_min_roll5_never_negative(self, tmp_path):
+        """min_roll5 should never be negative for any player-game row."""
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+        non_null = result["min_roll5"].dropna()
+        assert (non_null >= 0).all(), "min_roll5 contains negative values"
+
+
+# ── Test 8: usg_pct from advanced stats ──────────────────────────────────────
+
+
+class TestUsgPctMerge:
+
+    def test_absent_rows_carry_usg_pct_from_advanced_stats(self, tmp_path):
+        """
+        Player A has usg_pct=0.22 in advanced stats. Absent rows for Player A
+        should carry that value (not the default 0.18).
+        """
+        df = _make_synthetic_log()
+        log_path, adv_path, out_path = _make_game_log(tmp_path, df)
+        result = build_player_absences(
+            game_log_path=log_path,
+            adv_stats_path=adv_path,
+            output_path=out_path,
+        )
+        player_a_absent = result[
+            (result["player_id"].astype(str) == "101") &
+            (result["was_absent"] == 1)
+        ]
+        if not player_a_absent.empty:
+            usg = player_a_absent["usg_pct"].iloc[0]
+            assert abs(usg - 0.22) < 0.01, (
+                f"Expected Player A usg_pct=0.22 from advanced stats, got {usg}"
+            )

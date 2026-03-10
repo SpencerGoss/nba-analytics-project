@@ -2994,7 +2994,7 @@ function renderLeaders(){
   {const _dl=document.getElementById('dash-leaders');if(_dl)_setHtml(_dl,top.map((p,i)=>`
     <tr>
       <td><span class="rn">${i+1}</span></td>
-      <td class="nc">${headshot(p.nbaId,p.ini,28)}<span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name.split(' ').pop()}</span></td>
+      <td class="nc">${headshot(p.nbaId,p.ini,28)}<span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name?p.name.split(' ').pop():''}</span></td>
       <td style="color:var(--gold);font-weight:700">${p.pts}</td>
       <td style="color:${i<2?'var(--green)':'var(--t2)'};font-size:11px">${i<2?'↑ Top 2':''}</td>
     </tr>`).join(''));}
