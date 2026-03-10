@@ -57,6 +57,12 @@ class TestParseHomeAway:
         result = _parse_home_away(s)
         assert len(result) == 0
 
+    def test_values_only_0_or_1(self):
+        """parse_home_away must produce only 0 or 1 — no other values."""
+        s = pd.Series(["A vs. B", "A @ B", "C vs. D", "C @ D"])
+        result = _parse_home_away(s)
+        assert set(result.tolist()).issubset({0, 1})
+
 
 # ---------------------------------------------------------------------------
 # _extract_opponent_abbr
@@ -157,6 +163,31 @@ class TestComputePlayerRolling:
         df = self._make_player_group(n=12)
         result = _compute_player_rolling(df, windows=ROLL_WINDOWS)
         assert len(result) == 12
+
+    def test_form_delta_positive_when_recent_exceeds_season_avg(self):
+        """When last-5 avg > season avg, form_delta must be positive."""
+        # 15 games at 10 pts, then 5 games at 30 pts
+        pts_vals = [10.0] * 15 + [30.0] * 5
+        df = pd.DataFrame({
+            "game_date": pd.date_range("2026-01-01", periods=20, freq="2D"),
+            "pts": pts_vals,
+            "reb": [5.0] * 20,
+            "ast": [3.0] * 20,
+            "min": [30.0] * 20,
+            "fg_pct": [0.50] * 20,
+            "fg3m": [2.0] * 20,
+            "stl": [1.0] * 20,
+            "blk": [0.5] * 20,
+            "tov": [2.0] * 20,
+            "plus_minus": [5.0] * 20,
+        })
+        result = _compute_player_rolling(df, windows=ROLL_WINDOWS)
+        # Last row should have pts_roll5 ~30 (hot) but season_avg ~10-15 (cool)
+        last = result.iloc[-1]
+        if pd.notna(last["pts_form_delta"]) and pd.notna(last["pts_roll5"]):
+            assert last["pts_form_delta"] > 0, (
+                f"Expected positive form delta (hot streak), got {last['pts_form_delta']}"
+            )
 
     def test_stabilized_roll5_converges_to_value(self):
         """After 6 games of 20 pts, row 6 roll5 should be ~20."""

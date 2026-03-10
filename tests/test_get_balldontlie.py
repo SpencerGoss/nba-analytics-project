@@ -266,3 +266,63 @@ class TestBuildHeaders:
         """An empty string API key is stored as-is (caller's responsibility)."""
         headers = _build_headers("")
         assert headers["Authorization"] == ""
+
+    def test_exactly_two_header_keys(self):
+        """Headers dict must contain exactly 2 keys (Authorization + Accept)."""
+        headers = _build_headers("key")
+        assert len(headers) == 2
+
+
+class TestGetBalldontlieStatsMultipleRecords:
+    def test_two_records_produce_two_rows(self):
+        """When API returns 2 records, output DataFrame has 2 rows."""
+        fake_records = [
+            {
+                "id": 101,
+                "date": "2024-10-22",
+                "season": 2024,
+                "home_team": {"id": 1, "abbreviation": "LAL"},
+                "visitor_team": {"id": 2, "abbreviation": "BOS"},
+                "home_team_score": 110,
+                "visitor_team_score": 105,
+                "status": "Final",
+                "period": 4,
+                "time": "",
+            },
+            {
+                "id": 102,
+                "date": "2024-10-23",
+                "season": 2024,
+                "home_team": {"id": 3, "abbreviation": "GSW"},
+                "visitor_team": {"id": 4, "abbreviation": "OKC"},
+                "home_team_score": 120,
+                "visitor_team_score": 115,
+                "status": "Final",
+                "period": 4,
+                "time": "",
+            },
+        ]
+        with (
+            patch("src.data.get_balldontlie._get_api_key", return_value="fake-key"),
+            patch("src.data.get_balldontlie._fetch_all_pages", return_value=fake_records),
+        ):
+            result = get_balldontlie_stats(season=2024)
+        assert len(result) == 2
+        assert set(result["home_team_abbr"].tolist()) == {"LAL", "GSW"}
+
+
+class TestFetchAllPagesNetworkError:
+    def test_connection_error_returns_empty_list(self):
+        """A network-level ConnectionError must return empty list (not raise)."""
+        import requests as req_lib
+        with (
+            patch("src.data.get_balldontlie.requests.get",
+                  side_effect=req_lib.exceptions.ConnectionError("no route to host")),
+            patch("src.data.get_balldontlie.time.sleep"),
+        ):
+            result = _fetch_all_pages(
+                endpoint="https://api.balldontlie.io/v1/games",
+                params={"per_page": 100},
+                headers=_build_headers("fake-key"),
+            )
+        assert result == []
