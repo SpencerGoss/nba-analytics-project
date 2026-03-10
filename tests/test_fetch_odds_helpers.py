@@ -109,3 +109,37 @@ class TestTeamNameToAbb:
     def test_all_mapped_abbreviations_are_uppercase(self):
         for abbr in ODDS_TEAM_TO_ABB.values():
             assert abbr == abbr.upper(), f"Abbreviation {abbr!r} is not all uppercase"
+
+    def test_lakers_maps_to_lal(self):
+        assert team_name_to_abb("Los Angeles Lakers") == "LAL"
+
+    def test_celtics_maps_to_bos(self):
+        assert team_name_to_abb("Boston Celtics") == "BOS"
+
+    def test_all_30_teams_mapped(self):
+        """ODDS_TEAM_TO_ABB must cover all 30 current NBA teams."""
+        assert len(ODDS_TEAM_TO_ABB) == 30
+
+    def test_mapping_has_no_duplicate_abbreviations(self):
+        """Each abbreviation must be used exactly once (no two teams share an abbr)."""
+        abbrs = list(ODDS_TEAM_TO_ABB.values())
+        assert len(abbrs) == len(set(abbrs)), "Duplicate abbreviations found"
+
+
+class TestAmericanOddsAdditional:
+    def test_minus_200_formula(self):
+        """-200: 200/(200+100) = 200/300 ≈ 0.6667."""
+        result = american_odds_to_implied_prob(-200)
+        assert result == pytest.approx(200 / 300, abs=0.001)
+
+    def test_vig_means_pair_sums_above_one(self):
+        """Fair line pairs (-110/-110) sum > 1.0 due to bookmaker vig."""
+        fav = american_odds_to_implied_prob(-110)
+        dog = american_odds_to_implied_prob(-110)
+        total = fav + dog
+        assert total > 1.0, f"Expected vig sum > 1.0, got {total}"
+
+    def test_plus_200_formula(self):
+        """+200: 100/(200+100) = 1/3 ≈ 0.3333."""
+        result = american_odds_to_implied_prob(200)
+        assert result == pytest.approx(100 / 300, abs=0.001)

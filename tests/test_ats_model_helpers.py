@@ -146,6 +146,31 @@ class TestAtsSeason_Splits:
         _, _, label = splits[0]
         assert label == "date_fallback"
 
+    def test_train_size_grows_with_each_split(self):
+        """Expanding window: each successive split's train set must be larger than the prior."""
+        df = _make_multi_season_df(n_seasons=7, rows_per_season=5)
+        splits = _ats_season_splits(df, min_train=4)
+        season_splits = [(tr, va, lbl) for tr, va, lbl in splits if lbl != "date_fallback"]
+        for i in range(1, len(season_splits)):
+            prev_train_size = len(season_splits[i - 1][0])
+            curr_train_size = len(season_splits[i][0])
+            assert curr_train_size > prev_train_size, (
+                f"Split {i}: train size {curr_train_size} <= previous {prev_train_size} "
+                "(expanding window must grow)"
+            )
+
+    def test_validation_is_exactly_one_season(self):
+        """Each validation fold must contain exactly one distinct season."""
+        df = _make_multi_season_df(n_seasons=7, rows_per_season=5)
+        splits = _ats_season_splits(df, min_train=4)
+        for tr, va, label in splits:
+            if label == "date_fallback":
+                continue
+            n_valid_seasons = va["season"].nunique()
+            assert n_valid_seasons == 1, (
+                f"Split '{label}' has {n_valid_seasons} validation seasons, expected 1"
+            )
+
     def test_split_count_increases_with_more_seasons(self):
         df_few = _make_multi_season_df(n_seasons=5)
         df_many = _make_multi_season_df(n_seasons=8)

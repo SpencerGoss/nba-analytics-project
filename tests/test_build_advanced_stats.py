@@ -187,6 +187,54 @@ class TestRounding:
 # Season filter
 # ---------------------------------------------------------------------------
 
+class TestEfgConversion:
+    def _row(self, name="EFG Player", gp=30, efg_pct=0.55):
+        return {
+            "player_name": name, "season": CURRENT_SEASON, "gp": gp,
+            "ts_pct": 0.60, "usg_pct": 0.25, "off_rating": 115.0,
+            "def_rating": 110.0, "net_rating": 5.0, "efg_pct": efg_pct, "pie": 0.14,
+        }
+
+    def test_efg_converted_to_percentage(self, monkeypatch, tmp_path):
+        """efg_pct=0.55 -> efg=55.0 in output."""
+        csv = _make_csv(tmp_path, [self._row(efg_pct=0.55)])
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        assert result["EFG Player"]["efg"] == pytest.approx(55.0, abs=0.1)
+
+    def test_efg_rounded_to_one_decimal(self, monkeypatch, tmp_path):
+        csv = _make_csv(tmp_path, [self._row(efg_pct=0.5015)])
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        val = result["EFG Player"]["efg"]
+        assert val == round(val, 1)
+
+
+class TestMultiplePlayers:
+    def _row(self, name, gp=30):
+        return {
+            "player_name": name, "season": CURRENT_SEASON, "gp": gp,
+            "ts_pct": 0.55, "usg_pct": 0.20, "off_rating": 110.0,
+            "def_rating": 108.0, "net_rating": 2.0, "efg_pct": 0.50, "pie": 0.12,
+        }
+
+    def test_all_three_players_in_result(self, monkeypatch, tmp_path):
+        rows = [self._row("Alpha"), self._row("Beta"), self._row("Gamma")]
+        csv = _make_csv(tmp_path, rows)
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        assert "Alpha" in result
+        assert "Beta" in result
+        assert "Gamma" in result
+
+    def test_result_values_are_dicts(self, monkeypatch, tmp_path):
+        rows = [self._row("PlayerX")]
+        csv = _make_csv(tmp_path, rows)
+        monkeypatch.setattr(mod, "ADV_CSV", csv)
+        result = build_advanced_stats()
+        assert isinstance(result["PlayerX"], dict)
+
+
 class TestSeasonFilter:
     def _row(self, name, season, gp=30):
         return {
