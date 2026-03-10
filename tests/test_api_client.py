@@ -149,3 +149,28 @@ class TestDefaultParameters:
     def test_default_retry_delay_constant(self):
         assert isinstance(DEFAULT_RETRY_DELAY, (int, float))
         assert DEFAULT_RETRY_DELAY > 0
+
+
+class TestFetchWithRetryEdgeCases:
+    def test_return_value_can_be_dict(self):
+        """fetch_with_retry works when fn returns a dict (not just DataFrame)."""
+        fn = lambda: {"key": "value"}
+        result = fetch_with_retry(fn, label="test", retry_delay=0)
+        assert result["success"] is True
+        assert result["data"] == {"key": "value"}
+
+    def test_value_error_triggers_retry(self):
+        """ValueError is caught and retried like any other exception."""
+        fn = _fail_fn(exc_type=ValueError, msg="bad value")
+        with patch("src.data.api_client.time.sleep"):
+            result = fetch_with_retry(fn, label="test", max_retries=2, retry_delay=0)
+        assert result["success"] is False
+        assert "bad value" in result["error"]
+
+    def test_fails_max_retries_minus_1_then_succeeds(self):
+        """Succeeding on the last allowed attempt returns success."""
+        fn = _fail_then_succeed(n_failures=DEFAULT_MAX_RETRIES - 1)
+        with patch("src.data.api_client.time.sleep"):
+            result = fetch_with_retry(fn, label="test",
+                                      max_retries=DEFAULT_MAX_RETRIES, retry_delay=0)
+        assert result["success"] is True

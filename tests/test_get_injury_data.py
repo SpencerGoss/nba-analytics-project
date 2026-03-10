@@ -204,3 +204,17 @@ class TestMappingConstants:
             assert len(abbr) == 3 and abbr.isupper(), (
                 f"'{name}' maps to invalid abbreviation '{abbr}'"
             )
+
+    def test_team_name_to_abb_no_duplicate_abbreviations(self):
+        """No two full team names should map to the same 3-letter abbreviation."""
+        abbrs = list(TEAM_NAME_TO_ABB.values())
+        assert len(abbrs) == len(set(abbrs)), "Duplicate abbreviations in TEAM_NAME_TO_ABB"
+
+    def test_normalize_pdf_response_empty_input_returns_empty(self):
+        """Empty source DataFrame must produce empty output without error."""
+        empty = pd.DataFrame(columns=[
+            "player_name", "team", "current_status", "reason"
+        ])
+        result = _normalize_pdf_response(empty, "2025-03-05")
+        assert isinstance(result, pd.DataFrame)
+        assert result.empty
