@@ -329,6 +329,48 @@ def test_predict_margin_raises_on_unknown_team(tmp_path):
 # -- Test 10: pipeline is serialisable ------------------------------------
 
 
+def test_validate_null_rates_no_nulls_passes():
+    """A DataFrame with zero nulls must never raise."""
+    df = pd.DataFrame({"feat_a": [1.0, 2.0, 3.0], "feat_b": [4.0, 5.0, 6.0]})
+    _validate_null_rates(df, ["feat_a", "feat_b"], threshold=0.95)
+
+
+def test_validate_null_rates_below_threshold_passes():
+    """Null rate below threshold (e.g. 1/5 = 0.20 < 0.95) must not raise."""
+    df = pd.DataFrame({"feat_a": [1.0, np.nan, 3.0, 4.0, 5.0]})
+    _validate_null_rates(df, ["feat_a"], threshold=0.95)
+
+
+def test_validate_null_rates_at_threshold_raises():
+    """Null rate exactly at threshold (>= threshold) must raise."""
+    # 5/5 = 1.0 >= 0.95 -> should raise
+    df = pd.DataFrame({"feat_a": [np.nan] * 5})
+    with pytest.raises(ValueError):
+        _validate_null_rates(df, ["feat_a"], threshold=0.95)
+
+
+def test_get_feature_cols_returns_list():
+    """_get_feature_cols must return a Python list."""
+    df = _make_matchup_df()
+    result = _get_feature_cols(df, outcome_features=None)
+    assert isinstance(result, list)
+    assert len(result) > 0
+
+
+def test_season_splits_train_strictly_before_test():
+    """Every season in a train fold must be strictly before every season in validation."""
+    df = _make_matchup_df(n=N_ROWS)
+    splits = _season_splits(df)
+    for tr, va, label in splits:
+        if label == "date_fallback":
+            continue
+        max_train = max(tr["season"].astype(str))
+        min_valid = min(va["season"].astype(str))
+        assert max_train < min_valid, (
+            f"Split '{label}': train max={max_train} >= validation min={min_valid}"
+        )
+
+
 def test_pipeline_serialisable(tmp_path):
     """The trained pipeline must survive a pickle round-trip."""
     matchup = _make_matchup_df(n=N_ROWS)

@@ -215,6 +215,70 @@ class TestAggregations:
         expected_weighted_avg = (10.0 * 300.0 + 0.0 * 100.0) / 400.0
         assert result["avg_lineup_net_rtg"].iloc[0] == pytest.approx(expected_weighted_avg, abs=0.01)
 
+    def test_best_off_rating_is_maximum(self, tmp_path):
+        """best_off_rating must be the highest off_rating across qualifying lineups."""
+        rows = [
+            _base_lineup_row(gp=10, off_rating=115.0, group_name="High off"),
+            _base_lineup_row(gp=8, off_rating=105.0, group_name="Low off"),
+        ]
+        path = _make_lineup_csv(tmp_path, rows)
+        import src.features.lineup_features as lf
+        original_output = lf.OUTPUT_PATH
+        lf.OUTPUT_PATH = str(tmp_path / "lineup_team_features.csv")
+        try:
+            result = build_lineup_features(lineup_csv_path=path)
+        finally:
+            lf.OUTPUT_PATH = original_output
+        assert result["best_off_rating"].iloc[0] == pytest.approx(115.0)
+
+    def test_top3_is_avg_of_top3_by_gp(self, tmp_path):
+        """top3_lineup_net_rtg is the mean net_rating of the top-3 rows sorted by GP desc."""
+        rows = [
+            _base_lineup_row(gp=30, net_rating=12.0, group_name="Top by GP"),
+            _base_lineup_row(gp=20, net_rating=8.0, group_name="Second by GP"),
+            _base_lineup_row(gp=10, net_rating=4.0, group_name="Third by GP"),
+            _base_lineup_row(gp=6, net_rating=0.0, group_name="Fourth by GP"),
+        ]
+        path = _make_lineup_csv(tmp_path, rows)
+        import src.features.lineup_features as lf
+        original_output = lf.OUTPUT_PATH
+        lf.OUTPUT_PATH = str(tmp_path / "lineup_team_features.csv")
+        try:
+            result = build_lineup_features(lineup_csv_path=path)
+        finally:
+            lf.OUTPUT_PATH = original_output
+        # top3 = mean of top 3 by gp: (12+8+4)/3 = 8.0
+        assert result["top3_lineup_net_rtg"].iloc[0] == pytest.approx(8.0, abs=0.01)
+
+    def test_lineup_net_rtg_std_reflects_spread(self, tmp_path):
+        """lineup_net_rtg_std must be non-zero when net ratings differ across lineups."""
+        rows = [
+            _base_lineup_row(gp=10, net_rating=10.0, group_name="High"),
+            _base_lineup_row(gp=8, net_rating=-10.0, group_name="Low"),
+        ]
+        path = _make_lineup_csv(tmp_path, rows)
+        import src.features.lineup_features as lf
+        original_output = lf.OUTPUT_PATH
+        lf.OUTPUT_PATH = str(tmp_path / "lineup_team_features.csv")
+        try:
+            result = build_lineup_features(lineup_csv_path=path)
+        finally:
+            lf.OUTPUT_PATH = original_output
+        assert result["lineup_net_rtg_std"].iloc[0] > 0.0
+
+    def test_single_lineup_std_is_zero(self, tmp_path):
+        """With exactly one qualifying lineup, std dev must be 0.0 (not NaN)."""
+        rows = [_base_lineup_row(gp=10, net_rating=7.0)]
+        path = _make_lineup_csv(tmp_path, rows)
+        import src.features.lineup_features as lf
+        original_output = lf.OUTPUT_PATH
+        lf.OUTPUT_PATH = str(tmp_path / "lineup_team_features.csv")
+        try:
+            result = build_lineup_features(lineup_csv_path=path)
+        finally:
+            lf.OUTPUT_PATH = original_output
+        assert result["lineup_net_rtg_std"].iloc[0] == pytest.approx(0.0)
+
     def test_multiple_teams_produce_separate_rows(self, tmp_path):
         """Each (season, team_id) combination must produce exactly one output row."""
         rows = [
