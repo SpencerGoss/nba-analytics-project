@@ -231,24 +231,24 @@ def _compute_referee_rolling_stats(long_df: pd.DataFrame) -> pd.DataFrame:
     """
     long_df = long_df.sort_values(["referee", "game_date"]).reset_index(drop=True)
 
-    ref_group = long_df.groupby("referee", group_keys=False)
-
+    # Use transform so the result always aligns back to the original index
+    # regardless of the number of unique referees in the input.
     # Rolling FTA/game per referee (shift-1 to prevent leakage)
-    long_df["ref_fta_rate_roll10"] = ref_group.apply(
-        lambda g: g["fta_per_game"].shift(1).rolling(10, min_periods=1).mean(),
-        include_groups=False,
-    ).values
+    long_df["ref_fta_rate_roll10"] = (
+        long_df.groupby("referee")["fta_per_game"]
+        .transform(lambda x: x.shift(1).rolling(10, min_periods=1).mean())
+    )
 
-    long_df["ref_fta_rate_roll20"] = ref_group.apply(
-        lambda g: g["fta_per_game"].shift(1).rolling(20, min_periods=1).mean(),
-        include_groups=False,
-    ).values
+    long_df["ref_fta_rate_roll20"] = (
+        long_df.groupby("referee")["fta_per_game"]
+        .transform(lambda x: x.shift(1).rolling(20, min_periods=1).mean())
+    )
 
     # Rolling pace (avg possessions) per referee
-    long_df["ref_poss_roll10"] = ref_group.apply(
-        lambda g: g["avg_poss"].shift(1).rolling(10, min_periods=1).mean(),
-        include_groups=False,
-    ).values
+    long_df["ref_poss_roll10"] = (
+        long_df.groupby("referee")["avg_poss"]
+        .transform(lambda x: x.shift(1).rolling(10, min_periods=1).mean())
+    )
 
     return long_df
 
