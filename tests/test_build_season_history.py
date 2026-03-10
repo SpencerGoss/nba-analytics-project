@@ -194,6 +194,52 @@ def test_build_output_seasons_newest_first():
     assert seasons[-1] == "2020-21"
 
 
+def test_season_label_all_known_codes():
+    """Every code in SEASON_CODES must have a proper label (not just str(code))."""
+    for code in SEASON_CODES:
+        label = season_label(code)
+        assert isinstance(label, str) and len(label) > 0
+        # Labels should be like "2024-25", not just "202425"
+        assert "-" in label, f"Expected formatted label for {code}, got {label!r}"
+
+
+def test_standings_wins_plus_losses_equals_games_played():
+    """w + l must equal the total number of games played for each team."""
+    df = _make_logs([
+        ("BOS", 202425, "2025-01-01", "W", "BOS vs. NYK", 110, "g001"),
+        ("BOS", 202425, "2025-01-02", "L", "BOS vs. MIA", 95, "g002"),
+        ("BOS", 202425, "2025-01-03", "W", "BOS vs. PHI", 112, "g003"),
+    ])
+    standings = build_standings(df)
+    bos = next(s for s in standings if s["abbr"] == "BOS")
+    assert bos["w"] + bos["l"] == 3
+
+
+def test_standings_multiple_teams():
+    """Three teams with different records produce three separate standings entries."""
+    df = _make_logs([
+        ("BOS", 202425, "2025-01-01", "W", "BOS vs. NYK", 110, "g001"),
+        ("LAL", 202425, "2025-01-01", "W", "LAL vs. GSW", 112, "g002"),
+        ("CHI", 202425, "2025-01-01", "L", "CHI vs. MIL", 88, "g003"),
+    ])
+    standings = build_standings(df)
+    abbrs = {s["abbr"] for s in standings}
+    assert "BOS" in abbrs
+    assert "LAL" in abbrs
+    assert "CHI" in abbrs
+
+
+def test_games_home_pts_correct():
+    """home_pts in the game entry must match the home team's pts from the log."""
+    df = _make_logs([
+        ("OKC", 202425, "2025-01-05", "W", "OKC vs. UTA", 127, "g010"),
+        ("UTA", 202425, "2025-01-05", "L", "UTA @ OKC", 112, "g010"),
+    ])
+    games = build_games(df)
+    assert len(games) == 1
+    assert games[0]["home_pts"] == 127
+
+
 def test_build_output_skips_empty_seasons():
     # Only 202425 data — other seasons should be absent from data dict
     df = _make_logs([
