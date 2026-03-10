@@ -185,6 +185,44 @@ def test_compute_h2h_home_team_field():
 # _build_game_index integration smoke test
 # ---------------------------------------------------------------------------
 
+def test_get_h2h_meetings_excludes_unrelated_games():
+    """Games between other teams must not appear in OKC vs POR meetings."""
+    from scripts.build_h2h import _get_h2h_meetings
+    meetings = _get_h2h_meetings(SAMPLE_GAMES, "OKC", "POR")
+    teams_in_meetings = set(meetings["home_team"]) | set(meetings["away_team"])
+    # Only OKC and POR should appear in this matchup's meetings
+    unexpected = teams_in_meetings - {"OKC", "POR"}
+    assert not unexpected, f"Unexpected teams in OKC/POR meetings: {unexpected}"
+
+
+def test_series_record_sweep():
+    """When one team wins all games, the record reflects a sweep."""
+    from scripts.build_h2h import _series_record, _get_h2h_meetings
+    # OKC wins 2, POR wins 1 from SAMPLE_GAMES -> not a sweep
+    # Create a sweep: OKC wins all 3
+    sweep_games = _make_games([
+        {"game_id": 1, "game_date": "2024-01-01", "home_team": "OKC", "away_team": "POR",
+         "home_score": 118, "away_score": 100, "home_wl": "W", "winner": "OKC", "margin": 18, "season": 202324},
+        {"game_id": 2, "game_date": "2024-02-01", "home_team": "POR", "away_team": "OKC",
+         "home_score": 105, "away_score": 115, "home_wl": "L", "winner": "OKC", "margin": 10, "season": 202324},
+        {"game_id": 3, "game_date": "2024-03-01", "home_team": "OKC", "away_team": "POR",
+         "home_score": 120, "away_score": 108, "home_wl": "W", "winner": "OKC", "margin": 12, "season": 202324},
+    ])
+    meetings = _get_h2h_meetings(sweep_games, "OKC", "POR")
+    record = _series_record(meetings, "OKC", "POR")
+    assert "OKC" in record
+    assert "3" in record  # OKC 3-0
+
+
+def test_compute_h2h_series_record_is_string():
+    """series_record must be a non-empty string for both matchups."""
+    from scripts.build_h2h import compute_h2h
+    results = compute_h2h(SAMPLE_PICKS, SAMPLE_GAMES)
+    for r in results:
+        assert isinstance(r["series_record"], str)
+        assert len(r["series_record"]) > 0
+
+
 def test_build_game_index_from_logs():
     """_build_game_index should produce one row per game."""
     from scripts.build_h2h import _build_game_index

@@ -240,6 +240,28 @@ def test_run_ensemble_extends_df(tmp_path):
 
 # -- Test 8: sigmoid helper ---------------------------------------------------
 
+def test_sigmoid_is_monotone():
+    """_sigmoid must be strictly increasing: larger x -> larger output."""
+    x_sorted = np.array([-5.0, -2.0, -0.5, 0.0, 0.5, 2.0, 5.0])
+    y = _sigmoid(x_sorted)
+    for i in range(1, len(y)):
+        assert y[i] >= y[i - 1], f"sigmoid not monotone at index {i}"
+
+
+def test_confidence_high_at_strong_edge():
+    """edge well above HIGH threshold must label as high."""
+    assert _confidence_label(1.0) == "high"
+    assert _confidence_label(-1.0) == "high"
+
+
+def test_run_ensemble_row_count_preserved(tmp_path):
+    """run_ensemble_on_predictions must return same row count as input."""
+    ad = _build(tmp_path)
+    X = _make_df(n=12, seed=5)
+    result = run_ensemble_on_predictions(X, artifacts_dir=ad)
+    assert len(result) == 12
+
+
 def test_sigmoid_output_range():
     """_sigmoid must output values in [0, 1]; midpoint must be 0.5."""
     # Practical inputs (within ~10x the norm factor) must be strictly (0,1)
