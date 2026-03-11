@@ -1,61 +1,50 @@
 # Handoff -- NBA Analytics Project
 
-_Last updated: 2026-03-11 Session 9 (major dashboard overhaul + model upgrades + pipeline fixes)_
+_Last updated: 2026-03-11 Session 10 (dashboard table fix + UX polish)_
 
 ## What Was Done This Session
 
-### Dashboard Overhaul (14 improvements)
-- **CSS contrast fix** -- `--t2` changed to `#7B89A8` for WCAG AA compliance
-- **Card entrance animations** -- staggered fade-up with 50ms delays, `cardIn` keyframe
-- **Reduced motion** -- aurora blobs respect `prefers-reduced-motion`
-- **Light mode dropdown fix** -- background uses `var(--bg2)` instead of hardcoded dark
-- **Confidence meters** -- gradient bars (red/yellow/green) with tier labels (Coin Flip/Lean/Confident/Strong)
-- **"Why This Pick?"** -- expandable sections on pick cards showing situational factors
-- **Pick of the Day** -- prominent spotlight card on Today tab for highest-confidence pick
-- **Empty state messages** -- 6 locations (picks, games, sharp money, props, line movement, charts)
-- **Null safety** -- try-catch guards on lazy-loaded player comparison and standings
-- **Elo Timeline chart** -- interactive Plotly chart in Rankings tab with team color chips and quick-select
-- **Team matchup radar** -- Plotly scatterpolar in H2H/Matchup with 5 dimensions
-- **Game detail modals** -- factor badges (positive/negative/neutral), confidence meters, H2H fallback
-- **SVG sparklines** -- last-10 form in standings and power rankings tables
-- **Season comparison tool** -- side-by-side stats, best teams, key differences in History tab
+### Critical Bug Fix
+- **`_setHtml()` was silently breaking ALL dynamic tables** — `createContextualFragment` strips `<tr>`/`<td>` tags when range context is document body. Fixed to use `createElement('table') + innerHTML` for tbody/thead/tfoot targets. This was the root cause of tables rendering as flat text blobs.
 
-### Model & Feature Upgrades
-- **XGBoost candidate** -- added alongside GBM with early stopping via `_build_fit_params()` helper
-- **Four Factors composite** -- Dean Oliver weights (40/25/20/15) as `four_factors_roll10/roll20`
-- **About page** -- updated to 352+ features, 1407 tests, 6 new feature cards
+### Dashboard Fixes (12 items)
+1. Player Stats table — proper columns (#, Player, PTS, REB, AST, FG%, 3P%, TS%, Team)
+2. Teams Overview — clean 8-column layout, conferences side-by-side
+3. Rankings — score bars, net ratings, records, trends, sparklines in proper columns
+4. Standings — also fixed by the _setHtml fix
+5. Player Compare — search bars replace dropdowns, Career Trend + Efficiency charts added
+6. League Leaders — clean table replacing bar graphs
+7. Props — sorted by fantasy value, search fixed with debounce
+8. Power rankings rebalanced (Season Win% 35%, Pyth 25%, Net L20 25%, Net L10 15%)
+9. Ticker slowed from 45s to 120s
+10. Betting tabs consolidated (Line Movement merged into Market)
+11. Filter dropdowns fixed (scoped `select{width:100%}` to `.sel-wrap` only)
+12. Nav bar + background visual redesign
 
-### Pipeline Fixes
-- **Pinnacle odds FIXED** -- spread selection bug (alt-line overwrite), added totals column, User-Agent headers
-- **CLV tracking FIXED** -- `backfill_closing_lines()` added as Step 3b in update.py; captures closing spreads before overwrite
-- **New builders** -- `build_game_detail.py` (prediction explainability), `build_elo_timeline.py` (team Elo across season)
-- **8 new CLV tests** -- 1415 total tests passing
+### What's Verified
+- 1432 tests passing (0 failures)
+- 0 JS errors in browser
+- All major tabs screenshotted and verified: Today, Players (Stats/Compare/Points), Teams, Rankings, Standings, Picks, Props, Player Modal
 
-## Commits
-- `ece1bc1` -- feat: major dashboard overhaul, model upgrades, and pipeline fixes (10 files, +882/-41)
-- `efd46f3` -- feat: add Elo timeline chart, team matchup radar, and game detail wiring (+300/-1)
-- `3865a1a` -- feat: CLV tracking, sparklines, and season comparison tool (+580/-8)
+## What's NOT Done
+1. Shooting zone chart colors don't use team colors (uses hardcoded blue/orange defaults)
+2. Mobile responsive polish (tables need horizontal scroll UX on small screens)
+3. XGBoost + Four Factors model retrain (features built, model not retrained yet)
+4. Hustle stats feature engineering (builder exists at `src/features/hustle_features.py`)
 
-## Push Status
-- **PUSHED** -- all commits live on GitHub Pages
+## Next Session Priorities
+1. **Retrain model** with XGBoost + Four Factors features to measure accuracy improvement
+2. **Hustle stats** — run `build_hustle_features()`, merge into matchup dataset
+3. **Mobile polish** — test at 375px/768px viewports, fix any layout breaks
+4. **Shooting zone colors** — pass team colors through to `renderShoot()` properly
 
-## Pipeline Status
-- `update.py` was running at time of handoff (feature engineering step)
-- After pipeline completes: commit updated `dashboard/data/*.json` and push
+## Key Files Changed
+- `dashboard/index.html` — _setHtml fix, table layouts, compare search, props sort/search, CSS fixes
+- `dashboard/data/power_rankings.json` — regenerated with new weights
+- `scripts/build_power_rankings.py` — weight adjustment (W_WIN_PCT=0.35, W_PYTH20=0.25, W_NET20=0.25, W_NET10=0.15)
 
-## Next Steps (priority order)
-
-1. **Commit pipeline output** -- after update.py finishes, `git add dashboard/data/ && git push`
-2. **Retrain model** -- run with XGBoost + Four Factors to see accuracy improvement
-3. **Hustle stats features** -- team_hustle_stats.csv exists but unused; potential model boost
-4. **More interactivity** -- team detail modal improvements, player bio modals
-5. **Mobile optimization** -- game card grid minmax, sidebar collapse at 768px
-
-## Critical Gotchas
-- Worktree agents may commit on branch that gets deleted -- always verify changes on main
-- `backfill_closing_lines()` must run BEFORE `refresh_odds_data()` (captures yesterday's closing lines)
-- `_setHtml(el, html)` for ALL dashboard DOM writes -- security hook blocks innerHTML
-- `_confMeterHtml()`, `_whyThisPickHtml()`, `_factorBadgeHtml()` are new dashboard helpers
-- Elo timeline lazy-loads on Rankings tab open (not in Promise.all)
-- `game_lines.csv` at `data/odds/` (NOT `data/processed/`)
-- `dashboard/data/*.json` must be committed after each `update.py` run
+## Commits This Session
+- `fe519fc` fix: resolve JS syntax errors breaking dashboard
+- `198ed9a` feat: redesign nav bar and background for cleaner UI
+- `ca1ab26` fix: major dashboard overhaul — table rendering, layout, UX improvements
+- `8acc2d3` docs: session 10 wrap-up
