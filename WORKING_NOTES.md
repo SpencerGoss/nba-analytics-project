@@ -8,10 +8,10 @@
 - [model] Elo system: K=20 standard + K=40 fast; `elo_momentum = fast - standard` detects surges/slumps; interaction features: elo_x_rest, elo_x_b2b, elo_x_streak
 - [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_stats.csv stores TOTALS -- divide by gp
 - [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols; `game_lines.csv` at `data/odds/`; `dashboard/data/*.json` COMMITTED to git
-- [pipeline] update.py Step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; Step 7: all 24 builders; Step 8: SQL Server sync
-- [dashboard] ALL DOM writes use `_setHtml(el,html)`; data-dependent UI in Promise.all loader; aurora background with 4 color bands; gradient nav/card borders
+- [pipeline] update.py: Step 3 calls BOTH build_team_game_features() AND build_matchup_dataset(); Step 3b: backfill_closing_lines(); Step 7: all 29 builders; Step 8: SQL Server sync
+- [dashboard] ALL DOM writes use `_setHtml(el,html)`; new helpers: _confMeterHtml(), _whyThisPickHtml(), _factorBadgeHtml(), _emptyStateHtml(); Elo timeline lazy-loads on Rankings tab
 - [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free)
-- [infra] `game_lines.csv` is EMPTY (Pinnacle debug needed); CLV closing_spread always NULL (update_closing_line never called)
+- [agents] Worktree agents may commit on branch that gets deleted -- always verify changes landed on main; prefer non-worktree for single-file edits
 
 ## Domain Notes
 
@@ -69,6 +69,21 @@
 
 [2026-03-06] [api] INSIGHT: Pinnacle guest API works without auth — GET /leagues/487/matchups + GET /leagues/487/markets/straight; filter matchups to parentId=None with alignment=home/away (neutral=futures); join on matchupId; prices use designation: home/away
 [2026-03-06] [api] WHY: The Odds API key was expired (401); Pinnacle guest API confirmed free+keyless 2026-03-06; team names are identical to Odds API full names so ODDS_TEAM_TO_ABB mapping reused unchanged; player props stubbed (Pinnacle props need different endpoint)
+
+### [odds]
+
+[2026-03-11] [odds] INSIGHT: Pinnacle fetch_odds.py was silently overwriting spreads with alt lines — ending up with the LAST (most extreme) alt spread instead of the primary. E.g., NOP vs TOR showed -3.5 (alt) instead of -1.0 (primary).
+[2026-03-11] [odds] WHY: Loop over alt lines had no guard `if mid not in spreads`; adding this check keeps only the first (primary) spread. Also added User-Agent header to prevent API rejection.
+
+### [clv]
+
+[2026-03-11] [clv] INSIGHT: CLV closing lines must be captured BEFORE refresh_odds_data() overwrites game_lines.csv — Step 3b in update.py reads yesterday's spreads as closing lines for completed games.
+[2026-03-11] [clv] WHY: Pinnacle API only shows lines for upcoming games; once a game tips off it disappears. The last-fetched spread is the best available closing line approximation.
+
+### [agents]
+
+[2026-03-11] [agents] INSIGHT: Worktree isolation agents commit changes on a temporary branch. If you copy the file and then delete the worktree+branch, changes may be lost if the agent committed (working dir is clean, commit is on deleted branch).
+[2026-03-11] [agents] WHY: Must either merge the worktree branch before deletion, or verify the copy captured all changes by checking git diff on main after copy.
 
 ### [skills]
 

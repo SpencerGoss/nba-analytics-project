@@ -4,6 +4,35 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-11 (Session 9) — Major Dashboard Overhaul + Pipeline Fixes
+
+**Done:**
+- **Dashboard overhaul (14 items)** — CSS contrast fix (--t2 WCAG AA), card entrance animations, reduced motion for blobs, light mode dropdown fix, confidence meters with tier labels, "Why This Pick?" expandable sections, Pick of the Day spotlight, empty state messages (6 locations), null safety guards, game detail modals with factor badges
+- **Elo Timeline chart** — interactive Plotly line chart in Rankings tab with team color chips, top/bottom 5 quick-select, hover tooltips
+- **Team matchup radar** — Plotly scatterpolar in H2H/Matchup Tool comparing Offense, Defense, Pace, 3PT Rate, Recent Form
+- **SVG sparklines** — last-10 form in standings and power rankings tables
+- **Season comparison tool** — side-by-side aggregate stats, best teams, key differences in History tab
+- **Pinnacle odds FIXED** — spread selection bug (alt-line overwrite), added totals column, User-Agent headers; game_lines.csv now populated
+- **CLV tracking WIRED** — `backfill_closing_lines()` as Step 3b in update.py; captures closing spreads before overwrite; 8 new tests; verified on real data (ORL vs CLE CLV=-2.5)
+- **XGBoost model candidate** — added alongside GBM with early stopping via `_build_fit_params()` helper
+- **Four Factors composite** — Dean Oliver weights (40/25/20/15) as `four_factors_roll10/roll20` with shift(1) leakage protection
+- **New builders** — `build_game_detail.py` (prediction explainability), `build_elo_timeline.py` (team Elo across season), both wired into update.py
+- **About page** — updated to 352+ features, 1407 tests, 6 new feature cards
+- **Full pipeline run** — all data refreshed through 2026-03-11, 29 builders executed successfully
+
+**Multi-agent approach:** 5 research agents (dashboard audit, UX research, data integrity, model research, builder audit) -> 4 Wave 1 impl agents -> 3 Wave 2 impl agents -> 3 Wave 3 impl agents. Total ~15 agents orchestrated.
+
+**Tests:** 1415 passing (+8 new CLV tests)
+**Commits:** `ece1bc1`, `efd46f3`, `3865a1a`, `3eab2f4` (4 commits, all pushed)
+
+**Next:**
+1. Retrain model with XGBoost + Four Factors to measure accuracy improvement
+2. Hustle stats feature engineering
+3. Mobile optimization
+4. More player/team detail modal content
+
+---
+
 ## 2026-03-11 (Session 8) — Model Tuning + Dashboard Aurora Redesign
 
 **Done:**

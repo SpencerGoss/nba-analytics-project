@@ -8,7 +8,7 @@ Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js das
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1407+ passing, current baseline as of 2026-03-10)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1415+ passing, current baseline as of 2026-03-11)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
@@ -42,7 +42,10 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - Dashboard JS: data-dependent UI must be in Promise.all loader (not tab-click handlers); all dynamic DOM writes use `_setHtml(el,html)` — security hook blocks Edit when replacement contains "innerHTML"
 - Always guard `g.ats||''` before `.includes()`/`.startsWith()` in gameCard — ats field can be absent; CSP `frame-ancestors` is ignored in meta tags (HTTP header only)
 - `game_lines.csv` at `data/odds/` (NOT data/processed/); fetch_odds.py writes columns `date`+`home_moneyline`; build_value_bets.py converts to `game_date`+`home_market_prob`
-- `player_stats.csv` stores season TOTALS — divide by `gp` before projections; Step 7 calls all 24 builders; deploy: `python update.py` then `git add dashboard/data/ && git push`
+- `player_stats.csv` stores season TOTALS — divide by `gp` before projections; Step 7 calls all 29 builders; deploy: `python update.py` then `git add dashboard/data/ && git push`
+- CLV: `backfill_closing_lines()` runs as Step 3b BEFORE `refresh_odds_data()` — captures yesterday's spreads as closing lines; do NOT reorder these steps
+- Dashboard helpers: `_confMeterHtml()`, `_whyThisPickHtml()`, `_factorBadgeHtml()`, `_emptyStateHtml()`, `_sparklineHtml()` — use these for new pick/game UI
+- XGBoost is an optional model candidate (requires xgboost package); `_build_fit_params()` handles eval_set for early stopping
 
 ## Skill Routing (auto-trigger — no prompting needed)
 
