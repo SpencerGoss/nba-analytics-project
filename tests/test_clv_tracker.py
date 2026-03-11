@@ -187,3 +187,221 @@ class TestGetClvSummary:
         tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)
         clv = tracker.update_closing_line("2026-01-15", "LAL", "GSW", -5.5)
         assert isinstance(clv, float)
+
+
+# ---------------------------------------------------------------------------
+# backfill_closing_lines
+# ---------------------------------------------------------------------------
+
+from datetime import date
+
+import pandas as pd
+
+from src.models.clv_tracker import backfill_closing_lines
+
+
+class TestBackfillClosingLines:
+    """Tests for backfill_closing_lines() which reads game_lines.csv and
+    updates closing spreads for completed games."""
+
+    def _write_game_lines(self, path, rows):
+        """Helper: write a game_lines.csv file."""
+        df = pd.DataFrame(rows)
+        df.to_csv(path, index=False)
+
+    def test_backfills_past_game(self, tmp_path):
+        """Past game with opening line but no closing -> gets backfilled."""
+        db = tmp_path / "test.db"
+        csv = tmp_path / "game_lines.csv"
+
+        tracker = CLVTracker(db_path=db)
+        tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)
+
+        self._write_game_lines(csv, [{
+            "date": "2026-01-15",
+            "home_team": "LAL",
+            "away_team": "GSW",
+            "home_moneyline": -165,
+            "away_moneyline": 140,
+            "spread": -5.5,
+            "total": 220.0,
+        }])
+
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=csv,
+            today=date(2026, 1, 16),
+        )
+        assert n == 1
+
+        # Verify CLV was computed correctly
+        summary = tracker.get_clv_summary()
+        assert summary["n_games"] == 1
+        assert summary["data"][0]["clv"] == pytest.approx(2.0)
+
+    def test_skips_future_games(self, tmp_path):
+        """Games on or after today should NOT be backfilled."""
+        db = tmp_path / "test.db"
+        csv = tmp_path / "game_lines.csv"
+
+        tracker = CLVTracker(db_path=db)
+        tracker.log_opening_line("2026-01-20", "LAL", "GSW", -3.5)
+
+        self._write_game_lines(csv, [{
+            "date": "2026-01-20",
+            "home_team": "LAL",
+            "away_team": "GSW",
+            "home_moneyline": -165,
+            "away_moneyline": 140,
+            "spread": -5.5,
+            "total": 220.0,
+        }])
+
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=csv,
+            today=date(2026, 1, 20),
+        )
+        assert n == 0
+
+    def test_skips_already_closed_games(self, tmp_path):
+        """Games that already have a closing line should not be updated again."""
+        db = tmp_path / "test.db"
+        csv = tmp_path / "game_lines.csv"
+
+        tracker = CLVTracker(db_path=db)
+        tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)
+        tracker.update_closing_line("2026-01-15", "LAL", "GSW", -4.0)
+
+        self._write_game_lines(csv, [{
+            "date": "2026-01-15",
+            "home_team": "LAL",
+            "away_team": "GSW",
+            "home_moneyline": -165,
+            "away_moneyline": 140,
+            "spread": -5.5,
+            "total": 220.0,
+        }])
+
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=csv,
+            today=date(2026, 1, 16),
+        )
+        assert n == 0
+
+        # Original closing line should be preserved
+        summary = tracker.get_clv_summary()
+        assert summary["data"][0]["closing_spread"] == -4.0
+
+    def test_skips_games_without_opening_line(self, tmp_path):
+        """If no opening line was logged, backfill should skip the game."""
+        db = tmp_path / "test.db"
+        csv = tmp_path / "game_lines.csv"
+
+        # Create tracker but do NOT log an opening line
+        CLVTracker(db_path=db)
+
+        self._write_game_lines(csv, [{
+            "date": "2026-01-15",
+            "home_team": "LAL",
+            "away_team": "GSW",
+            "home_moneyline": -165,
+            "away_moneyline": 140,
+            "spread": -5.5,
+            "total": 220.0,
+        }])
+
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=csv,
+            today=date(2026, 1, 16),
+        )
+        assert n == 0
+
+    def test_skips_null_spread(self, tmp_path):
+        """Rows with NaN/null spread should be skipped."""
+        db = tmp_path / "test.db"
+        csv = tmp_path / "game_lines.csv"
+
+        tracker = CLVTracker(db_path=db)
+        tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)
+
+        self._write_game_lines(csv, [{
+            "date": "2026-01-15",
+            "home_team": "LAL",
+            "away_team": "GSW",
+            "home_moneyline": -165,
+            "away_moneyline": 140,
+            "spread": None,
+            "total": 220.0,
+        }])
+
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=csv,
+            today=date(2026, 1, 16),
+        )
+        assert n == 0
+
+    def test_returns_zero_when_csv_missing(self, tmp_path):
+        """Missing game_lines.csv should return 0 without error."""
+        db = tmp_path / "test.db"
+        CLVTracker(db_path=db)
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=tmp_path / "nonexistent.csv",
+            today=date(2026, 1, 16),
+        )
+        assert n == 0
+
+    def test_returns_zero_when_csv_empty(self, tmp_path):
+        """Empty game_lines.csv should return 0."""
+        db = tmp_path / "test.db"
+        csv = tmp_path / "game_lines.csv"
+        CLVTracker(db_path=db)
+
+        # Write header-only CSV
+        pd.DataFrame(columns=[
+            "date", "home_team", "away_team", "home_moneyline",
+            "away_moneyline", "spread", "total"
+        ]).to_csv(csv, index=False)
+
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=csv,
+            today=date(2026, 1, 16),
+        )
+        assert n == 0
+
+    def test_multiple_games_backfilled(self, tmp_path):
+        """Multiple past games should all get closing lines."""
+        db = tmp_path / "test.db"
+        csv = tmp_path / "game_lines.csv"
+
+        tracker = CLVTracker(db_path=db)
+        tracker.log_opening_line("2026-01-15", "LAL", "GSW", -3.5)
+        tracker.log_opening_line("2026-01-15", "BOS", "NYK", -5.0)
+
+        self._write_game_lines(csv, [
+            {
+                "date": "2026-01-15", "home_team": "LAL", "away_team": "GSW",
+                "home_moneyline": -165, "away_moneyline": 140,
+                "spread": -5.5, "total": 220.0,
+            },
+            {
+                "date": "2026-01-15", "home_team": "BOS", "away_team": "NYK",
+                "home_moneyline": -200, "away_moneyline": 175,
+                "spread": -6.0, "total": 215.0,
+            },
+        ])
+
+        n = backfill_closing_lines(
+            db_path=db,
+            game_lines_path=csv,
+            today=date(2026, 1, 16),
+        )
+        assert n == 2
+
+        summary = tracker.get_clv_summary()
+        assert summary["n_games"] == 2

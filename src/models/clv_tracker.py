@@ -17,8 +17,10 @@ Usage:
 
 import sqlite3
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
+
+import pandas as pd
 
 log = logging.getLogger(__name__)
 
@@ -261,3 +263,128 @@ def log_todays_opening_lines(db_path: str | Path = DB_PATH) -> int:
 
     log.info(f"CLV: logged {n_logged} new opening lines (of {len(lines)} fetched)")
     return n_logged
+
+
+def backfill_closing_lines(
+    db_path: str | Path = DB_PATH,
+    game_lines_path: str | Path | None = None,
+    today: date | None = None,
+) -> int:
+    """Update closing spreads for past games using the last-fetched game_lines.csv.
+
+    The Pinnacle guest API only returns lines for upcoming games. Once a game
+    tips off, it disappears from the API. The daily pipeline fetches odds and
+    writes game_lines.csv *before* games start, so the spread in that file
+    represents the near-closing line (last available before tip-off).
+
+    This function reads game_lines.csv and, for each game whose date is in
+    the past (already played) and whose clv_tracking row has no closing_spread,
+    writes the spread from game_lines.csv as the closing line and computes CLV.
+
+    Should be called at the START of the daily pipeline, BEFORE fetch_odds.py
+    overwrites game_lines.csv with fresh data for today's games.
+
+    Args:
+        db_path: Path to predictions_history.db.
+        game_lines_path: Path to data/odds/game_lines.csv. Defaults to
+            PROJECT_ROOT / "data" / "odds" / "game_lines.csv".
+        today: Override for today's date (for testing). Defaults to date.today().
+
+    Returns:
+        Number of closing lines updated.
+    """
+    if game_lines_path is None:
+        game_lines_path = PROJECT_ROOT / "data" / "odds" / "game_lines.csv"
+    game_lines_path = Path(game_lines_path)
+
+    if today is None:
+        today = date.today()
+
+    if not game_lines_path.exists():
+        log.warning("CLV backfill: game_lines.csv not found at %s", game_lines_path)
+        return 0
+
+    try:
+        lines_df = pd.read_csv(game_lines_path)
+    except Exception as e:
+        log.error("CLV backfill: failed to read game_lines.csv: %s", e)
+        return 0
+
+    if lines_df.empty:
+        log.info("CLV backfill: game_lines.csv is empty, nothing to backfill")
+        return 0
+
+    tracker = CLVTracker(db_path)
+    n_updated = 0
+
+    for _, row in lines_df.iterrows():
+        game_date_str = str(row.get("date", ""))
+        if not game_date_str or len(game_date_str) < 10:
+            continue
+
+        # Only update games that have already been played
+        try:
+            game_date = date.fromisoformat(game_date_str[:10])
+        except ValueError:
+            continue
+
+        if game_date >= today:
+            continue  # game hasn't happened yet
+
+        home_team = str(row.get("home_team", ""))
+        away_team = str(row.get("away_team", ""))
+        spread_raw = row.get("spread")
+
+        # Guard: skip if spread is null/NaN
+        if pd.isna(spread_raw):
+            log.debug(
+                "CLV backfill: spread is NULL for %s vs %s on %s -- skipping",
+                home_team, away_team, game_date_str,
+            )
+            continue
+
+        closing_spread = float(spread_raw)
+
+        # Check if this game already has a closing line in DB
+        try:
+            with tracker._connect() as conn:
+                existing = conn.execute(
+                    f"""
+                    SELECT closing_spread FROM {CLV_TABLE}
+                    WHERE game_date=? AND home_team=? AND away_team=?
+                    """,
+                    (game_date_str[:10], home_team, away_team),
+                ).fetchone()
+
+            if existing is None:
+                # No opening line logged for this game -- skip
+                log.debug(
+                    "CLV backfill: no opening line for %s vs %s on %s",
+                    home_team, away_team, game_date_str,
+                )
+                continue
+
+            if existing["closing_spread"] is not None:
+                # Already has a closing line -- skip
+                continue
+        except sqlite3.Error as e:
+            log.error("CLV backfill: DB error checking existing row: %s", e)
+            continue
+
+        clv = tracker.update_closing_line(
+            game_date_str[:10], home_team, away_team, closing_spread
+        )
+        if clv is not None:
+            n_updated += 1
+            print(
+                f"  CLV backfill: {home_team} vs {away_team} {game_date_str[:10]} "
+                f"-> closing={closing_spread:+.1f} CLV={clv:+.2f}"
+            )
+
+    log.info("CLV backfill: updated %d closing line(s)", n_updated)
+    if n_updated > 0:
+        print(f"  CLV backfill: {n_updated} closing line(s) updated")
+    else:
+        print("  CLV backfill: no new closing lines to update")
+
+    return n_updated

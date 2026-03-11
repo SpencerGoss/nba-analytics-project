@@ -218,6 +218,18 @@ def main() -> None:
             log_pipeline_error("update.py:feature_rebuild", feat_err)
             print(f"Feature rebuild failed (non-fatal): {feat_err}")
 
+        print("\n=== Step 3b: Backfilling CLV closing lines ===")
+        try:
+            from src.models.clv_tracker import backfill_closing_lines
+            n_clv = backfill_closing_lines()
+            if n_clv == 0:
+                print("  No new closing lines to backfill.")
+            else:
+                print(f"  Backfilled {n_clv} closing line(s) for CLV tracking.")
+        except Exception as clv_err:
+            log_pipeline_error("update.py:clv_backfill", clv_err)
+            print(f"  CLV backfill failed (non-fatal): {clv_err}")
+
         print("\n=== Step 4: Refreshing sportsbook odds ===")
         if not refresh_odds_data():
             print("Odds refresh skipped/failed; continuing update pipeline.")
