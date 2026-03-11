@@ -1986,14 +1986,14 @@ const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'
 // ─── MATCHUP RADAR CHART ───
 function renderMatchupRadar(targetId,teamA,teamB,rawMatchupEntry){
   var el=document.getElementById(targetId);
-  if(\!el)return;
+  if(!el)return;
   var m=rawMatchupEntry||null;
-  if(\!m&&window.MATCHUP_JSON&&window.MATCHUP_JSON.length){
+  if(!m&&window.MATCHUP_JSON&&window.MATCHUP_JSON.length){
     m=window.MATCHUP_JSON.find(function(e){
       return(e.home_team===teamA&&e.away_team===teamB)||(e.home_team===teamB&&e.away_team===teamA);
     })||null;
   }
-  if(\!m){
+  if(!m){
     _setHtml(el,'<div style="text-align:center;color:var(--t2);font-size:12px;padding:20px">No radar data available for this matchup</div>');
     return;
   }
@@ -2005,7 +2005,7 @@ function renderMatchupRadar(targetId,teamA,teamB,rawMatchupEntry){
     radarA=m.radar[teamA].slice();
     radarB=m.radar[teamB].slice();
   }else{
-    var isFlip=(m.home_team\!==teamA);
+    var isFlip=(m.home_team!==teamA);
     var aOrtg=isFlip?m.away_ortg:m.home_ortg;
     var bOrtg=isFlip?m.home_ortg:m.away_ortg;
     var aDrtg=isFlip?m.away_drtg:m.home_drtg;
@@ -5054,7 +5054,7 @@ function renderProps(){
     const injured=player.is_injured;
     const logoUrl=teamLogoUrl(player.team);
     const logoTag=logoUrl
-      ?'<img src="'+logoUrl+'" width="16" height="16" alt="'+esc(player.team)+'" style="object-fit:contain;flex-shrink:0;vertical-align:middle" onerror="this.style.display='none'"/>'
+      ?'<img src="'+logoUrl+'" width="16" height="16" alt="'+esc(player.team)+'" style="object-fit:contain;flex-shrink:0;vertical-align:middle" onerror="this.style.display=\'none\'"/>'
       :'';
     html+='<div class="prop-card">';
     html+='<div class="prop-card-header">';
@@ -6036,8 +6036,8 @@ function renderValueBets(){
       const mkp=(b.market_prob*100).toFixed(1);
       const fillW=Math.min(100,b.model_prob*100);
       const vbAwayUrl=teamLogoUrl(b.away_team);const vbHomeUrl=teamLogoUrl(b.home_team);
-      const vbAwLogo=vbAwayUrl?'<img src="'+vbAwayUrl+'" width="14" height="14" alt="'+esc(b.away_team)+'" style="object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display='none'"/>':'';
-      const vbHmLogo=vbHomeUrl?'<img src="'+vbHomeUrl+'" width="14" height="14" alt="'+esc(b.home_team)+'" style="object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display='none'"/>':'';
+      const vbAwLogo=vbAwayUrl?'<img src="'+vbAwayUrl+'" width="14" height="14" alt="'+esc(b.away_team)+'" style="object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display=\'none\'"/>':'';
+      const vbHmLogo=vbHomeUrl?'<img src="'+vbHomeUrl+'" width="14" height="14" alt="'+esc(b.home_team)+'" style="object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display=\'none\'"/>':'';
       const rowMarkup='<tr><td style="color:var(--t2);font-family:var(--fm)">'+esc(ds)+'</td><td style="font-family:var(--f);font-weight:600">'+vbAwLogo+esc(b.away_team)+' @ '+vbHmLogo+esc(b.home_team)+'</td><td><span class="badge g">'+esc(b.recommended_side)+'</span></td><td>'+mp+'%<div class="vb-prob-bar"><div class="vb-prob-fill" style="width:'+fillW+'%;background:var(--blue)"></div></div></td><td style="color:var(--t2)">'+mkp+'%</td><td><span class="vb-edge '+ecls+'">+'+edge+'%</span></td><td></td></tr>';
       tb.insertAdjacentHTML('beforeend', rowMarkup);
       const lastRow=tb.lastElementChild;
@@ -8160,7 +8160,7 @@ function btRenderList(bets){
     }).join('')
     +'</tbody></table></div>';
   _setHtml(list,rows);
-}}
+}
 function btAddBet(){
   const err=document.getElementById('btf-error');
   const date=document.getElementById('btf-date').value;
