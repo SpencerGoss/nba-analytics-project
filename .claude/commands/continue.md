@@ -1,1 +1,0 @@
-Invoke the session-kickoff skill to orient the session. Read .planning/STATE.md and PROJECT_JOURNAL.md. Output a SITUATION REPORT showing branch, last commit, uncommitted changes, open TODOs, and recommended next step. Then stop and wait.
