@@ -4,6 +4,36 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-11 (Session 10) — Dashboard Table Fix + UX Polish
+
+**Done:**
+- **Critical bug: `_setHtml()` was breaking ALL dynamic tables** — `createContextualFragment` strips `<tr>`/`<td>` tags when range context is document body. Fixed to use `table.innerHTML` parsing for tbody/thead/tfoot elements. This was the root cause of every table rendering vertically.
+- **Tables fixed** — Player Stats, Teams Overview, Rankings, Standings all render with proper columns
+- **Nav + background redesign** — gradient border on nav, aurora background polish
+- **Player Compare overhaul** — `<select>` dropdowns replaced with `<input type="search">` + `<datalist>` for 500+ players; added Career Scoring Trend (Plotly line) and Efficiency Comparison (Plotly radar) charts
+- **League Leaders** — replaced bar graphs with clean sortable tables
+- **Props UX** — sorting by fantasy value (stat-specific when filtered); search fixed with debounced event listener
+- **Power rankings rebalanced** — Season Win% 35%, Pyth Win% L20 25%, Net Rtg L20 25%, Net Rtg L10 15% (was too recency-biased)
+- **Filter layout** — scoped `select{width:100%}` to `.sel-wrap` only; player filter dropdowns now inline
+- **Ticker** — slowed from 45s to 120s
+- **Betting tabs** — Line Movement merged into Market tab (6 tabs now)
+- **Teams Overview** — reduced to 8 columns for side-by-side fit (#, Team, W, L, PCT, GB, L10, Streak)
+- **Rankings** — tighter cell padding, 1100px min-width, proper data alignment
+- **All table cells** — added `white-space:nowrap` globally to prevent data wrapping
+
+**Root cause insight:** `document.createRange().createContextualFragment('<tr>...</tr>')` silently strips table elements because the range's start container is the document body, where `<tr>` is invalid. Must use `createElement('table') + innerHTML` to parse table HTML correctly. This affected every `_setHtml()` call targeting a `<tbody>`.
+
+**Tests:** 1432 passing (+17 from session 9 baseline)
+**Commits:** `fe519fc`, `198ed9a`, `ca1ab26` (3 commits, all pushed)
+
+**Next:**
+1. Retrain model with XGBoost + Four Factors
+2. Hustle stats feature engineering
+3. Mobile responsive polish
+4. Shooting zone chart colors to use team colors
+
+---
+
 ## 2026-03-11 (Session 9) — Major Dashboard Overhaul + Pipeline Fixes
 
 **Done:**

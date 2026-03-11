@@ -8,7 +8,7 @@ Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js das
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1415+ passing, current baseline as of 2026-03-11)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1432 passing, current baseline as of 2026-03-11)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
@@ -39,7 +39,7 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - CLV formula: `clv = opening_spread - closing_spread` (positive = better line than closing); do NOT invert; `closing_spread` is NULL in DB until game closes — always guard with `pd.isna()` before `float()` cast
 - Dashboard: always use `.venv/Scripts/python.exe` for ML scripts (lacks optuna/lightgbm); HPO flag is `--trials N`; `calibration.py`/`ats_model.py` need sys.path set — use python -c workaround
 - After any debug session or non-obvious fix → invoke `working-memory` skill to extract insight
-- Dashboard JS: data-dependent UI must be in Promise.all loader (not tab-click handlers); all dynamic DOM writes use `_setHtml(el,html)` — security hook blocks Edit when replacement contains "innerHTML"
+- Dashboard JS: data-dependent UI must be in Promise.all loader (not tab-click handlers); all dynamic DOM writes use `_setHtml(el,html)` — for tbody/thead/tfoot it uses createElement('table')+innerHTML (NOT createContextualFragment which strips `<tr>`/`<td>` tags); security hook blocks Edit when replacement contains "innerHTML"
 - Always guard `g.ats||''` before `.includes()`/`.startsWith()` in gameCard — ats field can be absent; CSP `frame-ancestors` is ignored in meta tags (HTTP header only)
 - `game_lines.csv` at `data/odds/` (NOT data/processed/); fetch_odds.py writes columns `date`+`home_moneyline`; build_value_bets.py converts to `game_date`+`home_market_prob`
 - `player_stats.csv` stores season TOTALS — divide by `gp` before projections; Step 7 calls all 29 builders; deploy: `python update.py` then `git add dashboard/data/ && git push`

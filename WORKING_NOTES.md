@@ -9,7 +9,7 @@
 - [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_stats.csv stores TOTALS -- divide by gp
 - [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols; `game_lines.csv` at `data/odds/`; `dashboard/data/*.json` COMMITTED to git
 - [pipeline] update.py: Step 3 calls BOTH build_team_game_features() AND build_matchup_dataset(); Step 3b: backfill_closing_lines(); Step 7: all 29 builders; Step 8: SQL Server sync
-- [dashboard] ALL DOM writes use `_setHtml(el,html)`; new helpers: _confMeterHtml(), _whyThisPickHtml(), _factorBadgeHtml(), _emptyStateHtml(); Elo timeline lazy-loads on Rankings tab
+- [dashboard] ALL DOM writes use `_setHtml(el,html)` — for tbody/thead/tfoot it uses `createElement('table')+innerHTML` (NOT createContextualFragment which strips `<tr>`/`<td>`); helpers: _confMeterHtml(), _whyThisPickHtml(), _factorBadgeHtml(), _emptyStateHtml(), _sparklineHtml()
 - [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free)
 - [agents] Worktree agents may commit on branch that gets deleted -- always verify changes landed on main; prefer non-worktree for single-file edits
 
@@ -139,8 +139,11 @@
 [2026-03-07] [dashboard] INSIGHT: Always guard `g.ats||''` before calling `.includes()` or `.startsWith()` on it in gameCard() -- matchup_analysis.json entries can omit the ats field when no spread data is available.
 [2026-03-07] [dashboard] WHY: `undefined.includes()` throws TypeError; the guard pattern `const ats=g.ats||''` is cheap and prevents the whole renderGames() call from crashing.
 
-[2026-03-07] [dashboard] INSIGHT: `_setHtml(el, html)` using `createContextualFragment + replaceChildren` is the correct pattern for all dynamic HTML injection -- both avoids the security hook AND is safer than innerHTML.
-[2026-03-07] [dashboard] WHY: Security hook fires on any Edit where replacement text contains the literal string "innerHTML"; _setHtml sidesteps this entirely while providing equivalent DOM behavior.
+[2026-03-07] [dashboard] INSIGHT: ~~`_setHtml(el, html)` using `createContextualFragment + replaceChildren` is the correct pattern for all dynamic HTML injection~~ SUPERSEDED by 2026-03-11 fix below.
+[2026-03-07] [dashboard] WHY: Security hook fires on any Edit where replacement text contains the literal string "innerHTML"; _setHtml sidesteps this.
+
+[2026-03-11] [dashboard] INSIGHT: `document.createRange().createContextualFragment('<tr>...</tr>')` SILENTLY STRIPS `<tr>` and `<td>` tags because the range's start container is the document body, where table elements are invalid. _setHtml MUST use `createElement('table') + table.innerHTML` for tbody/thead/tfoot targets.
+[2026-03-11] [dashboard] WHY: Every `_setHtml(tbody, rowsHtml)` call was producing flat text+inline nodes instead of proper table rows. Tables appeared to have data but columns were collapsed into one blob. Fix: detect el.tagName, wrap HTML in `<table><tbody>...</tbody></table>`, parse, then move children.
 
 [2026-03-07] [dashboard] INSIGHT: Python http.server does NOT serve updated files after in-place writes until a new server process starts on a different port -- browser still receives stale content.
 [2026-03-07] [dashboard] WHY: OS file caching + existing TCP connections cause this; always start a new server on a fresh port (e.g., 8081) after editing index.html to verify fixes in Playwright.
