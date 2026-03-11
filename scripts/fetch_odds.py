@@ -104,8 +104,12 @@ def get_pinnacle(endpoint: str) -> list | dict | None:
     No authentication is required. The guest API is public and keyless.
     """
     url = f"{PINNACLE_BASE}/{endpoint}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) NBAAnalytics/1.0",
+        "Accept": "application/json",
+    }
     try:
-        r = requests.get(url, timeout=20)
+        r = requests.get(url, headers=headers, timeout=20)
         log.info(f"API call: {endpoint} -> {r.status_code}")
         if r.status_code == 200:
             return r.json()
@@ -141,9 +145,10 @@ def team_name_to_abb(name: str) -> str:
 
 
 def fetch_game_lines() -> pd.DataFrame:
-    """Fetch moneylines and spreads for all upcoming NBA games from Pinnacle."""
+    """Fetch moneylines, spreads, and totals for all upcoming NBA games from Pinnacle."""
     empty = pd.DataFrame(columns=["date", "home_team", "away_team",
-                                   "home_moneyline", "away_moneyline", "spread"])
+                                   "home_moneyline", "away_moneyline", "spread",
+                                   "total"])
 
     matchups_raw = get_pinnacle(f"leagues/{LEAGUE_ID}/matchups")
     if not matchups_raw:
@@ -174,9 +179,12 @@ def fetch_game_lines() -> pd.DataFrame:
             "date":      m.get("startTime", "")[:10],
         }
 
-    # Index markets by matchupId, keeping only period 0 moneyline and spread.
+    # Index markets by matchupId, keeping only period 0 moneyline, spread, and total.
+    # For spread and total the API returns multiple alt lines; keep only the first
+    # (primary) line per matchup by checking ``mid not in`` before inserting.
     moneylines: dict[int, dict] = {}   # matchupId -> {home: price, away: price}
     spreads:    dict[int, dict] = {}   # matchupId -> {home_points, away_points}
+    totals:     dict[int, float] = {}  # matchupId -> total points (over/under)
 
     for mkt in markets_raw:
         mid    = mkt.get("matchupId")
@@ -195,7 +203,7 @@ def fetch_game_lines() -> pd.DataFrame:
                     entry["away"] = p.get("price")
             moneylines[mid] = entry
 
-        elif mtype == "spread":
+        elif mtype == "spread" and mid not in spreads:
             entry = {}
             for p in prices:
                 if p.get("designation") == "home":
@@ -204,6 +212,13 @@ def fetch_game_lines() -> pd.DataFrame:
                 elif p.get("designation") == "away":
                     entry["away_points"] = p.get("points")
             spreads[mid] = entry
+
+        elif mtype == "total" and mid not in totals:
+            for p in prices:
+                pts = p.get("points")
+                if pts is not None:
+                    totals[mid] = float(pts)
+                    break
 
     rows = []
     for mid, info in matchups.items():
@@ -216,6 +231,7 @@ def fetch_game_lines() -> pd.DataFrame:
             "home_moneyline": ml.get("home"),
             "away_moneyline": ml.get("away"),
             "spread":         sp.get("home_points"),   # negative = home favored
+            "total":          totals.get(mid),          # over/under points
         })
 
     df = pd.DataFrame(rows)

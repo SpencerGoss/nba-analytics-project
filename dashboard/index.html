@@ -41,7 +41,7 @@
   --b1:       rgba(255,255,255,0.13);
   --t0:       #F1F5FF;
   --t1:       #8892AA;
-  --t2:       #4A5268;
+  --t2:       #7B89A8;
   --green:    #00C896;
   --green-d:  rgba(0,200,150,0.12);
   --red:      #FF5C5C;
@@ -67,6 +67,7 @@
   --glow-b:   0 0 24px rgba(79,158,255,0.12);
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(prefers-reduced-motion:reduce){.b-g,.b-o,.b-b,.b-b::after{animation:none!important}}
 
 /* ── THEME TOGGLE ── */
 .theme-toggle{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--b1);background:transparent;cursor:pointer;color:var(--t1);transition:all 160ms ease;margin-left:4px;flex-shrink:0}
@@ -229,6 +230,15 @@ html{background:linear-gradient(180deg,var(--bg) 0%,var(--bg-mid) 50%,var(--bg) 
 .bgl>.b-g::after{content:'';position:absolute;top:120%;left:40%;width:1000px;height:320px;border-radius:50%;background:radial-gradient(ellipse,var(--aurora-3),transparent 65%);filter:blur(100px);transform:skewY(4deg);animation:aurora-shimmer 60s ease-in-out infinite}
 @keyframes aurora-shimmer{0%,100%{opacity:.7;transform:skewY(4deg) translateX(0)}50%{opacity:1;transform:skewY(6deg) translateX(40px)}}
 
+/* ── CARD ENTRANCE ANIMATION ── */
+.card,.gc,.sc{animation:cardIn .4s cubic-bezier(.16,1,.3,1) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.card:nth-child(2),.gc:nth-child(2),.sc:nth-child(2){animation-delay:50ms}
+.card:nth-child(3),.gc:nth-child(3),.sc:nth-child(3){animation-delay:.1s}
+.card:nth-child(4),.gc:nth-child(4),.sc:nth-child(4){animation-delay:.15s}
+.card:nth-child(5),.gc:nth-child(5),.sc:nth-child(5){animation-delay:.2s}
+.card:nth-child(6),.gc:nth-child(6),.sc:nth-child(6){animation-delay:.25s}
+
 /* ── NAV ── */
 .nav{
   position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;
@@ -303,7 +313,7 @@ html{background:linear-gradient(180deg,var(--bg) 0%,var(--bg-mid) 50%,var(--bg) 
 .acct-btn.open .acct-arrow{transform:rotate(180deg)}
 .acct-drop{
   position:absolute;top:calc(100% + 10px);right:0;min-width:220px;
-  background:#0F1117;border:1px solid var(--b1);border-radius:16px;padding:8px;
+  background:var(--bg2);border:1px solid var(--b1);border-radius:16px;padding:8px;color:var(--t0);
   box-shadow:0 4px 16px rgba(0,0,0,.7),0 24px 56px rgba(0,0,0,.5);
   opacity:0;pointer-events:none;transform:translateY(-6px);transition:all 180ms ease;z-index:200
 }
@@ -1044,6 +1054,20 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 .waitlist-btn{padding:8px 16px;border-radius:var(--r-pill);border:none;background:var(--green);color:#000;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--f);transition:opacity 140ms;white-space:nowrap;}
 .waitlist-btn:hover{opacity:.85;}
 .waitlist-success{font-size:12px;color:var(--green);font-weight:600;display:none;}
+
+/* ── CONFIDENCE METER ── */
+.conf-meter{height:6px;border-radius:3px;background:var(--card-border);overflow:hidden;margin:4px 0}
+.conf-meter-fill{height:100%;border-radius:3px;transition:width .6s}
+.conf-tier{font-size:11px;font-weight:600;letter-spacing:.03em}
+.conf-tier.strong{color:#00C896}.conf-tier.confident{color:#4F9EFF}
+.conf-tier.lean{color:#F0B429}.conf-tier.coinflip{color:#E8564A}
+.why-pick{padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;margin-top:8px;font-size:12px;line-height:1.5;border:1px solid var(--card-border)}
+.why-pick-toggle{cursor:pointer;color:var(--green);font-size:11px;font-weight:600}
+.why-pick-content{display:none;margin-top:6px}.why-pick-content.show{display:block}
+.potd-spotlight{background:linear-gradient(135deg,rgba(0,200,150,.08),rgba(79,158,255,.08));border:1px solid rgba(0,200,150,.2);border-radius:16px;padding:20px;margin:16px 0;position:relative;overflow:hidden}
+.potd-spotlight::before{content:'PICK OF THE DAY';position:absolute;top:8px;right:12px;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--green);opacity:.7}
+.empty-state{text-align:center;padding:32px 16px;color:var(--t1);font-size:14px}
+.empty-state-icon{font-size:32px;margin-bottom:8px;opacity:.5}
 </style>
 
 </head>
@@ -2415,12 +2439,14 @@ function _buildPickCard(p){
     '<div class="phc-ats">'+ 
       '<span class="phc-ats-pick">ATS: <strong>'+pickTeam+' '+esc(spreadStr)+'</strong></span>'+ 
     '</div>'+ 
-    projMarginHtml+ 
-    oneLiner+ 
-    ctxSummary+ 
-    decisionHelper+ 
-    kellyHtml+ 
-    badgeBlock+ 
+    projMarginHtml+
+    oneLiner+
+    ctxSummary+
+    decisionHelper+
+    kellyHtml+
+    _confMeterHtml(p.confidence || p.home_win_prob)+
+    _whyThisPickHtml(p, window._GAME_CONTEXTS)+
+    badgeBlock+
   '</div>';
 }
 
@@ -3051,8 +3077,8 @@ function gameCard(g){
 }
 
 function renderGames(){
-  const _dg=document.getElementById('dash-games');if(_dg)_setHtml(_dg,DATA.games.slice(0,3).map(gameCard).join(''));
-  const _ag=document.getElementById('all-games');if(_ag)_setHtml(_ag,DATA.games.map(gameCard).join(''));
+  const _dg=document.getElementById('dash-games');if(_dg)_setHtml(_dg,DATA.games.length?DATA.games.slice(0,3).map(gameCard).join(''):_emptyStateHtml('','No games scheduled today.'));
+  const _ag=document.getElementById('all-games');if(_ag)_setHtml(_ag,DATA.games.length?DATA.games.map(gameCard).join(''):_emptyStateHtml('','No games scheduled today.'));
 }
 function filterGames(type,btn){
   document.querySelectorAll('[onclick^="filterGames"]').forEach(b=>b.classList.remove('active'));
@@ -3650,6 +3676,7 @@ function _loadPlayerComparison(){
     }
   }
   fetch('data/player_comparison.json').then(r=>r.ok?r.json():null).then(playerJson=>{
+    try{
     const loadEl=document.getElementById('player-comp-loading');
     if(loadEl)loadEl.remove();
     _playerCompLoading=false;
@@ -3668,6 +3695,7 @@ function _loadPlayerComparison(){
     buildLeagueLeaders();
     renderPlayersTable();
     updateSortHeaders();
+    }catch(e){console.warn('Error processing player_comparison.json:',e);}
   }).catch(err=>{
     const loadEl=document.getElementById('player-comp-loading');
     if(loadEl)loadEl.remove();
@@ -4013,6 +4041,7 @@ function sortStand(key,conf){
   renderStandings();
 }
 function renderStandings(){
+  if(!DATA.east||!DATA.east.length||!DATA.west||!DATA.west.length)return;
   function conf(rawData,id,confKey){
     const s=standState[confKey];
     const data=[...rawData].sort((a,b)=>{
@@ -4252,7 +4281,7 @@ function renderPicks(){
   });
 
   if(!filtered.length){
-    _setHtml(grid,'<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--t2);font-size:13px">No picks match this filter.</div>');
+    _setHtml(grid,totalN===0?_emptyStateHtml('','No picks available for today. Check back when games are scheduled.'):'<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--t2);font-size:13px">No picks match this filter.</div>');
     return;
   }
 
@@ -4280,6 +4309,7 @@ function renderPicks(){
       +_picksFormHtml(pickTeam)
       +_picksFactorHtml(p)
       +_picksKellyHtml(p)
+      +_confMeterHtml(confDisp/100)
       +_picksCopyBtn(pickTeam,p.spread||'',confDisp)
       +'</div>';
   }).join('');
@@ -4992,6 +5022,56 @@ function buildLeagueLeaders(){
     const title = '<div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px;letter-spacing:.3px">' + cfg.label + ' Leaders &mdash; Top 15</div>';
     _setHtml(el, '<div class="card" style="padding:16px 20px">' + title + rows + '</div>');
   });
+}
+
+// ─── CONFIDENCE METER HELPER ───
+function _confMeterHtml(conf){
+  if(!conf||isNaN(conf))return'';
+  var pct=Math.round(conf*100),tier,cls,col;
+  if(pct>=65){tier='Strong';cls='strong';col='#00C896'}
+  else if(pct>=60){tier='Confident';cls='confident';col='#4F9EFF'}
+  else if(pct>=55){tier='Lean';cls='lean';col='#F0B429'}
+  else{tier='Coin Flip';cls='coinflip';col='#E8564A'}
+  return'<div class="conf-meter"><div class="conf-meter-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'
+    +'<span class="conf-tier '+cls+'">'+tier+' ('+pct+'%)</span>';
+}
+
+// ─── WHY THIS PICK HELPER ───
+function _whyThisPickHtml(pick, contexts){
+  if(!contexts)return'';
+  var ctx=null;
+  if(Array.isArray(contexts)){for(var i=0;i<contexts.length;i++){var c=contexts[i];if(c&&((c.home_team||'')===(pick.home_team||'')||(c.away_team||'')===(pick.away_team||''))){ctx=c;break}}}
+  if(!ctx)return'';
+  var factors=[];
+  if(ctx.situational_flags&&ctx.situational_flags.length){
+    for(var j=0;j<Math.min(ctx.situational_flags.length,3);j++){
+      factors.push(esc(ctx.situational_flags[j].replace(/_/g,' ')))
+    }
+  }
+  if(ctx.home_streak&&Math.abs(ctx.home_streak)>=3)factors.push(esc((pick.home_team||'Home')+' on '+(ctx.home_streak>0?ctx.home_streak+'W streak':Math.abs(ctx.home_streak)+'L streak')));
+  if(ctx.away_streak&&Math.abs(ctx.away_streak)>=3)factors.push(esc((pick.away_team||'Away')+' on '+(ctx.away_streak>0?ctx.away_streak+'W streak':Math.abs(ctx.away_streak)+'L streak')));
+  if(!factors.length)return'';
+  var html='<div class="why-pick"><span class="why-pick-toggle" onclick="this.nextElementSibling.classList.toggle(\'show\')">Why this pick?</span>';
+  html+='<div class="why-pick-content"><ul style="margin:4px 0 0 16px;padding:0">';
+  for(var k=0;k<factors.length;k++)html+='<li style="margin:2px 0;color:var(--t1)">'+factors[k]+'</li>';
+  html+='</ul></div></div>';
+  return html;
+}
+
+// ─── EMPTY STATE HELPER ───
+function _emptyStateHtml(icon,msg){return'<div class="empty-state"><div class="empty-state-icon">'+esc(icon)+'</div><div>'+esc(msg)+'</div></div>'}
+
+// ─── PICK OF THE DAY BUILDER ───
+function _buildPickOfDay(picks){
+  if(!picks||!picks.length)return'';
+  var best=picks[0];
+  for(var i=1;i<picks.length;i++){if((picks[i].confidence||0)>(best.confidence||0))best=picks[i]}
+  var conf=best.confidence||best.home_win_prob||0;
+  return'<div class="potd-spotlight"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+    +'<span style="font-size:18px;font-weight:700;color:var(--t0)">'+esc(best.away_team||'')+' @ '+esc(best.home_team||'')+'</span></div>'
+    +'<div style="margin:8px 0">'+_confMeterHtml(conf)+'</div>'
+    +'<div style="font-size:13px;color:var(--t1)">'+(best.pick_summary||('Model favors '+(conf>0.5?esc(best.home_team||'Home'):esc(best.away_team||'Away'))))+'</div>'
+    +_whyThisPickHtml(best,window._GAME_CONTEXTS)+'</div>';
 }
 
 // ─── SHARP MONEY / LINE MOVEMENT ───
@@ -6096,6 +6176,8 @@ async function loadDashboardData(){
     // Store live advanced stats for player comparison (ts%, usg%, off/def ratings)
     window.ADVANCED_STATS=(advStats&&advStats.players)?advStats.players:{};
     window._VB_EXPLAINERS=explainers;
+    window._GAME_CONTEXTS=contexts;
+    window._PICKS=picks;
     if(picks.length){
       window._RAW_PICKS=picks;
       // Fallback: populate last-updated-stamp from picks[0].exported_at if meta didn't provide it
@@ -6151,6 +6233,18 @@ async function loadDashboardData(){
           if(bpdC) bpdC.textContent = confPct + isVal;
           bpdEl.style.display = 'block';
         }
+      }
+      // Insert POTD spotlight below best-pick-callout
+      var potdHtml=_buildPickOfDay(picks);
+      if(potdHtml){
+        var potdEl=document.getElementById('potd-spotlight-container');
+        if(!potdEl){
+          potdEl=document.createElement('div');
+          potdEl.id='potd-spotlight-container';
+          var bpdRef=document.getElementById('best-pick-callout');
+          if(bpdRef&&bpdRef.parentNode)bpdRef.parentNode.insertBefore(potdEl,bpdRef.nextSibling);
+        }
+        if(potdEl)_setHtml(potdEl,potdHtml);
       }
     }
     // ── Wire matchup_analysis.json -> MATCHUP_DATA ──

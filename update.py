@@ -339,6 +339,8 @@ def main() -> None:
             ("build_game_context", "Game context"),
             ("build_explainers", "Explainers"),
             ("build_matchup_analysis", "Matchup analysis"),
+            ("build_game_detail", "Game detail"),
+            ("build_elo_timeline", "Elo timeline"),
             # Performance depends on backfill being done
             ("build_performance", "Performance history"),
             ("build_accuracy_history", "Accuracy history"),
@@ -439,6 +441,8 @@ def builders_only() -> None:
         ("build_game_context", "Game context"),
         ("build_explainers", "Explainers"),
         ("build_matchup_analysis", "Matchup analysis"),
+        ("build_game_detail", "Game detail"),
+        ("build_elo_timeline", "Elo timeline"),
         ("build_performance", "Performance history"),
         ("build_accuracy_history", "Accuracy history"),
         ("build_line_movement", "Line movement"),

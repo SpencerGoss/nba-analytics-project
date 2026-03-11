@@ -642,6 +642,30 @@ def build_team_game_features(
         nn = df[col].notna().mean()
         print(f"  {col}: {nn:.1%} non-null")
 
+    # ── Four Factors composite (Dean Oliver weights, per-team rolling) ─────
+    # Combines efg, tov_pct, oreb_pct, ft_rate into a single efficiency score.
+    # Computed from per-game raw metrics, then shift(1) + rolling to avoid leakage.
+    # Uses _roll suffix so diff_ columns are auto-captured by build_matchup_dataset.
+    print("Computing Four Factors composite rolling features...")
+    df["four_factors_game"] = (
+        0.40 * df["efg_game"].fillna(0)
+        + 0.25 * (1 - df["tov_pct_game"].fillna(0))
+        + 0.20 * df["oreb_pct_game"].fillna(0)
+        + 0.15 * df["ft_rate_game"].fillna(0)
+    )
+    ff_group = df.groupby("team_id", group_keys=False)
+    for window in [10, 20]:
+        col_name = f"four_factors_roll{window}"
+        df[col_name] = ff_group.apply(
+            lambda g, w=window: g["four_factors_game"]
+            .shift(1)
+            .rolling(w, min_periods=1)
+            .mean(),
+            include_groups=False,
+        ).values
+    nn_ff = df["four_factors_roll20"].notna().mean()
+    print(f"  four_factors_roll20: {nn_ff:.1%} non-null")
+
     # ── EWMA features (key stats only) ─────────────────────────────────────
     print("Computing EWMA features...")
     ewma_group = df.groupby("team_id", group_keys=False)
@@ -1232,6 +1256,8 @@ def build_matchup_dataset(
         # Short rolling window (3-game) differentials
         "pts_roll3", "plus_minus_roll3", "win_pct_roll3",
         "net_rtg_game_roll3", "off_rtg_game_roll3", "def_rtg_game_roll3",
+        # Four Factors composite
+        "four_factors_roll10", "four_factors_roll20",
     ]
 
     for stat in diff_stats:

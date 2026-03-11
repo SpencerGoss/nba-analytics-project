@@ -35,6 +35,12 @@ try:
 except ImportError:
     _LGBM_AVAILABLE = False
 
+try:
+    from xgboost import XGBClassifier
+    _XGB_AVAILABLE = True
+except ImportError:
+    _XGB_AVAILABLE = False
+
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -200,6 +206,44 @@ def _get_low_importance_features(
         ]
     except Exception:
         return []
+
+
+def _build_fit_params(
+    name: str,
+    pipe: Pipeline,
+    X_val: pd.DataFrame,
+    y_val: pd.Series,
+) -> dict:
+    """Build fit_params dict for Pipeline.fit(), handling early-stopping models.
+
+    XGBoost requires eval_set in .fit() for early_stopping_rounds. Since
+    the Pipeline imputes X before passing to clf, we must pre-transform
+    the validation data through the imputer step so the clf receives
+    clean (no NaN) validation arrays.
+
+    Returns an empty dict for models that don't need special fit params.
+    """
+    if name not in ("xgboost",):
+        return {}
+
+    # Pre-transform validation data through the imputer (and scaler if present)
+    imputer = pipe.named_steps.get("imputer")
+    scaler = pipe.named_steps.get("scaler")
+
+    if imputer is None:
+        return {}
+
+    # Fit-transform imputer on validation data using training params
+    # Note: imputer will be fit on training data during pipe.fit(),
+    # so we use a clone to avoid contamination
+    from sklearn.base import clone
+    imp_clone = clone(imputer)
+    X_val_imp = imp_clone.fit_transform(X_val)
+    if scaler is not None:
+        scl_clone = clone(scaler)
+        X_val_imp = scl_clone.fit_transform(X_val_imp)
+
+    return {"clf__eval_set": [(X_val_imp, y_val.values)], "clf__verbose": False}
 
 
 def _clone_pipeline(pipe: Pipeline) -> Pipeline:
@@ -400,6 +444,25 @@ def train_game_outcome_model(
             )),
         ])
 
+    if _XGB_AVAILABLE:
+        candidates["xgboost"] = Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("clf", XGBClassifier(
+                n_estimators=500,
+                max_depth=6,
+                learning_rate=0.05,
+                subsample=0.8,
+                colsample_bytree=0.7,
+                min_child_weight=20,
+                gamma=0.1,
+                reg_alpha=0.1,
+                reg_lambda=1.0,
+                eval_metric="logloss",
+                early_stopping_rounds=15,
+                random_state=42,
+            )),
+        ])
+
     splits = _season_splits(train)
     print(f"\n--- Model selection across {len(splits)} validation split(s) ---")
 
@@ -411,7 +474,8 @@ def train_game_outcome_model(
             X_sub, y_sub = tr[feat_cols], tr[TARGET]
             X_val, y_val = va[feat_cols], va[TARGET]
 
-            pipe.fit(X_sub, y_sub)
+            fit_params = _build_fit_params(name, pipe, X_val, y_val)
+            pipe.fit(X_sub, y_sub, **fit_params)
             val_proba = pipe.predict_proba(X_val)[:, 1]
             val_auc = roc_auc_score(y_val, val_proba)
             best_t, val_acc = _best_threshold(y_val, val_proba)
@@ -437,7 +501,8 @@ def train_game_outcome_model(
     )
 
     best_pipe = candidates[best_name]
-    best_pipe.fit(X_train, y_train)
+    final_fit_params = _build_fit_params(best_name, best_pipe, X_test, y_test)
+    best_pipe.fit(X_train, y_train, **final_fit_params)
     test_proba = best_pipe.predict_proba(X_test)[:, 1]
     test_pred = (test_proba >= best_threshold).astype(int)
 
