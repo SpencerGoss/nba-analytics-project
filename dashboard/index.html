@@ -711,57 +711,29 @@ select option{background:#0F1117;color:#F1F5FF}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.22)}
 button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 
-/* ── TERMS GATE MODAL ── */
-.tg-overlay{
-  position:fixed;inset:0;z-index:9999;
-  background:rgba(4,5,10,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  display:flex;align-items:center;justify-content:center;padding:20px;
+/* ── DISCLAIMER BANNER ── */
+.tg-banner{
+  position:fixed;bottom:0;left:0;right:0;z-index:9999;
+  background:var(--bg2,rgba(15,17,23,.85));
+  border-top:1px solid rgba(255,255,255,.10);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  padding:14px 24px;
+  display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;
+  font-size:13px;color:var(--t1,#aaa);
+  transform:translateY(0);
+  transition:transform 380ms cubic-bezier(.4,0,.2,1);
 }
-.tg-overlay.hidden{display:none}
-.tg-box{
-  background:#0F1117;border:1px solid rgba(255,255,255,.12);border-radius:24px;
-  padding:40px 40px 32px;max-width:540px;width:100%;
-  box-shadow:0 4px 24px rgba(0,0,0,.8),0 40px 80px rgba(0,0,0,.6);
-}
-.tg-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
-.tg-logo-txt{font-size:16px;font-weight:800;letter-spacing:-.3px;color:var(--t0)}
-.tg-logo-txt span{color:var(--gold)}
-.tg-title{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:6px}
-.tg-sub{font-size:13px;color:var(--t1);margin-bottom:24px;line-height:1.6}
-.tg-checks{display:flex;flex-direction:column;gap:12px;margin-bottom:28px}
-.tg-check-row{
-  display:flex;align-items:flex-start;gap:12px;cursor:pointer;
-  padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.06);
-  background:rgba(255,255,255,.02);transition:background 140ms,border-color 140ms;
-}
-.tg-check-row:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10)}
-.tg-check-row.checked{background:rgba(0,200,150,.05);border-color:rgba(0,200,150,.18)}
-.tg-checkbox{
-  width:18px;height:18px;flex-shrink:0;margin-top:1px;
-  border:2px solid rgba(255,255,255,.25);border-radius:5px;
-  background:transparent;display:flex;align-items:center;justify-content:center;
-  transition:all 160ms;
-}
-.tg-check-row.checked .tg-checkbox{background:var(--green);border-color:var(--green);box-shadow:0 0 8px rgba(0,200,150,.4)}
-.tg-checkbox svg{display:none}
-.tg-check-row.checked .tg-checkbox svg{display:block}
-.tg-check-lbl{font-size:13px;font-weight:500;color:var(--t1);line-height:1.5;user-select:none}
-.tg-check-row.checked .tg-check-lbl{color:var(--t0)}
-.tg-btn{
-  width:100%;padding:14px;border-radius:14px;border:none;
+.tg-banner.hidden{transform:translateY(100%);pointer-events:none}
+.tg-banner-txt{line-height:1.5;text-align:center;max-width:720px}
+.tg-banner-txt a{color:var(--accent,#00c896);text-decoration:none;font-weight:600;margin-left:6px}
+.tg-banner-txt a:hover{text-decoration:underline}
+.tg-banner-btn{
+  padding:8px 20px;border-radius:10px;border:none;white-space:nowrap;
   background:linear-gradient(135deg,rgba(0,200,150,.9),rgba(0,200,150,.6));
-  color:#fff;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;
-  transition:opacity 180ms,transform 120ms;
+  color:#fff;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;
+  transition:opacity 180ms,transform 120ms;flex-shrink:0;
 }
-.tg-btn:disabled{opacity:.28;cursor:not-allowed;transform:none}
-.tg-btn:not(:disabled):hover{opacity:.88;transform:translateY(-1px)}
-.tg-decline{
-  width:100%;margin-top:10px;padding:8px;border-radius:10px;border:none;
-  background:transparent;color:var(--t2);font-family:var(--f);font-size:12px;font-weight:600;
-  cursor:pointer;transition:color 140ms;
-}
-.tg-decline:hover{color:var(--t1)}
-.tg-footer-note{font-size:11px;color:var(--t2);text-align:center;margin-top:16px;line-height:1.6}
+.tg-banner-btn:hover{opacity:.88;transform:translateY(-1px)}
 
 /* ── HERO SPOTLIGHT ── */
 .spotlight{
@@ -1089,66 +1061,53 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 .potd-spotlight::before{content:'PICK OF THE DAY';position:absolute;top:8px;right:12px;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--green);opacity:.7}
 .empty-state{text-align:center;padding:32px 16px;color:var(--t1);font-size:14px}
 .empty-state-icon{font-size:32px;margin-bottom:8px;opacity:.5}
+
+/* ── MOBILE OPTIMIZATION ── */
+@media(max-width:768px){
+  .wrap{padding:72px 14px 80px!important}
+  .pt{font-size:22px}
+  .pd{font-size:12px}
+  .ph{margin-bottom:18px}
+  .card{padding:14px;border-radius:14px}
+  .mob-nav-item{padding:8px 6px;min-height:44px;min-width:44px}
+  .mob-nav-item svg{width:22px;height:22px}
+  .mob-nav-item{font-size:10px}
+  .tab{padding:8px 14px;min-height:36px;font-size:11px}
+  .gc{padding:14px 12px;min-height:64px}
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;display:block;width:100%}
+  .tw table{min-width:560px}
+  .tw table td,.tw table th{padding:10px 8px;font-size:11px}
+  .tg-banner{padding:12px 16px;gap:10px}
+  .tg-banner-txt{font-size:12px}
+  .sgrid{gap:10px}
+  .picks-hero-grid{gap:10px}
+  .gg{gap:10px}
+  .stat-vs-label{min-width:60px;font-size:9px}
+}
+@media(max-width:480px){
+  .wrap{padding:68px 10px 80px!important}
+  .pt{font-size:19px}
+  .card{padding:12px;border-radius:12px}
+  .picks-hero-grid{grid-template-columns:1fr!important}
+  .tg-banner{flex-direction:column;gap:8px;padding:12px}
+  .tg-banner-btn{width:100%}
+}
+/* Modal mobile sizing */
+@media(max-width:768px){
+  #player-modal,#game-modal,#team-modal{width:min(96vw,580px)!important;max-height:90vh;border-radius:16px!important}
+  #player-modal button,#game-modal button,#team-modal button{min-width:44px;min-height:44px}
+  #pm-content table{font-size:11px}
+  #pm-content table td,#pm-content table th{padding:8px 6px}
+}
 </style>
 
 </head>
 <body>
 
-<!-- ═══ TERMS GATE ═══ -->
-<div class="tg-overlay" id="tg-overlay" role="dialog" aria-modal="true" aria-labelledby="tg-title-el">
-  <div class="tg-box">
-    <div class="tg-logo">
-      <svg width="28" height="28" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="tg-lg1" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#00C896"/><stop offset="100%" stop-color="#F5A623"/>
-          </linearGradient>
-          <linearGradient id="tg-lg2" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#00C896" stop-opacity="0.3"/><stop offset="100%" stop-color="#F5A623" stop-opacity="0.3"/>
-          </linearGradient>
-        </defs>
-        <path d="M15 2L27 8.5V21.5L15 28L3 21.5V8.5L15 2Z" stroke="url(#tg-lg1)" stroke-width="1.5" fill="url(#tg-lg2)"/>
-        <path d="M8 15 A7 7 0 0 1 22 15" stroke="url(#tg-lg1)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <circle cx="15" cy="15" r="1.8" fill="url(#tg-lg1)"/>
-        <rect x="10" y="17" width="2" height="4" rx=".8" fill="url(#tg-lg1)" opacity=".9"/>
-        <rect x="14" y="15.5" width="2" height="5.5" rx=".8" fill="url(#tg-lg1)" opacity=".9"/>
-        <rect x="18" y="18.5" width="2" height="2.5" rx=".8" fill="url(#tg-lg1)" opacity=".9"/>
-      </svg>
-      <span class="tg-logo-txt">Baseline<span>Analytics</span></span>
-    </div>
-    <div class="tg-title" id="tg-title-el">Before you continue</div>
-    <div class="tg-sub">Please read and confirm each statement below. All five must be checked to access betting-related analysis.</div>
-    <div class="tg-checks" id="tg-checks">
-      <label class="tg-check-row" id="tgr-0">
-        <div class="tg-checkbox" id="tgcb-0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <span class="tg-check-lbl">I am 18 years of age or older</span>
-        <input type="checkbox" id="tgc-0" style="display:none" onchange="tgCheck()"/>
-      </label>
-      <label class="tg-check-row" id="tgr-1">
-        <div class="tg-checkbox" id="tgcb-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <span class="tg-check-lbl">I understand sports betting laws vary — I am responsible for knowing my local laws</span>
-        <input type="checkbox" id="tgc-1" style="display:none" onchange="tgCheck()"/>
-      </label>
-      <label class="tg-check-row" id="tgr-2">
-        <div class="tg-checkbox" id="tgcb-2"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <span class="tg-check-lbl">This tool provides analysis for informational purposes only — it is NOT financial or betting advice</span>
-        <input type="checkbox" id="tgc-2" style="display:none" onchange="tgCheck()"/>
-      </label>
-      <label class="tg-check-row" id="tgr-3">
-        <div class="tg-checkbox" id="tgcb-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <span class="tg-check-lbl">I understand past model accuracy does not guarantee future results</span>
-        <input type="checkbox" id="tgc-3" style="display:none" onchange="tgCheck()"/>
-      </label>
-      <label class="tg-check-row" id="tgr-4">
-        <div class="tg-checkbox" id="tgcb-4"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <span class="tg-check-lbl">I accept full responsibility for any decisions I make</span>
-        <input type="checkbox" id="tgc-4" style="display:none" onchange="tgCheck()"/>
-      </label>
-    </div>
-    <button class="tg-btn" id="tg-agree-btn" disabled onclick="tgAccept()">I Agree — Continue</button>
-    <button class="tg-decline" onclick="tgDecline()">Decline — take me to Standings</button>
-    <div class="tg-footer-note">By continuing you confirm you have read and accepted all statements above.</div>
-  </div>
+<!-- ═══ DISCLAIMER BANNER ═══ -->
+<div class="tg-banner hidden" id="tg-banner" role="complementary" aria-label="Disclaimer">
+  <span class="tg-banner-txt">This site provides sports analytics for informational purposes only — not betting advice. You must be 18+ and follow local laws.<a href="about.html">Learn more</a></span>
+  <button class="tg-banner-btn" onclick="tgAccept()">Got it</button>
 </div>
 
 <div class="bgl" aria-hidden="true">
@@ -2248,75 +2207,28 @@ function setMarkup(el, markup){
 }
 
 // ═══════════════════════════════════════════════
-// TERMS GATE
+// DISCLAIMER BANNER
 // ═══════════════════════════════════════════════
 const TG_KEY='baseline_terms_v1';
 
 function tgInit(){
   const stored=localStorage.getItem(TG_KEY);
   if(stored){
-    try{const obj=JSON.parse(stored);if(obj&&obj.version==='v1'&&obj.accepted_at){tgHide();return;}}catch(e){}
+    try{const obj=JSON.parse(stored);if(obj&&obj.version==='v1'&&obj.accepted_at)return;}catch(e){}
   }
-  document.getElementById('tg-overlay').classList.remove('hidden');
+  const b=document.getElementById('tg-banner');
+  if(b){requestAnimationFrame(()=>b.classList.remove('hidden'));}
 }
 
-function tgHide(){
-  document.getElementById('tg-overlay').classList.add('hidden');
+function tgAccept(){
+  localStorage.setItem(TG_KEY,JSON.stringify({version:'v1',accepted_at:new Date().toISOString()}));
+  const b=document.getElementById('tg-banner');
+  if(b){b.classList.add('hidden');}
 }
 
 function tgReopen(){
-  for(let i=0;i<5;i++){
-    const cb=document.getElementById('tgc-'+i);
-    const row=document.getElementById('tgr-'+i);
-    if(cb){cb.checked=false;}
-    if(row){row.classList.remove('checked');}
-  }
-  document.getElementById('tg-agree-btn').disabled=true;
-  document.getElementById('tg-overlay').classList.remove('hidden');
-}
-
-function tgCheck(){
-  let allChecked=true;
-  for(let i=0;i<5;i++){
-    const cb=document.getElementById('tgc-'+i);
-    const row=document.getElementById('tgr-'+i);
-    if(!cb||!row)continue;
-    const isChecked=cb.checked;
-    row.classList.toggle('checked',isChecked);
-    if(!isChecked)allChecked=false;
-  }
-  document.getElementById('tg-agree-btn').disabled=!allChecked;
-}
-
-(function(){
-  document.addEventListener('DOMContentLoaded',()=>{
-    for(let i=0;i<5;i++){
-      const row=document.getElementById('tgr-'+i);
-      const cb=document.getElementById('tgc-'+i);
-      if(!row||!cb)continue;
-      row.addEventListener('click',(e)=>{
-        e.preventDefault();
-        cb.checked=!cb.checked;
-        tgCheck();
-      });
-    }
-  });
-})();
-
-function tgAccept(){
-  const allGood=[...Array(5)].every((_,i)=>{
-    const cb=document.getElementById('tgc-'+i);
-    return cb&&cb.checked;
-  });
-  if(!allGood)return;
-  localStorage.setItem(TG_KEY,JSON.stringify({version:'v1',accepted_at:new Date().toISOString()}));
-  tgHide();
-  if(_pendingBetTab){const t=_pendingBetTab;_pendingBetTab=null;_activateBettingTab(t,null);}
-}
-
-function tgDecline(){
-  tgHide();
-  showFreeTab('standings');
+  const b=document.getElementById('tg-banner');
+  if(b){b.classList.remove('hidden');}
 }
 
 // ═══════════════════════════════════════════════
@@ -2815,21 +2727,8 @@ function showFreeTab(id){
 }
 
 function showBettingTab(tabId, pillEl){
-  // Check terms
-  const stored=localStorage.getItem(TG_KEY);
-  let accepted=false;
-  if(stored){try{const obj=JSON.parse(stored);if(obj&&obj.version==='v1'&&obj.accepted_at)accepted=true;}catch(e){}}
-  if(!accepted){
-    // Store pending tab, show gate
-    _pendingBetTab=tabId;
-    document.getElementById('tg-overlay').classList.remove('hidden');
-    closeBettingDropdown();
-    return;
-  }
   _activateBettingTab(tabId, pillEl);
 }
-
-let _pendingBetTab=null;
 
 function _activateBettingTab(tabId, pillEl){
   closeBettingDropdown();
