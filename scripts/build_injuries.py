@@ -224,7 +224,7 @@ def main() -> None:
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
-        json.dump(results, fh, indent=2, ensure_ascii=False)
+        json.dump(results, fh, separators=(",", ":"), ensure_ascii=False)
 
     print(f"  Written -> {OUT_JSON}")
     for game in results[:3]:

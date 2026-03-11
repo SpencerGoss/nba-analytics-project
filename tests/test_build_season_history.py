@@ -14,7 +14,6 @@ from scripts.build_season_history import (
     build_games,
     build_output,
     SEASON_CODES,
-    SEASON_LABELS,
 )
 
 
@@ -26,10 +25,10 @@ def test_season_label_known():
 
 
 def test_season_label_unknown():
-    # Unknown code falls back to string representation
+    # Any valid season code gets a formatted label
     result = season_label(201920)
     assert isinstance(result, str)
-    assert "201920" in result
+    assert result == "2019-20"
 
 
 # ─── filter_seasons ───────────────────────────────────────────────────────────
@@ -189,9 +188,9 @@ def test_build_output_seasons_newest_first():
     ])
     output = build_output(df)
     seasons = output["seasons"]
-    # Seasons list should be newest first (2024-25 first, 2020-21 last)
-    assert seasons[0] == "2024-25"
-    assert seasons[-1] == "2020-21"
+    # Seasons list should be newest first
+    assert seasons[0] == season_label(SEASON_CODES[-1])
+    assert seasons[-1] == season_label(SEASON_CODES[0])
 
 
 def test_season_label_all_known_codes():

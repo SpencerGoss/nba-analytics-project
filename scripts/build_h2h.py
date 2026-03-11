@@ -185,7 +185,7 @@ def build_h2h() -> list[dict]:
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_JSON, "w", encoding="utf-8") as fh:
-        json.dump(results, fh, indent=2)
+        json.dump(results, fh, separators=(",", ":"))
     print(f"Written -> {OUT_JSON}")
     return results
 

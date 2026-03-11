@@ -451,7 +451,7 @@ def main() -> None:
                 "exported_at": datetime.now(timezone.utc).isoformat(),
             },
             fh,
-            indent=2,
+            separators=(",", ":"),
             ensure_ascii=False,
         )
     size_kb = OUT_JSON.stat().st_size // 1024

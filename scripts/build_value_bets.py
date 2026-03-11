@@ -162,7 +162,8 @@ def _compute_value_bets(
             continue
 
         # Half-Kelly criterion: f = 0.5 * (p*b - (1-p)) / b
-        b = market_prob / (1.0 - market_prob) if market_prob < 1.0 else 0.0
+        # b = decimal odds - 1 = (1 - market_prob) / market_prob (odds against)
+        b = (1.0 - market_prob) / market_prob if market_prob > 0.0 else 0.0
         kelly_raw = (model_prob * b - (1.0 - model_prob)) / b if b > 0 else 0.0
         kelly_fraction = round(max(0.0, 0.5 * kelly_raw), 4)
 

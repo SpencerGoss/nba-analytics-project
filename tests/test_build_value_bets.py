@@ -362,9 +362,10 @@ def test_kelly_fraction_is_float():
 
 
 def test_kelly_fraction_half_kelly_formula():
-    """Verify half-Kelly arithmetic: model=0.72, market=0.60 -> b=0.6/0.4=1.5
-    kelly_raw = (0.72*1.5 - 0.28)/1.5 = (1.08-0.28)/1.5 = 0.8/1.5 = 0.5333
-    half_kelly = 0.5 * 0.5333 = 0.2667, rounded to 4dp = 0.2667
+    """Verify half-Kelly arithmetic: model=0.72, market=0.60
+    b = (1 - 0.60) / 0.60 = 0.6667  (odds against)
+    kelly_raw = (0.72*0.6667 - 0.28) / 0.6667 = 0.2 / 0.6667 = 0.3
+    half_kelly = 0.5 * 0.3 = 0.15
     """
     from scripts.build_value_bets import _compute_value_bets
     predictions = [
@@ -378,7 +379,7 @@ def test_kelly_fraction_half_kelly_formula():
     ]
     lines_index = {("2026-03-06", "BOS", "NYK"): {"home_market_prob": 0.60}}
     result = _compute_value_bets(predictions, lines_index, {}, edge_threshold=0.05)
-    assert result[0]["kelly_fraction"] == pytest.approx(0.2667, abs=0.001)
+    assert result[0]["kelly_fraction"] == pytest.approx(0.15, abs=0.001)
 
 
 def test_kelly_fraction_never_negative():
@@ -397,3 +398,43 @@ def test_kelly_fraction_never_negative():
     result = _compute_value_bets(predictions, lines_index, {}, edge_threshold=0.05)
     if result:
         assert result[0]["kelly_fraction"] >= 0.0
+
+
+def test_kelly_fraction_correct_formula():
+    """Verify the fixed Kelly formula with model_prob=0.6, market_prob=0.5.
+
+    Correct formula:
+      b = (1 - market_prob) / market_prob = (1 - 0.5) / 0.5 = 1.0
+      kelly_raw = (model_prob * b - (1 - model_prob)) / b
+                = (0.6 * 1.0 - 0.4) / 1.0 = 0.2
+      half_kelly = 0.5 * 0.2 = 0.1
+
+    The old inverted formula would compute b = market / (1-market) = 1.0 by
+    coincidence at 0.5, but diverges at other market probs.  This test uses
+    0.5 to verify the core arithmetic, then a second assertion at 0.4 to
+    confirm the direction is correct.
+    """
+    from scripts.build_value_bets import _compute_value_bets
+
+    # Case 1: model=0.6, market=0.5
+    predictions = [{
+        "game_date": "2026-03-06", "home_team": "DEN", "away_team": "MIN",
+        "home_win_prob": 0.6, "created_at": "2026-03-06T00:00:00",
+    }]
+    lines_index = {("2026-03-06", "DEN", "MIN"): {"home_market_prob": 0.5}}
+    result = _compute_value_bets(predictions, lines_index, {}, edge_threshold=0.05)
+    assert len(result) == 1
+    # half_kelly = 0.5 * 0.2 = 0.1
+    assert result[0]["kelly_fraction"] == pytest.approx(0.1, abs=0.001)
+
+    # Case 2: model=0.7, market=0.4 -> b = 0.6/0.4 = 1.5
+    # kelly_raw = (0.7*1.5 - 0.3)/1.5 = (1.05-0.3)/1.5 = 0.5
+    # half_kelly = 0.25
+    predictions2 = [{
+        "game_date": "2026-03-06", "home_team": "OKC", "away_team": "POR",
+        "home_win_prob": 0.7, "created_at": "2026-03-06T00:00:00",
+    }]
+    lines_index2 = {("2026-03-06", "OKC", "POR"): {"home_market_prob": 0.4}}
+    result2 = _compute_value_bets(predictions2, lines_index2, {}, edge_threshold=0.05)
+    assert len(result2) == 1
+    assert result2[0]["kelly_fraction"] == pytest.approx(0.25, abs=0.001)

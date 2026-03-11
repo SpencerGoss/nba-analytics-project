@@ -37,6 +37,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.features.era_labels import label_eras
 from src.features.lineup_features import build_lineup_features
+from src.features.elo import build_elo_ratings
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -44,7 +45,20 @@ from src.features.lineup_features import build_lineup_features
 DATA_PATH      = "data/processed/team_game_logs.csv"
 STANDINGS_PATH = "data/processed/standings.csv"
 OUTPUT_PATH    = "data/features/team_game_features.csv"
-ROLL_WINDOWS   = [5, 10, 20]   # rolling window sizes (games)
+ROLL_WINDOWS   = [3, 5, 10, 20]   # rolling window sizes (games)
+
+# Only apply the 3-game window to these key stats (avoid feature explosion)
+SHORT_ROLL_STATS = ["pts", "net_rtg_game", "off_rtg_game", "def_rtg_game", "plus_minus"]
+
+# EWMA spans and the stats they apply to (key stats only)
+# Maps source column -> output prefix (to get clean names like net_rtg_ewma7)
+EWMA_SPANS = [7, 15]
+EWMA_STATS = {
+    "net_rtg_game": "net_rtg",
+    "off_rtg_game": "off_rtg",
+    "def_rtg_game": "def_rtg",
+    "pts":          "pts",
+}
 
 ROLL_STATS = [
     "pts", "fg_pct", "fg3_pct", "ft_pct",
@@ -153,6 +167,43 @@ def _rolling_win_pct(group: pd.DataFrame, window: int) -> pd.Series:
         .rolling(window=window, min_periods=1)
         .mean()
     )
+
+
+def _ewma_shift(group: pd.DataFrame, col: str, span: int) -> pd.Series:
+    """
+    Compute a shifted EWMA (exponentially weighted moving average).
+    Shift(1) ensures we only use games BEFORE the current one (no leakage).
+    """
+    return (
+        group[col]
+        .shift(1)
+        .ewm(span=span, min_periods=1)
+        .mean()
+    )
+
+
+def _compute_streak(group: pd.DataFrame) -> pd.Series:
+    """
+    Compute win/loss streak entering each game (shift-1 semantics).
+
+    Positive = consecutive wins, negative = consecutive losses.
+    The streak at game N reflects results of games 0..N-1 only.
+    Returns 0 for the first game of each season (no prior info).
+    """
+    wins = (group["wl"] == "W").astype(int)
+    shifted = wins.shift(1)
+
+    streak = pd.Series(0, index=group.index, dtype=int)
+    current = 0
+    for i, val in enumerate(shifted):
+        if pd.isna(val):
+            current = 0
+        elif val == 1:
+            current = current + 1 if current > 0 else 1
+        else:
+            current = current - 1 if current < 0 else -1
+        streak.iloc[i] = current
+    return streak
 
 
 def _games_in_window(group: pd.DataFrame, window_days: int) -> pd.Series:
@@ -442,7 +493,9 @@ def build_team_game_features(
     for window in roll_windows:
         group = df.groupby("team_id", group_keys=False)
 
-        for stat in ROLL_STATS:
+        # For window=3, only compute key stats to avoid feature explosion
+        stats_for_window = SHORT_ROLL_STATS if window == 3 else ROLL_STATS
+        for stat in stats_for_window:
             if stat in df.columns:
                 col_name = f"{stat}_roll{window}"
                 df[col_name] = group.apply(
@@ -571,7 +624,12 @@ def build_team_game_features(
     print("Computing advanced metric rolling features...")
     adv_group = df.groupby("team_id", group_keys=False)
     for window in roll_windows:
-        for stat in ADV_ROLL_STATS:
+        # For window=3, only compute key advanced stats
+        adv_stats_for_window = (
+            [s for s in ADV_ROLL_STATS if s in SHORT_ROLL_STATS]
+            if window == 3 else ADV_ROLL_STATS
+        )
+        for stat in adv_stats_for_window:
             col_name = f"{stat}_roll{window}"
             df[col_name] = adv_group.apply(
                 lambda g, s=stat: _rolling_mean_shift(g, s, window),
@@ -583,6 +641,26 @@ def build_team_game_features(
         col = f"{stat}_roll20"
         nn = df[col].notna().mean()
         print(f"  {col}: {nn:.1%} non-null")
+
+    # ── EWMA features (key stats only) ─────────────────────────────────────
+    print("Computing EWMA features...")
+    ewma_group = df.groupby("team_id", group_keys=False)
+    for span in EWMA_SPANS:
+        for src_col, out_prefix in EWMA_STATS.items():
+            if src_col in df.columns:
+                col_name = f"{out_prefix}_ewma{span}"
+                df[col_name] = ewma_group.apply(
+                    lambda g, s=src_col, sp=span: _ewma_shift(g, s, sp),
+                    include_groups=False,
+                ).values
+
+    # ── Win/loss streak (per team, per season, shift-1) ────────────────────
+    print("Computing streak feature...")
+    df["streak"] = (
+        df.groupby(["team_id", "season"], group_keys=False)
+        .apply(lambda g: _compute_streak(g), include_groups=False)
+        .values
+    )
 
     # ── Trend features (rolling linear regression slope) ──────────────────────
     print("Computing trend & volatility features...")
@@ -708,6 +786,13 @@ def build_team_game_features(
         # Referee features (NaN when no scrape data -- do NOT fillna(0))
         "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
         "ref_crew_pace_impact_roll10",
+        # EWMA features (not auto-captured by roll_cols since they use _ewma not _roll)
+        "net_rtg_ewma7", "net_rtg_ewma15",
+        "off_rtg_ewma7", "off_rtg_ewma15",
+        "def_rtg_ewma7", "def_rtg_ewma15",
+        "pts_ewma7", "pts_ewma15",
+        # Streak
+        "streak",
         # Note: pythagorean_win_pct_roll10 is auto-captured by roll_cols (_roll filter)
     ]
     # Filter to only include columns that exist in df
@@ -896,6 +981,13 @@ def build_matchup_dataset(
         # Referee features (NaN when no scrape data -- do NOT fillna(0))
         "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
         "ref_crew_pace_impact_roll10",
+        # EWMA features
+        "net_rtg_ewma7", "net_rtg_ewma15",
+        "off_rtg_ewma7", "off_rtg_ewma15",
+        "def_rtg_ewma7", "def_rtg_ewma15",
+        "pts_ewma7", "pts_ewma15",
+        # Streak
+        "streak",
         # Note: pythagorean_win_pct_roll10 is auto-captured by roll_cols (_roll filter)
     ] + injury_cols
 
@@ -932,6 +1024,32 @@ def build_matchup_dataset(
     matchup["season_month"] = pd.to_datetime(matchup["game_date"], format="mixed").dt.month
     print(f"  season_month: {matchup['season_month'].nunique()} unique months, "
           f"range {int(matchup['season_month'].min())}-{int(matchup['season_month'].max())}")
+
+    # ── Cross-matchup offensive/defensive interaction ─────────────────────────
+    print("Computing cross-matchup interaction features...")
+    if "home_off_rtg_game_roll20" in matchup.columns and "away_def_rtg_game_roll20" in matchup.columns:
+        matchup["home_off_vs_away_def_20"] = (
+            matchup["home_off_rtg_game_roll20"] - matchup["away_def_rtg_game_roll20"]
+        )
+        matchup["away_off_vs_home_def_20"] = (
+            matchup["away_off_rtg_game_roll20"] - matchup["home_def_rtg_game_roll20"]
+        )
+        matchup["matchup_off_def_edge"] = (
+            matchup["home_off_vs_away_def_20"] - matchup["away_off_vs_home_def_20"]
+        )
+
+    # ── Rest x Travel fatigue interaction ──────────────────────────────────
+    print("Computing fatigue compound features...")
+    if "home_is_back_to_back" in matchup.columns and "home_travel_miles" in matchup.columns:
+        matchup["home_fatigue_compound"] = (
+            matchup["home_is_back_to_back"] * matchup["home_travel_miles"]
+        )
+        matchup["away_fatigue_compound"] = (
+            matchup["away_is_back_to_back"] * matchup["away_travel_miles"]
+        )
+        matchup["diff_fatigue_compound"] = (
+            matchup["home_fatigue_compound"] - matchup["away_fatigue_compound"]
+        )
 
     # ── Lineup efficiency features (Phase 8, FEAT-02) ─────────────────────────
     # Lineup data exists for 2023-24 and 2024-25 only. Left join so earlier
@@ -1014,6 +1132,53 @@ def build_matchup_dataset(
             for col in lineup_cols:
                 matchup[f"{side}_{col}"] = 0.0
 
+
+    # ── Elo ratings (pre-game) ──────────────────────────────────────────────────
+    print("Joining Elo ratings...")
+    try:
+        elo_df = build_elo_ratings()
+        elo_df["game_id"] = elo_df["game_id"].astype(str)
+        matchup["game_id"] = matchup["game_id"].astype(str)
+
+        # Get home/away team_id for join
+        home_ids_elo = home[["game_id", "team_id"]].copy()
+        home_ids_elo["game_id"] = home_ids_elo["game_id"].astype(str)
+        away_ids_elo = away[["game_id", "team_id"]].copy()
+        away_ids_elo["game_id"] = away_ids_elo["game_id"].astype(str)
+
+        # Merge home Elo
+        home_elo = elo_df[["game_id", "team_id", "elo_pre", "elo_expected_win_prob"]].copy()
+        home_elo.columns = ["game_id", "team_id", "home_elo", "elo_expected_win_prob"]
+        home_elo = home_elo.merge(home_ids_elo, on=["game_id", "team_id"], how="inner")
+        matchup = matchup.merge(
+            home_elo[["game_id", "home_elo", "elo_expected_win_prob"]],
+            on="game_id", how="left",
+        )
+
+        # Merge away Elo
+        away_elo = elo_df[["game_id", "team_id", "elo_pre"]].copy()
+        away_elo.columns = ["game_id", "team_id", "away_elo"]
+        away_elo = away_elo.merge(away_ids_elo, on=["game_id", "team_id"], how="inner")
+        matchup = matchup.merge(
+            away_elo[["game_id", "away_elo"]], on="game_id", how="left",
+        )
+
+        matchup["diff_elo"] = matchup["home_elo"] - matchup["away_elo"]
+        matchup["home_elo"] = matchup["home_elo"].fillna(1500.0)
+        matchup["away_elo"] = matchup["away_elo"].fillna(1500.0)
+        matchup["diff_elo"] = matchup["diff_elo"].fillna(0.0)
+        matchup["elo_expected_win_prob"] = matchup["elo_expected_win_prob"].fillna(0.5)
+        print(
+            f"  Elo features: home_elo, away_elo, diff_elo, elo_expected_win_prob added. "
+            f"Non-null rate: {matchup['home_elo'].notna().mean():.1%}"
+        )
+    except Exception as e:
+        print(f"  Warning: could not build Elo ratings ({e}). Defaulting to 1500.")
+        matchup["home_elo"] = 1500.0
+        matchup["away_elo"] = 1500.0
+        matchup["diff_elo"] = 0.0
+        matchup["elo_expected_win_prob"] = 0.5
+
     # ── Differential features ─────────────────────────────────────────────────
     # Explicit home-minus-away gaps for the most predictive stats.
     print("Computing matchup differential features...")
@@ -1057,6 +1222,16 @@ def build_matchup_dataset(
         # Lineup efficiency differentials (Phase 8, FEAT-02)
         "top1_lineup_net_rtg", "top3_lineup_net_rtg", "avg_lineup_net_rtg",
         "best_off_rating", "best_def_rating",
+        # EWMA differentials
+        "net_rtg_ewma7", "net_rtg_ewma15",
+        "off_rtg_ewma7", "off_rtg_ewma15",
+        "def_rtg_ewma7", "def_rtg_ewma15",
+        "pts_ewma7", "pts_ewma15",
+        # Streak
+        "streak",
+        # Short rolling window (3-game) differentials
+        "pts_roll3", "plus_minus_roll3", "win_pct_roll3",
+        "net_rtg_game_roll3", "off_rtg_game_roll3", "def_rtg_game_roll3",
     ]
 
     for stat in diff_stats:
@@ -1064,6 +1239,23 @@ def build_matchup_dataset(
         a_col = f"away_{stat}"
         if h_col in matchup.columns and a_col in matchup.columns:
             matchup[f"diff_{stat}"] = matchup[h_col] - matchup[a_col]
+
+    # ── Elo x Context interaction features ────────────────────────────────────
+    # Elo advantages are amplified/diminished by rest, fatigue, and momentum.
+    # These capture non-linear synergies between rating gap and situational factors.
+    print("Computing Elo x context interaction features...")
+    if "diff_elo" in matchup.columns:
+        if "diff_days_rest" in matchup.columns:
+            matchup["elo_x_rest"] = matchup["diff_elo"] * matchup["diff_days_rest"]
+        if "diff_is_back_to_back" in matchup.columns:
+            matchup["elo_x_b2b"] = matchup["diff_elo"] * matchup["diff_is_back_to_back"]
+        if "diff_streak" in matchup.columns:
+            matchup["elo_x_streak"] = matchup["diff_elo"] * matchup["diff_streak"]
+        n_elo_interactions = sum(
+            1 for c in ["elo_x_rest", "elo_x_b2b", "elo_x_streak"]
+            if c in matchup.columns
+        )
+        print(f"  Added {n_elo_interactions} Elo x context interaction features")
 
     # Four Factors differential composite (FR-2.4)
     matchup["diff_four_factors_composite"] = _four_factors_composite(

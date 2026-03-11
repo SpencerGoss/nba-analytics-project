@@ -361,7 +361,7 @@ def build_picks(
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
-        json.dump(picks, fh, indent=2, default=str)
+        json.dump(picks, fh, separators=(",", ":"), default=str)
 
     print(f"Written -> {out_path}  ({len(picks)} picks)")
     return picks

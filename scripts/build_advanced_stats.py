@@ -102,7 +102,7 @@ def main() -> None:
         json.dump(
             {"players": data, "season": CURRENT_SEASON,
              "exported_at": datetime.now(timezone.utc).isoformat()},
-            fh, indent=2, ensure_ascii=False
+            fh, separators=(",", ":"), ensure_ascii=False
         )
     print(f"  Written -> {OUT_JSON}")
 

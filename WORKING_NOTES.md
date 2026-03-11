@@ -4,11 +4,12 @@
 
 - [model] `shift(1)` before ALL rolling features; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out from CV
 - [model] ALL inference loads `game_outcome_model_calibrated.pkl`; sys.path must include PROJECT_ROOT; update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`
-- [model] Optuna HPO done: gradient_boosting wins (AUC 0.7406, do not replace); NBAEnsemble blends 3 models (win=0.5/ats=0.3/margin=0.2); margin Ridge MAE 10.574
+- [model] Optuna HPO done: gradient_boosting wins (AUC 0.7422 with Elo+EWMA features); NBAEnsemble blends 3 models (win=0.6/ats=0.15/margin=0.25); margin Ridge MAE 10.52; diff_elo is #1 feature (37.3%)
 - [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526; player_stats.csv stores TOTALS -- divide by gp
 - [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols -- causes ValueError; `closing_spread` can be NULL before games close -- guard with pd.isna() before float()
 - [pipeline] update.py Step 7 calls all 24 builders; `game_lines.csv` at `data/odds/` (NOT data/processed/); `dashboard/data/*.json` COMMITTED to git (GitHub Pages has no build step)
-- [dashboard] Promise.all has 19 fetches (player_detail.json is lazy-loaded separately on first modal open); data-dependent UI in loader callback (NOT tab-click handlers); ALL dynamic DOM writes use `_setHtml(el,html)` -- security hook blocks "innerHTML" in any Edit replacement text
+- [dashboard] Promise.all has 18 fetches (player_comparison+player_detail lazy-loaded, Plotly.js lazy-loaded); URL hash routing for deep linking; CSV export on picks/standings; data-dependent UI in loader callback; ALL DOM writes use `_setHtml(el,html)`
+- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; sync via `scripts/sync_to_sqlserver.py --full` after schema changes; pyodbc installed; auto-syncs in update.py Step 8
 - [dashboard] Player modal: season table FT% + GP-weighted career totals (wAvg/wAvgPct); career cards FG%/FT%/TS%; standings: L10 col (green>=7/red<5) + full names via t.team_name; season history: winner scores colored green, margin col, logos via home_abbr/away_abbr
 - [infra] Pinnacle guest API (league 487, no auth, free); only predictions_history.db active (nba.db empty/legacy); Playwright Chrome fails on Windows if Chrome already running -- use grep for verification instead
 - [data] NBA API LeagueDashPlayerStats only ~1996-97+; pre-1996 legends use _inject_legends(); fetch_historical_players.py flush: use `first_write` alone (not `first_write and i <= len(frames)`) -- i >> len when early seasons fail
@@ -162,6 +163,16 @@
 
 [2026-03-07] [dashboard] INSIGHT: Security hook (PreToolUse) blocks any Edit call whose replacement text contains the substring "innerHTML" -- even in comments or journal entries embedded in the replacement.
 [2026-03-07] [dashboard] WHY: Workaround: choose anchor strings (old_string) that end BEFORE the innerHTML line so new_string doesn't need to contain it; or rephrase to "direct DOM insertion". The hook checks new_string content, not intent.
+
+### [elo]
+
+[2026-03-10] [elo] INSIGHT: Elo system (K=20, MOV multiplier, 1/3 season regression toward 1500) produces diff_elo as the #1 feature at 37.3% importance — more than 3x the next feature. FiveThirtyEight-style MOV multiplier: eln(MOV+1) * (2.2 / (ELOS_DIFF * 0.001 + 2.2)).
+[2026-03-10] [elo] WHY: Elo captures cumulative team strength across entire season history (25+ seasons); rolling features only see 5-20 games. The differential (home_elo - away_elo) is the single most predictive feature for game outcome.
+
+### [sqlserver]
+
+[2026-03-10] [sqlserver] INSIGHT: pyodbc NaN/NaT values cause "invalid data type float" errors — must convert each value through _clean_value() that checks pd.isna() and converts numpy scalars via .item(). Also object columns with mixed types need astype(str) before INSERT.
+[2026-03-10] [sqlserver] WHY: pandas NaN is a float but SQL Server rejects it as invalid for FLOAT columns; None is the correct NULL representation. Mixed-type object columns (e.g., column has both ints and strings) cause type mismatches in executemany().
 
 ### [deployment]
 

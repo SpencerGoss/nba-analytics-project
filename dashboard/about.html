@@ -3,14 +3,19 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://cdn.nba.com; connect-src 'self'"/>
 <title>About — Baseline Analytics</title>
 <meta name="description" content="About Baseline Analytics — how we build data-driven NBA predictions with real machine learning and plain-English explanations."/>
 <meta name="theme-color" content="#08090E"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2308090E'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='system-ui,sans-serif' font-weight='900' fill='%2300C896'>B</text></svg>"/>
 <meta property="og:title" content="About — Baseline Analytics"/>
-<meta property="og:description" content="How Baseline Analytics works: 10+ years of NBA data, 290+ ML features, plain-English explanations. Free."/>
+<meta property="og:description" content="How Baseline Analytics works: 25+ years of NBA data, 349+ ML features, Elo ratings, plain-English explanations. Free."/>
+<meta property="og:image" content="https://spencergoss.github.io/nba-analytics-project/og-image.svg"/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://spencergoss.github.io/nba-analytics-project/about.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="About — Baseline Analytics"/>
+<meta name="twitter:description" content="How Baseline Analytics works: 25+ years of NBA data, 349+ ML features, Elo ratings, plain-English explanations. Free."/>
 <link rel="canonical" href="https://spencergoss.github.io/nba-analytics-project/about.html"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -62,7 +67,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── BACKGROUND BLOBS ── */
+/* ── BACKGROUND AURORA ── */
 .bgl {
   position: fixed;
   inset: 0;
@@ -70,37 +75,64 @@ body {
   z-index: 0;
   overflow: hidden;
 }
+.bgl::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.22) 0%, transparent 100%),
+    radial-gradient(1px 1px at 34% 72%, rgba(255,255,255,.16) 0%, transparent 100%),
+    radial-gradient(1px 1px at 56% 9%, rgba(255,255,255,.20) 0%, transparent 100%),
+    radial-gradient(1px 1px at 78% 44%, rgba(255,255,255,.14) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 91% 81%, rgba(255,255,255,.20) 0%, transparent 100%);
+  opacity: .14;
+}
+.bgl::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 1;
+}
 .blob {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.18;
-  animation: drift 18s ease-in-out infinite alternate;
+  filter: blur(120px);
+  opacity: .85;
 }
 .blob-1 {
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(0,200,150,0.35), transparent 70%);
-  top: -200px; left: -150px;
-  animation-duration: 20s;
+  width: 1200px; height: 350px;
+  border-radius: 50% / 40%;
+  background: radial-gradient(ellipse, rgba(0,200,150,.10), transparent 70%);
+  top: -8%; left: -10%;
+  transform: skewY(-8deg);
+  animation: aurora-a 55s ease-in-out infinite;
 }
 .blob-2 {
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(245,166,35,0.25), transparent 70%);
-  top: 30%; right: -150px;
-  animation-duration: 24s;
-  animation-delay: -6s;
+  width: 1000px; height: 300px;
+  border-radius: 50% / 40%;
+  background: radial-gradient(ellipse, rgba(245,166,35,.07), transparent 70%);
+  bottom: -5%; right: -8%;
+  transform: skewY(6deg);
+  animation: aurora-b 48s ease-in-out infinite;
 }
 .blob-3 {
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(79,158,255,0.20), transparent 70%);
-  bottom: -100px; left: 30%;
-  animation-duration: 22s;
-  animation-delay: -12s;
+  width: 900px; height: 280px;
+  border-radius: 50% / 40%;
+  background: radial-gradient(ellipse, rgba(79,158,255,.06), transparent 70%);
+  top: 40%; left: 20%;
+  transform: skewY(-4deg);
+  animation: aurora-a 60s ease-in-out infinite reverse;
 }
-@keyframes drift {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(30px, -40px) scale(1.05); }
-  100% { transform: translate(-20px, 30px) scale(0.97); }
+@keyframes aurora-a {
+  0%, 100% { transform: skewY(-8deg) translate(0, 0); }
+  50% { transform: skewY(-6deg) translate(30px, -35px); }
+}
+@keyframes aurora-b {
+  0%, 100% { transform: skewY(6deg) translate(0, 0); }
+  50% { transform: skewY(8deg) translate(-25px, 30px); }
 }
 
 /* ── NAV ── */
@@ -677,7 +709,7 @@ footer a:hover { color: var(--green); }
           </svg>
         </div>
         <h3>Our model finds edges</h3>
-        <p>A machine learning model trained on 290+ features identifies when sportsbooks misprice a game. 67.1% accuracy on unseen data.</p>
+        <p>A machine learning model trained on 349+ features — including Elo ratings, EWMA trends, and cross-matchup interactions — identifies when sportsbooks misprice a game. 67.5% accuracy on unseen data.</p>
       </article>
       <article class="how-card">
         <div class="how-num">STEP 03</div>
@@ -698,29 +730,28 @@ footer a:hover { color: var(--green); }
     <h2 id="stats-heading">What's under the hood</h2>
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-value green">67.1%</div>
+        <div class="stat-value green">67.5%</div>
         <div class="stat-label">Model accuracy<br>game outcome</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value green">54.9%</div>
+        <div class="stat-value green">55.0%</div>
         <div class="stat-label">ATS model<br>accuracy</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value gold">136,452</div>
-        <div class="stat-label">Historical games<br>analyzed</div>
+        <div class="stat-value gold">349+</div>
+        <div class="stat-label">ML features<br>engineered</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value gold">10+</div>
+        <div class="stat-value gold">25+</div>
         <div class="stat-label">Years of<br>NBA data</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value blue">456</div>
+        <div class="stat-value blue">1,396</div>
         <div class="stat-label">Tests<br>passing</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value blue">80</div>
-        <div class="stat-label">Seasons of<br>player history</div>
-        <div class="stat-soon">Coming soon</div>
+        <div class="stat-value blue">3</div>
+        <div class="stat-label">ML models<br>in ensemble</div>
       </div>
     </div>
     <div style="text-align:center;margin-top:28px">
@@ -760,21 +791,35 @@ footer a:hover { color: var(--green); }
           <div class="model-dot green"></div>
           <div>
             <div class="model-name">Game Outcome Model</div>
-            <div class="model-desc">GradientBoostingClassifier — 290+ features — expanding-window cross-validation — 67.1% accuracy, AUC 0.7406</div>
+            <div class="model-desc">GradientBoostingClassifier — 349+ features (Elo, EWMA, streaks, interactions) — expanding-window cross-validation — 67.5% accuracy, AUC 0.7422</div>
           </div>
         </div>
         <div class="model-row">
           <div class="model-dot blue"></div>
           <div>
             <div class="model-name">ATS (Against the Spread) Model</div>
-            <div class="model-desc">Logistic Regression (L1) — Brier-score optimized selection — 54.9% accuracy</div>
+            <div class="model-desc">Logistic Regression (L1) — Brier-score optimized selection — 55.0% accuracy, AUC 0.557</div>
+          </div>
+        </div>
+        <div class="model-row">
+          <div class="model-dot gold"></div>
+          <div>
+            <div class="model-name">Margin Regression Model</div>
+            <div class="model-desc">Ridge Regression — predicts point margin — CV MAE 10.52, test MAE 10.66</div>
+          </div>
+        </div>
+        <div class="model-row">
+          <div class="model-dot gold"></div>
+          <div>
+            <div class="model-name">NBAEnsemble</div>
+            <div class="model-desc">3-model blend with confidence-dependent weights — combines game outcome (0.65), ATS, and margin models — dynamic weighting by prediction confidence</div>
           </div>
         </div>
         <div class="model-row">
           <div class="model-dot gold"></div>
           <div>
             <div class="model-name">Probability Calibration</div>
-            <div class="model-desc">Platt Scaler — fitted on held-out 2021-22 season — probabilities mapped to [0, 1] true frequencies</div>
+            <div class="model-desc">Auto-selected (Platt vs Isotonic) — fitted on held-out 2021-22 season — probabilities mapped to [0, 1] true frequencies</div>
           </div>
         </div>
         <div class="model-row">

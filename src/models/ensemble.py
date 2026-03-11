@@ -3,10 +3,17 @@
 Blend game_outcome (win probability), ATS (cover probability), and margin
 (point differential) predictions into a unified ensemble score.
 
-ensemble_score = 0.5 * win_prob + 0.3 * ats_prob + 0.2 * margin_signal
+Uses confidence-dependent weighting: when win probability is decisive the
+win model gets more weight; when uncertain the margin model gets more.
+
 margin_signal  = sigmoid(margin_pred / 15)
 ensemble_edge  = ensemble_score - 0.5  (positive means lean home)
 confidence     = high/medium/low based on |ensemble_edge| thresholds
+
+Weight regimes (win / ats / margin):
+  high-confidence (win_prob >0.65 or <0.35): 0.75 / 0.0 / 0.25
+  default         (in between):               0.65 / 0.0 / 0.35
+  uncertain       (win_prob 0.45-0.55):       0.55 / 0.0 / 0.45
 
 The ensemble wraps three individual model pkl files and has no pkl of its own.
 Configuration is saved as ensemble_config.json.
@@ -15,6 +22,7 @@ Configuration is saved as ensemble_config.json.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import pickle
 import sys
@@ -27,6 +35,8 @@ import pandas as pd
 
 warnings.filterwarnings("ignore")
 
+logger = logging.getLogger(__name__)
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
 if PROJECT_ROOT not in sys.path:
@@ -34,18 +44,52 @@ if PROJECT_ROOT not in sys.path:
 
 ARTIFACTS_DIR = Path(PROJECT_ROOT) / "models" / "artifacts"
 
-WIN_PROB_WEIGHT = 0.5
-ATS_PROB_WEIGHT = 0.3
-MARGIN_SIGNAL_WEIGHT = 0.2
+# --- Weight regime constants -------------------------------------------------
+# ATS model (AUC ~0.557) is near-random.  Set to 0.0 to remove noise from the
+# blend.  Keep the code path so ATS can be re-enabled if the model improves.
+ATS_WEIGHT = 0.0
+
+# High-confidence regime: win_prob > 0.65 or < 0.35
+WEIGHTS_HIGH_CONF = {"win_prob": 0.75, "ats_prob": ATS_WEIGHT, "margin_signal": 0.25}
+# Default regime: 0.35 <= win_prob <= 0.65, excluding uncertain band
+WEIGHTS_DEFAULT = {"win_prob": 0.65, "ats_prob": ATS_WEIGHT, "margin_signal": 0.35}
+# Uncertain regime: 0.45 <= win_prob <= 0.55
+WEIGHTS_UNCERTAIN = {"win_prob": 0.55, "ats_prob": ATS_WEIGHT, "margin_signal": 0.45}
+
+# Backward-compat aliases (sum of non-ATS weights for each regime)
+WIN_PROB_WEIGHT = WEIGHTS_DEFAULT["win_prob"]
+ATS_PROB_WEIGHT = ATS_WEIGHT
+MARGIN_SIGNAL_WEIGHT = WEIGHTS_DEFAULT["margin_signal"]
+
+# Confidence-label thresholds (on ensemble_edge)
 HIGH_CONFIDENCE_THRESHOLD = 0.15
 MEDIUM_CONFIDENCE_THRESHOLD = 0.08
 MARGIN_NORM_FACTOR = 15.0
-ENSEMBLE_VERSION = "1.0.0"
+ENSEMBLE_VERSION = "2.0.0"
+
+# Win-prob thresholds that determine the weight regime
+_WIN_PROB_HIGH_UPPER = 0.65  # above this -> high-confidence regime
+_WIN_PROB_HIGH_LOWER = 0.35  # below this -> high-confidence regime
+_WIN_PROB_UNCERTAIN_UPPER = 0.55  # at or below -> uncertain regime
+_WIN_PROB_UNCERTAIN_LOWER = 0.45  # at or above -> uncertain regime
 
 
 def _sigmoid(x):
     """Numerically stable sigmoid."""
     return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))
+
+
+def _select_weight_regime(win_prob):
+    """Choose weight regime based on a single win probability value.
+
+    Returns:
+        Tuple of (weights_dict, regime_name).
+    """
+    if win_prob > _WIN_PROB_HIGH_UPPER or win_prob < _WIN_PROB_HIGH_LOWER:
+        return WEIGHTS_HIGH_CONF, "high_confidence"
+    if _WIN_PROB_UNCERTAIN_LOWER <= win_prob <= _WIN_PROB_UNCERTAIN_UPPER:
+        return WEIGHTS_UNCERTAIN, "uncertain"
+    return WEIGHTS_DEFAULT, "default"
 
 
 def _confidence_label(edge):
@@ -67,11 +111,21 @@ def _load_artifact(path):
 class NBAEnsemble:
     """Blend NBA prediction models into a unified ensemble score.
 
-    Weights: win_prob=0.5, ats_prob=0.3, margin_signal=0.2
+    Uses confidence-dependent weighting that shifts weight between win-prob
+    and margin models depending on how decisive the win probability is.
+
+    ATS model (AUC ~0.557) is loaded but receives 0 weight (ATS_WEIGHT=0.0).
+    Set ATS_WEIGHT > 0 to re-enable once the model improves.
+
     margin_signal = sigmoid(margin_pred / 15)
     ensemble_edge = ensemble_score - 0.5  (positive -> lean home)
     confidence: high if |edge|>0.15, medium if >0.08, low otherwise
     """
+
+    # Class-level weight attributes for easy external access / tuning
+    W_WIN = WIN_PROB_WEIGHT
+    W_ATS = ATS_PROB_WEIGHT
+    W_MARGIN = MARGIN_SIGNAL_WEIGHT
 
     def __init__(
         self,
@@ -170,13 +224,17 @@ class NBAEnsemble:
     def predict(self, X):
         """Compute ensemble predictions for each row in X.
 
+        Uses confidence-dependent weighting: high-confidence win probs get
+        more win-model weight; uncertain probs shift weight to margin model.
+
         Args:
             X: DataFrame with feature columns. Missing columns become NaN and
                are handled by each sub-model's internal SimpleImputer.
 
         Returns:
             DataFrame with columns: win_prob, ats_prob, margin_pred,
-            margin_signal, ensemble_score, ensemble_edge, confidence.
+            margin_signal, ensemble_score, ensemble_edge, confidence,
+            weight_regime.
         """
         n = len(X)
 
@@ -196,17 +254,44 @@ class NBAEnsemble:
             margin_pred = np.full(n, np.nan)
             margin_signal = np.full(n, np.nan)
 
-        if self.margin_model is not None:
-            ensemble_score = (
-                WIN_PROB_WEIGHT * win_prob
-                + ATS_PROB_WEIGHT * ats_prob
-                + MARGIN_SIGNAL_WEIGHT * margin_signal
-            )
-        else:
-            total_w = WIN_PROB_WEIGHT + ATS_PROB_WEIGHT
-            w_win = WIN_PROB_WEIGHT / total_w
-            w_ats = ATS_PROB_WEIGHT / total_w
-            ensemble_score = w_win * win_prob + w_ats * ats_prob
+        # --- Dynamic weighting per row ---
+        ensemble_score = np.empty(n)
+        weight_regimes = []
+        regime_counts = {"high_confidence": 0, "default": 0, "uncertain": 0}
+
+        for i in range(n):
+            wp_i = float(win_prob[i])
+            weights, regime = _select_weight_regime(wp_i)
+            weight_regimes.append(regime)
+            regime_counts[regime] += 1
+
+            if self.margin_model is not None:
+                score = (
+                    weights["win_prob"] * wp_i
+                    + weights["ats_prob"] * float(ats_prob[i])
+                    + weights["margin_signal"] * float(margin_signal[i])
+                )
+            else:
+                # No margin model -- redistribute among win + ats only
+                total_w = weights["win_prob"] + weights["ats_prob"]
+                if total_w > 0:
+                    score = (
+                        (weights["win_prob"] / total_w) * wp_i
+                        + (weights["ats_prob"] / total_w) * float(ats_prob[i])
+                    )
+                else:
+                    score = wp_i
+            ensemble_score[i] = score
+
+        # Clamp to [0, 1] (should already be there, but guard)
+        ensemble_score = np.clip(ensemble_score, 0.0, 1.0)
+
+        logger.info(
+            "Ensemble weight regimes: %d high_confidence, %d default, %d uncertain",
+            regime_counts["high_confidence"],
+            regime_counts["default"],
+            regime_counts["uncertain"],
+        )
 
         ensemble_edge = ensemble_score - 0.5
         confidence = [_confidence_label(float(e)) for e in ensemble_edge]
@@ -220,6 +305,7 @@ class NBAEnsemble:
                 "ensemble_score": ensemble_score,
                 "ensemble_edge": ensemble_edge,
                 "confidence": confidence,
+                "weight_regime": weight_regimes,
             },
             index=X.index,
         )
@@ -236,10 +322,17 @@ class NBAEnsemble:
         config = {
             "version": ENSEMBLE_VERSION,
             "created_at": datetime.now().isoformat(),
-            "weights": {
-                "win_prob": WIN_PROB_WEIGHT,
-                "ats_prob": ATS_PROB_WEIGHT,
-                "margin_signal": MARGIN_SIGNAL_WEIGHT,
+            "weight_regimes": {
+                "high_confidence": WEIGHTS_HIGH_CONF,
+                "default": WEIGHTS_DEFAULT,
+                "uncertain": WEIGHTS_UNCERTAIN,
+            },
+            "ats_weight": ATS_WEIGHT,
+            "win_prob_thresholds": {
+                "high_upper": _WIN_PROB_HIGH_UPPER,
+                "high_lower": _WIN_PROB_HIGH_LOWER,
+                "uncertain_upper": _WIN_PROB_UNCERTAIN_UPPER,
+                "uncertain_lower": _WIN_PROB_UNCERTAIN_LOWER,
             },
             "margin_norm_factor": MARGIN_NORM_FACTOR,
             "confidence_thresholds": {

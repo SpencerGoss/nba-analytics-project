@@ -1,5 +1,5 @@
 metric,value
-brier_score_raw,0.205597
-brier_score_calibrated,0.213319
-ece_raw,0.02097
-ece_calibrated,0.076765
+brier_score_raw,0.204918
+brier_score_calibrated,0.21174
+ece_raw,0.029139
+ece_calibrated,0.085224

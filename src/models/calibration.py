@@ -57,6 +57,7 @@ warnings.filterwarnings("ignore")
 
 from sklearn.calibration import calibration_curve, CalibratedClassifierCV
 from sklearn.isotonic import IsotonicRegression
+from sklearn.linear_model import LogisticRegression as _LR
 from sklearn.metrics import brier_score_loss
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -83,10 +84,32 @@ class _CalibratedWrapper:
     def __init__(self, base_model, isotonic: IsotonicRegression):
         self.base_model = base_model
         self.isotonic = isotonic
+        self.calibration_method = "isotonic"
 
     def predict_proba(self, X):
         raw = self.base_model.predict_proba(X)[:, 1]
         cal = self.isotonic.predict(raw)
+        return np.column_stack([1 - cal, cal])
+
+    def predict(self, X):
+        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
+
+
+class _PlattWrapper:
+    """Wraps a base model + Platt scaling (logistic sigmoid) into a single
+    object with predict_proba(). Uses a 1-feature LogisticRegression fitted
+    on the base model's raw probabilities -- only 2 parameters (slope +
+    intercept), so much less prone to overfitting than isotonic regression
+    on small calibration sets."""
+
+    def __init__(self, base_model, platt_lr: _LR):
+        self.base_model = base_model
+        self.platt_lr = platt_lr
+        self.calibration_method = "platt"
+
+    def predict_proba(self, X):
+        raw = self.base_model.predict_proba(X)[:, 1]
+        cal = self.platt_lr.predict_proba(raw.reshape(-1, 1))[:, 1]
         return np.column_stack([1 - cal, cal])
 
     def predict(self, X):
@@ -173,13 +196,16 @@ def _plot_calibration_curve(
     ece_uncal:    float,
     ece_cal:      float,
     output_dir:   str,
+    cal_method:   str = "isotonic",
 ) -> None:
     """
     Plot the reliability diagram comparing the raw model to the
-    Platt-scaled (isotonic) calibrated version.
+    calibrated version (isotonic or Platt scaling).
     """
     frac_pos_u, mean_pred_u = calibration_curve(y_true, y_prob_uncal, n_bins=N_BINS)
     frac_pos_c, mean_pred_c = calibration_curve(y_true, y_prob_cal,   n_bins=N_BINS)
+
+    cal_label = "Isotonic" if cal_method == "isotonic" else "Platt"
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
@@ -189,7 +215,7 @@ def _plot_calibration_curve(
     ax.plot(mean_pred_u, frac_pos_u, "o-", color="#e74c3c", linewidth=2,
             markersize=7, label=f"Base GBM (Brier={brier_uncal:.4f}, ECE={ece_uncal:.4f})")
     ax.plot(mean_pred_c, frac_pos_c, "s-", color="#2ecc71", linewidth=2,
-            markersize=7, label=f"GBM + Isotonic (Brier={brier_cal:.4f}, ECE={ece_cal:.4f})")
+            markersize=7, label=f"GBM + {cal_label} (Brier={brier_cal:.4f}, ECE={ece_cal:.4f})")
 
     ax.fill_between(mean_pred_u, frac_pos_u, mean_pred_u,
                     alpha=0.12, color="#e74c3c", label="Miscalibration area")
@@ -375,11 +401,15 @@ def run_calibration_analysis(
     # -- Raw model predictions -------------------------------------------------
     # The v2 model artifact is a CalibratedClassifierCV wrapper around the base
     # GBM Pipeline.  We extract the inner pipeline for "pre-calibration" numbers
-    # so the chart can show the improvement from isotonic calibration.
+    # so the chart can show the improvement from calibration.
     # The v1 model is a plain Pipeline -- handled the same way for compatibility.
-    if isinstance(model, (CalibratedClassifierCV, _CalibratedWrapper)):
-        raw_model = model.base_model if isinstance(model, _CalibratedWrapper) else model.estimator
-        print("\n  (v2 model detected - comparing base GBM vs isotonic-calibrated output)")
+    if isinstance(model, (CalibratedClassifierCV, _CalibratedWrapper, _PlattWrapper)):
+        if isinstance(model, (_CalibratedWrapper, _PlattWrapper)):
+            raw_model = model.base_model
+        else:
+            raw_model = model.estimator
+        existing_method = getattr(model, "calibration_method", "isotonic")
+        print(f"\n  (v2 model detected - comparing base GBM vs {existing_method}-calibrated output)")
     else:
         raw_model = model             # v1 plain Pipeline
 
@@ -395,13 +425,14 @@ def run_calibration_analysis(
 
     # -- Calibrated predictions ------------------------------------------------
     # v2: the loaded artifact is already the calibrated model -- use it directly.
-    # v1: fit a fresh isotonic calibrator on the training data and save it so
-    #     future scripts (fetch_odds.py, predict_cli.py) can load calibrated probs
-    #     without re-fitting.
-    if isinstance(model, (CalibratedClassifierCV, _CalibratedWrapper)):
-        print("\nUsing pre-fitted isotonic calibration from trained model artifact...")
+    # v1: fit both isotonic and Platt calibrators on the calibration holdout,
+    #     compare Brier scores, and keep the better one.
+    if isinstance(model, (CalibratedClassifierCV, _CalibratedWrapper, _PlattWrapper)):
+        existing_method = getattr(model, "calibration_method", "isotonic")
+        print(f"\nUsing pre-fitted {existing_method} calibration from trained model artifact...")
         y_prob_cal = model.predict_proba(X_test)[:, 1]
         cal_model  = model   # already saved; no extra write needed
+        selected_method = existing_method
     else:
         train_all = df[~df["season"].isin(test_seasons)].copy()
         train_all = train_all.dropna(subset=[TARGET])
@@ -412,22 +443,49 @@ def run_calibration_analysis(
             calib_rows = train_all[train_all["season"] == calibration_season].copy()
 
         if calib_rows is not None and len(calib_rows) >= 100:
-            print(f"\nFitting isotonic calibration on held-out season {calibration_season} "
+            print(f"\nFitting calibrators on held-out season {calibration_season} "
                   f"({len(calib_rows):,} games) -- out-of-sample, no leakage...")
             calib_probs = model.predict_proba(calib_rows[feat_cols])[:, 1]
-            iso = IsotonicRegression(out_of_bounds="clip")
-            iso.fit(calib_probs, calib_rows[TARGET].values)
+            calib_y = calib_rows[TARGET].values
         else:
-            print("\nFitting isotonic calibration on training data (v1 model, in-sample)...")
-            # Fallback: in-sample fit (less accurate but compatible)
-            train_probs = model.predict_proba(train_all[feat_cols])[:, 1]
-            iso = IsotonicRegression(out_of_bounds="clip")
-            iso.fit(train_probs, train_all[TARGET].values)
+            print("\nFitting calibrators on training data (v1 model, in-sample)...")
+            calib_probs = model.predict_proba(train_all[feat_cols])[:, 1]
+            calib_y = train_all[TARGET].values
 
-        # Calibrate test predictions
-        y_prob_cal = iso.predict(y_prob)
-        # Build a lightweight wrapper that has predict_proba()
-        cal_model = _CalibratedWrapper(model, iso)
+        # --- Isotonic regression (non-parametric) ---
+        iso = IsotonicRegression(out_of_bounds="clip")
+        iso.fit(calib_probs, calib_y)
+        y_prob_iso = iso.predict(y_prob)
+        brier_iso = brier_score_loss(y_test, y_prob_iso)
+
+        # --- Platt scaling (logistic sigmoid, 2 parameters) ---
+        platt_lr = _LR(solver="lbfgs", max_iter=1000)
+        platt_lr.fit(calib_probs.reshape(-1, 1), calib_y)
+        y_prob_platt = platt_lr.predict_proba(y_prob.reshape(-1, 1))[:, 1]
+        brier_platt = brier_score_loss(y_test, y_prob_platt)
+
+        print(f"\n-- Calibration Method Comparison --------------------------")
+        print(f"  Isotonic  Brier : {brier_iso:.5f}")
+        print(f"  Platt     Brier : {brier_platt:.5f}")
+        print(f"  Base model Brier: {brier_uncal:.5f}")
+
+        # Select the calibration method with the lower Brier score.
+        # If both are worse than the base model, still pick the lesser evil
+        # (the wrapper is expected by downstream scripts).
+        if brier_platt < brier_iso:
+            selected_method = "platt"
+            y_prob_cal = y_prob_platt
+            cal_model = _PlattWrapper(model, platt_lr)
+            print(f"\n  -> Selected: Platt scaling (Brier {brier_platt:.5f} < isotonic {brier_iso:.5f})")
+        else:
+            selected_method = "isotonic"
+            y_prob_cal = y_prob_iso
+            cal_model = _CalibratedWrapper(model, iso)
+            print(f"\n  -> Selected: Isotonic regression (Brier {brier_iso:.5f} <= Platt {brier_platt:.5f})")
+
+        if brier_uncal < min(brier_iso, brier_platt):
+            print(f"  NOTE: Base model Brier ({brier_uncal:.5f}) is already better than "
+                  f"both calibrators. Calibration may be overfitting on a small holdout set.")
 
         # Save the calibrated wrapper alongside the raw model so downstream
         # scripts can load calibrated probabilities without re-fitting.
@@ -440,7 +498,8 @@ def run_calibration_analysis(
     brier_cal = brier_score_loss(y_test, y_prob_cal)
     ece_cal   = _expected_calibration_error(y_test, y_prob_cal)
 
-    print(f"\n-- Isotonic Calibrated Model -----------------------------")
+    cal_label = "Platt" if selected_method == "platt" else "Isotonic"
+    print(f"\n-- {cal_label} Calibrated Model -----------------------------")
     print(f"  Brier score : {brier_cal:.5f}")
     print(f"  ECE         : {ece_cal:.5f}")
     print(f"\n  Brier improvement : {brier_uncal - brier_cal:+.5f}")
@@ -463,6 +522,7 @@ def run_calibration_analysis(
         brier_uncal, brier_cal,
         ece_uncal, ece_cal,
         output_dir,
+        cal_method=selected_method,
     )
 
     # -- Per-season Brier trend -------------------------------------------------
@@ -503,6 +563,7 @@ def run_calibration_analysis(
         {"metric": "brier_score_calibrated","value": round(brier_cal, 6)},
         {"metric": "ece_raw",               "value": round(ece_uncal, 6)},
         {"metric": "ece_calibrated",        "value": round(ece_cal, 6)},
+        {"metric": "calibration_method",    "value": selected_method},
     ])
     metrics_path = os.path.join(output_dir, "calibration_metrics.csv")
     metrics_df.to_csv(metrics_path, index=False)
@@ -517,12 +578,13 @@ def run_calibration_analysis(
     print(f"Season Brier saved -> {season_path}")
 
     return {
-        "brier_score":     brier_uncal,
-        "brier_calibrated": brier_cal,
-        "ece":             ece_uncal,
-        "ece_calibrated":  ece_cal,
-        "bin_stats":       bin_stats,
-        "season_brier":    season_brier,
+        "brier_score":         brier_uncal,
+        "brier_calibrated":    brier_cal,
+        "ece":                 ece_uncal,
+        "ece_calibrated":      ece_cal,
+        "calibration_method":  selected_method,
+        "bin_stats":           bin_stats,
+        "season_brier":        season_brier,
     }
 
 

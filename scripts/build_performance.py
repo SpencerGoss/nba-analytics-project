@@ -363,7 +363,7 @@ def build_performance(
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+        json.dump(payload, f, separators=(",", ":"))
 
     print(f"performance.json written to {out_path}")
     print(f"  season_accuracy={season_accuracy}  total_games={total_games}")

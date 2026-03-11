@@ -251,7 +251,7 @@ def main() -> None:
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
-        json.dump(output, fh, indent=2, ensure_ascii=False)
+        json.dump(output, fh, separators=(",", ":"), ensure_ascii=False)
 
     print(f"  Written -> {OUT_JSON}")
     for entry in rankings[:10]:

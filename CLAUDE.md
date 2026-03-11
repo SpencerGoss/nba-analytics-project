@@ -1,21 +1,23 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized) → margin regression model (Ridge, MAE 10.574) → NBAEnsemble (3-model blend) → prediction store → dashboard v3 (9 tabs: Today, Players, Teams, H2H, Standings, Injuries, Rankings, Season History, Betting Tools [Picks/Value Bets/Props/Sharp Money/Performance/Bet Tracker]) + CLV tracking. Dashboard live at GitHub Pages. Optuna HPO complete: gradient_boosting confirmed best. Odds: Pinnacle guest API (free, keyless).
+Python NBA analytics pipeline: data ingestion → feature engineering (Elo ratings, EWMA, streaks, cross-matchup interactions) → game outcome prediction (67.5%, AUC 0.7422) → ATS betting model (55.0%, Brier-optimized) → margin regression model (Ridge, MAE 10.52) → NBAEnsemble (3-model blend, confidence-dependent weights, ATS=0) → prediction store → dashboard v3 (9 tabs: Today, Players, Teams, H2H, Standings, Injuries, Rankings, Season History, Betting Tools [Picks/Value Bets/Props/Sharp Money/Performance/Bet Tracker]) + CLV tracking + SQL Server warehouse. Dashboard live at GitHub Pages. Optuna HPO complete: gradient_boosting confirmed best. Odds: Pinnacle guest API (free, keyless).
 
 ## Stack
-Python 3.14+, pandas, scikit-learn, SQLite, Chart.js dashboard. No npm/Node.
+Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js dashboard, Node.js (dashboard optimizer).
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (598+ passing, current baseline as of 2026-03-08)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1407+ passing, current baseline as of 2026-03-10)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
 
 ## Key Paths
 - `src/data/` — fetchers | `src/features/` — engineering | `src/models/` — models+calibration | `src/processing/` — preprocessing | `src/validation/` — integrity
-- `src/models/value_bet_detector.py` — kelly_fraction | `src/models/clv_tracker.py` — CLV | `src/models/ensemble.py` — NBAEnsemble (win=0.5/ats=0.3/margin=0.2)
+- `src/features/elo.py` — Elo rating system (K=20 standard + K=40 fast Elo, MOV multiplier, season regression, elo_momentum feature)
+- `src/models/value_bet_detector.py` — kelly_fraction | `src/models/clv_tracker.py` — CLV | `src/models/ensemble.py` — NBAEnsemble (dynamic weights: high-conf 0.75/0/0.25, default 0.65/0/0.35, uncertain 0.55/0/0.45)
+- `scripts/sync_to_sqlserver.py` — syncs CSV+SQLite data to SQL Server `nba_analytics` DB | `scripts/optimize_dashboard.js` — Node.js dashboard minifier
 - `scripts/build_value_bets.py` — reads `data/odds/game_lines.csv` (NOT data/processed/); columns: game_date, home_market_prob
 - `dashboard/data/*.json` — COMMITTED to git (GitHub Pages has no build step); push after update.py
 - `data/raw/`, `data/processed/`, `data/features/` — pipeline stages | `models/artifacts/` — PKLs (gitignored)

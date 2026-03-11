@@ -212,7 +212,7 @@ def build_trends() -> dict[str, dict]:
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_JSON, "w", encoding="utf-8") as fh:
-        json.dump(trends, fh, indent=2)
+        json.dump(trends, fh, separators=(",", ":"))
     print(f"Written -> {OUT_JSON}")
     return trends
 

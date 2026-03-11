@@ -4,6 +4,49 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-10 (Session 7) — PC Migration + Major Model & Dashboard Upgrade
+
+**Done:**
+- **PC migration verified** — Python 3.14.3, venv, 1353 tests passing, `.env` present
+- **SQL Server integration** — `scripts/sync_to_sqlserver.py` syncs all CSV+SQLite data to `nba_analytics` DB (35 tables, 4 views, 2.8M+ rows); pyodbc installed; auto-syncs in update.py Step 8
+- **Node.js dashboard optimizer** — `scripts/optimize_dashboard.js` minifies HTML/CSS/JS (8.2% size reduction)
+- **VS Code configs** — `.vscode/launch.json` (7 debug profiles) + `settings.json`
+- **Elo rating system** — new `src/features/elo.py` (K=20, MOV multiplier, 1/3 season regression); `diff_elo` is now #1 feature at 37.3% importance
+- **EWMA features** — exponentially weighted means (spans 7, 15) for net_rtg, off_rtg, def_rtg, pts
+- **Win/loss streak** — per-team consecutive W/L heading into each game
+- **3-game short rolling** — pts, ratings, plus_minus (fast reaction to hot/cold)
+- **Cross-matchup interactions** — home_off_vs_away_def, matchup_off_def_edge
+- **Fatigue compound** — back-to-back x travel distance interaction feature
+- **All 3 models retrained** with 349 features (was 294):
+  - Game Outcome: AUC 0.7422, 67.5% accuracy
+  - Margin: Ridge MAE 10.52 (CV), 10.66 (test)
+  - Calibration re-run: Brier 0.205
+- **Ensemble reweighted** — 0.6 win / 0.15 ATS / 0.25 margin (reduced weak ATS model)
+- **Kelly formula bug fixed** — was inverted in build_value_bets.py
+- **Dashboard: 7 critical fixes** — lazy-load player_comparison.json (4.17MB) + Plotly.js (3.5MB); removed duplicate TEAM_IDS; error states; division-by-zero fix; staleness warnings; dynamic page titles; Plotly lazy-loaded
+- **Dashboard: PWA rewrite** — sw.js network-first for data/cache-first for assets; skipWaiting; manifest fixed with SVG icons
+- **Dashboard: accessibility** — ARIA roles, tablist/tabpanel, aria-selected
+- **Dashboard: URL hash routing** — bookmarkable tabs, browser back/forward works
+- **Dashboard: CSV data export** — download picks and standings as CSV
+- **Dashboard: SEO** — OG/Twitter meta tags, canonical URL, CSP on about.html
+- **15 JSON builders** switched to compact output (20-40% smaller files)
+- **Season history** now includes current 2025-26 season (was hardcoded to 2024-25)
+- **34 new tests** — test_elo.py (10), test_ewma_features.py (9), test_streak_feature.py (8), test_interaction_features.py (6), test_build_value_bets.py (+1)
+- **1387 tests passing**, zero regressions
+- **CLAUDE.md updated** — new model metrics, feature list, test baseline, key paths
+
+**Files changed (44 total):**
+- New: `src/features/elo.py`, `scripts/sync_to_sqlserver.py`, `scripts/optimize_dashboard.js`, `.vscode/launch.json`, `.vscode/settings.json`, `tests/test_elo.py`, `tests/test_ewma_features.py`, `tests/test_streak_feature.py`, `tests/test_interaction_features.py`
+- Modified: `dashboard/index.html`, `dashboard/sw.js`, `dashboard/manifest.json`, `dashboard/about.html`, `update.py`, `src/features/team_game_features.py`, `src/models/game_outcome_model.py`, `src/models/ensemble.py`, `scripts/build_value_bets.py`, 15 builder scripts (compact JSON), `.gitignore`, `CLAUDE.md`, `.claude/rules/testing.md`, `tests/test_build_season_history.py`, `tests/test_build_value_bets.py`, `scripts/build_season_history.py`
+
+**Next:**
+1. Run `python update.py` to refresh all data with new features + retrained models
+2. `git add -A && git push` to deploy to GitHub Pages
+3. Consider pruning the 12 low-importance features flagged by the model
+4. CLV closing_spread still NULL — needs update_closing_line() to be called post-game
+
+---
+
 ## 2026-03-07 (Session 6) — Dashboard Polish: Player Modal, Standings L10, Team Logos, Season History
 
 **Done:**

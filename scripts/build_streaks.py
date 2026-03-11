@@ -299,7 +299,7 @@ def build_streaks(
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
-        json.dump(result, fh, indent=2, default=str)
+        json.dump(result, fh, separators=(",", ":"), default=str)
 
     print(f"Written -> {out_path}")
     if hot:

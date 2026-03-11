@@ -559,7 +559,7 @@ def main() -> None:
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as fh:
-        json.dump(explainers, fh, indent=2)
+        json.dump(explainers, fh, separators=(",", ":"))
 
     print(f"Wrote {len(explainers)} explainers -> {OUTPUT_PATH}")
 

@@ -13,26 +13,30 @@
 <meta name="apple-mobile-web-app-title" content="Baseline"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2308090E'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='system-ui,sans-serif' font-weight='900' fill='%2300C896'>B</text></svg>"/>
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2308090E'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='system-ui,sans-serif' font-weight='900' fill='%2300C896'>B</text></svg>"/>
-<meta property="og:title" content="Baseline Analytics — NBA Intelligence"/>
-<meta property="og:description" content="Data-driven NBA analysis. Today's picks, value bets, player comparisons, and more. Free."/>
+<meta property="og:title" content="Baseline Analytics — NBA Predictions Dashboard"/>
+<meta property="og:description" content="AI-powered NBA game predictions, ATS picks, player props, and betting analytics."/>
+<meta property="og:image" content="https://spencergoss.github.io/nba-analytics-project/og-image.svg"/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://spencergoss.github.io/nba-analytics-project/"/>
-<meta property="og:image" content="https://spencergoss.github.io/nba-analytics-project/og-image.svg"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Baseline Analytics — NBA Intelligence"/>
-<meta name="twitter:description" content="Today's NBA picks vs. the books, value bets, player comparisons. Free NBA analytics."/>
+<meta name="twitter:title" content="Baseline Analytics — NBA Predictions Dashboard"/>
+<meta name="twitter:description" content="AI-powered NBA game predictions, ATS picks, player props, and betting analytics."/>
 <meta name="twitter:image" content="https://spencergoss.github.io/nba-analytics-project/og-image.svg"/>
+<link rel="canonical" href="https://spencergoss.github.io/nba-analytics-project/"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js" crossorigin="anonymous" integrity="sha384-Hl48Kq2HifOWdXEjMsKo6qxqvRLTYqIGbvlENBmkHAxZKIGCXv43H6W1jA671RzC"></script>
+<!-- Plotly.js (~3.5MB) is lazy-loaded on first chart render (see _ensurePlotly) -->
 <style>
 :root{
   --bg:       #08090E;
+  --bg-mid:   #0D1326;
   --bg2:      #0F1117;
   --bg3:      #161B27;
   --card:     rgba(255,255,255,0.055);
   --card-h:   rgba(255,255,255,0.09);
+  --card-border: rgba(255,255,255,0.06);
+  --card-border-h: rgba(255,255,255,0.12);
   --b0:       rgba(255,255,255,0.07);
   --b1:       rgba(255,255,255,0.13);
   --t0:       #F1F5FF;
@@ -49,6 +53,10 @@
   --blue-d:   rgba(79,158,255,0.10);
   --purple:   #A78BFA;
   --purple-d: rgba(167,139,250,0.10);
+  --accent-glow: rgba(0,200,150,0.08);
+  --aurora-1: rgba(0,200,150,0.07);
+  --aurora-2: rgba(79,158,255,0.05);
+  --aurora-3: rgba(167,139,250,0.04);
   --f:        'Plus Jakarta Sans',system-ui,sans-serif;
   --fm:       'JetBrains Mono',monospace;
   --r-card:   18px;
@@ -66,10 +74,10 @@
 .theme-toggle svg{width:14px;height:14px;pointer-events:none}
 
 /* ── LIGHT MODE ── */
-body.light{--bg:#F0F4FF;--bg2:#E8EDF8;--bg3:#DDE4F5;--card:rgba(0,0,0,.04);--card-h:rgba(0,0,0,.07);--b0:rgba(0,0,0,.08);--b1:rgba(0,0,0,.14);--t0:#0D1117;--t1:#3D4C6B;--t2:#8892AA;--green:#00A87A;--green-d:rgba(0,168,122,0.12);--gold:#D4891E;--gold-d:rgba(212,137,30,0.10);--blue:#2C80E8;--blue-d:rgba(44,128,232,0.10);--red:#E04040;--red-d:rgba(224,64,64,0.10);--shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08);--shadow-h:0 1px 2px rgba(0,0,0,.14),0 16px 40px rgba(0,0,0,.12);--glow-g:none;--glow-b:none}
-body.light .nav{background:rgba(240,244,255,.94);border-color:rgba(0,0,0,.10)}
+body.light{--bg:#F0F4FF;--bg-mid:#E4EAF8;--bg2:#E8EDF8;--bg3:#DDE4F5;--card:rgba(0,0,0,.04);--card-h:rgba(0,0,0,.07);--card-border:rgba(0,0,0,.06);--card-border-h:rgba(0,0,0,.10);--b0:rgba(0,0,0,.08);--b1:rgba(0,0,0,.14);--t0:#0D1117;--t1:#3D4C6B;--t2:#8892AA;--green:#00A87A;--green-d:rgba(0,168,122,0.12);--gold:#D4891E;--gold-d:rgba(212,137,30,0.10);--blue:#2C80E8;--blue-d:rgba(44,128,232,0.10);--red:#E04040;--red-d:rgba(224,64,64,0.10);--accent-glow:rgba(0,168,122,0.05);--aurora-1:rgba(0,168,122,0.04);--aurora-2:rgba(44,128,232,0.03);--aurora-3:rgba(167,139,250,0.02);--shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08);--shadow-h:0 1px 2px rgba(0,0,0,.14),0 16px 40px rgba(0,0,0,.12);--glow-g:none;--glow-b:none}
+body.light .nav{background-image:linear-gradient(rgba(240,244,255,.94),rgba(240,244,255,.94)),linear-gradient(90deg,transparent,rgba(0,168,122,.2),rgba(44,128,232,.15),transparent)}
 body.light .bgl::before{opacity:.10}
-body.light .blob{opacity:.25}
+body.light .blob{opacity:.15}
 body.light .bgl::after{opacity:.015}
 
 /* ── SORTABLE STANDINGS ── */
@@ -187,9 +195,10 @@ body.light .bgl::after{opacity:.015}
 .clv-lbl{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var(--f);font-size:14px;line-height:1.6;overflow-x:hidden;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+html{background:linear-gradient(180deg,var(--bg) 0%,var(--bg-mid) 50%,var(--bg) 100%);background-attachment:fixed}
 
 /* ── BACKGROUND ── */
-.bgl{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bgl{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-mid) 40%,var(--bg) 100%)}
 .bgl::before{content:'';position:absolute;inset:0;
   background-image:
     radial-gradient(1px 1px at 12% 18%,rgba(255,255,255,.22) 0%,transparent 100%),
@@ -199,27 +208,38 @@ html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var
     radial-gradient(1px 1px at 91% 81%,rgba(255,255,255,.20) 0%,transparent 100%),
     radial-gradient(1.5px 1.5px at 5% 62%,rgba(255,255,255,.28) 0%,transparent 100%),
     radial-gradient(1.5px 1.5px at 88% 15%,rgba(255,255,255,.22) 0%,transparent 100%)}
-/* subtle grid mesh overlay */
+/* organic mesh gradient overlay */
 .bgl::after{content:'';position:absolute;inset:0;
   background-image:
-    linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
-  background-size:48px 48px;
+    radial-gradient(ellipse 600px 300px at 20% 30%,rgba(0,200,150,.025),transparent),
+    radial-gradient(ellipse 500px 250px at 80% 70%,rgba(79,158,255,.02),transparent),
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:100% 100%,100% 100%,48px 48px,48px 48px;
   opacity:1}
-.blob{position:absolute;border-radius:50%;filter:blur(160px);opacity:.85}
-.b-g{width:780px;height:780px;background:radial-gradient(circle,rgba(0,200,150,.11),transparent);top:-14%;left:-10%;animation:da 38s ease-in-out infinite}
-.b-o{width:640px;height:640px;background:radial-gradient(circle,rgba(245,166,35,.09),transparent);bottom:-10%;right:-8%;animation:db 32s ease-in-out infinite}
-.b-b{width:560px;height:560px;background:radial-gradient(circle,rgba(79,158,255,.08),transparent);top:38%;left:36%;animation:da 42s ease-in-out infinite reverse}
-@keyframes da{0%,100%{transform:translate(0,0)}50%{transform:translate(32px,-40px)}}
-@keyframes db{0%,100%{transform:translate(0,0)}50%{transform:translate(-28px,36px)}}
+/* Aurora bands — elongated, skewed, drifting */
+.blob{position:absolute;filter:blur(120px);opacity:.85}
+.b-g{width:1400px;height:400px;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;background:radial-gradient(ellipse,var(--aurora-1),transparent 70%);top:-8%;left:-15%;transform:skewY(-8deg);animation:aurora-a 55s ease-in-out infinite}
+.b-o{width:1200px;height:350px;border-radius:40% 60% 50% 50% / 50% 50% 60% 40%;background:radial-gradient(ellipse,rgba(245,166,35,.06),transparent 70%);bottom:-5%;right:-12%;transform:skewY(6deg);animation:aurora-b 50s ease-in-out infinite}
+.b-b{width:1100px;height:380px;border-radius:55% 45% 45% 55% / 50% 60% 40% 50%;background:radial-gradient(ellipse,var(--aurora-2),transparent 70%);top:35%;left:20%;transform:skewY(-5deg);animation:aurora-a 58s ease-in-out infinite reverse}
+/* 4th aurora band — purple accent (reuses .b-b's sibling via CSS, applied to the green blob's ::after) */
+@keyframes aurora-a{0%,100%{transform:skewY(-8deg) translate(0,0)}25%{transform:skewY(-6deg) translate(30px,-20px)}50%{transform:skewY(-10deg) translate(-20px,30px)}75%{transform:skewY(-7deg) translate(15px,10px)}}
+@keyframes aurora-b{0%,100%{transform:skewY(6deg) translate(0,0)}25%{transform:skewY(8deg) translate(-25px,20px)}50%{transform:skewY(5deg) translate(20px,-25px)}75%{transform:skewY(7deg) translate(-10px,15px)}}
+/* Purple aurora shimmer — layered on background */
+.bgl>.b-g::after{content:'';position:absolute;top:120%;left:40%;width:1000px;height:320px;border-radius:50%;background:radial-gradient(ellipse,var(--aurora-3),transparent 65%);filter:blur(100px);transform:skewY(4deg);animation:aurora-shimmer 60s ease-in-out infinite}
+@keyframes aurora-shimmer{0%,100%{opacity:.7;transform:skewY(4deg) translateX(0)}50%{opacity:1;transform:skewY(6deg) translateX(40px)}}
 
 /* ── NAV ── */
 .nav{
   position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;
   display:flex;align-items:center;gap:2px;
   background:rgba(8,9,14,.88);
-  backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);
-  border:1px solid rgba(255,255,255,.09);
+  backdrop-filter:blur(56px) saturate(200%);-webkit-backdrop-filter:blur(56px) saturate(200%);
+  border:1px solid transparent;
+  border-bottom:1px solid transparent;
+  background-image:linear-gradient(rgba(8,9,14,.88),rgba(8,9,14,.88)),linear-gradient(90deg,transparent,rgba(0,200,150,.3),rgba(79,158,255,.2),transparent);
+  background-clip:padding-box,border-box;
+  background-origin:padding-box,border-box;
   border-radius:var(--r-pill);padding:4px 5px;
   box-shadow:0 2px 8px rgba(0,0,0,.7),0 24px 56px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)
 }
@@ -330,13 +350,15 @@ html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var
 
 /* ── CARDS ── */
 .card{
-  background:var(--card);border:1px solid rgba(255,255,255,0.08);border-radius:var(--r-card);padding:22px;
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  box-shadow:var(--shadow);
-  transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease;
+  background:var(--card);border:1px solid var(--card-border);border-radius:var(--r-card);padding:22px;
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease,border-color 160ms ease;
   position:relative;overflow:hidden
 }
-.card:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.06)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,200,150,.4),rgba(79,158,255,.3),transparent);opacity:0;transition:opacity 240ms ease;border-radius:var(--r-card) var(--r-card) 0 0}
+.card:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.08);border-color:var(--card-border-h)}
+.card:hover::before{opacity:1}
 
 /* ── STAT TILES ── */
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
@@ -344,12 +366,12 @@ html,body{min-height:100dvh;background:var(--bg);color:var(--t0);font-family:var
 @media(max-width:640px){.sgrid{grid-template-columns:1fr}}
 
 .sc{
-  background:var(--card);border:1px solid rgba(255,255,255,0.08);border-radius:var(--r-card);
-  padding:18px 20px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  box-shadow:var(--shadow);transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease;position:relative;overflow:hidden;
+  background:var(--card);border:1px solid var(--card-border);border-radius:var(--r-card);
+  padding:18px 20px;backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease,border-color 160ms ease;position:relative;overflow:hidden;
   cursor:default
 }
-.sc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.06)}
+.sc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.08);border-color:var(--card-border-h)}
 .sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;opacity:0;transition:opacity 200ms}
 .sc:hover::after{opacity:1}
 .sc.accent-green::after{background:linear-gradient(90deg,transparent,var(--green),transparent)}
@@ -473,11 +495,13 @@ tbody tr:last-child td{border-bottom:none}
 /* ── GAME CARDS ── */
 .gg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px}
 .gc{
-  background:var(--card);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 16px;
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  box-shadow:var(--shadow);cursor:pointer;transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease;position:relative;overflow:hidden
+  background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:14px 16px;
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);cursor:pointer;transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease,border-color 160ms ease;position:relative;overflow:hidden
 }
-.gc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.06)}
+.gc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,200,150,.35),rgba(79,158,255,.25),transparent);opacity:0;transition:opacity 240ms ease;border-radius:16px 16px 0 0}
+.gc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.08);border-color:var(--card-border-h)}
+.gc:hover::before{opacity:1}
 .gc.live{border-color:rgba(0,200,150,.18);background:rgba(0,200,150,.025)}
 @media(hover:none){.gc:active{transform:scale(0.98);opacity:.85}}
 
@@ -537,10 +561,11 @@ tbody tr:last-child td{border-bottom:none}
 
 /* ── PREDICTION CARDS ── */
 .pc{
-  background:var(--card);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 20px;
-  backdrop-filter:blur(24px);transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease;cursor:pointer;position:relative;overflow:hidden
+  background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:18px 20px;
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease,border-color 160ms ease;cursor:pointer;position:relative;overflow:hidden
 }
-.pc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.06)}
+.pc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 1px 0 rgba(255,255,255,.08);border-color:var(--card-border-h)}
 .pc.hi{border-top:2px solid rgba(0,200,150,.45)}.pc.md{border-top:2px solid rgba(245,166,35,.35)}
 .pm{font-size:13px;font-weight:700;margin-bottom:2px;letter-spacing:-.1px}
 .pmt{font-size:11px;color:var(--t2);margin-bottom:14px;font-weight:500}
@@ -714,17 +739,28 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 /* ── HERO SPOTLIGHT ── */
 .spotlight{
   margin-bottom:20px;padding:28px 32px;border-radius:22px;
-  background:var(--card);border:1px solid rgba(0,200,150,0.25);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  box-shadow:var(--shadow),0 0 40px rgba(0,200,150,.08);
+  background:var(--card);
+  border:1px solid transparent;
+  background-image:linear-gradient(var(--card),var(--card)),linear-gradient(135deg,rgba(0,200,150,.4),rgba(79,158,255,.25),rgba(167,139,250,.2));
+  background-clip:padding-box,border-box;
+  background-origin:padding-box,border-box;
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  box-shadow:var(--shadow),0 0 60px rgba(0,200,150,.10),0 0 120px rgba(0,200,150,.04);
   position:relative;overflow:hidden;
 }
 .spotlight::before{
-  content:'';position:absolute;top:-60px;right:-60px;
-  width:300px;height:300px;border-radius:50%;
-  background:radial-gradient(circle,rgba(0,200,150,.07),transparent 70%);
+  content:'';position:absolute;top:-80px;right:-80px;
+  width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,200,150,.10),rgba(79,158,255,.04) 50%,transparent 70%);
   pointer-events:none;
 }
+.spotlight::after{
+  content:'';position:absolute;inset:0;border-radius:22px;
+  background:linear-gradient(135deg,rgba(0,200,150,.06),transparent 40%,transparent 60%,rgba(79,158,255,.04));
+  pointer-events:none;
+  animation:spotlight-sweep 8s ease-in-out infinite alternate;
+}
+@keyframes spotlight-sweep{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
 .sp-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
 .sp-meta{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--green);margin-bottom:6px}
 .sp-teams{font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1.2;margin-bottom:4px}
@@ -1106,14 +1142,16 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   </div>
 
   <!-- FREE NAV TABS (no gate) -->
-  <button class="nb active" onclick="showFreeTab('today')" id="nb-today">Today</button>
-  <button class="nb" onclick="showFreeTab('players')" id="nb-players">Players</button>
-  <button class="nb" onclick="showFreeTab('teams')" id="nb-teams">Teams</button>
-  <button class="nb" onclick="showFreeTab('h2h')" id="nb-h2h">H2H</button>
-  <button class="nb" onclick="showFreeTab('standings')" id="nb-standings">Standings</button>
-  <button class="nb" onclick="showFreeTab('injuries')" id="nb-injuries">Injuries</button>
-  <button class="nb" onclick="showFreeTab('rankings')" id="nb-rankings">Rankings</button>
-  <button class="nb" onclick="showFreeTab('history')" id="nb-history">History</button>
+  <div role="tablist" aria-label="Dashboard sections" id="main-tablist">
+  <button class="nb active" onclick="showFreeTab('today')" id="nb-today" role="tab" aria-selected="true" aria-controls="page-today">Today</button>
+  <button class="nb" onclick="showFreeTab('players')" id="nb-players" role="tab" aria-selected="false" aria-controls="page-players">Players</button>
+  <button class="nb" onclick="showFreeTab('teams')" id="nb-teams" role="tab" aria-selected="false" aria-controls="page-teams">Teams</button>
+  <button class="nb" onclick="showFreeTab('h2h')" id="nb-h2h" role="tab" aria-selected="false" aria-controls="page-h2h">H2H</button>
+  <button class="nb" onclick="showFreeTab('standings')" id="nb-standings" role="tab" aria-selected="false" aria-controls="page-standings">Standings</button>
+  <button class="nb" onclick="showFreeTab('injuries')" id="nb-injuries" role="tab" aria-selected="false" aria-controls="page-injuries">Injuries</button>
+  <button class="nb" onclick="showFreeTab('rankings')" id="nb-rankings" role="tab" aria-selected="false" aria-controls="page-rankings">Rankings</button>
+  <button class="nb" onclick="showFreeTab('history')" id="nb-history" role="tab" aria-selected="false" aria-controls="page-history">History</button>
+  </div>
   <div class="nav-divider"></div>
   <!-- BETTING TOOLS BUTTON -->
   <button class="nb-betting" onclick="toggleBettingDropdown()" id="nb-betting" aria-expanded="false">
@@ -1152,12 +1190,12 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   </div>
 </div>
 
-<main class="wrap">
+<main class="wrap" aria-live="polite">
 
 <!-- FREE SECTION: NBA Data & Analytics (no gate) -->
 
 <!-- TODAY (default free tab) -->
-<section id="page-today" class="page active">
+<section id="page-today" class="page active" role="tabpanel" aria-labelledby="nb-today">
   <div class="ph" style="margin-bottom:20px">
     <h1 class="pt" id="greet-title">Good evening</h1>
     <p class="pd" id="greet">Loading today's games...</p>
@@ -1273,7 +1311,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </section>
 
 <!-- PLAYERS (free) -->
-<section id="page-players" class="page">
+<section id="page-players" class="page" role="tabpanel" aria-labelledby="nb-players">
   <div class="ph"><h1 class="pt">Players</h1><p class="pd">Click any stat column to sort &#183; Season stats and head-to-head comparison</p></div>
   <div class="tab-bar">
     <button class="tab active" data-tab="stats" onclick="switchTab('players','stats')">Stats</button>
@@ -1391,7 +1429,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </div>
 
 <!-- TEAMS (free) -->
-<section id="page-teams" class="page">
+<section id="page-teams" class="page" role="tabpanel" aria-labelledby="nb-teams">
   <div class="ph"><h1 class="pt">Teams</h1><p class="pd">Conference standings · recent form · matchup tools</p></div>
   <div class="tab-bar">
     <button class="tab active" data-tab="overview" onclick="switchTab('teams','overview')">Overview</button>
@@ -1444,7 +1482,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </section>
 
 <!-- H2H (free) -->
-<section id="page-h2h" class="page">
+<section id="page-h2h" class="page" role="tabpanel" aria-labelledby="nb-h2h">
   <div class="ph"><h1 class="pt">Head to Head</h1><p class="pd">Historical matchup records between any two teams &middot; last 10 meetings</p></div>
 
   <!-- Team selectors -->
@@ -1476,8 +1514,8 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </section>
 
 <!-- STANDINGS (free) -->
-<section id="page-standings" class="page">
-  <div class="ph"><h1 class="pt">Standings</h1><p class="pd">Conference standings and today's game scores</p></div>
+<section id="page-standings" class="page" role="tabpanel" aria-labelledby="nb-standings">
+  <div class="ph"><h1 class="pt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Standings<button onclick="exportStandingsCsv()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t2);font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap" title="Export standings to CSV">&#8595; CSV</button></h1><p class="pd">Conference standings and today's game scores</p></div>
   <div class="tab-bar">
     <button class="tab active" data-tab="conf" onclick="switchTab('standings','conf')">Standings</button>
     <button class="tab" data-tab="scores" onclick="switchTab('standings','scores')">Today's Games</button>
@@ -1501,7 +1539,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </section>
 
 <!-- INJURIES (free) -->
-<section id="page-injuries" class="page">
+<section id="page-injuries" class="page" role="tabpanel" aria-labelledby="nb-injuries">
   <div class="ph">
     <h1 class="pt">Injury Report</h1>
     <p class="pd">Players marked OUT in the last 3 game dates &middot; Impact rated by season scoring average</p>
@@ -1513,7 +1551,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </section>
 
 <!-- RANKINGS (free) -->
-<section id="page-rankings" class="page">
+<section id="page-rankings" class="page" role="tabpanel" aria-labelledby="nb-rankings">
   <div class="ph"><h1 class="pt">Rankings</h1><p class="pd">Composite power rankings built from net rating, Pythagorean win%, and recent form</p></div>
 
   <!-- Hero row -->
@@ -1589,7 +1627,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </section>
 
 <!-- HISTORY (free) -->
-<section id="page-history" class="page">
+<section id="page-history" class="page" role="tabpanel" aria-labelledby="nb-history">
   <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
     <div><h1 class="pt">Season History</h1><p class="pd">Game results and standings &mdash; last 5 seasons</p></div>
     <select id="hist-season-sel" onchange="renderSeasonHistory(this.value)" style="background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:7px 12px;color:var(--t0);font-size:13px;font-family:var(--f);outline:none"></select>
@@ -1601,7 +1639,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 
 <!-- PICKS (betting tab) -->
 <section id="page-bet-picks" class="page">
-  <div class="ph" style="margin-bottom:20px"><h1 class="pt">Today's Picks <span style="font-size:14px;color:var(--t2);font-weight:500;letter-spacing:0">ATS + ML</span></h1><p class="pd" id="greet-picks">Loading picks...</p></div>
+  <div class="ph" style="margin-bottom:20px"><h1 class="pt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Today's Picks <span style="font-size:14px;color:var(--t2);font-weight:500;letter-spacing:0">ATS + ML</span><button onclick="exportPicksCsv()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t2);font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap" title="Export picks to CSV">&#8595; CSV</button></h1><p class="pd" id="greet-picks">Loading picks...</p></div>
   <div class="spotlight card-value" id="hero-spotlight" style="display:none">
     <div class="sp-top">
       <div><div class="sp-meta">Top Value Bet Today</div><div class="sp-teams" id="sp-teams">-</div><div class="sp-date" id="sp-date">-</div></div>
@@ -1876,6 +1914,30 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 </footer>
 
 <script>
+// ─── LAZY PLOTLY LOADER ───
+// Plotly.js (~3.5MB) is loaded on-demand when a chart is first needed.
+// _ensurePlotly() returns a Promise that resolves once Plotly is available.
+// _plotlyNewPlot() is a drop-in lazy wrapper for Plotly.newPlot().
+let _plotlyPromise=null;
+function _ensurePlotly(){
+  if(window.Plotly)return Promise.resolve();
+  if(_plotlyPromise)return _plotlyPromise;
+  _plotlyPromise=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js';
+    s.crossOrigin='anonymous';
+    s.integrity='sha384-Hl48Kq2HifOWdXEjMsKo6qxqvRLTYqIGbvlENBmkHAxZKIGCXv43H6W1jA671RzC';
+    s.onload=resolve;
+    s.onerror=()=>{_plotlyPromise=null;reject(new Error('Failed to load Plotly.js'));};
+    document.head.appendChild(s);
+  });
+  return _plotlyPromise;
+}
+function _plotlyNewPlot(){
+  const args=Array.from(arguments);
+  return _ensurePlotly().then(()=>window.Plotly.newPlot.apply(window.Plotly,args)).catch(e=>console.warn('Plotly chart error:',e));
+}
+
 // ─── HTML ESCAPE HELPER (XSS prevention for any string fields from JSON) ───
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
@@ -2584,7 +2646,7 @@ function showFreeTab(id){
   // Clear all free nav active states
   FREE_TABS.forEach(t=>{
     const nb=document.getElementById('nb-'+t);
-    if(nb){nb.classList.remove('active');nb.removeAttribute('aria-current');}
+    if(nb){nb.classList.remove('active');nb.removeAttribute('aria-current');nb.setAttribute('aria-selected','false');}
   });
   // Reset betting button
   const bBtn=document.getElementById('nb-betting');
@@ -2596,8 +2658,14 @@ function showFreeTab(id){
   const pg=document.getElementById('page-'+id);
   if(pg){pg.classList.add('active');pg.classList.remove('tab-fade-in');void pg.offsetWidth;pg.classList.add('tab-fade-in');}
   const nb=document.getElementById('nb-'+id);
-  if(nb){nb.classList.add('active');nb.setAttribute('aria-current','page');}
+  if(nb){nb.classList.add('active');nb.setAttribute('aria-current','page');nb.setAttribute('aria-selected','true');}
+  // Update document title
+  const _freeTabNames={today:'Today',players:'Players',teams:'Teams',h2h:'Head-to-Head',standings:'Standings',injuries:'Injuries',rankings:'Rankings',history:'Season History',deep:'Deep Dive'};
+  document.title='Baseline Analytics'+((_freeTabNames[id])?' \u2014 '+_freeTabNames[id]:'');
+  // ─── URL HASH ROUTING — update hash on tab change ───
+  history.replaceState(null, '', '#' + id);
   // Trigger lazy renders
+  if(id==='players'){_loadPlayerComparison();}
   if(id==='deep'){renderMatchups();renderPlayoff();renderStreaks();}
   if(id==='h2h'){initH2H();}
   if(id==='rankings'){initRankings();}
@@ -2632,7 +2700,7 @@ function _activateBettingTab(tabId, pillEl){
   // Clear free nav active states
   FREE_TABS.forEach(t=>{
     const nb=document.getElementById('nb-'+t);
-    if(nb){nb.classList.remove('active');nb.removeAttribute('aria-current');}
+    if(nb){nb.classList.remove('active');nb.removeAttribute('aria-current');nb.setAttribute('aria-selected','false');}
   });
   // Show betting page
   const pg=document.getElementById('page-bet-'+tabId);
@@ -2654,6 +2722,11 @@ function _activateBettingTab(tabId, pillEl){
     if(p)p.classList.add('active');
   }
   _activeBetTab=tabId;
+  // ─── URL HASH ROUTING — update hash on betting tab change ───
+  history.replaceState(null, '', '#betting-' + tabId);
+  // Update document title
+  const _betTabNames={picks:'Picks',valuebets:'Value Bets',props:'Props',sharp:'Sharp Money',performance:'Performance',tracker:'Bet Tracker',linemovement:'Line Movement'};
+  document.title='Baseline Analytics'+(_betTabNames[tabId]?' \u2014 '+_betTabNames[tabId]:'');
   // Lazy renders
   if(tabId==='performance')renderBacktest();
   if(tabId==='valuebets')renderValueBets();
@@ -3484,7 +3557,7 @@ function showTeamDetail(abbr){
   if(!t)return;
   var logoUrl=teamLogoUrl(abbr);
   var logoTag=logoUrl?('<img src="'+logoUrl+'" width="52" height="52" style="object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'" alt="'+esc(abbr)+'">'):'';
-  var pct=(t.w/(t.w+t.l+0.001)*100).toFixed(1);
+  var pct=(t.w+t.l>0?(t.w/(t.w+t.l))*100:0).toFixed(1);
   var scCol=String(t.streak||'').startsWith('W')?'var(--green)':'var(--red)';
   var l10wins=parseInt(t.last10||'0')||0;
   var l10c=l10wins>=7?'var(--green)':l10wins>=5?'var(--t1)':'var(--red)';
@@ -3557,6 +3630,51 @@ function showTeamDetail(abbr){
   _setHtml(contentEl,html);
   modalEl.style.display='block';
   backdropEl.style.display='block';
+}
+
+// Lazy-load player_comparison.json (4MB+) on first Players tab open
+let _playerCompLoaded=false;
+let _playerCompLoading=false;
+function _loadPlayerComparison(){
+  if(_playerCompLoaded||_playerCompLoading)return;
+  _playerCompLoading=true;
+  const container=document.getElementById('players-tb');
+  if(container){
+    const parent=container.closest('.tab-content')||container.parentElement;
+    if(parent){
+      const spinner=document.createElement('div');
+      spinner.id='player-comp-loading';
+      spinner.style.cssText='padding:32px;text-align:center;color:var(--t2);font-size:13px';
+      spinner.textContent='Loading player data...';
+      parent.insertBefore(spinner,parent.firstChild);
+    }
+  }
+  fetch('data/player_comparison.json').then(r=>r.ok?r.json():null).then(playerJson=>{
+    const loadEl=document.getElementById('player-comp-loading');
+    if(loadEl)loadEl.remove();
+    _playerCompLoading=false;
+    _playerCompLoaded=true;
+    if(playerJson&&playerJson.players){
+      window._FULL_PLAYER_DATA=playerJson.players;
+      const mapped=playerJson.players.filter(p=>!p._legend).map(mapJsonPlayer);
+      const nameSet=new Set(mapped.map(p=>p.name));
+      LEGENDS.forEach(l=>{ if(!nameSet.has(l.name))mapped.push(l); });
+      DATA.players=mapped;
+    }
+    if(playerJson&&playerJson.meta)window._PLAYER_META=playerJson.meta;
+    enrichPlayerTs();
+    initPlayerSeasonDropdown();
+    initPlayerTeamDropdown();
+    buildLeagueLeaders();
+    renderPlayersTable();
+    updateSortHeaders();
+  }).catch(err=>{
+    const loadEl=document.getElementById('player-comp-loading');
+    if(loadEl)loadEl.remove();
+    _playerCompLoading=false;
+    console.warn('Failed to load player_comparison.json:',err);
+    showDataError('players-tab-stats','Could not load player data. Run update.py to refresh.');
+  });
 }
 
 // Lazy-load player_detail.json (1.5MB) on first player modal open
@@ -4262,7 +4380,7 @@ function renderDashChart(){
     xanchor:'left',yanchor:'bottom',
     xshift:4
   }];
-  Plotly.newPlot('dash-chart',traces,ML({y:{range:[42,92],ticksuffix:'%',title:{text:'Accuracy',font:{size:10,color:'#4A5268'}}},x:{title:{text:'Date',font:{size:10,color:'#4A5268'}}},margin:{l:52,r:36,t:8,b:38},ex:{showlegend:roll20Xs.length>0,legend:{x:0,y:1,orientation:'h',font:{size:10}},annotations:annotations}}),{responsive:true,displayModeBar:false});
+  _plotlyNewPlot('dash-chart',traces,ML({y:{range:[42,92],ticksuffix:'%',title:{text:'Accuracy',font:{size:10,color:'#4A5268'}}},x:{title:{text:'Date',font:{size:10,color:'#4A5268'}}},margin:{l:52,r:36,t:8,b:38},ex:{showlegend:roll20Xs.length>0,legend:{x:0,y:1,orientation:'h',font:{size:10}},annotations:annotations}}),{responsive:true,displayModeBar:false});
 }
 
 // ─── BACKTEST CHARTS ───
@@ -4279,7 +4397,7 @@ function renderBacktest(){
     ys=[42.6,51.1,48.3,51.5,46.6,48.7,47.0,45.1,49.8,49.7,51.6,57.4,45.8,46.7];
   }
 
-  Plotly.newPlot('bt-chart',[{
+  _plotlyNewPlot('bt-chart',[{
     x:xs,y:ys,type:'scatter',mode:'lines+markers',name:'Win Rate',
     line:{color:'#F5A623',width:2,shape:'spline'},
     marker:{color:'#F5A623',size:5},
@@ -4290,14 +4408,14 @@ function renderBacktest(){
     ex:{shapes:[{type:'line',x0:0,x1:1,xref:'paper',y0:50,y1:50,line:{color:'rgba(255,92,92,.3)',dash:'dot',width:1.5}}]}
   }),{responsive:true,displayModeBar:false});
 
-  Plotly.newPlot('bt-type-chart',[{
+  _plotlyNewPlot('bt-type-chart',[{
     x:["Pick'em (0-3)", "Fav (3.5-7)", "Fav (7.5-10)", "Heavy Fav (10.5+)"],
     y:[50.1, 49.4, 49.2, 48.3],type:'bar',
     marker:{color:["rgba(0,200,150,.75)", "rgba(0,200,150,.6)", "rgba(79,158,255,.65)", "rgba(79,158,255,.5)"],line:{width:0}},
     hovertemplate:'%{x}: %{y}%<extra></extra>'
   }],ML({y:{ticksuffix:'%',range:[40,75]}}),{responsive:true,displayModeBar:false});
 
-  Plotly.newPlot('bt-conf-chart',[{
+  _plotlyNewPlot('bt-conf-chart',[{
     x:['50-59%','60-64%','65-69%','70-74%','>=75%'],
     y:[50.0, 50.7, 50.1, 49.2, 48.5],type:'scatter',mode:'lines+markers',
     line:{color:'#00C896',width:2,shape:'spline'},
@@ -4381,17 +4499,9 @@ const TEAM_COLORS={
   POR:['#E03A3E','#000000'],SAC:['#5A2D81','#63727A'],SAS:['#C4CED4','#000000'],
   TOR:['#CE1141','#000000'],UTA:['#002B5C','#00471B'],WAS:['#002B5C','#E31837'],
 };
-// NBA team IDs for CDN logos: https://cdn.nba.com/logos/nba/{id}/global/L/logo.svg
-const TEAM_IDS={
-  ATL:1610612737,BOS:1610612738,BKN:1610612751,CHA:1610612766,CHI:1610612741,
-  CLE:1610612739,DAL:1610612742,DEN:1610612743,DET:1610612765,GSW:1610612744,
-  HOU:1610612745,IND:1610612754,LAC:1610612746,LAL:1610612747,MEM:1610612763,
-  MIA:1610612748,MIL:1610612749,MIN:1610612750,NOP:1610612740,NYK:1610612752,
-  OKC:1610612760,ORL:1610612753,PHI:1610612755,PHX:1610612756,POR:1610612757,
-  SAC:1610612758,SAS:1610612759,TOR:1610612761,UTA:1610612762,WAS:1610612764,
-};
+// teamLogoByAbbr — reuses NBA_TEAM_IDS defined earlier (no duplicate map needed)
 function teamLogoByAbbr(abbr){
-  const id=TEAM_IDS[abbr];
+  const id=NBA_TEAM_IDS[abbr];
   return id?`https://cdn.nba.com/logos/nba/${id}/global/L/logo.svg`:null;
 }
 // Neutral fallback color for teams not in TEAM_COLORS
@@ -4667,7 +4777,7 @@ function renderRadar(pA,pB,aA,aB,colA,colB){
   const cats=['Scoring','Playmaking','Rebounding','Efficiency','Defense','Volume'];
   const vA=[nm(pA.pts,18,35),nm(pA.ast,3,12),nm(pA.reb,3,14),nm(aA.ts,54,68),nm(aA.bpm,2,12),nm(aA.usg,24,37)];
   const vB=[nm(pB.pts,18,35),nm(pB.ast,3,12),nm(pB.reb,3,14),nm(aB.ts,54,68),nm(aB.bpm,2,12),nm(aB.usg,24,37)];
-  Plotly.newPlot('radar',[
+  _plotlyNewPlot('radar',[
     {type:'scatterpolar',r:[...vA,vA[0]],theta:[...cats,cats[0]],fill:'toself',
       fillcolor:fillA,line:{color:colA,width:2},name:pA.name.split(' ').pop(),
       hovertemplate:'%{theta}: %{r}<extra></extra>'},
@@ -4712,7 +4822,7 @@ function renderBars(id,rows,nA,nB,colA,colB){
 
 function renderShoot(aA,aB,nA,nB){
   const zones=['At the Rim','In the Paint','Mid-Range','3-Pointers'];
-  Plotly.newPlot('shoot-chart',[
+  _plotlyNewPlot('shoot-chart',[
     {x:zones,y:[aA.rim,aA.paint,aA.mid,aA.thr],type:'bar',name:nA.split(' ').pop(),
       marker:{color:'rgba(79,158,255,.7)',line:{width:0}},
       hovertemplate:'%{x}<br>'+nA.split(' ').pop()+': %{y}%<extra></extra>'},
@@ -5346,7 +5456,7 @@ async function renderPlayoff(){
   const champY=allOdds.map(t=>t.title);
   const champColors=['rgba(245,166,35,.85)','rgba(0,200,150,.75)','rgba(79,158,255,.65)','rgba(79,158,255,.55)','rgba(79,158,255,.45)','rgba(79,158,255,.4)','rgba(79,158,255,.35)','rgba(79,158,255,.3)'];
   const maxY=Math.max(...champY,5);
-  Plotly.newPlot('champ-chart',[{
+  _plotlyNewPlot('champ-chart',[{
     x:champX,y:champY,type:'bar',
     marker:{color:champColors.slice(0,champX.length),line:{width:0}},
     hovertemplate:'<b>%{x}</b><br>%{y}% title odds<extra></extra>'
@@ -5425,7 +5535,7 @@ async function renderStreaks(){
   const teams=teamStreaks.map(t=>t.team);
   const streaks=teamStreaks.map(t=>t.streak);
   const xEnd=Math.max(teams.length-1,0)+0.5;
-  Plotly.newPlot("streak-chart",[{
+  _plotlyNewPlot("streak-chart",[{
     x:teams,y:streaks,type:"bar",
     marker:{color:streaks.map(v=>v>0?`rgba(0,200,150,${Math.min(.9,.35+v*.12)})`:`rgba(255,92,92,${Math.min(.9,.35+Math.abs(v)*.12)})`),line:{width:0}},
     hovertemplate:"<b>%{x}</b><br>%{y} game streak<extra></extra>"
@@ -5437,7 +5547,7 @@ async function renderStreaks(){
   const haTeams=homeAway.map(t=>t.team);
   const haPct=homeAway.map(t=>t.home_pct);
   const awPct=homeAway.map(t=>t.away_pct);
-  Plotly.newPlot("homeway-chart",[
+  _plotlyNewPlot("homeway-chart",[
     {x:haTeams,y:haPct,type:"bar",name:"Home",marker:{color:"rgba(0,200,150,.7)",line:{width:0}},hovertemplate:"%{x} home: %{y}%<extra></extra>"},
     {x:haTeams,y:awPct,type:"bar",name:"Away",marker:{color:"rgba(79,158,255,.6)",line:{width:0}},hovertemplate:"%{x} away: %{y}%<extra></extra>"},
   ],{...ML({y:{ticksuffix:"%",range:[40,100]}}),barmode:"group",bargap:.3,bargroupgap:.1,
@@ -5463,13 +5573,13 @@ function renderShotMaps(){
   // TS% -> rough pts/attempt (TS% / 50 * 1.0 scale; 66% TS ~ 1.32 pts/att)
   const effVals=tsVals.map(ts=>Math.round(ts/50*100)/100);
 
-  Plotly.newPlot('shot-quality-chart',[{
+  _plotlyNewPlot('shot-quality-chart',[{
     y:playerNames,x:tsVals,type:'bar',orientation:'h',
     marker:{color:tsVals.map(v=>v>=65?'rgba(0,200,150,.75)':v>=60?'rgba(245,166,35,.7)':'rgba(79,158,255,.6)'),line:{width:0}},
     hovertemplate:'<b>%{y}</b><br>TS%: %{x:.1f}%<extra></extra>'
   }],{...ML({y:{},x:{range:[50,75]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
 
-  Plotly.newPlot('efficiency-chart',[{
+  _plotlyNewPlot('efficiency-chart',[{
     y:playerNames,x:effVals,type:'bar',orientation:'h',
     marker:{color:effVals.map(v=>v>=1.3?'rgba(0,200,150,.75)':v>=1.2?'rgba(245,166,35,.7)':'rgba(79,158,255,.6)'),line:{width:0}},
     hovertemplate:'<b>%{y}</b><br>%{x:.2f} pts/attempt (est.)<extra></extra>'
@@ -5488,7 +5598,7 @@ function renderShotMaps(){
     const dist=(adv&&adv.shot_zones)||_szDefaults[i];
     return {x:_szZones,y:dist,type:'bar',name:short,marker:{color:_szColors[i],line:{width:0}},hovertemplate:'<b>'+short+'</b> -- %{x}: %{y}%<extra></extra>'};
   });
-  Plotly.newPlot('shot-zone-chart',_szTraces,{...ML({y:{ticksuffix:'%'}}),barmode:'group',bargap:.25,bargroupgap:.08,
+  _plotlyNewPlot('shot-zone-chart',_szTraces,{...ML({y:{ticksuffix:'%'}}),barmode:'group',bargap:.25,bargroupgap:.08,
     legend:{font:{color:'#8892AA',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'}},
     {responsive:true,displayModeBar:false});
 }
@@ -5906,53 +6016,41 @@ function renderTicker(){
 // ─── DATA LOADER ───
 async function loadDashboardData(){
   try{
-    const [picks,accuracy,valueBets,meta,explainers,contexts,playerJson,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson]=await Promise.all([
-      fetch('data/todays_picks.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/accuracy_history.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/value_bets.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/meta.json').then(r=>r.ok?r.json():{}).catch(()=>({})),
-      fetch('data/explainers.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/game_context.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/player_comparison.json').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('data/live_scores.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/standings.json').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('data/advanced_stats.json').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('data/matchup_analysis.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/performance.json').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('data/line_movement.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/player_props.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/clv_summary.json').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('data/bet_tracker.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      fetch('data/sharp_money.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-      // player_detail.json (1.5MB) is lazy-loaded on first player modal open
-      fetch('data/trends.json').then(r=>r.ok?r.json():{}).catch(()=>({})),
-      fetch('data/totals.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-    ]);
-    // Store full player records for detail modal (season-by-season data)
-    if(playerJson&&playerJson.players)window._FULL_PLAYER_DATA=playerJson.players;
-    // player_detail.json is lazy-loaded on first player modal open (see _loadPlayerDetail)
-    // ── Populate DATA.players from JSON, then merge LEGENDS by name ──
-    if(playerJson&&playerJson.players&&playerJson.players.length){
-      const legendNames=new Set(LEGENDS.map(l=>l.name));
-      // Map all non-legend JSON entries to the DATA.players shape
-      const mapped=playerJson.players
-        .filter(p=>!p._legend)
-        .map(mapJsonPlayer);
-      // Append any LEGEND not already covered by the JSON (by name)
-      const nameSet=new Set(mapped.map(p=>p.name));
-      LEGENDS.forEach(l=>{ if(!nameSet.has(l.name))mapped.push(l); });
-      DATA.players=mapped;
-    } else {
-      // Fallback: use LEGENDS only so the page is never empty
-      DATA.players=[...LEGENDS];
+    const _fetchErrors=[];
+    function _trackFetch(url,fallback){
+      return fetch(url).then(r=>{
+        if(!r.ok){_fetchErrors.push(url);return fallback;}
+        return r.json();
+      }).catch(()=>{_fetchErrors.push(url);return fallback;});
     }
-    // Store player meta for season dropdown
-    if(playerJson&&playerJson.meta)window._PLAYER_META=playerJson.meta;
-    // Enrich TS% onto player objects and build filter dropdowns
+    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson]=await Promise.all([
+      _trackFetch('data/todays_picks.json',[]),
+      _trackFetch('data/accuracy_history.json',[]),
+      _trackFetch('data/value_bets.json',[]),
+      _trackFetch('data/meta.json',{}),
+      _trackFetch('data/explainers.json',[]),
+      _trackFetch('data/game_context.json',[]),
+      // player_comparison.json (4MB+) is lazy-loaded on first Players tab open (see _loadPlayerComparison)
+      _trackFetch('data/live_scores.json',[]),
+      _trackFetch('data/standings.json',null),
+      _trackFetch('data/advanced_stats.json',null),
+      _trackFetch('data/matchup_analysis.json',[]),
+      _trackFetch('data/performance.json',null),
+      _trackFetch('data/line_movement.json',[]),
+      _trackFetch('data/player_props.json',[]),
+      _trackFetch('data/clv_summary.json',null),
+      _trackFetch('data/bet_tracker.json',[]),
+      _trackFetch('data/sharp_money.json',[]),
+      // player_detail.json (1.5MB) is lazy-loaded on first player modal open
+      _trackFetch('data/trends.json',{}),
+      _trackFetch('data/totals.json',[]),
+    ]);
+    // player_comparison.json is lazy-loaded on first Players tab open (see _loadPlayerComparison)
+    // Start with LEGENDS only so the page is never empty
+    DATA.players=[...LEGENDS];
     enrichPlayerTs();
     initPlayerSeasonDropdown();
     initPlayerTeamDropdown();
-    // ── Build league leader boards (pts/reb/ast) ──
     buildLeagueLeaders();
     // ── Populate DATA.games from live_scores.json ──
     // Handle both bare array format and {games:[...], exported_at:"..."} dict format
@@ -6168,6 +6266,34 @@ async function loadDashboardData(){
       ['rankings-footer-ts','standings-footer-ts','deepdive-footer-ts'].forEach(id=>{
         const el=document.getElementById(id);if(el)el.textContent=tsLabel;
       });
+      // ── Staleness warning: data older than 24h ──
+      const ageMs=Date.now()-d.getTime();
+      if(ageMs>24*60*60*1000){
+        const ageLabel=Math.floor(ageMs/(24*60*60*1000))+'d ago';
+        const banner=document.createElement('div');
+        banner.id='stale-data-banner';
+        banner.style.cssText='position:fixed;top:86px;left:50%;transform:translateX(-50%);z-index:95;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:10px;padding:6px 18px;font-size:12px;color:var(--gold);font-weight:600;display:flex;align-items:center;gap:8px;backdrop-filter:blur(12px);max-width:90vw';
+        banner.textContent='Data last updated: '+label+' ('+ageLabel+'). Run update.py for fresh data.';
+        const closeBtn=document.createElement('button');
+        closeBtn.textContent='\u00d7';
+        closeBtn.style.cssText='background:none;border:none;color:var(--gold);font-size:16px;cursor:pointer;padding:0 0 0 8px;line-height:1';
+        closeBtn.onclick=function(){banner.remove();};
+        banner.appendChild(closeBtn);
+        document.body.appendChild(banner);
+      }
+    }
+    // ── Show user-visible errors for key data that failed to load ──
+    if(_fetchErrors.length){
+      console.warn('Failed to fetch:',_fetchErrors);
+      const keyDataMap={
+        'data/todays_picks.json':{id:'hero-picks-grid',msg:'Today\'s picks unavailable'},
+        'data/standings.json':{id:'standings-tab-conf',msg:'Standings data unavailable'},
+        'data/live_scores.json':{id:'standings-tab-scores',msg:'Live scores unavailable'},
+      };
+      _fetchErrors.forEach(url=>{
+        const entry=keyDataMap[url];
+        if(entry)showDataError(entry.id,entry.msg+' -- run update.py to refresh');
+      });
     }
   }catch(e){
     console.warn('Dashboard data load:',e);
@@ -6187,7 +6313,7 @@ function formatLastUpdated(isoStr) {
 
 // ─── ERROR STATE RENDERER ───
 function showDataError(section, message) {
-  const el = document.getElementById(section + '-content') || document.querySelector('.' + section);
+  const el = document.getElementById(section + '-content') || document.getElementById(section) || document.querySelector('.' + section);
   if (!el) return;
   const err = document.createElement('div');
   err.className = 'data-error';
@@ -6296,6 +6422,95 @@ function submitWaitlist(inputEl, successEl) {
   }
 }
 
+// ─── CSV EXPORT UTILITY ───
+function _downloadCSV(filename, headers, rows){
+  var csvLines=[headers.join(',')];
+  rows.forEach(function(r){
+    csvLines.push(r.map(function(cell){
+      var s=String(cell==null?'':cell);
+      if(s.indexOf(',')!==-1||s.indexOf('"')!==-1||s.indexOf('\n')!==-1){
+        return '"'+s.replace(/"/g,'""')+'"';
+      }
+      return s;
+    }).join(','));
+  });
+  var csv=csvLines.join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── PICKS CSV EXPORT ───
+function exportPicksCsv(){
+  var picks=DATA.picks||[];
+  if(!picks.length)return;
+  var headers=['Matchup','Pick','Spread','Confidence','Edge','Kelly','Value Bet','Reason'];
+  var rows=picks.map(function(p){
+    var conf=+(p.model_confidence!=null?p.model_confidence:p.conf)||0;
+    var confDisp=Math.round(conf>1?conf:conf*100);
+    var edge=p.edge_pct!=null?(p.edge_pct*100).toFixed(1)+'%':'';
+    var kelly=p.kelly_fraction!=null?(p.kelly_fraction*100).toFixed(1)+'%':'';
+    var isVal=p.value_bet===true||p.value_bet==='true';
+    return [p.matchup||'',p.pick||p.ats_pick||'',p.spread||'',confDisp+'%',edge,kelly,isVal?'Yes':'No',p.reason||''];
+  });
+  _downloadCSV('nba_picks.csv',headers,rows);
+}
+
+// ─── STANDINGS CSV EXPORT ───
+function exportStandingsCsv(){
+  var all=(DATA.east||[]).concat(DATA.west||[]);
+  if(!all.length)return;
+  var headers=['Conference','Team','W','L','PCT','GB','Home','Away','L10','Streak'];
+  var rows=[];
+  (DATA.east||[]).forEach(function(t){
+    var pct=((t.w+t.l)>0?(t.w/(t.w+t.l)):0).toFixed(3);
+    rows.push(['East',t.team_name||t.team||t.abbr||'',t.w,t.l,pct,t.gb,t.home_record||'',t.away_record||'',t.last10||'',t.streak||'']);
+  });
+  (DATA.west||[]).forEach(function(t){
+    var pct=((t.w+t.l)>0?(t.w/(t.w+t.l)):0).toFixed(3);
+    rows.push(['West',t.team_name||t.team||t.abbr||'',t.w,t.l,pct,t.gb,t.home_record||'',t.away_record||'',t.last10||'',t.streak||'']);
+  });
+  _downloadCSV('nba_standings.csv',headers,rows);
+}
+
+// ─── URL HASH ROUTING ───
+var _hashRouteMap={
+  'today':'today','players':'players','teams':'teams','h2h':'h2h',
+  'standings':'standings','injuries':'injuries','rankings':'rankings',
+  'history':'history','deep':'deep','betting':'betting-picks'
+};
+function _routeFromHash(){
+  var hash=(window.location.hash||'').replace(/^#/,'').toLowerCase();
+  if(!hash)return;
+  // Check betting sub-tabs first: #betting-picks, #betting-value, etc.
+  if(hash.indexOf('betting-')===0){
+    var sub=hash.replace('betting-','');
+    // Map shorthand to actual tab IDs
+    var betMap={picks:'picks',value:'valuebets',valuebets:'valuebets',props:'props',
+      sharp:'sharp',performance:'performance',tracker:'tracker',linemovement:'linemovement',line:'linemovement'};
+    var tabId=betMap[sub]||sub;
+    if(BET_TABS.indexOf(tabId)!==-1){
+      showBettingTab(tabId,null);
+      return;
+    }
+  }
+  // Check if it's a plain "betting" hash
+  if(hash==='betting'){
+    showBettingTab('picks',null);
+    return;
+  }
+  // Free tabs
+  if(FREE_TABS.indexOf(hash)!==-1){
+    showFreeTab(hash);
+    return;
+  }
+}
+window.addEventListener('hashchange', _routeFromHash);
+
 // ─── INIT ───
 document.addEventListener('DOMContentLoaded', async ()=>{
   // Terms gate — show modal on first visit only
@@ -6328,6 +6543,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     });
     renderDashChart();
   }, 120);
+  // ─── URL HASH ROUTING — activate tab from URL hash after data is loaded ───
+  _routeFromHash();
   // Inject static tooltips after all renders complete
   setTimeout(injectTooltips, 200);
   // Swipe hint — show once on mobile for first-time visitors
@@ -6971,7 +7188,7 @@ if ('serviceWorker' in navigator) {
 // ── TEAMS PAGE ──
 function buildTeamsOverview(){
   function row(t,i){
-    const pct=(t.w/(t.w+t.l+0.001)).toFixed(3);
+    const pct=(t.w+t.l>0?(t.w/(t.w+t.l)):0).toFixed(3);
     const streakStr=String(t.streak||'');
     const sc=streakStr.startsWith('W')?'var(--green)':'var(--red)';
     const streakNum=parseInt(streakStr.slice(1))||0;
@@ -7070,8 +7287,8 @@ function buildTeamsForm(){
   });
   const html=all.map(t=>{
     const isW=String(t.streak).startsWith('W');
-    const pct=(t.w/(t.w+t.l+0.001)*100).toFixed(1);
-    const barW=Math.min(100,t.w/(t.w+t.l+0.001)*100);
+    const pct=(t.w+t.l>0?(t.w/(t.w+t.l))*100:0).toFixed(1);
+    const barW=Math.min(100,t.w+t.l>0?(t.w/(t.w+t.l))*100:0);
     const abbr=t.abbr||t.team||'';
     const logoUrl=teamLogoUrl(abbr);
     const logoImg=logoUrl?'<img src="'+logoUrl+'" width="22" height="22" style="object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'" alt=""/>':'';
@@ -7367,7 +7584,7 @@ function btRender(){
         ys.push(parseFloat(cumPnl.toFixed(2)));
       });
       const lineColor=cumPnl>=0?'#00c896':'#ef4444';
-      Plotly.newPlot('bet-tracker-chart',[{
+      _plotlyNewPlot('bet-tracker-chart',[{
         x:xs,y:ys,mode:'lines',fill:'tozeroy',
         line:{color:lineColor,width:2},
         fillcolor:cumPnl>=0?'rgba(0,200,150,.10)':'rgba(239,68,68,.10)',

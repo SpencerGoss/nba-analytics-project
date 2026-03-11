@@ -460,7 +460,7 @@ def build_game_context(
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, default=str)
+        json.dump(results, f, separators=(",", ":"), default=str)
 
     print(f"Wrote {len(results)} game contexts to {out_path}")
     return results

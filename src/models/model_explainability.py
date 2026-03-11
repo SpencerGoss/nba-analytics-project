@@ -222,13 +222,15 @@ def explain_game_outcome_model(
     if SHAP_AVAILABLE:
         print("\nComputing SHAP values (this may take a minute)...")
         # SHAP needs the raw tree estimator, not any calibration wrapper.
-        # Handle three model artifact shapes:
+        # Handle four model artifact shapes:
         #   _CalibratedWrapper  — custom isotonic wrapper (base_model is a Pipeline)
+        #   _PlattWrapper       — custom Platt scaling wrapper (base_model is a Pipeline)
         #   CalibratedClassifierCV — sklearn calibration wrapper (estimator is a Pipeline)
         #   Pipeline            — v1 plain pipeline (direct named_steps access)
         from sklearn.calibration import CalibratedClassifierCV as _CalCV
         from src.models.calibration import _CalibratedWrapper as _CalWrap
-        if isinstance(model, _CalWrap):
+        from src.models.calibration import _PlattWrapper as _PlattWrap
+        if isinstance(model, (_CalWrap, _PlattWrap)):
             clf = model.base_model.named_steps["clf"]  # custom wrapper -> base Pipeline -> clf
         elif isinstance(model, _CalCV):
             clf = model.estimator.named_steps["clf"]   # sklearn wrapper -> estimator Pipeline -> clf

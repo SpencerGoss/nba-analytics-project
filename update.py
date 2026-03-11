@@ -204,6 +204,9 @@ def main() -> None:
 
         print("\n=== Step 3: Rebuilding derived feature CSVs ===")
         try:
+            from src.features.elo import build_elo_ratings
+            print("--- Elo ratings ---")
+            build_elo_ratings()
             build_team_game_features()
             build_matchup_dataset()
             try:
@@ -373,6 +376,24 @@ def main() -> None:
                 print(f"  [{label}] WARN: timed out after 180s")
             except Exception as build_err:
                 print(f"  [{label}] WARN: {build_err}")
+
+        print("\n=== Step 8: Syncing to SQL Server (optional) ===")
+        try:
+            sync_script = _SCRIPTS_DIR / "sync_to_sqlserver.py"
+            if sync_script.exists():
+                result = subprocess.run(
+                    [str(_PYTHON), str(sync_script)],
+                    capture_output=True, text=True, timeout=300,
+                    cwd=str(Path(__file__).parent),
+                )
+                if result.returncode == 0:
+                    print("  SQL Server sync OK")
+                else:
+                    print(f"  SQL Server sync skipped (pyodbc not installed or server not running)")
+            else:
+                print("  sync_to_sqlserver.py not found, skipping")
+        except Exception as sql_err:
+            print(f"  SQL Server sync failed (non-fatal): {sql_err}")
 
         elapsed = datetime.now() - start_time
         total_seconds = int(elapsed.total_seconds())

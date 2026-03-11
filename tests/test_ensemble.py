@@ -19,10 +19,15 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from src.models.ensemble import (  # noqa: E402
+    ATS_WEIGHT,
     HIGH_CONFIDENCE_THRESHOLD,
     MEDIUM_CONFIDENCE_THRESHOLD,
+    WEIGHTS_DEFAULT,
+    WEIGHTS_HIGH_CONF,
+    WEIGHTS_UNCERTAIN,
     NBAEnsemble,
     _confidence_label,
+    _select_weight_regime,
     _sigmoid,
     run_ensemble_on_predictions,
 )
@@ -132,7 +137,7 @@ def test_predict_returns_expected_columns(tmp_path):
     result = ens.predict(_make_df(n=5))
     expected = {
         "win_prob", "ats_prob", "margin_pred", "margin_signal",
-        "ensemble_score", "ensemble_edge", "confidence",
+        "ensemble_score", "ensemble_edge", "confidence", "weight_regime",
     }
     assert expected.issubset(set(result.columns))
     assert len(result) == 5
@@ -212,17 +217,19 @@ def test_two_model_fallback_score_in_range(tmp_path):
 # -- Test 6: save_config() writes valid JSON ----------------------------------
 
 def test_save_config_writes_json(tmp_path):
-    """save_config() must write a valid JSON file with weights summing to 1."""
+    """save_config() must write a valid JSON with all weight regimes summing to 1."""
     ad = _build(tmp_path)
     ens = NBAEnsemble.load(ad)
     config_path = ens.save_config(ad)
     assert config_path.exists()
     config = json.loads(config_path.read_text())
     assert "version" in config
-    assert "weights" in config
-    w = config["weights"]
-    total = w["win_prob"] + w["ats_prob"] + w["margin_signal"]
-    assert abs(total - 1.0) < 1e-9, f"Weights sum to {total}, not 1.0"
+    assert "weight_regimes" in config
+    for regime_name, w in config["weight_regimes"].items():
+        total = w["win_prob"] + w["ats_prob"] + w["margin_signal"]
+        assert abs(total - 1.0) < 1e-9, (
+            f"Weights in {regime_name} sum to {total}, not 1.0"
+        )
 
 
 # -- Test 7: run_ensemble_on_predictions helper ------------------------------
@@ -275,3 +282,101 @@ def test_sigmoid_output_range():
     assert (y_extreme >= 0).all() and (y_extreme <= 1).all()
     # Midpoint check
     assert abs(float(_sigmoid(0)) - 0.5) < 1e-10
+
+
+# -- Test 9: weight regime selection -----------------------------------------
+
+def test_select_weight_regime_high_confidence():
+    """High win_prob (>0.65) should select high_confidence regime."""
+    weights, regime = _select_weight_regime(0.70)
+    assert regime == "high_confidence"
+    assert weights == WEIGHTS_HIGH_CONF
+
+
+def test_select_weight_regime_high_confidence_low():
+    """Low win_prob (<0.35) should select high_confidence regime."""
+    weights, regime = _select_weight_regime(0.25)
+    assert regime == "high_confidence"
+    assert weights == WEIGHTS_HIGH_CONF
+
+
+def test_select_weight_regime_uncertain():
+    """win_prob in [0.45, 0.55] should select uncertain regime."""
+    weights, regime = _select_weight_regime(0.50)
+    assert regime == "uncertain"
+    assert weights == WEIGHTS_UNCERTAIN
+
+
+def test_select_weight_regime_default():
+    """win_prob between thresholds (not high, not uncertain) -> default."""
+    weights, regime = _select_weight_regime(0.60)
+    assert regime == "default"
+    assert weights == WEIGHTS_DEFAULT
+
+
+def test_select_weight_regime_boundary_065():
+    """win_prob exactly 0.65 is NOT > 0.65 so should be default."""
+    _, regime = _select_weight_regime(0.65)
+    assert regime == "default"
+
+
+def test_select_weight_regime_boundary_045():
+    """win_prob exactly 0.45 is in uncertain range [0.45, 0.55]."""
+    _, regime = _select_weight_regime(0.45)
+    assert regime == "uncertain"
+
+
+# -- Test 10: ATS weight is zero ---------------------------------------------
+
+def test_ats_weight_is_zero():
+    """ATS_WEIGHT must be 0.0 (ATS model effectively disabled)."""
+    assert ATS_WEIGHT == 0.0
+    for regime in (WEIGHTS_HIGH_CONF, WEIGHTS_DEFAULT, WEIGHTS_UNCERTAIN):
+        assert regime["ats_prob"] == 0.0
+
+
+# -- Test 11: all weight regimes sum to 1.0 ----------------------------------
+
+def test_all_weight_regimes_sum_to_one():
+    """Each weight regime must sum to exactly 1.0."""
+    for name, regime in [
+        ("high_confidence", WEIGHTS_HIGH_CONF),
+        ("default", WEIGHTS_DEFAULT),
+        ("uncertain", WEIGHTS_UNCERTAIN),
+    ]:
+        total = sum(regime.values())
+        assert abs(total - 1.0) < 1e-9, f"{name} weights sum to {total}"
+
+
+# -- Test 12: weight_regime column is populated --------------------------------
+
+def test_predict_weight_regime_column(tmp_path):
+    """predict() must return weight_regime with valid regime names."""
+    ens = NBAEnsemble.load(_build(tmp_path))
+    result = ens.predict(_make_df(n=20, seed=11))
+    valid = {"high_confidence", "default", "uncertain"}
+    invalid = set(result["weight_regime"].unique()) - valid
+    assert not invalid, f"Invalid weight regimes: {invalid}"
+
+
+# -- Test 13: dynamic weights change ensemble_score ---------------------------
+
+def test_dynamic_weights_vary_by_confidence(tmp_path):
+    """Rows with different win_prob ranges should get different weight regimes."""
+    ens = NBAEnsemble.load(_build(tmp_path))
+    # Use enough rows that we're likely to get multiple regimes
+    result = ens.predict(_make_df(n=50, seed=42))
+    regimes_seen = set(result["weight_regime"].unique())
+    # With 50 random rows we should see at least 2 different regimes
+    assert len(regimes_seen) >= 1, "Expected at least one weight regime"
+
+
+# -- Test 14: ensemble_score still in [0, 1] with dynamic weights ------------
+
+def test_ensemble_score_in_range_dynamic(tmp_path):
+    """ensemble_score must be in [0, 1] with dynamic weighting."""
+    ens = NBAEnsemble.load(_build(tmp_path))
+    for seed in range(5):
+        result = ens.predict(_make_df(n=20, seed=seed))
+        assert (result["ensemble_score"] >= 0).all(), f"Below 0 at seed {seed}"
+        assert (result["ensemble_score"] <= 1).all(), f"Above 1 at seed {seed}"

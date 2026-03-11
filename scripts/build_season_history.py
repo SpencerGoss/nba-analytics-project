@@ -2,7 +2,7 @@
 Build dashboard/data/season_history.json
 
 Reads data/processed/team_game_logs.csv and produces per-season standings
-and game results for the last 5 seasons (202021 through 202425).
+and game results for the last 5 complete seasons plus the current season.
 
 Output shape:
 {
@@ -22,6 +22,7 @@ Standings are sorted by win% descending. Games are sorted by date descending.
 
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -30,14 +31,26 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = PROJECT_ROOT / "data" / "processed" / "team_game_logs.csv"
 OUTPUT_PATH = PROJECT_ROOT / "dashboard" / "data" / "season_history.json"
 
-SEASON_CODES = [202021, 202122, 202223, 202324, 202425]
-SEASON_LABELS = {
-    202021: "2020-21",
-    202122: "2021-22",
-    202223: "2022-23",
-    202324: "2023-24",
-    202425: "2024-25",
-}
+def get_current_season_year(reference: datetime | None = None) -> int:
+    """Return NBA season start year (season flips in October)."""
+    now = reference or datetime.now()
+    return now.year if now.month >= 10 else now.year - 1
+
+
+def build_season_codes(num_previous: int = 5) -> list[int]:
+    """Build season codes for the last num_previous complete seasons plus the current one."""
+    current_start = get_current_season_year()
+    codes = []
+    for offset in range(num_previous, 0, -1):
+        start = current_start - offset
+        code = start * 100 + (start + 1) % 100
+        codes.append(code)
+    # Current season
+    codes.append(current_start * 100 + (current_start + 1) % 100)
+    return codes
+
+
+SEASON_CODES = build_season_codes()
 
 TEAM_NAMES = {
     "ATL": "Atlanta Hawks",
@@ -81,7 +94,10 @@ TEAM_NAMES = {
 
 
 def season_label(code: int) -> str:
-    return SEASON_LABELS.get(code, str(code))
+    """Convert season code like 202526 -> '2025-26'."""
+    start = code // 100
+    end = code % 100
+    return f"{start}-{end:02d}"
 
 
 def load_logs() -> pd.DataFrame:
@@ -205,7 +221,7 @@ def main() -> None:
     print(f"Loaded {len(df):,} rows from team_game_logs.csv")
 
     filtered = filter_seasons(df)
-    print(f"Filtered to {len(filtered):,} rows across last 5 seasons")
+    print(f"Filtered to {len(filtered):,} rows across {len(SEASON_CODES)} seasons")
 
     output = build_output(filtered)
 

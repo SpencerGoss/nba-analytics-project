@@ -288,7 +288,7 @@ def main() -> None:
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as fh:
-        json.dump(totals, fh, indent=2, ensure_ascii=False)
+        json.dump(totals, fh, separators=(",", ":"), ensure_ascii=False)
 
     log.info(
         "Wrote %d game totals -> %s", len(totals), OUTPUT_PATH

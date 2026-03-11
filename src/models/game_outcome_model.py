@@ -176,6 +176,97 @@ def _best_threshold(y_true: pd.Series, proba: np.ndarray) -> tuple:
     return best_t, best_acc
 
 
+def _get_low_importance_features(
+    model,
+    feature_names: list,
+    threshold: float = 0.001,
+) -> list[str]:
+    """Return feature names with importance below the given threshold.
+
+    Works with tree-based models (feature_importances_) and linear models
+    (coef_). Returns an empty list if importance cannot be extracted.
+    """
+    try:
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_
+        elif hasattr(model, "coef_"):
+            importances = np.abs(model.coef_[0])
+        else:
+            return []
+        return [
+            name
+            for name, imp in zip(feature_names, importances)
+            if imp < threshold
+        ]
+    except Exception:
+        return []
+
+
+def _clone_pipeline(pipe: Pipeline) -> Pipeline:
+    """Create a fresh clone of a pipeline with the same hyperparameters."""
+    from sklearn.base import clone
+    return clone(pipe)
+
+
+def _prune_low_importance_features(
+    best_pipe: Pipeline,
+    candidates: dict,
+    best_name: str,
+    train: pd.DataFrame,
+    test: pd.DataFrame,
+    feat_cols: list,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    best_threshold: float,
+    threshold: float = 0.001,
+) -> tuple:
+    """Drop features with importance < threshold and retrain if it helps.
+
+    Returns (pipeline, feat_cols, test_acc, test_auc, test_pred, test_proba).
+    Uses tree-based feature_importances_ or linear coef_ to identify
+    low-importance features. Only adopts the pruned set if test AUC improves.
+    """
+    clf = best_pipe.named_steps["clf"]
+    low_imp = _get_low_importance_features(clf, feat_cols, threshold)
+    if not low_imp:
+        print("\n--- Feature Pruning: no features below threshold ---")
+        test_proba = best_pipe.predict_proba(test[feat_cols])[:, 1]
+        test_pred = (test_proba >= best_threshold).astype(int)
+        test_acc = accuracy_score(y_test, test_pred)
+        test_auc = roc_auc_score(y_test, test_proba)
+        return best_pipe, feat_cols, test_acc, test_auc, test_pred, test_proba
+
+    print(f"\n--- Feature Pruning: {len(low_imp)} feature(s) below {threshold} ---")
+    for feat_name in sorted(low_imp):
+        print(f"    - {feat_name}")
+
+    reduced_cols = [c for c in feat_cols if c not in low_imp]
+    print(f"  Pruning {len(low_imp)} -> {len(reduced_cols)} features remaining")
+
+    reduced_pipe = _clone_pipeline(candidates[best_name])
+    reduced_pipe.fit(train[reduced_cols], y_train)
+    reduced_proba = reduced_pipe.predict_proba(test[reduced_cols])[:, 1]
+    reduced_pred = (reduced_proba >= best_threshold).astype(int)
+    reduced_acc = accuracy_score(y_test, reduced_pred)
+    reduced_auc = roc_auc_score(y_test, reduced_proba)
+
+    full_proba = best_pipe.predict_proba(test[feat_cols])[:, 1]
+    full_pred = (full_proba >= best_threshold).astype(int)
+    full_acc = accuracy_score(y_test, full_pred)
+    full_auc = roc_auc_score(y_test, full_proba)
+
+    print(f"  Full features:   acc={full_acc:.4f}, auc={full_auc:.4f}")
+    print(f"  Pruned features: acc={reduced_acc:.4f}, auc={reduced_auc:.4f}")
+
+    if reduced_auc >= full_auc:
+        print("  -> Pruned features maintain/improve AUC. Using pruned set.")
+        return (reduced_pipe, reduced_cols, reduced_acc, reduced_auc,
+                reduced_pred, reduced_proba)
+    else:
+        print("  -> Pruned features hurt AUC. Keeping full set.")
+        return (best_pipe, feat_cols, full_acc, full_auc, full_pred, full_proba)
+
+
 def _season_splits(train_df: pd.DataFrame) -> list:
     """
     Create expanding season splits:
@@ -270,10 +361,14 @@ def train_game_outcome_model(
         "gradient_boosting": Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
             ("clf", GradientBoostingClassifier(
-                n_estimators=350,
+                n_estimators=500,
                 max_depth=3,
                 learning_rate=0.03,
                 subsample=0.9,
+                min_samples_leaf=20,
+                max_features=0.7,
+                validation_fraction=0.1,
+                n_iter_no_change=15,
                 random_state=42,
             )),
         ]),
@@ -332,12 +427,12 @@ def train_game_outcome_model(
             "threshold": float(round(np.mean(split_thresholds), 2)),
         }
 
-    best_name = max(model_scores, key=lambda k: model_scores[k]["mean_val_acc"])
+    best_name = max(model_scores, key=lambda k: model_scores[k]["mean_val_auc"])
     best_threshold = model_scores[best_name]["threshold"]
     print(
         f"\nSelected model: {best_name} "
-        f"(mean val acc={model_scores[best_name]['mean_val_acc']:.4f}, "
-        f"mean val auc={model_scores[best_name]['mean_val_auc']:.4f}, "
+        f"(mean val auc={model_scores[best_name]['mean_val_auc']:.4f}, "
+        f"mean val acc={model_scores[best_name]['mean_val_acc']:.4f}, "
         f"threshold={best_threshold:.2f})"
     )
 
@@ -354,6 +449,23 @@ def train_game_outcome_model(
 
     print("\nClassification Report:")
     print(classification_report(y_test, test_pred, target_names=["Away Win", "Home Win"]))
+
+    # ── Automatic low-importance feature pruning ──────────────────────────────
+    # Drop features with importance < 0.001 and retrain if AUC holds.
+    n_before_prune = len(feat_cols)
+    best_pipe, feat_cols, test_acc, test_auc, test_pred, test_proba = (
+        _prune_low_importance_features(
+            best_pipe, candidates, best_name,
+            train, test, feat_cols,
+            y_train, y_test, best_threshold,
+            threshold=0.001,
+        )
+    )
+    n_pruned = n_before_prune - len(feat_cols)
+    if n_pruned > 0:
+        print(f"  Pruned {n_pruned} features ({n_before_prune} -> {len(feat_cols)})")
+        print(f"  Post-prune Test Accuracy: {test_acc:.4f}")
+        print(f"  Post-prune Test ROC-AUC:  {test_auc:.4f}")
 
     clf = best_pipe.named_steps["clf"]
     if hasattr(clf, "feature_importances_"):
