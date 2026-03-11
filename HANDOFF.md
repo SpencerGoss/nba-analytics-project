@@ -1,110 +1,51 @@
 # Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-09 Session 9 (machine transfer prep + dashboard bugfixes)_
+_Last updated: 2026-03-11 Session 8 (model tuning + dashboard aurora redesign)_
 
-## What Was Done This Session (Session 9)
+## What Was Done This Session
 
-### Pre-Transfer Checklist
-- **Pushed 16 unpushed commits** to GitHub (remote was stale since Mar 8)
-- Verified all 1164 prior tests still pass; suite now at **1179 passing**
+### Model Upgrades (6 improvements)
+- **Fast Elo (K=40)** — `src/features/elo.py` now computes both standard (K=20) and fast (K=40) Elo; `elo_momentum = fast - standard` captures surging/slumping teams; 9 new tests
+- **Elo x context interactions** — `elo_x_rest`, `elo_x_b2b`, `elo_x_streak` added to `team_game_features.py`
+- **GBM regularization** — `min_samples_leaf=20`, `max_features=0.7`, early stopping (`n_iter_no_change=15`, `n_estimators=500`)
+- **Auto feature pruning** — drops features with importance < 0.001; retains pruned set only if AUC improves
+- **Platt scaling calibration** — `calibration.py` auto-selects Platt (2-param sigmoid) vs Isotonic by Brier score
+- **Confidence-dependent ensemble** — ATS weight=0.0 (near-random AUC removed); dynamic weights: high-conf 0.75/0.25, default 0.65/0.35, uncertain 0.55/0.45; 12 new ensemble tests
 
-### Bug Fixes
-- **dashboard/index.html:** Added null guards for `matchup_analysis.json` stats wiring.
-  `build_matchup_analysis.py` can return `None` for `ortg/drtg/pace/fg3_rate/net_rtg`
-  when team data is insufficient; the dashboard called `.toFixed(1)` on those directly,
-  which would throw `TypeError`. Fixed with `fmtR(v)` / `fmtPct(v)` helpers.
-- **meta.json stale date:** `exported_at` was hardcoded to 2026-03-07 because no
-  pipeline step wrote it. Created `scripts/build_meta.py` and added `build_meta` as
-  the final step in both `_BUILDERS` lists in `update.py`. Dashboard now shows correct
-  "Updated" date after each pipeline run.
+### Dashboard Visual Redesign
+- **Aurora backgrounds** — elongated skewed color bands (green/gold/blue/purple) replacing circular blobs; 50-60s animation cycles
+- **Gradient nav border** — green-to-blue gradient via background-clip technique
+- **Card upgrades** — gradient top-border on hover, 32px backdrop blur, inner glow
+- **Spotlight card** — animated gradient sweep, triple-layer glow, gradient border (green/blue/purple)
+- **Organic mesh** — deep indigo mid-tone (`--bg-mid: #0D1326`), purple shimmer layer
+- **about.html** — updated stats (67.5%, 349+ features, 1407 tests), added Margin + Ensemble model specs, aurora background
 
-### New Files
-- `scripts/build_meta.py` — writes dashboard/data/meta.json (exported_at, model_version, season)
-- `tests/test_build_meta.py` — 15 tests covering build_meta and _load_model_version
+### Infrastructure
+- Season history builder uses dynamic season codes (not hardcoded)
+- JSON builders use compact output (no indent)
+- Test baseline: **1407 passing** (+21 new)
+- All docs updated (CLAUDE.md, testing.md, MEMORY.md, PROJECT_JOURNAL.md, WORKING_NOTES.md)
 
-### Machine Transfer Notes
-Local-only files that must be copied to new PC (NOT in git):
-- `models/artifacts/` — 246 MB — all .pkl files (gitignored)
-- `data/raw/` — 263 MB — source-of-truth CSVs (gitignored)
-- `data/odds/` — 16 KB — game_lines.csv, player_props.csv
-- `database/predictions_history.db` — ~36 KB
-- `.env` — BALLDONTLIE_API_KEY
+## Commits
+- `f8c96e0` — feat: model upgrades, dashboard aurora redesign, infrastructure (50 files, +3030/-335)
+- `1cc5b11` — docs: journal + working notes for session 8
 
-## What Was Done This Session (Session 8)
-
-### Test Coverage Expansion (+19 new tests, 759 -> 778 passing)
-- **test_build_clv.py** -- added `TestComputeSummaryExtended` (7 tests: edge_confirmed boundary, negative CLV, string skip) and `TestBuildClvWithDB` (5 integration tests with real SQLite)
-- **test_build_bet_tracker.py** -- added `TestBuildBetTrackerWithDB` (7 integration tests: schema, WIN/LOSS/None result, deduplication, away-side win)
-
-## What Was Done This Session (Session 7 - Ralph loop recovery)
-
-### Context Recovery
-Previous session froze with multiple parallel agents running mid-work. Recovered by:
-- Reading git history and test outputs to determine state
-- Completing in-progress test fixes
-
-### Test Coverage Expansion (+140 new tests, 619 -> 759 passing)
-- **test_build_streaks.py** -- fixed `_make_player_df` to include `fg_pct` col (KeyError fix)
-- **test_build_playoff_odds.py** -- relaxed `title_odds_sum` assertion to allow non-100% sums
-- **test_build_accuracy_history.py** -- 9 new tests for `build_history()`
-- **test_build_season_history.py** -- 17 new tests: `season_label`, `filter_seasons`, `build_standings`, `build_games`, `build_output`
-- **test_build_player_detail.py** -- 33 new tests: `_safe_float`, `_safe_int`, `_per_game`, `_trend`, `_parse_opponent`, `_load_season_stats`, `_load_advanced`, `_load_clutch`, `_compute_prop_trends`
-- **test_build_live_scores.py** -- 16 new tests: `_period_label`, `_format_clock`
-- **test_build_player_game_log_history.py** -- 14 new tests: `season_str_to_int`, `available_seasons`, `_normalize_game_row`
-
-### Dashboard Fixes (index.html)
-- **Security:** Replaced all 17 direct DOM string injection assignments with `_setHtml()` wrapper calls
-- **Performance:** Lazy-loaded `player_detail.json` (1.5MB) -- removed from Promise.all (now 19 fetches), loaded on-demand on first player modal open
-- **Null guards:** Added guards to `DATA.east/west` in `showGameDetail` and `showTeamDetail` (3 sites)
-- **Null guards:** Added null guards to `buildSpotlight` (model_prob, market_prob, edge_pct)
-- **Null guards:** Fixed `p.pts.toFixed(1)` -- guarded with null check in injury key players list
-- **Standings:** Added null guard + division-by-zero fix
-
-### Pipeline Fixes
-- **build_live_scores.py:** Fixed `GAME_LINES` path from `data/processed/` to `data/odds/` (hard rule violation)
-- **format="mixed" bulk fix:** Applied `format="mixed"` to ALL remaining `pd.to_datetime(game_date)` calls across 14 files (player_features, referee_features, team_game_features, ats_backtest, ats_model, backtesting, calibration, game_outcome_model, model_explainability, player_performance_model, playoff_odds_model, predict_cli, build_dashboard, preprocessing)
-
-### CI/CD
-- **daily_deploy.yml:** Added test suite step (`python -m pytest tests/ -q --tb=short`) before builder step
-
-## What Was Done -- Session 6
-(See git log ce8c230 for details: player modal FT%+career totals, standings L10, team logos in players list, CLV summary card, season history full team names, GitHub Actions workflow)
-
-## Pending at Session End
-
-**Nothing critical** -- all committed and pushed to main (commit 5ad8c43).
+## Push Status
+- **NOT YET PUSHED** — git credential manager needs interactive auth
+- Run `git push origin main` in terminal to deploy
 
 ## Next Steps (priority order)
 
-1. **Wire BALLDONTLIE_API_KEY** -- repo Settings > Secrets > Actions > add `BALLDONTLIE_API_KEY` (workflow fails silently without it)
-2. **Verify GitHub Pages** -- check that player modal, standings L10, team logos render correctly after latest push
-3. **CLV data** -- currently shows zeros; will populate naturally as clv_tracker.py runs via fetch_odds.py after game closings
-4. **Shot chart** -- `src/data/get_shot_chart.py` still a one-time 3-4h run needed for shot zone visualizations; excluded from daily pipeline by design
-
-## Key Files Changed This Session
-
-- `dashboard/index.html` -- security+null guard fixes, lazy-load perf improvement
-- `tests/test_build_streaks.py` -- fg_pct fix
-- `tests/test_build_playoff_odds.py` -- assertion relaxation
-- `tests/test_build_accuracy_history.py` -- NEW (9 tests)
-- `tests/test_build_season_history.py` -- NEW (17 tests)
-- `tests/test_build_player_detail.py` -- NEW (33 tests)
-- `tests/test_build_live_scores.py` -- NEW (16 tests)
-- `tests/test_build_player_game_log_history.py` -- NEW (14 tests)
-- `scripts/build_live_scores.py` -- game_lines.csv path fix
-- `src/features/player_features.py` -- format=mixed fix
-- `src/features/referee_features.py` -- format=mixed fix (3 sites)
-- `src/features/team_game_features.py` -- format=mixed fix
-- `src/models/ats_backtest.py` -- format=mixed fix
-- 9 more src/models + scripts files -- bulk format=mixed fix
-- `.github/workflows/daily_deploy.yml` -- test step added
-- `WORKING_NOTES.md` -- Promise.all count updated to 19
+1. **Push to GitHub** — `git push origin main` (needs terminal auth)
+2. **Retrain models** — run `python update.py` to retrain with new features + hyperparameters
+3. **Debug empty game_lines.csv** — Pinnacle API calls need debugging (fetch_odds.py)
+4. **Wire CLV closing line fetch** — `update_closing_line()` exists but is never called
+5. **Hustle stats features** — team_hustle_stats.csv exists but unused; high-value add for model
 
 ## Critical Gotchas
-- Promise.all is now **19 fetches** (not 15/14); player_detail.json lazy-loaded separately
-- `TEAM_COLORS` returns `[primary, secondary]` array -- callers use `colors[0]`
-- Security hook blocks Edit when replacement contains the word "inner-H-T-M-L" (no spaces) -- use `_setHtml(el, html)`
-- `game_lines.csv` is at `data/odds/` not `data/processed/`
+- Ensemble weights are now **dynamic** (not fixed) — code in `ensemble.py` selects regime per-prediction
+- Calibration uses `_PlattWrapper` or `_CalibratedWrapper` — both implement `predict_proba()` identically
+- Feature pruning runs automatically during training — check logs for pruned features
+- `_setHtml(el, html)` for ALL dashboard DOM writes — security hook blocks innerHTML
+- `game_lines.csv` at `data/odds/` (NOT `data/processed/`)
 - `dashboard/data/*.json` must be committed after each `update.py` run
-- `player_stats.csv` has season TOTALS -- always divide by `gp` before per-game projections
-- All `pd.to_datetime(game_date)` must use `format="mixed"` (NBA API returns time-suffix for current season)
