@@ -2,17 +2,16 @@
 
 ## Core Insights (loaded by session-kickoff)
 
-- [model] `shift(1)` before ALL rolling features; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out from CV
-- [model] ALL inference loads `game_outcome_model_calibrated.pkl`; sys.path must include PROJECT_ROOT; update.py step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`
-- [model] Optuna HPO done: gradient_boosting wins (AUC 0.7422 with Elo+EWMA features); NBAEnsemble blends 3 models (win=0.6/ats=0.15/margin=0.25); margin Ridge MAE 10.52; diff_elo is #1 feature (37.3%)
-- [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_game_logs uses `season_id=22025` for 202526; player_stats.csv stores TOTALS -- divide by gp
-- [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols -- causes ValueError; `closing_spread` can be NULL before games close -- guard with pd.isna() before float()
-- [pipeline] update.py Step 7 calls all 24 builders; `game_lines.csv` at `data/odds/` (NOT data/processed/); `dashboard/data/*.json` COMMITTED to git (GitHub Pages has no build step)
-- [dashboard] Promise.all has 18 fetches (player_comparison+player_detail lazy-loaded, Plotly.js lazy-loaded); URL hash routing for deep linking; CSV export on picks/standings; data-dependent UI in loader callback; ALL DOM writes use `_setHtml(el,html)`
-- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; sync via `scripts/sync_to_sqlserver.py --full` after schema changes; pyodbc installed; auto-syncs in update.py Step 8
-- [dashboard] Player modal: season table FT% + GP-weighted career totals (wAvg/wAvgPct); career cards FG%/FT%/TS%; standings: L10 col (green>=7/red<5) + full names via t.team_name; season history: winner scores colored green, margin col, logos via home_abbr/away_abbr
-- [infra] Pinnacle guest API (league 487, no auth, free); only predictions_history.db active (nba.db empty/legacy); Playwright Chrome fails on Windows if Chrome already running -- use grep for verification instead
-- [data] NBA API LeagueDashPlayerStats only ~1996-97+; pre-1996 legends use _inject_legends(); fetch_historical_players.py flush: use `first_write` alone (not `first_write and i <= len(frames)`) -- i >> len when early seasons fail
+- [model] `shift(1)` before ALL rolling features; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out
+- [model] GBM: n_estimators=500 + early stopping (n_iter_no_change=15), min_samples_leaf=20, max_features=0.7; auto-prunes features < 0.001 importance; diff_elo is #1 feature (37.3%)
+- [model] Ensemble: confidence-dependent weights (ATS=0.0, removed as noise); high-conf 0.75/0.25, default 0.65/0.35, uncertain 0.55/0.45; calibration auto-selects Platt vs Isotonic by Brier
+- [model] Elo system: K=20 standard + K=40 fast; `elo_momentum = fast - standard` detects surges/slumps; interaction features: elo_x_rest, elo_x_b2b, elo_x_streak
+- [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_stats.csv stores TOTALS -- divide by gp
+- [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols; `game_lines.csv` at `data/odds/`; `dashboard/data/*.json` COMMITTED to git
+- [pipeline] update.py Step 3: call BOTH `build_team_game_features()` AND `build_matchup_dataset()`; Step 7: all 24 builders; Step 8: SQL Server sync
+- [dashboard] ALL DOM writes use `_setHtml(el,html)`; data-dependent UI in Promise.all loader; aurora background with 4 color bands; gradient nav/card borders
+- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free)
+- [infra] `game_lines.csv` is EMPTY (Pinnacle debug needed); CLV closing_spread always NULL (update_closing_line never called)
 
 ## Domain Notes
 
@@ -168,6 +167,19 @@
 
 [2026-03-10] [elo] INSIGHT: Elo system (K=20, MOV multiplier, 1/3 season regression toward 1500) produces diff_elo as the #1 feature at 37.3% importance — more than 3x the next feature. FiveThirtyEight-style MOV multiplier: eln(MOV+1) * (2.2 / (ELOS_DIFF * 0.001 + 2.2)).
 [2026-03-10] [elo] WHY: Elo captures cumulative team strength across entire season history (25+ seasons); rolling features only see 5-20 games. The differential (home_elo - away_elo) is the single most predictive feature for game outcome.
+
+[2026-03-11] [elo] INSIGHT: Fast Elo (K=40) + elo_momentum = elo_pre_fast - elo_pre. Teams on hot streaks show positive momentum (fast Elo rises faster); slumping teams show negative. Both Elo tracks use identical MOV multiplier and 1/3 season regression.
+[2026-03-11] [elo] WHY: K=40 reacts ~2x faster to recent results; the delta between fast and standard captures momentum that pure win streaks miss (margin-of-victory weighted).
+
+### [ensemble]
+
+[2026-03-11] [ensemble] INSIGHT: ATS model (AUC 0.557) was adding noise to ensemble at 15% weight — setting to 0 and redistributing improved signal. Dynamic weighting: uncertain games give margin model more influence (0.45) since spread signal is more informative when win probability is near 50/50.
+[2026-03-11] [ensemble] WHY: Fixed weights assume all models contribute equally at all confidence levels; in reality, the win model is most reliable when confident (>0.65), while the margin model adds value precisely in the uncertain zone.
+
+### [calibration]
+
+[2026-03-11] [calibration] INSIGHT: Platt scaling (2-param sigmoid) is less prone to overfitting than isotonic regression on small calibration sets. Auto-selection by Brier score ensures the best calibrator wins without manual intervention.
+[2026-03-11] [calibration] WHY: Isotonic worsened Brier from 0.205 to 0.212 — too many parameters for the 202122 holdout set size. Platt has only slope+intercept, generalizes better.
 
 ### [sqlserver]
 

@@ -4,6 +4,31 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-11 (Session 8) — Model Tuning + Dashboard Aurora Redesign
+
+**Done:**
+- **Fast Elo (K=40)** — added high-reactivity Elo variant to `src/features/elo.py`; `elo_momentum = elo_pre_fast - elo_pre` captures surging/slumping teams; 9 new tests
+- **Elo x context interactions** — `elo_x_rest`, `elo_x_b2b`, `elo_x_streak` in `team_game_features.py` (non-linear synergy between rating gap and fatigue/momentum)
+- **GBM regularization** — `min_samples_leaf=20`, `max_features=0.7`, early stopping (`n_iter_no_change=15`, `n_estimators` raised to 500 ceiling)
+- **Auto feature pruning** — drops features with importance < 0.001, retains pruned set only if AUC improves
+- **Platt scaling calibration** — auto-selects Platt (2-param sigmoid) vs Isotonic by Brier score; addresses isotonic overfitting on small calibration sets
+- **Confidence-dependent ensemble** — ATS weight set to 0.0 (AUC 0.557 = noise); dynamic weights: high-conf 0.75/0.25, default 0.65/0.35, uncertain 0.55/0.45; 12 new ensemble tests
+- **Dashboard aurora redesign** — elongated skewed aurora bands (4 colors) replacing circular blobs; gradient nav border; card gradient top-border on hover; spotlight animated sweep + triple glow; organic mesh gradient; purple shimmer layer; deep indigo mid-tone
+- **about.html updates** — model stats updated (67.5%, 349+ features, 1407 tests); added Margin + Ensemble model specs; aurora background
+- **Documentation** — CLAUDE.md, testing.md, MEMORY.md all updated with new ensemble weights, Elo features, test baseline
+
+**Tests:** 1407 passing (+21 new: 9 Elo momentum, 12 ensemble)
+**Commit:** `f8c96e0` (50 files, +3030/-335)
+**Push:** pending (git credential manager needed interactive auth)
+
+**Next:**
+1. Push `git push origin main` (credential auth in terminal)
+2. Retrain models with new features + hyperparameters (run `python update.py`)
+3. Debug empty `game_lines.csv` (Pinnacle API)
+4. Wire CLV closing line fetch into pipeline
+
+---
+
 ## 2026-03-10 (Session 7) — PC Migration + Major Model & Dashboard Upgrade
 
 **Done:**
