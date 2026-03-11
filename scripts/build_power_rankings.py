@@ -37,19 +37,19 @@ LAST_N = 20   # primary recency window (last 20 games)
 LAST_10 = 10  # hot-streak window
 
 # Composite weights -- must sum to 1.0
-W_NET20 = 0.35
-W_NET10 = 0.25
-W_PYTH20 = 0.20
-W_WIN_PCT = 0.20
+W_NET20 = 0.25
+W_NET10 = 0.15
+W_PYTH20 = 0.25
+W_WIN_PCT = 0.35
 
 # Normalisation range for composite (output 0-100 scale)
 COMPOSITE_MIN = -12.0
 COMPOSITE_MAX = 12.0
 
 METHOD_DESCRIPTION = (
-    "Composite score (0-100) = Net Rtg L20 (35%) + Net Rtg L10 (25%) "
-    "+ Pythagorean Win% L20 (20%) + Season Win% (20%). "
-    "Emphasises recent 20-game form while anchoring on full-season record. "
+    "Composite score (0-100) = Season Win% (35%) + Pythagorean Win% L20 (25%) "
+    "+ Net Rtg L20 (25%) + Net Rtg L10 (15%). "
+    "Anchors on full-season record with recent-form adjustment. "
     "Rank delta = position change vs prior 10-game window."
 )
 
