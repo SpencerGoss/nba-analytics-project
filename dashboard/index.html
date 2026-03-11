@@ -97,6 +97,14 @@ body.light .bgl::after{opacity:.015}
 /* ── SKELETON LOADING ── */
 @keyframes skeleton-pulse{0%,100%{opacity:.4}50%{opacity:.8}}
 .skeleton{background:rgba(255,255,255,.06);border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite}
+/* ── MATCHUP RADAR CHART ── */
+#matchup-radar,#h2h-radar{margin:16px auto}
+/* ── ELO TIMELINE TEAM PICKER ── */
+.elo-team-picker{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.elo-team-chip{padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;background:var(--card);border:1px solid var(--card-border);transition:all .16s;user-select:none}
+.elo-team-chip.active{background:rgba(0,200,150,.15);border-color:var(--green);color:var(--green)}
+.elo-team-chip:hover{border-color:var(--b1)}
+
 /* ── VALUE BET PULSE (neon-green glow ring on high-kelly picks) ── */
 @keyframes value-pulse{0%,100%{box-shadow:var(--shadow),0 0 0 0 rgba(0,200,150,.4)}50%{box-shadow:var(--shadow),0 0 0 10px rgba(0,200,150,0)}}
 .pc.hi.value-active{animation:value-pulse 2.4s ease-in-out infinite}
@@ -1064,6 +1072,10 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 .why-pick{padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;margin-top:8px;font-size:12px;line-height:1.5;border:1px solid var(--card-border)}
 .why-pick-toggle{cursor:pointer;color:var(--green);font-size:11px;font-weight:600}
 .why-pick-content{display:none;margin-top:6px}.why-pick-content.show{display:block}
+.factor-badge{display:inline-block;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:600;letter-spacing:.03em;margin:2px}
+.factor-badge.positive{background:rgba(0,200,150,.12);color:#00C896;border:1px solid rgba(0,200,150,.2)}
+.factor-badge.negative{background:rgba(232,86,74,.12);color:#E8564A;border:1px solid rgba(232,86,74,.2)}
+.factor-badge.neutral{background:rgba(79,158,255,.12);color:#4F9EFF;border:1px solid rgba(79,158,255,.2)}
 .potd-spotlight{background:linear-gradient(135deg,rgba(0,200,150,.08),rgba(79,158,255,.08));border:1px solid rgba(0,200,150,.2);border-radius:16px;padding:20px;margin:16px 0;position:relative;overflow:hidden}
 .potd-spotlight::before{content:'PICK OF THE DAY';position:absolute;top:8px;right:12px;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--green);opacity:.7}
 .empty-state{text-align:center;padding:32px 16px;color:var(--t1);font-size:14px}
@@ -1648,6 +1660,24 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     Power rankings · Source: team_game_features.csv
   </p>
+
+  <!-- Elo Timeline -->
+  <div class="card" style="padding:20px 24px;margin-top:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:15px;font-weight:800;color:var(--t0);letter-spacing:-.3px">Elo Ratings Across the Season</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px">Click team chips to toggle visibility</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="eloQuickSelect('top5')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Top 5</button>
+        <button onclick="eloQuickSelect('bot5')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Bottom 5</button>
+        <button onclick="eloQuickSelect('all')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">All</button>
+        <button onclick="eloQuickSelect('none')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Clear</button>
+      </div>
+    </div>
+    <div id="elo-team-picker" class="elo-team-picker"></div>
+    <div id="elo-timeline-chart" style="width:100%;height:450px"></div>
+  </div>
 </section>
 
 <!-- HISTORY (free) -->
@@ -1966,6 +1996,60 @@ function _plotlyNewPlot(){
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 // ═══════════════════════════════════════════════
+// ─── MATCHUP RADAR CHART ───
+function renderMatchupRadar(targetId,teamA,teamB,rawMatchupEntry){
+  var el=document.getElementById(targetId);
+  if(\!el)return;
+  var m=rawMatchupEntry||null;
+  if(\!m&&window.MATCHUP_JSON&&window.MATCHUP_JSON.length){
+    m=window.MATCHUP_JSON.find(function(e){
+      return(e.home_team===teamA&&e.away_team===teamB)||(e.home_team===teamB&&e.away_team===teamA);
+    })||null;
+  }
+  if(\!m){
+    _setHtml(el,'<div style="text-align:center;color:var(--t2);font-size:12px;padding:20px">No radar data available for this matchup</div>');
+    return;
+  }
+  var dimsRaw=m.dimensions||['Offense','Defense','Pace','3PT Rate','Recent Form'];
+  var dims=dimsRaw.slice();
+  dims.push(dims[0]);
+  var radarA,radarB;
+  if(m.radar&&m.radar[teamA]&&m.radar[teamB]){
+    radarA=m.radar[teamA].slice();
+    radarB=m.radar[teamB].slice();
+  }else{
+    var isFlip=(m.home_team\!==teamA);
+    var aOrtg=isFlip?m.away_ortg:m.home_ortg;
+    var bOrtg=isFlip?m.home_ortg:m.away_ortg;
+    var aDrtg=isFlip?m.away_drtg:m.home_drtg;
+    var bDrtg=isFlip?m.home_drtg:m.away_drtg;
+    var aPace=isFlip?m.away_pace:m.home_pace;
+    var bPace=isFlip?m.home_pace:m.away_pace;
+    var aFg3=isFlip?m.away_fg3_rate:m.home_fg3_rate;
+    var bFg3=isFlip?m.home_fg3_rate:m.away_fg3_rate;
+    var aNet=isFlip?m.away_net_rtg:m.home_net_rtg;
+    var bNet=isFlip?m.home_net_rtg:m.away_net_rtg;
+    function _rn(v,lo,hi){return Math.max(0,Math.min(100,((v-lo)/(hi-lo))*100));}
+    radarA=[_rn(aOrtg||110,100,120),_rn(-(aDrtg||110),-120,-100),_rn(aPace||100,95,110),_rn((aFg3||0.33)*100,28,42),_rn(aNet||0,-15,15)];
+    radarB=[_rn(bOrtg||110,100,120),_rn(-(bDrtg||110),-120,-100),_rn(bPace||100,95,110),_rn((bFg3||0.33)*100,28,42),_rn(bNet||0,-15,15)];
+    dims=['Offense','Defense','Pace','3PT Rate','Net Rating','Offense'];
+  }
+  if(radarA.length===dims.length-1)radarA.push(radarA[0]);
+  if(radarB.length===dims.length-1)radarB.push(radarB[0]);
+  _ensurePlotly().then(function(){
+    var trA={type:'scatterpolar',r:radarA,theta:dims,fill:'toself',name:teamA,fillcolor:'rgba(0,200,150,0.15)',line:{color:'#00C896',width:2},marker:{size:4}};
+    var trB={type:'scatterpolar',r:radarB,theta:dims,fill:'toself',name:teamB,fillcolor:'rgba(79,158,255,0.15)',line:{color:'#4F9EFF',width:2},marker:{size:4}};
+    var lay={
+      polar:{radialaxis:{visible:true,range:[0,100],gridcolor:'rgba(255,255,255,0.06)',tickfont:{color:'#8892AA',size:9}},angularaxis:{gridcolor:'rgba(255,255,255,0.06)',tickfont:{color:'#8892AA',size:11}}},
+      paper_bgcolor:'transparent',plot_bgcolor:'transparent',
+      font:{color:'#8892AA',family:'Plus Jakarta Sans,system-ui,sans-serif'},
+      showlegend:true,legend:{font:{color:'#F1F5FF',size:12}},
+      margin:{l:60,r:60,t:30,b:30}
+    };
+    window.Plotly.newPlot(el,[trA,trB],lay,{responsive:true,displayModeBar:false});
+  }).catch(function(e){console.warn('Matchup radar error:',e);});
+}
+
 // NBA TEAM LOGOS
 // ═══════════════════════════════════════════════
 const NBA_TEAM_IDS = {
@@ -3366,6 +3450,8 @@ function showGameDetail(home,away){
   const matchup=(window.MATCHUP_JSON||[]).find(function(m){return m.home_team===home&&m.away_team===away;})||null;
   const injData=(window.INJURIES_DATA||[]).find(function(g){return g.home_team===home&&g.away_team===away;})||null;
   const h2hEntry=(window.H2H_DATA||[]).find(function(m){return(m.home_team===home&&m.away_team===away)||(m.home_team===away&&m.away_team===home);})||null;
+  var gdGames=(window._GAME_DETAIL&&window._GAME_DETAIL.games)||[];
+  var gdEntry=gdGames.find(function(g){return g.home&&g.home.team===home&&g.away&&g.away.team===away;})||null;
   const allTeams=(DATA.east||[]).concat(DATA.west||[]);
   const hRec=allTeams.find(function(t){return t.abbr===home||t.team===home;})||null;
   const aRec=allTeams.find(function(t){return t.abbr===away||t.team===away;})||null;
@@ -3416,6 +3502,47 @@ function showGameDetail(home,away){
       html+='<div style="font-size:11px;color:var(--t2)"><span style="font-weight:700;color:var(--t1)">Consensus Check</span> &mdash; Model aligns with market</div></div>';
     }
     html+='</div></div>';
+  }
+  // ── Confidence Meter (from game_detail.json) ──
+  if(gdEntry&&gdEntry.prediction&&gdEntry.prediction.model_confidence){
+    var gdConf=gdEntry.prediction.model_confidence/100;
+    html+='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Confidence</div>';
+    html+='<div style="background:var(--b0);border-radius:12px;padding:14px 16px">';
+    html+=_confMeterHtml(gdConf);
+    if(gdEntry.prediction.projected_margin!=null){
+      var margin=gdEntry.prediction.projected_margin;
+      html+='<div style="margin-top:10px;font-size:12px;color:var(--t1)">Projected margin: <span style="font-weight:700;color:var(--t0)">'+(margin>0?'+':'')+margin.toFixed(1)+' pts</span></div>';
+    }
+    html+='</div></div>';
+  }
+  // ── Prediction Factors (from game_detail.json) ──
+  if(gdEntry&&gdEntry.context){
+    var gdFactors=gdEntry.context.factors||[];
+    var gdFlags=gdEntry.context.situational_flags||[];
+    if(gdFlags.length||gdFactors.length){
+      html+='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Prediction Factors</div>';
+      html+='<div style="background:var(--b0);border-radius:12px;padding:14px 16px">';
+      if(gdFlags.length){
+        html+='<div style="margin-bottom:10px">';
+        for(var fi=0;fi<gdFlags.length;fi++)html+=_factorBadgeHtml(gdFlags[fi]);
+        html+='</div>';
+      }
+      if(gdFactors.length){
+        html+='<ul style="margin:0;padding:0 0 0 16px;list-style:none">';
+        for(var fj=0;fj<gdFactors.length;fj++){
+          var bulletCol='var(--t2)';
+          var fUp=gdFactors[fj].toUpperCase();
+          if(fUp.indexOf('FAVORING')!==-1||fUp.indexOf('HOT')!==-1||fUp.indexOf('REST ADV')!==-1)bulletCol='var(--green)';
+          else if(fUp.indexOf('COLD')!==-1||fUp.indexOf('B2B')!==-1||fUp.indexOf('MISSING')!==-1||fUp.indexOf('LOSING')!==-1)bulletCol='var(--red)';
+          html+='<li style="margin:4px 0;font-size:12px;color:var(--t1);position:relative;padding-left:12px"><span style="position:absolute;left:0;color:'+bulletCol+'">&#8226;</span>'+esc(gdFactors[fj])+'</li>';
+        }
+        html+='</ul>';
+      }
+      if(gdEntry.context.context_summary){
+        html+='<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--b1);font-size:11px;color:var(--t2);line-height:1.5">'+esc(gdEntry.context.context_summary)+'</div>';
+      }
+      html+='</div></div>';
+    }
   }
   // records and form
   if(hRec||aRec){
@@ -3538,6 +3665,33 @@ function showGameDetail(home,away){
       html+='</div>';
     });
     html+='</div></div>';
+  }else if(gdEntry&&gdEntry.injuries){
+    // Fallback: use game_detail.json injury data
+    var gdInj=gdEntry.injuries;
+    var gdHomeInj=gdInj.home_injuries||[];
+    var gdAwayInj=gdInj.away_injuries||[];
+    if(gdHomeInj.length||gdAwayInj.length){
+      html+='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Injury Report</div>';
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+      [[away,gdAwayInj],[home,gdHomeInj]].forEach(function(item){
+        var team=item[0],injs=item[1];
+        html+='<div><div style="font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:6px">'+esc(team)+'</div>';
+        if(!injs.length){html+='<div style="font-size:12px;color:var(--t2)">None reported</div>';}
+        else{injs.forEach(function(p){
+          var c=impactCols[p.impact]||'var(--t2)';
+          html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">';
+          html+='<span style="font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:'+c+';padding:1px 5px;border-radius:4px;background:'+c+'22;flex-shrink:0">'+esc((p.impact||'').toUpperCase())+'</span>';
+          html+='<span style="font-size:12px;color:var(--t1)">'+esc(p.player)+'</span>';
+          if(p.season_avg_pts)html+='<span style="font-size:11px;color:var(--t2);margin-left:auto">'+p.season_avg_pts.toFixed(1)+' PPG</span>';
+          html+='</div>';
+        });}
+        html+='</div>';
+      });
+      html+='</div></div>';
+    } else {
+      html+='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Injury Report</div>';
+      html+='<div style="font-size:12px;color:var(--t2);padding:10px 0">No injury data for this game. Visit the Injuries tab for the full report.</div></div>';
+    }
   }else{
     html+='<div style="margin-bottom:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Injury Report</div>';
     html+='<div style="font-size:12px;color:var(--t2);padding:10px 0">No injury data for this game. Visit the Injuries tab for the full report.</div></div>';
@@ -3557,6 +3711,25 @@ function showGameDetail(home,away){
       html+='<span style="color:var(--t2);font-size:11px;min-width:80px">'+esc(dateLabel)+'</span>';
       html+='<span style="font-family:var(--fm);color:var(--t1)">'+esc(m.home_team)+' '+m.home_score+'-'+m.away_score+' '+(m.away_team||'')+'</span>';
       html+='<span style="font-weight:700;color:var(--green);min-width:36px;text-align:right">'+esc(m.winner)+'</span>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+  }else if(gdEntry&&gdEntry.h2h&&gdEntry.h2h.meetings&&gdEntry.h2h.meetings.length){
+    // Fallback: use game_detail.json h2h data
+    var gdMeetings=gdEntry.h2h.meetings.slice(0,5);
+    html+='<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">Head-to-Head (Last 5)</div>';
+    if(gdEntry.h2h.series_record)html+='<div style="font-size:12px;color:var(--t1);margin-bottom:8px">'+esc(gdEntry.h2h.series_record)+'</div>';
+    if(gdEntry.h2h.avg_total)html+='<div style="font-size:11px;color:var(--t2);margin-bottom:8px">Avg total: '+gdEntry.h2h.avg_total.toFixed(1)+' pts</div>';
+    html+='<div style="background:var(--b0);border-radius:10px;overflow:hidden">';
+    gdMeetings.forEach(function(m,idx){
+      var dParts=(m.date||'').split('-');
+      var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var dateLabel=dParts.length===3?months[parseInt(dParts[1],10)-1]+' '+parseInt(dParts[2],10)+', '+dParts[0]:m.date;
+      var border=idx>0?'border-top:1px solid var(--b1)':'';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;'+border+';font-size:12px">';
+      html+='<span style="color:var(--t2);font-size:11px;min-width:80px">'+esc(dateLabel)+'</span>';
+      html+='<span style="font-family:var(--fm);color:var(--t1)">'+esc(m.home_team||'')+' '+m.home_score+'-'+m.away_score+' '+esc(m.away_team||'')+'</span>';
+      html+='<span style="font-weight:700;color:var(--green);min-width:36px;text-align:right">'+esc(m.winner||'')+'</span>';
       html+='</div>';
     });
     html+='</div></div>';
@@ -5024,6 +5197,15 @@ function buildLeagueLeaders(){
   });
 }
 
+// ─── FACTOR BADGE HELPER ───
+function _factorBadgeHtml(factor){
+  var f=factor.toUpperCase();
+  var cls='neutral';
+  if(f.indexOf('ADV')!==-1||f.indexOf('HOT')!==-1||f.indexOf('REST')!==-1||f.indexOf('STREAK')!==-1)cls='positive';
+  if(f.indexOf('B2B')!==-1||f.indexOf('COLD')!==-1||f.indexOf('INJ')!==-1||f.indexOf('FATIGUE')!==-1||f.indexOf('LOSING')!==-1)cls='negative';
+  return'<span class="factor-badge '+cls+'">'+esc(factor.replace(/_/g,' '))+'</span>';
+}
+
 // ─── CONFIDENCE METER HELPER ───
 function _confMeterHtml(conf){
   if(!conf||isNaN(conf))return'';
@@ -5458,7 +5640,12 @@ function drawMatchup(i){
           </div>`;
         }).join('')}
       </div>
+    </div>
+    <div class="card" style="margin-top:14px;padding:18px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Team Comparison Radar</div>
+      <div id="matchup-radar" style="width:100%;max-width:500px;height:400px;margin:0 auto"></div>
     </div>`);
+  if(m._raw)renderMatchupRadar('matchup-radar',m.away,m.home,m._raw);
 }
 
 // ─── DEEP DIVE — PLAYOFF ───
@@ -6103,7 +6290,7 @@ async function loadDashboardData(){
         return r.json();
       }).catch(()=>{_fetchErrors.push(url);return fallback;});
     }
-    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson,gameDetailJson]=await Promise.all([
       _trackFetch('data/todays_picks.json',[]),
       _trackFetch('data/accuracy_history.json',[]),
       _trackFetch('data/value_bets.json',[]),
@@ -6124,6 +6311,7 @@ async function loadDashboardData(){
       // player_detail.json (1.5MB) is lazy-loaded on first player modal open
       _trackFetch('data/trends.json',{}),
       _trackFetch('data/totals.json',[]),
+      _trackFetch('data/game_detail.json',{games:[]}),
     ]);
     // player_comparison.json is lazy-loaded on first Players tab open (see _loadPlayerComparison)
     // Start with LEGENDS only so the page is never empty
@@ -6279,6 +6467,7 @@ async function loadDashboardData(){
             ['Recent Form (L5)',recentFmt(m.away_recent_form),recentFmt(m.home_recent_form)],
           ],
           edge:edge,reason:reason,
+          _raw:m,
         });
       });
     }
@@ -6335,6 +6524,8 @@ async function loadDashboardData(){
     // ── Wire trends.json and totals.json for game detail modal ──
     window.TEAM_TRENDS=teamTrendsJson||{};
     window.GAME_TOTALS=Array.isArray(totalsJson)?totalsJson:[];
+    // ── Wire game_detail.json for enhanced game detail modals ──
+    window._GAME_DETAIL=gameDetailJson&&gameDetailJson.games?gameDetailJson:{games:[]};
     // ── Wire sharp_money.json -> Sharp Money tab ──
     window.SHARP_MONEY=Array.isArray(sharpMoney)?sharpMoney:[];
     renderSharpMoney();
@@ -6940,7 +7131,10 @@ if ('serviceWorker' in navigator) {
       _renderBanner(matchup, teamA, teamB, stats) +
       _renderResultsStrip(matchup, teamA) +
       _renderStats(stats, matchup.avg_total, teamA, teamB) +
+      '<div class="card" style="margin-bottom:16px;padding:18px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Team Comparison Radar</div><div id="h2h-radar" style="width:100%;max-width:500px;height:400px;margin:0 auto"></div></div>' +
       _renderTable(matchup, teamA, teamB));
+    // Render radar chart for H2H teams
+    renderMatchupRadar('h2h-radar', teamA, teamB);
   };
 
   // initH2H — called once when the user navigates to the H2H page
@@ -7149,6 +7343,96 @@ if ('serviceWorker' in navigator) {
     if (table)   table.style.display   = '';
   }
 
+  // ─── ELO TIMELINE ─────────────────────────────────────────────────────────────
+  const _ELO_TEAM_COLORS = {
+    ATL:'#E03A3E',BKN:'#000000',BOS:'#007A33',CHA:'#1D1160',CHI:'#CE1141',
+    CLE:'#860038',DAL:'#00538C',DEN:'#0E2240',DET:'#C8102E',GSW:'#1D428A',
+    HOU:'#CE1141',IND:'#002D62',LAC:'#C8102E',LAL:'#552583',MEM:'#5D76A9',
+    MIA:'#98002E',MIL:'#00471B',MIN:'#0C2340',NOP:'#0C2340',NYK:'#F58426',
+    OKC:'#007AC1',ORL:'#0077C0',PHI:'#006BB6',PHX:'#E56020',POR:'#E03A3E',
+    SAC:'#5A2D81',SAS:'#C4CED4',TOR:'#CE1141',UTA:'#002B5C',WAS:'#002B5C'
+  };
+  const _ELO_DARK_OVERRIDES = {
+    BKN:'#AAAAAA',DEN:'#FEC524',MIN:'#78BE20',NOP:'#C8102E',SAS:'#C4CED4',
+    UTA:'#F9A01B',WAS:'#E31837'
+  };
+  let _eloData = null;
+  let _eloSelected = {};
+  function _getEloTeamColor(abbr) {
+    return _ELO_DARK_OVERRIDES[abbr] || _ELO_TEAM_COLORS[abbr] || '#888888';
+  }
+  function _getEloSorted() {
+    if (!_eloData || !_eloData.teams) return [];
+    var teams = Object.keys(_eloData.teams);
+    teams.sort(function(a, b) {
+      var aArr = _eloData.teams[a]; var bArr = _eloData.teams[b];
+      var aElo = aArr.length ? aArr[aArr.length - 1].elo : 1500;
+      var bElo = bArr.length ? bArr[bArr.length - 1].elo : 1500;
+      return bElo - aElo;
+    });
+    return teams;
+  }
+  function _buildEloChips() {
+    var picker = document.getElementById('elo-team-picker');
+    if (!picker || !_eloData) return;
+    var sorted = _getEloSorted();
+    var html = sorted.map(function(abbr) {
+      var cls = _eloSelected[abbr] ? 'elo-team-chip active' : 'elo-team-chip';
+      var col = _eloSelected[abbr] ? 'border-color:' + _getEloTeamColor(abbr) + ';color:' + _getEloTeamColor(abbr) + ';background:' + _getEloTeamColor(abbr) + '22' : '';
+      return '<span class="' + cls + '" style="' + col + '" onclick="toggleEloTeam(\'' + esc(abbr) + '\')">' + esc(abbr) + '</span>';
+    }).join('');
+    _setHtml(picker, html);
+  }
+  function _renderEloChart() {
+    if (!_eloData || !_eloData.teams) return;
+    var chartEl = document.getElementById('elo-timeline-chart');
+    if (!chartEl) return;
+    var traces = [];
+    var sorted = _getEloSorted();
+    sorted.forEach(function(abbr) {
+      if (!_eloSelected[abbr]) return;
+      var pts = _eloData.teams[abbr];
+      var dates = pts.map(function(p) { return p.date; });
+      var elos = pts.map(function(p) { return p.elo; });
+      var hoverTexts = pts.map(function(p) {
+        var mom = p.elo_momentum != null ? p.elo_momentum.toFixed(1) : 'N/A';
+        return abbr + '<br>Date: ' + p.date + '<br>Elo: ' + p.elo.toFixed(1) + '<br>Momentum: ' + mom;
+      });
+      traces.push({ x:dates, y:elos, type:'scatter', mode:'lines+markers', name:abbr,
+        line:{color:_getEloTeamColor(abbr),width:2}, marker:{size:4,color:_getEloTeamColor(abbr)},
+        text:hoverTexts, hoverinfo:'text' });
+    });
+    if (!traces.length) {
+      _setHtml(chartEl, '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:var(--t2);font-size:13px">Select teams above to view their Elo trajectory</div>');
+      return;
+    }
+    var layout = { paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+      font:{family:'Plus Jakarta Sans,system-ui,sans-serif',color:'#8892AA',size:11},
+      margin:{l:50,r:20,t:10,b:50},
+      xaxis:{type:'date',gridcolor:'rgba(255,255,255,0.05)',linecolor:'rgba(255,255,255,0.1)',tickformat:'%b %d'},
+      yaxis:{title:{text:'Elo Rating',font:{size:12}},gridcolor:'rgba(255,255,255,0.05)',linecolor:'rgba(255,255,255,0.1)'},
+      legend:{orientation:'h',y:-0.15,x:0.5,xanchor:'center',font:{size:10},bgcolor:'transparent'},
+      hovermode:'closest', showlegend:true };
+    _plotlyNewPlot(chartEl, traces, layout, {displayModeBar:false,responsive:true});
+  }
+  function renderEloTimeline() {
+    _buildEloChips();
+    _ensurePlotly().then(function() { _renderEloChart(); });
+  }
+  window.toggleEloTeam = function(abbr) {
+    _eloSelected[abbr] = !_eloSelected[abbr];
+    _buildEloChips(); _renderEloChart();
+  };
+  window.eloQuickSelect = function(mode) {
+    if (!_eloData || !_eloData.teams) return;
+    var sorted = _getEloSorted();
+    _eloSelected = {};
+    if (mode === 'top5') sorted.slice(0, 5).forEach(function(t) { _eloSelected[t] = true; });
+    else if (mode === 'bot5') sorted.slice(-5).forEach(function(t) { _eloSelected[t] = true; });
+    else if (mode === 'all') sorted.forEach(function(t) { _eloSelected[t] = true; });
+    _buildEloChips(); _renderEloChart();
+  };
+
   window.initRankings = function () {
     if (_rkLoading) return;
     if (_rkLoaded)  return;
@@ -7169,6 +7453,21 @@ if ('serviceWorker' in navigator) {
           + '<div style="font-size:12px;color:var(--t2)">Run <code>python scripts/build_power_rankings.py</code> then refresh. (' + err + ')</div>'
           + '</div>');
       });
+    // Lazy-load Elo timeline data
+    if (!_eloData) {
+      fetch('data/elo_timeline.json')
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data) return;
+          window._ELO_TIMELINE = data;
+          _eloData = data;
+          var sorted = _getEloSorted();
+          sorted.slice(0, 5).forEach(function(t) { _eloSelected[t] = true; });
+          sorted.slice(-5).forEach(function(t) { _eloSelected[t] = true; });
+          renderEloTimeline();
+        })
+        .catch(function(err) { console.warn('Elo timeline load error:', err); });
+    }
   };
 })();
 </script>
