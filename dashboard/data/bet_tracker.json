@@ -1,5 +1,95 @@
 [
   {
+    "game_date": "2026-03-11",
+    "home_team": "LAC",
+    "away_team": "MIN",
+    "predicted_winner": "MIN",
+    "home_win_prob": 0.3333,
+    "away_win_prob": 0.6667,
+    "ats_pick": "MIN",
+    "spread": null,
+    "edge_pct": null,
+    "value_bet": false,
+    "actual_winner": null,
+    "result": null,
+    "created_at": "2026-03-11T05:58:19.212996"
+  },
+  {
+    "game_date": "2026-03-11",
+    "home_team": "SAC",
+    "away_team": "CHA",
+    "predicted_winner": "SAC",
+    "home_win_prob": 0.8738,
+    "away_win_prob": 0.1262,
+    "ats_pick": "SAC",
+    "spread": null,
+    "edge_pct": null,
+    "value_bet": false,
+    "actual_winner": null,
+    "result": null,
+    "created_at": "2026-03-11T05:58:18.022677"
+  },
+  {
+    "game_date": "2026-03-11",
+    "home_team": "DEN",
+    "away_team": "HOU",
+    "predicted_winner": "DEN",
+    "home_win_prob": 0.6102,
+    "away_win_prob": 0.3898,
+    "ats_pick": "DEN",
+    "spread": null,
+    "edge_pct": null,
+    "value_bet": false,
+    "actual_winner": null,
+    "result": null,
+    "created_at": "2026-03-11T05:58:16.868442"
+  },
+  {
+    "game_date": "2026-03-11",
+    "home_team": "UTA",
+    "away_team": "NYK",
+    "predicted_winner": "NYK",
+    "home_win_prob": 0.04,
+    "away_win_prob": 0.96,
+    "ats_pick": "NYK",
+    "spread": null,
+    "edge_pct": null,
+    "value_bet": false,
+    "actual_winner": null,
+    "result": null,
+    "created_at": "2026-03-11T05:58:15.721282"
+  },
+  {
+    "game_date": "2026-03-11",
+    "home_team": "NOP",
+    "away_team": "TOR",
+    "predicted_winner": "TOR",
+    "home_win_prob": 0.3056,
+    "away_win_prob": 0.6944,
+    "ats_pick": "TOR",
+    "spread": null,
+    "edge_pct": null,
+    "value_bet": false,
+    "actual_winner": null,
+    "result": null,
+    "created_at": "2026-03-11T05:58:14.545139"
+  },
+  {
+    "game_date": "2026-03-11",
+    "home_team": "ORL",
+    "away_team": "CLE",
+    "predicted_winner": "CLE",
+    "home_win_prob": 0.4286,
+    "away_win_prob": 0.5714,
+    "ats_pick": "CLE +1.0",
+    "spread": "+1.0",
+    "edge_pct": null,
+    "value_bet": false,
+    "actual_winner": null,
+    "result": null,
+    "created_at": "2026-03-11T05:58:13.383888"
+  },
+  {
     "game_date": "2026-03-07",
     "home_team": "OKC",
     "away_team": "GSW",
@@ -10,8 +100,8 @@
     "spread": null,
     "edge_pct": null,
     "value_bet": false,
-    "actual_winner": null,
-    "result": null,
+    "actual_winner": "OKC",
+    "result": "WIN",
     "created_at": "2026-03-07T20:33:27.381625"
   },
   {
@@ -25,8 +115,8 @@
     "spread": null,
     "edge_pct": null,
     "value_bet": false,
-    "actual_winner": null,
-    "result": null,
+    "actual_winner": "MIL",
+    "result": "WIN",
     "created_at": "2026-03-07T20:33:21.933565"
   },
   {
@@ -40,8 +130,8 @@
     "spread": null,
     "edge_pct": null,
     "value_bet": false,
-    "actual_winner": null,
-    "result": null,
+    "actual_winner": "LAC",
+    "result": "LOSS",
     "created_at": "2026-03-07T20:33:16.690350"
   },
   {
@@ -53,10 +143,10 @@
     "away_win_prob": 0.5,
     "ats_pick": "ATL -9.5",
     "spread": "-9.5",
-    "edge_pct": 21.51,
-    "value_bet": true,
-    "actual_winner": null,
-    "result": null,
+    "edge_pct": null,
+    "value_bet": false,
+    "actual_winner": "ATL",
+    "result": "WIN",
     "created_at": "2026-03-07T20:33:11.464419"
   },
   {
@@ -70,8 +160,8 @@
     "spread": "-15.5",
     "edge_pct": null,
     "value_bet": false,
-    "actual_winner": null,
-    "result": null,
+    "actual_winner": "BKN",
+    "result": "LOSS",
     "created_at": "2026-03-07T20:33:05.614226"
   },
   {
@@ -85,8 +175,8 @@
     "spread": null,
     "edge_pct": null,
     "value_bet": false,
-    "actual_winner": null,
-    "result": null,
+    "actual_winner": "ORL",
+    "result": "LOSS",
     "created_at": "2026-03-07T20:32:59.447216"
   },
   {

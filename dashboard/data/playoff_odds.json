@@ -4,56 +4,56 @@
       "team": "Detroit Pistons",
       "abbr": "DET",
       "pct": 100.0,
-      "title": 7.1,
+      "title": 5.0,
       "rank": 1
     },
     {
       "team": "Boston Celtics",
       "abbr": "BOS",
       "pct": 100.0,
-      "title": 3.3,
+      "title": 2.9,
       "rank": 2
     },
     {
       "team": "New York Knicks",
       "abbr": "NYK",
       "pct": 100.0,
-      "title": 2.8,
+      "title": 2.3,
       "rank": 3
     },
     {
       "team": "Cleveland Cavaliers",
       "abbr": "CLE",
       "pct": 100.0,
-      "title": 2.4,
+      "title": 2.2,
       "rank": 4
     },
     {
       "team": "Toronto Raptors",
       "abbr": "TOR",
       "pct": 100.0,
-      "title": 1.8,
-      "rank": 5
-    },
-    {
-      "team": "Philadelphia 76ers",
-      "abbr": "PHI",
-      "pct": 100.0,
       "title": 1.7,
-      "rank": 6
+      "rank": 5
     },
     {
       "team": "Miami Heat",
       "abbr": "MIA",
-      "pct": 15.0,
+      "pct": 100.0,
       "title": 1.7,
-      "rank": 7
+      "rank": 6
     },
     {
       "team": "Orlando Magic",
       "abbr": "ORL",
       "pct": 15.0,
       "title": 1.6,
+      "rank": 7
+    },
+    {
+      "team": "Philadelphia 76ers",
+      "abbr": "PHI",
+      "pct": 15.0,
+      "title": 1.5,
       "rank": 8
     },
     {
@@ -67,33 +67,33 @@
       "team": "Charlotte Hornets",
       "abbr": "CHA",
       "pct": 0.0,
-      "title": 1.4,
+      "title": 1.3,
       "rank": 10
     },
     {
       "team": "Milwaukee Bucks",
       "abbr": "MIL",
       "pct": 0.0,
-      "title": 1.1,
+      "title": 1.0,
       "rank": 11
     },
     {
       "team": "Chicago Bulls",
       "abbr": "CHI",
       "pct": 0.0,
-      "title": 1.1,
+      "title": 1.0,
       "rank": 12
-    },
-    {
-      "team": "Washington Wizards",
-      "abbr": "WAS",
-      "pct": 0.0,
-      "title": 0.8,
-      "rank": 13
     },
     {
       "team": "Brooklyn Nets",
       "abbr": "BKN",
+      "pct": 0.0,
+      "title": 0.7,
+      "rank": 13
+    },
+    {
+      "team": "Washington Wizards",
+      "abbr": "WAS",
       "pct": 0.0,
       "title": 0.7,
       "rank": 14
@@ -125,28 +125,28 @@
       "team": "Minnesota Timberwolves",
       "abbr": "MIN",
       "pct": 100.0,
-      "title": 2.6,
+      "title": 2.3,
       "rank": 3
     },
     {
       "team": "Houston Rockets",
       "abbr": "HOU",
       "pct": 100.0,
-      "title": 2.5,
-      "rank": 4
-    },
-    {
-      "team": "Denver Nuggets",
-      "abbr": "DEN",
-      "pct": 100.0,
       "title": 2.3,
-      "rank": 5
+      "rank": 4
     },
     {
       "team": "Los Angeles Lakers",
       "abbr": "LAL",
       "pct": 100.0,
-      "title": 2.2,
+      "title": 2.1,
+      "rank": 5
+    },
+    {
+      "team": "Denver Nuggets",
+      "abbr": "DEN",
+      "pct": 100.0,
+      "title": 2.0,
       "rank": 6
     },
     {
@@ -157,15 +157,15 @@
       "rank": 7
     },
     {
-      "team": "Golden State Warriors",
-      "abbr": "GSW",
+      "team": "Los Angeles Clippers",
+      "abbr": "LAC",
       "pct": 15.0,
-      "title": 1.5,
+      "title": 1.3,
       "rank": 8
     },
     {
-      "team": "Los Angeles Clippers",
-      "abbr": "LAC",
+      "team": "Golden State Warriors",
+      "abbr": "GSW",
       "pct": 0.0,
       "title": 1.3,
       "rank": 9
@@ -174,21 +174,21 @@
       "team": "Portland Trail Blazers",
       "abbr": "POR",
       "pct": 0.0,
-      "title": 1.3,
+      "title": 1.2,
       "rank": 10
     },
     {
       "team": "Memphis Grizzlies",
       "abbr": "MEM",
       "pct": 0.0,
-      "title": 1.0,
+      "title": 0.9,
       "rank": 11
     },
     {
       "team": "Dallas Mavericks",
       "abbr": "DAL",
       "pct": 0.0,
-      "title": 0.9,
+      "title": 0.8,
       "rank": 12
     },
     {
@@ -213,5 +213,5 @@
       "rank": 15
     }
   ],
-  "exported_at": "2026-03-08T01:47:06.773133+00:00"
+  "exported_at": "2026-03-11T05:58:49.900030+00:00"
 }

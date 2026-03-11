@@ -1,51 +1,61 @@
-# Handoff — NBA Analytics Project
+# Handoff -- NBA Analytics Project
 
-_Last updated: 2026-03-11 Session 8 (model tuning + dashboard aurora redesign)_
+_Last updated: 2026-03-11 Session 9 (major dashboard overhaul + model upgrades + pipeline fixes)_
 
 ## What Was Done This Session
 
-### Model Upgrades (6 improvements)
-- **Fast Elo (K=40)** — `src/features/elo.py` now computes both standard (K=20) and fast (K=40) Elo; `elo_momentum = fast - standard` captures surging/slumping teams; 9 new tests
-- **Elo x context interactions** — `elo_x_rest`, `elo_x_b2b`, `elo_x_streak` added to `team_game_features.py`
-- **GBM regularization** — `min_samples_leaf=20`, `max_features=0.7`, early stopping (`n_iter_no_change=15`, `n_estimators=500`)
-- **Auto feature pruning** — drops features with importance < 0.001; retains pruned set only if AUC improves
-- **Platt scaling calibration** — `calibration.py` auto-selects Platt (2-param sigmoid) vs Isotonic by Brier score
-- **Confidence-dependent ensemble** — ATS weight=0.0 (near-random AUC removed); dynamic weights: high-conf 0.75/0.25, default 0.65/0.35, uncertain 0.55/0.45; 12 new ensemble tests
+### Dashboard Overhaul (14 improvements)
+- **CSS contrast fix** -- `--t2` changed to `#7B89A8` for WCAG AA compliance
+- **Card entrance animations** -- staggered fade-up with 50ms delays, `cardIn` keyframe
+- **Reduced motion** -- aurora blobs respect `prefers-reduced-motion`
+- **Light mode dropdown fix** -- background uses `var(--bg2)` instead of hardcoded dark
+- **Confidence meters** -- gradient bars (red/yellow/green) with tier labels (Coin Flip/Lean/Confident/Strong)
+- **"Why This Pick?"** -- expandable sections on pick cards showing situational factors
+- **Pick of the Day** -- prominent spotlight card on Today tab for highest-confidence pick
+- **Empty state messages** -- 6 locations (picks, games, sharp money, props, line movement, charts)
+- **Null safety** -- try-catch guards on lazy-loaded player comparison and standings
+- **Elo Timeline chart** -- interactive Plotly chart in Rankings tab with team color chips and quick-select
+- **Team matchup radar** -- Plotly scatterpolar in H2H/Matchup with 5 dimensions
+- **Game detail modals** -- factor badges (positive/negative/neutral), confidence meters, H2H fallback
+- **SVG sparklines** -- last-10 form in standings and power rankings tables
+- **Season comparison tool** -- side-by-side stats, best teams, key differences in History tab
 
-### Dashboard Visual Redesign
-- **Aurora backgrounds** — elongated skewed color bands (green/gold/blue/purple) replacing circular blobs; 50-60s animation cycles
-- **Gradient nav border** — green-to-blue gradient via background-clip technique
-- **Card upgrades** — gradient top-border on hover, 32px backdrop blur, inner glow
-- **Spotlight card** — animated gradient sweep, triple-layer glow, gradient border (green/blue/purple)
-- **Organic mesh** — deep indigo mid-tone (`--bg-mid: #0D1326`), purple shimmer layer
-- **about.html** — updated stats (67.5%, 349+ features, 1407 tests), added Margin + Ensemble model specs, aurora background
+### Model & Feature Upgrades
+- **XGBoost candidate** -- added alongside GBM with early stopping via `_build_fit_params()` helper
+- **Four Factors composite** -- Dean Oliver weights (40/25/20/15) as `four_factors_roll10/roll20`
+- **About page** -- updated to 352+ features, 1407 tests, 6 new feature cards
 
-### Infrastructure
-- Season history builder uses dynamic season codes (not hardcoded)
-- JSON builders use compact output (no indent)
-- Test baseline: **1407 passing** (+21 new)
-- All docs updated (CLAUDE.md, testing.md, MEMORY.md, PROJECT_JOURNAL.md, WORKING_NOTES.md)
+### Pipeline Fixes
+- **Pinnacle odds FIXED** -- spread selection bug (alt-line overwrite), added totals column, User-Agent headers
+- **CLV tracking FIXED** -- `backfill_closing_lines()` added as Step 3b in update.py; captures closing spreads before overwrite
+- **New builders** -- `build_game_detail.py` (prediction explainability), `build_elo_timeline.py` (team Elo across season)
+- **8 new CLV tests** -- 1415 total tests passing
 
 ## Commits
-- `f8c96e0` — feat: model upgrades, dashboard aurora redesign, infrastructure (50 files, +3030/-335)
-- `1cc5b11` — docs: journal + working notes for session 8
+- `ece1bc1` -- feat: major dashboard overhaul, model upgrades, and pipeline fixes (10 files, +882/-41)
+- `efd46f3` -- feat: add Elo timeline chart, team matchup radar, and game detail wiring (+300/-1)
+- `3865a1a` -- feat: CLV tracking, sparklines, and season comparison tool (+580/-8)
 
 ## Push Status
-- **NOT YET PUSHED** — git credential manager needs interactive auth
-- Run `git push origin main` in terminal to deploy
+- **PUSHED** -- all commits live on GitHub Pages
+
+## Pipeline Status
+- `update.py` was running at time of handoff (feature engineering step)
+- After pipeline completes: commit updated `dashboard/data/*.json` and push
 
 ## Next Steps (priority order)
 
-1. **Push to GitHub** — `git push origin main` (needs terminal auth)
-2. **Retrain models** — run `python update.py` to retrain with new features + hyperparameters
-3. **Debug empty game_lines.csv** — Pinnacle API calls need debugging (fetch_odds.py)
-4. **Wire CLV closing line fetch** — `update_closing_line()` exists but is never called
-5. **Hustle stats features** — team_hustle_stats.csv exists but unused; high-value add for model
+1. **Commit pipeline output** -- after update.py finishes, `git add dashboard/data/ && git push`
+2. **Retrain model** -- run with XGBoost + Four Factors to see accuracy improvement
+3. **Hustle stats features** -- team_hustle_stats.csv exists but unused; potential model boost
+4. **More interactivity** -- team detail modal improvements, player bio modals
+5. **Mobile optimization** -- game card grid minmax, sidebar collapse at 768px
 
 ## Critical Gotchas
-- Ensemble weights are now **dynamic** (not fixed) — code in `ensemble.py` selects regime per-prediction
-- Calibration uses `_PlattWrapper` or `_CalibratedWrapper` — both implement `predict_proba()` identically
-- Feature pruning runs automatically during training — check logs for pruned features
-- `_setHtml(el, html)` for ALL dashboard DOM writes — security hook blocks innerHTML
+- Worktree agents may commit on branch that gets deleted -- always verify changes on main
+- `backfill_closing_lines()` must run BEFORE `refresh_odds_data()` (captures yesterday's closing lines)
+- `_setHtml(el, html)` for ALL dashboard DOM writes -- security hook blocks innerHTML
+- `_confMeterHtml()`, `_whyThisPickHtml()`, `_factorBadgeHtml()` are new dashboard helpers
+- Elo timeline lazy-loads on Rankings tab open (not in Promise.all)
 - `game_lines.csv` at `data/odds/` (NOT `data/processed/`)
 - `dashboard/data/*.json` must be committed after each `update.py` run
