@@ -38,6 +38,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.features.era_labels import label_eras
 from src.features.lineup_features import build_lineup_features
 from src.features.elo import build_elo_ratings
+from src.features.hustle_features import build_hustle_features
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -1203,6 +1204,83 @@ def build_matchup_dataset(
         matchup["diff_elo"] = 0.0
         matchup["elo_expected_win_prob"] = 0.5
 
+    # ── Hustle stats (season-level per team) ───────────────────────────────────
+    # Hustle data available from 2015-16 onward. Left join so earlier seasons
+    # receive 0.0 (neutral / unknown). These are season-level aggregates, not
+    # game-level, so no shift(1) is needed.
+    print("Joining hustle stats features...")
+    hustle_cols = [
+        "contested_shots", "deflections", "screen_assists",
+        "loose_balls_recovered", "charges_drawn", "box_outs", "hustle_index",
+    ]
+    try:
+        hustle_df = build_hustle_features(output_path=None)
+
+        if not hustle_df.empty:
+            hustle_df["season"] = hustle_df["season"].astype(int)
+            hustle_df["team_id"] = hustle_df["team_id"].astype(int)
+            matchup["season"] = matchup["season"].astype(int)
+
+            # Re-extract team_ids for hustle join (cast game_id to str for safe join)
+            home_ids_h = home[["game_id", "team_id"]].copy()
+            home_ids_h["game_id"] = home_ids_h["game_id"].astype(str)
+            home_ids_h.columns = ["game_id", "home_team_id_hustle"]
+            away_ids_h = away[["game_id", "team_id"]].copy()
+            away_ids_h["game_id"] = away_ids_h["game_id"].astype(str)
+            away_ids_h.columns = ["game_id", "away_team_id_hustle"]
+            matchup["game_id"] = matchup["game_id"].astype(str)
+            matchup = matchup.merge(home_ids_h, on="game_id", how="left")
+            matchup = matchup.merge(away_ids_h, on="game_id", how="left")
+
+            # Join home hustle features
+            home_hustle = hustle_df[["season", "team_id"] + hustle_cols].copy()
+            home_hustle.columns = (
+                ["season", "home_team_id_hustle"]
+                + [f"home_{c}" for c in hustle_cols]
+            )
+            matchup = matchup.merge(
+                home_hustle, on=["season", "home_team_id_hustle"], how="left"
+            )
+
+            # Join away hustle features
+            away_hustle = hustle_df[["season", "team_id"] + hustle_cols].copy()
+            away_hustle.columns = (
+                ["season", "away_team_id_hustle"]
+                + [f"away_{c}" for c in hustle_cols]
+            )
+            matchup = matchup.merge(
+                away_hustle, on=["season", "away_team_id_hustle"], how="left"
+            )
+
+            # Drop temporary join keys
+            matchup = matchup.drop(
+                columns=["home_team_id_hustle", "away_team_id_hustle"]
+            )
+
+            # Fill NaN with 0.0 for seasons without hustle data
+            for side in ["home", "away"]:
+                for col in hustle_cols:
+                    full = f"{side}_{col}"
+                    if full in matchup.columns:
+                        matchup[full] = matchup[full].fillna(0.0)
+
+            nn_rate = matchup["home_hustle_index"].ne(0).mean()
+            print(
+                f"  Hustle features: {len(hustle_cols)*2} new columns added. "
+                f"Non-zero rate: {nn_rate:.1%}"
+            )
+        else:
+            print("  Hustle features: empty DataFrame -- skipping join.")
+            for side in ["home", "away"]:
+                for col in hustle_cols:
+                    matchup[f"{side}_{col}"] = 0.0
+
+    except Exception as e:
+        print(f"  Warning: could not build hustle features ({e}). Defaulting to 0.0.")
+        for side in ["home", "away"]:
+            for col in hustle_cols:
+                matchup[f"{side}_{col}"] = 0.0
+
     # ── Differential features ─────────────────────────────────────────────────
     # Explicit home-minus-away gaps for the most predictive stats.
     print("Computing matchup differential features...")
@@ -1258,6 +1336,9 @@ def build_matchup_dataset(
         "net_rtg_game_roll3", "off_rtg_game_roll3", "def_rtg_game_roll3",
         # Four Factors composite
         "four_factors_roll10", "four_factors_roll20",
+        # Hustle stats (season-level)
+        "contested_shots", "deflections", "screen_assists",
+        "loose_balls_recovered", "charges_drawn", "box_outs", "hustle_index",
     ]
 
     for stat in diff_stats:
