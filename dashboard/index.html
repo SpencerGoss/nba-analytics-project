@@ -6762,8 +6762,8 @@ window.addEventListener('hashchange', _routeFromHash);
 
 // ─── INIT ───
 document.addEventListener('DOMContentLoaded', async ()=>{
-  // Terms gate — show modal on first visit only
-  // Terms gate handled by betting tab clicks
+  // Disclaimer banner — show on first visit only
+  tgInit();
   // Restore theme preference
   if(localStorage.getItem('nba-theme')==='light') toggleTheme();
   setGreeting();
