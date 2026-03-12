@@ -74,6 +74,7 @@ SCORING_CSV   = PROJECT_ROOT / "data" / "processed" / "player_stats_scoring.csv"
 CLUTCH_CSV    = PROJECT_ROOT / "data" / "processed" / "player_stats_clutch.csv"
 HUSTLE_CSV    = PROJECT_ROOT / "data" / "processed" / "player_hustle_stats.csv"
 LOGS_CSV      = PROJECT_ROOT / "data" / "processed" / "player_game_logs.csv"
+POS_CSV       = PROJECT_ROOT / "data" / "processed" / "player_positions.csv"
 
 # --- Output path ---
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "player_detail.json"
@@ -365,6 +366,24 @@ def _parse_opponent(matchup: str, team: str) -> str:
 # Main build
 # ---------------------------------------------------------------------------
 
+def _load_positions() -> dict[int, dict]:
+    """Load player positions from player_positions.csv."""
+    if not POS_CSV.exists():
+        return {}
+    df = pd.read_csv(POS_CSV)
+    result: dict[int, dict] = {}
+    for _, row in df.iterrows():
+        pid = _safe_int(row.get("player_id"))
+        if pid is None:
+            continue
+        result[pid] = {
+            "position": str(row.get("position") or ""),
+            "positions": str(row.get("positions") or ""),
+            "position_primary": str(row.get("position_primary") or ""),
+        }
+    return result
+
+
 def build_player_detail() -> dict:
     """Build and return the full player detail dict keyed by player name."""
 
@@ -375,6 +394,7 @@ def build_player_detail() -> dict:
     df_clutch  = pd.read_csv(CLUTCH_CSV)  if CLUTCH_CSV.exists()  else pd.DataFrame()
     df_hustle  = pd.read_csv(HUSTLE_CSV)  if HUSTLE_CSV.exists()  else pd.DataFrame()
     df_logs    = pd.read_csv(LOGS_CSV)    if LOGS_CSV.exists()    else pd.DataFrame()
+    pos_by_pid = _load_positions()
 
     print(f"  Loaded stats:{len(df_stats)} adv:{len(df_adv)} "
           f"scoring:{len(df_scoring)} clutch:{len(df_clutch)} "
@@ -422,10 +442,14 @@ def build_player_detail() -> dict:
         last5 = logs_by_pid.get(pid, [])
         prop_trends = _compute_prop_trends(last5, season_stats)
 
+        pos_info = pos_by_pid.get(pid, {})
         result[name] = {
             "player_id":      pid,
             "name":           name,
             "team":           base.get("team") or "",
+            "position":       pos_info.get("position", ""),
+            "positions":      pos_info.get("positions", ""),
+            "position_primary": pos_info.get("position_primary", ""),
             "season_stats":   season_stats,
             "shooting_splits": scoring_by_pid.get(pid),
             "clutch_stats":   clutch_by_pid.get(pid),

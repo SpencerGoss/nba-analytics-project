@@ -37,6 +37,7 @@ DASHBOARD_DATA.mkdir(parents=True, exist_ok=True)
 
 PLAYERS_CSV = RAW_DIR / "historical_player_seasons.csv"
 TEAMS_CSV = RAW_DIR / "historical_team_seasons.csv"
+POS_CSV = PROJECT_ROOT / "data" / "processed" / "player_positions.csv"
 
 OUT_COMPARISON = DASHBOARD_DATA / "player_comparison.json"
 OUT_INDEX = DASHBOARD_DATA / "player_index.json"
@@ -326,13 +327,55 @@ def _season_row(row: pd.Series) -> dict:
     }
 
 
+def _load_position_lookup() -> dict[int, dict]:
+    """Load player positions from player_positions.csv if available."""
+    if not POS_CSV.exists():
+        return {}
+    try:
+        df = pd.read_csv(POS_CSV)
+        result = {}
+        for _, row in df.iterrows():
+            pid = int(row["player_id"])
+            result[pid] = {
+                "position": str(row.get("position") or ""),
+                "positions": str(row.get("positions") or ""),
+                "position_primary": str(row.get("position_primary") or ""),
+            }
+        return result
+    except Exception:
+        return {}
+
+
+def _heuristic_positions(career_avgs: dict) -> str:
+    """Guess single granular position from career averages (historical players)."""
+    pts = career_avgs.get("pts") or 0
+    reb = career_avgs.get("reb") or 0
+    ast = career_avgs.get("ast") or 0
+    blk = career_avgs.get("blk") or 0
+    if reb >= 9 and blk >= 1.5:
+        return "C"
+    if reb >= 9:
+        return "PF"
+    if ast >= 7:
+        return "PG"
+    if reb >= 6:
+        return "SF"
+    if ast >= 4:
+        return "SG"
+    if pts >= 15 and reb >= 5:
+        return "SF"
+    return "SG"
+
+
 def build_player_records(enriched: pd.DataFrame,
                           min_seasons: int,
-                          min_career_games: int) -> list[dict]:
+                          min_career_games: int,
+                          pos_lookup: dict[int, dict] | None = None) -> list[dict]:
     """
     Group by player, build career summary, filter to eligibility threshold.
     Returns list of player dicts sorted by career pts_normalized desc.
     """
+    pos_lookup = pos_lookup or {}
     records = []
 
     for (player_id, player_name), grp in enriched.groupby(
@@ -377,9 +420,21 @@ def build_player_records(enriched: pd.DataFrame,
         max_year = int(str(grp["season"].max())[:4]) + 1
         seasons_span = f"{min_year}-{max_year}"
 
+        # Position: prefer roster data, fall back to heuristic
+        pos_info = pos_lookup.get(int(player_id), {})
+        position = pos_info.get("position", "")
+        positions = pos_info.get("positions", "")
+        position_primary = pos_info.get("position_primary", "")
+        if not positions:
+            positions = _heuristic_positions(career_avgs)
+            position_primary = positions
+
         records.append({
             "player_id": int(player_id),
             "player_name": str(player_name),
+            "position": position,
+            "positions": positions,
+            "position_primary": position_primary,
             "seasons": season_rows,
             "career_avgs": career_avgs,
             "best_season": str(best_season_str),
@@ -433,6 +488,7 @@ def build_player_index(player_records: list[dict]) -> list[dict]:
 _LEGENDS: list[dict] = [
     {
         "player_id": -1, "player_name": "Michael Jordan",
+        "positions": "SG", "position_primary": "SG",
         "seasons_span": "1984-2003", "career_gp": 1072,
         "career_avgs": {"pts": 30.1, "reb": 6.2, "ast": 5.3, "stl": 2.35, "blk": 0.83,
                         "pts_normalized": None},
@@ -453,6 +509,7 @@ _LEGENDS: list[dict] = [
     },
     {
         "player_id": -2, "player_name": "Larry Bird",
+        "positions": "SF, PF", "position_primary": "SF",
         "seasons_span": "1979-1992", "career_gp": 897,
         "career_avgs": {"pts": 24.3, "reb": 10.0, "ast": 6.3, "stl": 1.74, "blk": 0.84,
                         "pts_normalized": None},
@@ -463,6 +520,7 @@ _LEGENDS: list[dict] = [
     },
     {
         "player_id": -3, "player_name": "Magic Johnson",
+        "positions": "PG", "position_primary": "PG",
         "seasons_span": "1979-1996", "career_gp": 906,
         "career_avgs": {"pts": 19.5, "reb": 7.2, "ast": 11.2, "stl": 1.90, "blk": 0.37,
                         "pts_normalized": None},
@@ -473,6 +531,7 @@ _LEGENDS: list[dict] = [
     },
     {
         "player_id": -4, "player_name": "Kareem Abdul-Jabbar",
+        "positions": "C", "position_primary": "C",
         "seasons_span": "1969-1989", "career_gp": 1560,
         "career_avgs": {"pts": 24.6, "reb": 11.2, "ast": 3.6, "stl": 0.94, "blk": 2.60,
                         "pts_normalized": None},
@@ -483,6 +542,7 @@ _LEGENDS: list[dict] = [
     },
     {
         "player_id": -5, "player_name": "Kobe Bryant",
+        "positions": "SG", "position_primary": "SG",
         "seasons_span": "1996-2016", "career_gp": 1346,
         "career_avgs": {"pts": 25.0, "reb": 5.2, "ast": 4.7, "stl": 1.38, "blk": 0.52,
                         "pts_normalized": None},
@@ -493,6 +553,7 @@ _LEGENDS: list[dict] = [
     },
     {
         "player_id": -6, "player_name": "Wilt Chamberlain",
+        "positions": "C", "position_primary": "C",
         "seasons_span": "1959-1973", "career_gp": 1045,
         "career_avgs": {"pts": 30.1, "reb": 22.9, "ast": 4.4, "stl": None, "blk": None,
                         "pts_normalized": None},
@@ -559,9 +620,13 @@ def run(min_seasons: int = DEFAULT_MIN_SEASONS,
     print("build_player_comparison: enriching player seasons...")
     enriched = enrich_player_seasons(players, league, hist_avgs)
 
+    print("build_player_comparison: loading position data...")
+    pos_lookup = _load_position_lookup()
+    print(f"  {len(pos_lookup)} players with roster positions")
+
     print(f"build_player_comparison: building player records "
           f"(min_seasons={min_seasons}, min_career_games={min_career_games})...")
-    player_records = build_player_records(enriched, min_seasons, min_career_games)
+    player_records = build_player_records(enriched, min_seasons, min_career_games, pos_lookup)
     league_rows = build_league_by_season(league)
     player_index = build_player_index(player_records)
 

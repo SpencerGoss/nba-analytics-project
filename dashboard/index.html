@@ -1044,8 +1044,9 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 .factor-badge.positive{background:rgba(0,200,150,.12);color:#00C896;border:1px solid rgba(0,200,150,.2)}
 .factor-badge.negative{background:rgba(232,86,74,.12);color:#E8564A;border:1px solid rgba(232,86,74,.2)}
 .factor-badge.neutral{background:rgba(79,158,255,.12);color:#4F9EFF;border:1px solid rgba(79,158,255,.2)}
-.potd-spotlight{background:linear-gradient(135deg,rgba(0,200,150,.08),rgba(79,158,255,.08));border:1px solid rgba(0,200,150,.2);border-radius:16px;padding:20px;margin:16px 0;position:relative;overflow:hidden}
-.potd-spotlight::before{content:'PICK OF THE DAY';position:absolute;top:8px;right:12px;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--green);opacity:.7}
+.potd-spotlight{background:linear-gradient(135deg,rgba(245,166,35,.06),rgba(245,166,35,.02));border:1px solid rgba(245,166,35,.3);border-radius:16px;padding:24px;margin:16px 0;position:relative;overflow:hidden}
+.potd-spotlight::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F5A623,#D4942A,#F5A623);border-radius:16px 16px 0 0}
+.potd-spotlight::after{content:'';position:absolute;top:-50%;right:-20%;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(245,166,35,.08),transparent 70%);pointer-events:none}
 .empty-state{text-align:center;padding:32px 16px;color:var(--t1);font-size:14px}
 .empty-state-icon{font-size:32px;margin-bottom:8px;opacity:.5}
 
@@ -1301,7 +1302,7 @@ body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,
 
 <!-- PLAYERS (free) -->
 <section id="page-players" class="page" role="tabpanel" aria-labelledby="nb-players">
-  <div class="ph"><h1 class="pt">Players</h1><p class="pd">Click any stat column to sort &#183; Season stats and head-to-head comparison</p></div>
+  <div class="ph"><h1 class="pt">Players</h1><p class="pd">Click any stat column to sort &#183; Current season and all-time stats</p></div>
   <div class="tab-bar">
     <button class="tab active" data-tab="stats" onclick="switchTab('players','stats')">Stats</button>
     <button class="tab" data-tab="compare" onclick="switchTab('players','compare'); initPickers()">Compare</button>
@@ -1310,17 +1311,15 @@ body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,
     <button class="tab" data-tab="ast" onclick="switchTab('players','ast')">Assists</button>
   </div>
   <div class="tab-content active" id="players-tab-stats">
-    <!-- Status filter chips: unified list - All / Active / Retired / Current Season -->
+    <!-- Status filter chips: Current Season / All Time -->
     <div class="fb" style="margin-bottom:10px">
-      <button class="fc active" id="pfilt-all" onclick="setPlayerFilter('all',this)">All</button>
-      <button class="fc" id="pfilt-current" onclick="setPlayerFilter('current',this)">Active</button>
-      <button class="fc" id="pfilt-legends" onclick="setPlayerFilter('legends',this)">Retired</button>
-      <button class="fc" id="pfilt-season" onclick="setPlayerFilter('season',this)">Current Season</button>
+      <button class="fc active" id="pfilt-season" onclick="setPlayerFilter('season',this)">Current Season</button>
+      <button class="fc" id="pfilt-alltime" onclick="setPlayerFilter('alltime',this)">All Time</button>
     </div>
     <!-- Search + secondary filters row -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">
       <input id="player-search" type="search" placeholder="Search player name…" oninput="setPlayerSearch(this.value)" style="flex:1;min-width:160px;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t0);font-family:var(--f);font-size:13px;outline:none"/>
-      <select id="player-season-filter" onchange="setPlayerSeasonFilter(this.value)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t0);font-family:var(--f);font-size:12px;outline:none;cursor:pointer">
+      <select id="player-season-filter" onchange="setPlayerSeasonFilter(this.value)" style="display:none;padding:8px 10px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t0);font-family:var(--f);font-size:12px;outline:none;cursor:pointer">
         <option value="">All Seasons</option>
       </select>
       <select id="player-pos-filter" onchange="setPlayerPosFilter(this.value)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t0);font-family:var(--f);font-size:12px;outline:none;cursor:pointer">
@@ -1742,11 +1741,11 @@ body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,
   <div class="card" style="margin-bottom:18px;background:rgba(0,200,150,.04);border-color:rgba(0,200,150,.15)">
     <div style="display:flex;align-items:center;gap:14px">
       <div style="width:40px;height:40px;border-radius:12px;background:var(--green-d);border:1px solid rgba(0,200,150,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-      <div><div style="font-size:13px;font-weight:700;margin-bottom:3px;color:var(--t0)">How we score the model</div><div style="font-size:12px;color:var(--t1);line-height:1.65">Every pick is tracked here. A coin flip wins 50% of the time. Our model runs at <strong style="color:var(--green)" id="bt-ats-inline">--</strong>.</div></div>
+      <div><div style="font-size:13px;font-weight:700;margin-bottom:3px;color:var(--t0)">How we score the model</div><div style="font-size:12px;color:var(--t1);line-height:1.65">Every pick is tracked against the spread. Our model runs at <strong style="color:var(--green)" id="bt-ats-inline">--</strong> ATS.</div></div>
     </div>
   </div>
   <div class="sgrid" style="margin-bottom:22px">
-    <div class="bt-stat"><span class="sl">Overall Win Rate</span><span class="bt-val g" id="bt-win-rate">54.9%</span><div class="schange up" style="justify-content:center;font-size:11px">Beats a coin flip by 4.9%</div></div>
+    <div class="bt-stat"><span class="sl">Overall Win Rate</span><span class="bt-val g" id="bt-win-rate">54.9%</span><div class="schange up" style="justify-content:center;font-size:11px" id="bt-win-rate-edge">Season ATS record</div></div>
     <div class="bt-stat"><span class="sl">Current Streak</span><span class="bt-val o" id="bt-streak">--</span><div class="schange up" style="justify-content:center;font-size:11px" id="bt-best-streak">--</div></div>
     <div class="bt-stat"><span class="sl">Total Predictions</span><span class="bt-val g" id="bt-total-games">--</span><div class="schange" style="justify-content:center;font-size:11px">games tracked this season</div></div>
     <div class="bt-stat"><span class="sl">Total Picks Made</span><span class="bt-val" id="bt-backtest-total">--</span><div class="schange" style="justify-content:center;font-size:11px">games in backtest</div></div>
@@ -2586,7 +2585,8 @@ const DATA = {
   players:[], // populated by loadDashboardData() from player_comparison.json
   east:[], // populated by loadDashboardData() from standings.json
   west:[], // populated by loadDashboardData() from standings.json
-  picks:[] // populated from todays_picks.json by loadDashboardData()
+  picks:[], // populated from todays_picks.json by loadDashboardData()
+  seasonPlayers:[] // populated from player_detail.json (current season per-game stats)
 };
 
 // ─── HARDCODED LEGENDS — merged into DATA.players after JSON fetch ───
@@ -2612,25 +2612,52 @@ function mapJsonPlayer(p){
   const ca=p.career_avgs||{};
   const lastSeason=p.seasons&&p.seasons.length?p.seasons[p.seasons.length-1]:null;
   const team=lastSeason?lastSeason.team:(p.seasons&&p.seasons[0]?p.seasons[0].team:'N/A');
-  const fgRaw=lastSeason?lastSeason.fg_pct:(p.fg_pct||null);
-  const thrRaw=lastSeason?lastSeason.fg3_pct:(p.fg3_pct||null);
-  // debutYear: parse from seasons_span e.g. "2007-2025" -> 2007
   const spanStr=String(p.seasons_span||'');
   const debutYear=spanStr?parseInt(spanStr.split('-')[0],10)||null:null;
+  // Collect all teams this player played for
+  const allTeams=[...new Set((p.seasons||[]).map(s=>s.team).filter(Boolean))];
+  // GP-weighted career averages
+  const cStats=_gpWeightedStats(p.seasons||[]);
   return {
     name:     p.player_name,
     team:     team||'N/A',
-    pts:      Math.round((ca.pts||0)*10)/10,
-    reb:      Math.round((ca.reb||0)*10)/10,
-    ast:      Math.round((ca.ast||0)*10)/10,
-    fg:       fgRaw!=null?Math.round(fgRaw*1000)/10:0,
-    thr:      thrRaw!=null?Math.round(thrRaw*1000)/10:0,
+    pts:      cStats.pts,
+    reb:      cStats.reb,
+    ast:      cStats.ast,
+    fg:       cStats.fg,
+    thr:      cStats.thr,
+    ts:       cStats.ts,
+    position: p.position||'',
+    positions: p.positions||'',
+    position_primary: p.position_primary||'',
     ini:      playerIni(p.player_name),
     nbaId:    p.player_id>0?p.player_id:null,
     debutYear:debutYear,
     primaryTeam:team||'N/A',
+    allTeams: allTeams,
     retired:  !spanStr.includes('2024')&&!spanStr.includes('2025'),
     seasons_span: spanStr,
+    _seasons: p.seasons||[],
+  };
+}
+// Compute GP-weighted averages from an array of season objects
+function _gpWeightedStats(seasons){
+  let ptsS=0,rebS=0,astS=0,fgS=0,thrS=0,tsS=0,gpT=0,fgGp=0,thrGp=0,tsGp=0;
+  seasons.forEach(s=>{
+    const gp=s.gp||0; if(gp<=0)return;
+    ptsS+=(s.pts||0)*gp; rebS+=(s.reb||0)*gp; astS+=(s.ast||0)*gp; gpT+=gp;
+    if(s.fg_pct!=null){fgS+=s.fg_pct*gp;fgGp+=gp;}
+    if(s.fg3_pct!=null){thrS+=s.fg3_pct*gp;thrGp+=gp;}
+    if(s.ts_pct!=null){tsS+=s.ts_pct*gp;tsGp+=gp;}
+  });
+  return {
+    pts: gpT>0?Math.round((ptsS/gpT)*10)/10:0,
+    reb: gpT>0?Math.round((rebS/gpT)*10)/10:0,
+    ast: gpT>0?Math.round((astS/gpT)*10)/10:0,
+    fg:  fgGp>0?Math.round((fgS/fgGp)*1000)/10:0,
+    thr: thrGp>0?Math.round((thrS/thrGp)*1000)/10:0,
+    ts:  tsGp>0?Math.round((tsS/tsGp)*1000)/10:0,
+    gp:  gpT,
   };
 }
 
@@ -3080,16 +3107,41 @@ function filterGames(type,btn){
 function renderLeaders(){
   fetch('data/player_detail.json').then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.players)return;
-    const arr=Object.entries(d.players).map(([name,p])=>({name,team:p.team,ppg:p.season_stats?p.season_stats.ppg:0,gp:p.season_stats?p.season_stats.gp:0,nbaId:p.player_id})).filter(p=>p.gp>20);
-    arr.sort((a,b)=>b.ppg-a.ppg);
-    const top=arr.slice(0,8);
+    // Build season players array for Players tab "Current Season" filter
+    const allSeason=Object.entries(d.players).map(([name,p])=>{
+      const s=p.season_stats||{};
+      const ini=name.split(' ').map(w=>(w[0]||'')).join('');
+      return {
+        name:name,team:p.team||'',
+        pts:Math.round((s.ppg||0)*10)/10,
+        reb:Math.round((s.rpg||0)*10)/10,
+        ast:Math.round((s.apg||0)*10)/10,
+        fg:s.fg_pct!=null?Math.round(s.fg_pct*1000)/10:0,
+        thr:s.fg3_pct!=null?Math.round(s.fg3_pct*1000)/10:0,
+        ts:s.ts_pct!=null?Math.round(s.ts_pct*1000)/10:0,
+        gp:s.gp||0,
+        position:p.position||'',
+        positions:p.positions||'',
+        position_primary:p.position_primary||'',
+        ini:ini,
+        nbaId:p.player_id||null,
+        primaryTeam:p.team||'',
+        retired:false,
+        _season:true
+      };
+    }).filter(p=>p.gp>0);
+    DATA.seasonPlayers=allSeason;
+    // Re-render players table if currently on season filter
+    if(pFilter==='season')renderPlayersTable();
+    // Scoring leaders on Home tab (top 8 by PPG, min 20 GP)
+    const leaders=allSeason.filter(p=>p.gp>20).sort((a,b)=>b.pts-a.pts).slice(0,8);
     const _dl=document.getElementById('dash-leaders');
-    if(_dl)_setHtml(_dl,top.map((p,i)=>`
+    if(_dl)_setHtml(_dl,leaders.map((p,i)=>`
       <tr style="cursor:pointer" onclick="showFreeTab('players')">
         <td><span class="rn">${i+1}</span></td>
         <td class="nc">${headshot(p.nbaId,p.name.split(' ').map(w=>w[0]).join(''),28)}<span style="font-family:var(--f);font-weight:600;font-size:13px">${esc(p.name)}</span></td>
         <td style="font-size:11px;color:var(--t2)">${esc(p.team)}</td>
-        <td style="color:var(--gold);font-weight:700;font-family:var(--fm)">${p.ppg.toFixed(1)}</td>
+        <td style="color:var(--gold);font-weight:700;font-family:var(--fm)">${p.pts.toFixed(1)}</td>
       </tr>`).join(''));
   }).catch(()=>{});
 }
@@ -3113,7 +3165,7 @@ function updateSortHeaders(){
   });
 }
 
-let pFilter='all'; // 'all' | 'current' | 'legends' | 'season'
+let pFilter='season'; // 'season' | 'alltime'
 let pSearch='';    // name search term
 let pSeasonFilter=''; // season string e.g. '2024-25' or ''
 let pPosFilter='';    // position abbreviation or ''
@@ -3136,7 +3188,11 @@ function initPlayerTeamDropdown(){
   const sel=document.getElementById('player-team-filter');
   if(!sel)return;
   const teams=new Set();
-  DATA.players.forEach(p=>{ if(p.team&&p.team!=='N/A')teams.add(p.team); });
+  // Gather all teams from all seasons (not just last team)
+  DATA.players.forEach(p=>{
+    if(p.allTeams&&p.allTeams.length) p.allTeams.forEach(t=>teams.add(t));
+    else if(p.team&&p.team!=='N/A') teams.add(p.team);
+  });
   const sorted=[...teams].sort();
   const opts=sorted.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
   sel.insertAdjacentHTML('beforeend',opts);
@@ -3145,8 +3201,11 @@ function initPlayerTeamDropdown(){
 function setPlayerFilter(mode,btn){
   pFilter=mode;
   pShowAll=false;
-  document.querySelectorAll('#pfilt-all,#pfilt-current,#pfilt-legends,#pfilt-season').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#pfilt-season,#pfilt-alltime').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  // Season dropdown only relevant for All Time
+  const seasonSel=document.getElementById('player-season-filter');
+  if(seasonSel)seasonSel.style.display=mode==='alltime'?'':'none';
   renderPlayersTable();
 }
 
@@ -3187,14 +3246,22 @@ function playerTsPct(p){
   return null;
 }
 
-// Rough position heuristic based on stat profile (no pos field in data)
+// Position label — uses granular positions (PG/SG/SF/PF/C)
 function playerPosLabel(p){
-  if(p.pos)return p.pos;
-  if(p.ast>=7)return p.reb>=7?'SF':'PG';
+  // Display the primary position for table/label use
+  if(p.position_primary)return p.position_primary;
+  if(p.positions)return p.positions.split(',')[0].trim();
+  // Heuristic fallback for old players without roster data
   if(p.reb>=9)return 'C';
   if(p.reb>=6)return 'PF';
-  if(p.ast>=4)return 'SG';
+  if(p.ast>=5)return 'PG';
   return 'SF';
+}
+// Check if a player matches a position filter (any of their positions)
+function playerMatchesPos(p,filter){
+  if(!filter)return true;
+  const pos=p.positions||p.position_primary||'';
+  return pos.split(',').some(s=>s.trim()===filter);
 }
 
 // Check if a player played in a given season string (e.g. '2024-25')
@@ -3223,22 +3290,12 @@ function enrichPlayerTs(){
 }
 
 function renderPlayersTable(){
-  // 1. Status chip filter
-  let pool=DATA.players;
-  if(pFilter==='current')
-    pool=DATA.players.filter(p=>!p.retired&&(p.seasons_span
-      ?(p.seasons_span.includes('2024')||p.seasons_span.includes('2025'))
-      :true));
-  else if(pFilter==='legends')
-    pool=DATA.players.filter(p=>p.retired);
-  else if(pFilter==='season')
-    pool=DATA.players.filter(p=>playerInSeason(p,'2024-25'));
-  // 2. Secondary filters
-  if(pSeasonFilter)pool=pool.filter(p=>playerInSeason(p,pSeasonFilter));
-  if(pTeamFilter)pool=pool.filter(p=>(p.team||p.primaryTeam)===pTeamFilter);
-  if(pPosFilter)pool=pool.filter(p=>playerPosLabel(p)===pPosFilter);
-  // 3. Search filter
-  if(pSearch)pool=pool.filter(p=>(p.name||'').toLowerCase().includes(pSearch));
+  if(pFilter==='season'&&!(DATA.seasonPlayers&&DATA.seasonPlayers.length)){
+    const tb=document.getElementById('players-tb');
+    if(tb)_setHtml(tb,'<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--t2);font-size:13px">Loading current season players...</td></tr>');
+    return;
+  }
+  const pool=_getFilteredPlayerPool();
   // 4. Sort
   const s=[...pool].sort((a,b)=>(a[pSort]-b[pSort])*pDir);
   // 5. Paginate
@@ -3264,7 +3321,7 @@ function renderPlayersTable(){
       <td style="${pSort==='fg'?'color:var(--gold);font-weight:700':''}">${p.fg}%</td>
       <td style="${pSort==='thr'?'color:var(--gold);font-weight:700':''}">${p.thr}%</td>
       <td style="${pSort==='ts'?'color:var(--gold);font-weight:700':''}">${tsVal}</td>
-      <td><div style="display:flex;align-items:center;gap:4px">${(()=>{const lu=teamLogoByAbbr(p.team||p.primaryTeam);return lu?`<img src="${lu}" width="18" height="18" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'" alt=""/>`:'';})()}<span class="tpill">${esc(p.team||p.primaryTeam)}</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:4px">${(()=>{const lu=teamLogoByAbbr(p.team||p.primaryTeam);return lu?`<img src="${lu}" width="18" height="18" style="object-fit:contain;flex-shrink:0" onerror="this.style.display='none'" alt=""/>`:'';})()}<span class="tpill">${esc(p.team||p.primaryTeam)}</span>${p.positions?`<span style="font-size:10px;color:var(--t2);margin-left:2px">${esc(p.positions)}</span>`:''}</div></td>
       <td><button onclick="event.stopPropagation();preSelectCompare('${safeN}')" style="padding:3px 9px;border-radius:6px;border:1px solid var(--b1);background:transparent;color:var(--t2);font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap" title="Load in Compare tool">Cmp</button></td>
     </tr>`;
   }).join('');
@@ -3293,20 +3350,41 @@ function preSelectCompare(name){
 }
 
 // Export current filtered player list as CSV (client-side)
-function exportPlayersCsv(){
-  let pool=DATA.players;
-  if(pFilter==='current')
-    pool=DATA.players.filter(p=>!p.retired&&(p.seasons_span
-      ?(p.seasons_span.includes('2024')||p.seasons_span.includes('2025'))
-      :true));
-  else if(pFilter==='legends')
-    pool=DATA.players.filter(p=>p.retired);
-  else if(pFilter==='season')
-    pool=DATA.players.filter(p=>playerInSeason(p,'2024-25'));
-  if(pSeasonFilter)pool=pool.filter(p=>playerInSeason(p,pSeasonFilter));
-  if(pTeamFilter)pool=pool.filter(p=>(p.team||p.primaryTeam)===pTeamFilter);
-  if(pPosFilter)pool=pool.filter(p=>playerPosLabel(p)===pPosFilter);
+function _getFilteredPlayerPool(){
+  // Shared filter logic for render + export
+  let pool;
+  if(pFilter==='season'){
+    if(!(DATA.seasonPlayers&&DATA.seasonPlayers.length))return [];
+    pool=DATA.seasonPlayers.slice();
+    if(pTeamFilter)pool=pool.filter(p=>(p.team||p.primaryTeam)===pTeamFilter);
+    if(pPosFilter)pool=pool.filter(p=>playerMatchesPos(p,pPosFilter));
+  } else {
+    pool=DATA.players.slice();
+    if(pSeasonFilter)pool=pool.filter(p=>playerInSeason(p,pSeasonFilter));
+    if(pTeamFilter){
+      pool=pool.filter(p=>p.allTeams&&p.allTeams.includes(pTeamFilter));
+      pool=pool.map(p=>{
+        const teamSeasons=(p._seasons||[]).filter(s=>s.team===pTeamFilter);
+        const filtered=pSeasonFilter?teamSeasons.filter(s=>s.season===pSeasonFilter):teamSeasons;
+        if(!filtered.length)return null;
+        const st=_gpWeightedStats(filtered);
+        return {...p,pts:st.pts,reb:st.reb,ast:st.ast,fg:st.fg,thr:st.thr,ts:st.ts,team:pTeamFilter};
+      }).filter(Boolean);
+    } else if(pSeasonFilter){
+      pool=pool.map(p=>{
+        const filtered=(p._seasons||[]).filter(s=>s.season===pSeasonFilter);
+        if(!filtered.length)return null;
+        const st=_gpWeightedStats(filtered);
+        return {...p,pts:st.pts,reb:st.reb,ast:st.ast,fg:st.fg,thr:st.thr,ts:st.ts,team:filtered[0].team};
+      }).filter(Boolean);
+    }
+    if(pPosFilter)pool=pool.filter(p=>playerMatchesPos(p,pPosFilter));
+  }
   if(pSearch)pool=pool.filter(p=>(p.name||'').toLowerCase().includes(pSearch));
+  return pool;
+}
+function exportPlayersCsv(){
+  const pool=_getFilteredPlayerPool();
   const rows=[['Name','Team','PTS','REB','AST','FG%','3P%','TS%','Status','Seasons']];
   pool.forEach(p=>rows.push([
     '"'+(p.name||'').replace(/"/g,'""')+'"',
@@ -4243,12 +4321,7 @@ function buildStorylines(){
   const injuries=window.INJURIES_DATA||[];
   const trends=window.TEAM_TRENDS||{};
   const lines=[];
-  // 1. High-confidence pick
-  const topPick=picks.filter(p=>!p.result).sort((a,b)=>(b.model_confidence||0)-(a.model_confidence||0))[0];
-  if(topPick&&(topPick.model_confidence||0)>=70){
-    lines.push({icon:'&#127919;',color:'var(--green)',text:'Model is <strong>'+topPick.model_confidence+'% confident</strong> '+topPick.ats_pick+' covers tonight vs '+(topPick.home_team===topPick.ats_pick?topPick.away_team:topPick.home_team)+'.'});
-  }
-  // 2. Value bet highlight
+  // 1. Value bet highlight (top pick moved to POTD card)
   const vb=(window.VALUE_BETS||[]).sort((a,b)=>(b.edge_pct||0)-(a.edge_pct||0))[0];
   if(vb&&(vb.edge_pct||0)>0.1){
     lines.push({icon:'&#9733;',color:'var(--gold)',text:'<strong>Value alert:</strong> '+vb.recommended_side+' has <strong>'+(vb.edge_pct*100).toFixed(1)+'% edge</strong> over market implied odds ('+vb.away_team+' @ '+vb.home_team+').'});
@@ -4481,6 +4554,7 @@ function renderDashPicks(){
 
 // ─── DASH CHART ───
 function renderDashChart(){
+  if(!document.getElementById('dash-chart'))return;
   const acc=window.ACCURACY_DATA||[];
   if(!acc.length){
     const el=document.getElementById('dash-chart');
@@ -5257,7 +5331,7 @@ function _confMeterHtml(conf){
   if(pct>=65){tier='Strong';cls='strong';col='#00C896'}
   else if(pct>=60){tier='Confident';cls='confident';col='#4F9EFF'}
   else if(pct>=55){tier='Lean';cls='lean';col='#F0B429'}
-  else{tier='Coin Flip';cls='coinflip';col='#E8564A'}
+  else{tier='Low';cls='coinflip';col='#E8564A'}
   return'<div class="conf-meter"><div class="conf-meter-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'
     +'<span class="conf-tier '+cls+'">'+tier+' ('+pct+'%)</span>';
 }
@@ -5305,36 +5379,89 @@ function _whyThisPickOpen(pick, contexts){
 function _emptyStateHtml(icon,msg){return'<div class="empty-state"><div class="empty-state-icon">'+esc(icon)+'</div><div>'+esc(msg)+'</div></div>'}
 
 // ─── PICK OF THE DAY BUILDER ───
+// Scores each game by: spread_edge * confidence_multiplier
+// spread_edge = |projected_margin + spread| (how many points model disagrees with line)
+//   spread convention: negative = home favored, positive = home underdog
+//   projected_margin: positive = home wins by X
+//   edge = projected_margin + spread (positive = model favors home covering)
+// confidence_multiplier = model_confidence / 100 (weight toward confident picks)
+// POTD = highest composite score across all games
 function _buildPickOfDay(picks){
   if(!picks||!picks.length)return'';
-  // Score each pick: value edge > kelly > model confidence
-  function _valScore(p){
-    var s=0;
-    if(p.value_bet)s+=50;
-    if(p.edge_pct)s+=(p.edge_pct*100)||0;
-    if(p.kelly_fraction)s+=(p.kelly_fraction*20)||0;
-    s+=(p.model_confidence||p.confidence||0)/2;
-    return s;
+  function _potdScore(p){
+    var margin=p.projected_margin!=null?p.projected_margin:0;
+    var spread=p.spread!=null?p.spread:0;
+    var spreadEdge=Math.abs(margin+spread);
+    var conf=(p.model_confidence||50)/100;
+    return spreadEdge*conf;
   }
   var best=picks[0];
-  for(var i=1;i<picks.length;i++){if(_valScore(picks[i])>_valScore(best))best=picks[i];}
-  var rawConf=best.model_confidence||0;
-  var conf=rawConf>1?rawConf/100:rawConf;
-  if(!conf){var hp=best.home_win_prob||0;var ap=best.away_win_prob||0;conf=Math.max(hp,ap);}
-  var label='Best Value Bet';
-  var edgeStr='';
-  if(best.edge_pct){edgeStr=' · Edge: '+(best.edge_pct*100).toFixed(1)+'%';}
-  if(best.kelly_fraction){edgeStr+=' · Kelly: '+(best.kelly_fraction*100).toFixed(1)+'%';}
-  if(!best.value_bet&&!best.edge_pct)label='Top Pick';
-  return'<div class="potd-spotlight"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
-    +'<span style="font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green)">'+label+'</span>'
-    +(best.value_bet?'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;background:var(--green-d);color:var(--green)">VALUE BET</span>':'')
+  for(var i=1;i<picks.length;i++){if(_potdScore(picks[i])>_potdScore(best))best=picks[i];}
+  var margin=best.projected_margin!=null?best.projected_margin:0;
+  var spread=best.spread!=null?best.spread:0;
+  var spreadEdge=Math.abs(margin+spread);
+  var conf=best.model_confidence||50;
+  // Determine the pick: edge = margin + spread
+  // positive edge = model favors home covering, negative = away covering
+  // spread sign: negative = home favored, positive = home underdog
+  var edge=margin+spread;
+  var pickSide,pickTeam,pickSpreadStr;
+  if(edge>0){
+    // Model favors home covering
+    pickTeam=best.home_team||'Home';
+    pickSpreadStr=spread>=0?'+'+spread:String(spread);
+    pickSide='home';
+  } else {
+    // Model favors away covering
+    pickTeam=best.away_team||'Away';
+    pickSpreadStr=spread>=0?String(-spread):'+'+Math.abs(spread);
+    pickSide='away';
+  }
+  var winProb=Math.round(Math.max(best.home_win_prob||0,best.away_win_prob||0)*100);
+  var absMargin=Math.abs(margin);
+  var logoUrl=typeof teamLogoUrl==='function'?teamLogoUrl(pickTeam):null;
+  var logoHtml=logoUrl?'<img src="'+logoUrl+'" width="32" height="32" alt="'+esc(pickTeam)+'" style="object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
+  return'<div class="potd-spotlight">'
+    // Header
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold)">Pick of the Day</span>'
+      +'</div>'
+      +'<span style="font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--gold-d);color:var(--gold);letter-spacing:.5px">SPREAD</span>'
     +'</div>'
-    +'<div style="font-size:18px;font-weight:700;color:var(--t0);margin-bottom:6px">'+esc(best.away_team||'')+' @ '+esc(best.home_team||'')+'</div>'
-    +'<div style="margin:8px 0">'+_confMeterHtml(conf)+'</div>'
-    +'<div style="font-size:13px;color:var(--t1)">'+(best.pick_summary||('Model favors '+(conf>0.5?esc(best.home_team||'Home'):esc(best.away_team||'Away'))))+edgeStr+'</div>'
+    // Matchup
+    +'<div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">'+esc(best.away_team||'')+' @ '+esc(best.home_team||'')+'</div>'
+    // The Pick — big and bold
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'
+      +logoHtml
+      +'<div>'
+        +'<div style="font-size:26px;font-weight:800;color:var(--gold);letter-spacing:-.5px;line-height:1.1">'+esc(pickTeam)+' <span style="font-size:20px;font-weight:700;color:var(--t0)">'+esc(pickSpreadStr)+'</span></div>'
+      +'</div>'
+    +'</div>'
+    // Stats row
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
+      +'<div style="text-align:center;padding:8px;border-radius:10px;background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.12)">'
+        +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:4px">Line Edge</div>'
+        +'<div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--fm)">'+spreadEdge.toFixed(1)+'</div>'
+        +'<div style="font-size:9px;color:var(--t2)">points off</div>'
+      +'</div>'
+      +'<div style="text-align:center;padding:8px;border-radius:10px;background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.12)">'
+        +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:4px">Win Prob</div>'
+        +'<div style="font-size:18px;font-weight:800;color:var(--t0);font-family:var(--fm)">'+winProb+'%</div>'
+        +'<div style="font-size:9px;color:var(--t2)">moneyline</div>'
+      +'</div>'
+      +'<div style="text-align:center;padding:8px;border-radius:10px;background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.12)">'
+        +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:4px">Proj Margin</div>'
+        +'<div style="font-size:18px;font-weight:800;color:var(--t0);font-family:var(--fm)">'+(margin>0?'+':'')+absMargin.toFixed(1)+'</div>'
+        +'<div style="font-size:9px;color:var(--t2)">'+(margin>0?esc(best.home_team||''):esc(best.away_team||''))+'</div>'
+      +'</div>'
+    +'</div>'
+    // Explanation
+    +'<div style="font-size:12px;color:var(--t1);line-height:1.5;padding:10px 12px;border-radius:8px;background:rgba(245,166,35,.04);border-left:3px solid var(--gold)">'
+      +'Model projects '+(margin>0?esc(best.home_team||''):esc(best.away_team||''))+' winning by '+absMargin.toFixed(1)+' but the line is set at '+Math.abs(spread)+'. That\'s a <strong style="color:var(--gold)">'+spreadEdge.toFixed(1)+'-point discrepancy</strong> in favor of '+esc(pickTeam)+'.'
+    +'</div>'
     +_whyThisPickOpen(best,window._GAME_CONTEXTS)
-    +'<div style="margin-top:10px"><button onclick="showBettingTab(\'picks\',null)" style="padding:6px 16px;border-radius:var(--r-pill);border:1px solid rgba(0,200,150,.3);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)">See all picks &rarr;</button></div></div>';
+    +'<div style="margin-top:12px;text-align:center"><button onclick="showBettingTab(\'picks\',null)" style="padding:7px 20px;border-radius:var(--r-pill);border:1px solid rgba(245,166,35,.35);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f);letter-spacing:.3px">See all picks &rarr;</button></div></div>';
 }
 
 // ─── SHARP MONEY / LINE MOVEMENT ───
@@ -6579,38 +6706,11 @@ async function loadDashboardData(){
       if(streak)setEl('bt-streak',(streak.type==='W'?'W':'L')+streak.length);
       const bestStreak=p.best_streak;
       if(bestStreak)setEl('bt-best-streak','W'+bestStreak.length+' best');
-      // ── Wire performance data to Today tab Model Record sidebar ──
-      const todayRecEl=document.querySelector('#page-today [data-count-str="67-55"]');
-      const todayL10El=document.querySelector('#page-today [data-count-str="7-3"]');
-      const todayBadgeEl=document.querySelector('#page-today .badge.g');
-      if(todayRecEl&&p.total_games){
-        const w=Math.round((p.season_accuracy||0)*p.total_games);
-        const l=p.total_games-w;
-        const winPct=p.total_games>0?((w/p.total_games)*100).toFixed(1):'0.0';
-        todayRecEl.textContent=w+'-'+l+' ('+winPct+'%)';
-      }
-      if(todayL10El&&p.current_streak){
-        const s=p.current_streak;
-        todayL10El.textContent=(s.type==='W'?'W':'L')+s.length+' streak';
-        const parentDiv=todayL10El.parentElement;
-        if(parentDiv){const changeEl=parentDiv.querySelector('.schange');if(changeEl)changeEl.textContent=s.type==='W'?'On a hot streak':'Cold stretch';}
-      }
-      if(todayBadgeEl&&p.season_accuracy){todayBadgeEl.textContent=(p.season_accuracy*100).toFixed(1)+'% ATS';}
+      // Model record stats are shown in Performance betting tab only
     }
     // ── Wire line_movement.json -> Sharp Money tab ──
     window.LINE_MOVEMENT=lineMovJson;
-    // ── Steam alert on Today tab ──
-    const steamMoves=Array.isArray(lineMovJson)?lineMovJson.filter(g=>g.steam_move||Math.abs(g.movement||0)>=1.5):[];
-    const steamEl=document.getElementById('steam-alert');
-    if(steamEl&&steamMoves.length>0){
-      steamEl.style.display='flex';
-      steamEl.style.alignItems='center';
-      steamEl.style.gap='10px';
-      const titleEl=document.getElementById('steam-alert-title');
-      const descEl=document.getElementById('steam-alert-desc');
-      if(titleEl)titleEl.textContent=steamMoves.length+' Steam Move'+(steamMoves.length>1?'s':'')+' Detected';
-      if(descEl)descEl.textContent='Sharp money moving lines on '+steamMoves.map(g=>g.away_team+' @ '+g.home_team).join(', ');
-    }
+    // Steam alerts are shown in the Betting > Market tab only (removed from Home tab)
     // ── Wire trends.json and totals.json for game detail modal ──
     window.TEAM_TRENDS=teamTrendsJson||{};
     window.GAME_TOTALS=Array.isArray(totalsJson)?totalsJson:[];
