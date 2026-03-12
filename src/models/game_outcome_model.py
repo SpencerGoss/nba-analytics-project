@@ -601,6 +601,100 @@ def train_game_outcome_model(
     return best_pipe, metrics
 
 
+def _get_current_season_code() -> str:
+    """Return the current NBA season code (e.g. '202526')."""
+    now = datetime.now()
+    # NBA season starts in October; if month >= 10, season is thisYear_nextYear
+    if now.month >= 10:
+        return f"{now.year}{(now.year + 1) % 100:02d}"
+    return f"{now.year - 1}{now.year % 100:02d}"
+
+
+def _synthesize_matchup_row(
+    df: pd.DataFrame,
+    home_team_abbr: str,
+    away_team_abbr: str,
+    feat_cols: list[str],
+) -> pd.Series | None:
+    """Build a fresh matchup row from each team's most recent game.
+
+    Uses the home team's latest game for home_* columns and the away team's
+    latest game for away_* columns, regardless of opponent. Recomputes all
+    diff_* columns and injects current Elo ratings from elo_ratings.csv.
+
+    Returns None if either team has no current-season data.
+    """
+    current_season = _get_current_season_code()
+
+    # Each team's most recent game in current season
+    current_df = df[df["season"].astype(str) == current_season]
+    if current_df.empty:
+        current_df = df  # fall back to all data if no current-season rows
+
+    home_games = current_df[
+        (current_df["home_team"] == home_team_abbr)
+        | (current_df["away_team"] == home_team_abbr)
+    ].sort_values("game_date")
+
+    away_games = current_df[
+        (current_df["home_team"] == away_team_abbr)
+        | (current_df["away_team"] == away_team_abbr)
+    ].sort_values("game_date")
+
+    if home_games.empty or away_games.empty:
+        return None
+
+    # Prefer a row where the team is in the matching role (home plays at home)
+    home_as_home = home_games[home_games["home_team"] == home_team_abbr]
+    home_source = (
+        home_as_home.iloc[-1].copy() if not home_as_home.empty
+        else home_games.iloc[-1].copy()
+    )
+
+    away_as_away = away_games[away_games["away_team"] == away_team_abbr]
+    away_source = (
+        away_as_away.iloc[-1].copy() if not away_as_away.empty
+        else away_games.iloc[-1].copy()
+    )
+
+    # Start from home source row, overwrite away_* columns from away source
+    row = home_source.copy()
+    row["away_team"] = away_team_abbr
+    row["home_team"] = home_team_abbr
+
+    for c in df.columns:
+        if c.startswith("away_"):
+            row[c] = away_source.get(c, row.get(c, np.nan))
+
+    # Inject current Elo ratings
+    try:
+        from src.features.elo import get_current_elos
+        current_elos = get_current_elos()
+        home_elo = current_elos.get(home_team_abbr, 1500.0)
+        away_elo = current_elos.get(away_team_abbr, 1500.0)
+        row["home_elo"] = home_elo
+        row["away_elo"] = away_elo
+    except Exception:
+        home_elo = row.get("home_elo", 1500.0)
+        away_elo = row.get("away_elo", 1500.0)
+
+    # Recompute ALL diff_* columns from current home/away values
+    for c in df.columns:
+        if c.startswith("diff_"):
+            if c == "diff_elo":
+                row[c] = home_elo - away_elo
+                continue
+            base = c.replace("diff_", "")
+            h_col, a_col = f"home_{base}", f"away_{base}"
+            if h_col in row.index and a_col in row.index:
+                try:
+                    row[c] = float(row[h_col]) - float(row[a_col])
+                except (TypeError, ValueError):
+                    pass
+
+    return row
+
+
 def predict_game(
     home_team_abbr: str,
     away_team_abbr: str,
@@ -611,9 +705,11 @@ def predict_game(
     """Estimate win probability for a matchup.
 
     Strategy:
-      1) Use most recent exact historical pairing if available.
-      2) Fallback: synthesize a matchup row using each team's most recent
-         home/away context and differential columns.
+      1) Look for a current-season exact matchup between these teams.
+      2) If none exists, synthesize a fresh row from each team's most recent
+         game in the current season, with current Elo ratings and recomputed
+         diff_* columns.
+      3) Last resort: use any available data (cross-season).
     """
     model, model_artifact_name = _load_game_outcome_model(artifacts_dir)
     feat_path = os.path.join(artifacts_dir, "game_outcome_features.pkl")
@@ -623,28 +719,35 @@ def predict_game(
     df = pd.read_csv(features_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
-    exact = df[(df["home_team"] == home_team_abbr) & (df["away_team"] == away_team_abbr)]
+    current_season = _get_current_season_code()
+
+    # 1) Try current-season exact matchup
+    exact = df[
+        (df["home_team"] == home_team_abbr)
+        & (df["away_team"] == away_team_abbr)
+        & (df["season"].astype(str) == current_season)
+    ]
     if not exact.empty:
         row = exact.sort_values("game_date").iloc[-1].copy()
+        # Still refresh Elo to reflect games played since this matchup
+        try:
+            from src.features.elo import get_current_elos
+            current_elos = get_current_elos()
+            home_elo = current_elos.get(home_team_abbr, row.get("home_elo", 1500.0))
+            away_elo = current_elos.get(away_team_abbr, row.get("away_elo", 1500.0))
+            row["home_elo"] = home_elo
+            row["away_elo"] = away_elo
+            row["diff_elo"] = home_elo - away_elo
+        except Exception:
+            pass
     else:
-        home_rows = df[df["home_team"] == home_team_abbr].sort_values("game_date")
-        away_rows = df[df["away_team"] == away_team_abbr].sort_values("game_date")
-        if home_rows.empty or away_rows.empty:
-            return {"error": f"Not enough history to build features for {home_team_abbr} vs {away_team_abbr}."}
-
-        row = home_rows.iloc[-1].copy()
-        away_source = away_rows.iloc[-1]
-
-        for c in df.columns:
-            if c.startswith("away_"):
-                row[c] = away_source.get(c, row.get(c, np.nan))
-
-        for c in feat_cols:
-            if c.startswith("diff_"):
-                base = c.replace("diff_", "")
-                h_col, a_col = f"home_{base}", f"away_{base}"
-                if h_col in row.index and a_col in row.index:
-                    row[c] = row[h_col] - row[a_col]
+        # 2) Synthesize from each team's most recent game
+        row = _synthesize_matchup_row(df, home_team_abbr, away_team_abbr, feat_cols)
+        if row is None:
+            return {
+                "error": f"Not enough history to build features for "
+                         f"{home_team_abbr} vs {away_team_abbr}."
+            }
 
     row_df = row.to_frame().T.reindex(columns=feat_cols).fillna(0)
     prob = model.predict_proba(row_df)[0]

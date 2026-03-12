@@ -177,6 +177,72 @@
 **Integration Tests Only; No End-to-End Validation: RESOLVED**
 - **RESOLVED (2026-03-05):** `tests/test_data_integrity.py` added with 17 tests: game_id uniqueness, season integer dtype, home_win valid values, (game_id, player_id) pair uniqueness, rolling feature leakage spot-check. All tests skip cleanly on fresh clones via `pytest.mark.skipif` guards.
 
+## Critical: Stale Feature Bug in predict_game() (2026-03-11)
+
+**SEVERITY: HIGH -- predictions for 3 of 6 games today are materially wrong**
+
+### Root Cause
+
+`predict_game()` in `src/models/game_outcome_model.py` (line 626-628) uses the **most recent exact historical matchup** between two specific teams, regardless of how old it is. For teams that haven't played each other yet this season, it falls back to **last season's features** -- including last season's Elo ratings, win percentages, rolling stats, and cumulative records.
+
+The model does NOT synthesize a current-season feature row from each team's latest stats when the exact matchup is stale. It literally uses the feature values frozen at the time of their last meeting.
+
+### Affected Predictions (2026-03-11)
+
+| Game | Prediction | Features From | Key Problem |
+|------|-----------|---------------|-------------|
+| **CHA @ SAC** | SAC 87% (WRONG) | 2025-02-24 (last season) | Uses SAC Elo 1465 / CHA Elo 1200 / diff_elo +265. **Reality: SAC Elo 1252 / CHA Elo 1639 / diff should be -387.** SAC is 16-50 (worst in West), CHA is 33-33. Prediction is inverted. |
+| **TOR @ NOP** | NOP 69% win (SUSPICIOUS) | 2024-11-27 (last season) | Uses NOP Elo 1381 / TOR Elo 1309 / diff_elo +73. **Reality: NOP Elo 1408 / TOR Elo 1519 / diff should be -111.** NOP is 21-45, TOR is rebuilding but ~30+ wins. Direction may be correct (NOP has home court) but magnitude is inflated by stale features. |
+| **HOU @ DEN** | DEN 61% (STALE) | 2025-12-20 (early this season) | Uses DEN Elo 1735 / HOU Elo 1647 / diff_elo +88. **Reality: DEN Elo 1556 / HOU Elo 1602 / diff should be -46.** DEN was much stronger in December; has since fallen. Prediction direction might flip with current features. |
+
+Three games use current-season features and are reasonable:
+- CLE @ ORL: features from 2026-01-24 (this season) -- reasonable
+- MIN @ LAC: features from 2026-02-26 (this season) -- reasonable
+- NYK @ UTA: features from 2024-11-23 (last season) but both teams' relative strength is similar, so prediction (NYK 96%) is directionally correct
+
+### Why diff_elo Matters So Much
+
+`diff_elo` is the #1 feature at 37.3% importance in the game outcome model. When this value is wrong by 500+ Elo points (as in CHA @ SAC: model uses +265, reality is -387), the prediction is catastrophically wrong.
+
+### The Fallback Path (lines 630-647) Is Also Problematic
+
+When there is no exact matchup, `predict_game()` synthesizes a row from each team's latest home/away row separately and recomputes diff_ columns. This fallback is **better** than the exact-match path for cross-season predictions because it uses each team's most recent game. However, it has its own issues:
+- It copies `away_*` columns from a different opponent context
+- diff_ columns are recomputed from home/away raw values, but Elo columns (home_elo, away_elo, diff_elo) are NOT recomputed -- they come from the copied rows where one team was playing a different opponent
+
+### Proposed Fix
+
+**Option A (quick fix):** In `predict_game()`, when the exact matchup row is from a previous season (different `season` value), force the fallback path instead. This ensures current-season stats are used for each team.
+
+**Option B (proper fix):** Always synthesize a fresh feature row for future-game predictions:
+1. Take the most recent home row for the home team (from current season)
+2. Take the most recent away row for the away team (from current season)
+3. Copy home_* and away_* columns from their respective rows
+4. Recompute ALL diff_ columns (including diff_elo using current Elo ratings from `get_current_elos()`)
+5. This ensures predictions always reflect the teams' current form
+
+**Option C (best fix):** Create a `predict_future_game()` function that:
+1. Loads current Elo ratings from `elo_ratings.csv` (latest per team)
+2. Loads each team's most recent team_game_features row
+3. Constructs a matchup row from scratch using current features
+4. Never relies on historical exact-match rows for future games
+
+### Impact Assessment
+
+- Every cross-season matchup prediction is potentially wrong
+- Teams that improved or declined significantly between seasons are most affected
+- SAC (went from .500 to .242) and CHA (went from .254 to .500) show the most dramatic reversal
+- This bug has been present since the prediction system was built -- it affects all historical predictions for first-time seasonal matchups
+
+### Related Files
+
+- `src/models/game_outcome_model.py` lines 604-676 (`predict_game()`)
+- `src/models/predict_cli.py` lines 60-105 (`_handle_ats()` -- same pattern)
+- `scripts/build_picks.py` lines 139-175 (`_build_margin_lookup()` -- same pattern for margin model)
+- `src/features/elo.py` line 206-226 (`get_current_elos()` -- provides correct current Elos)
+- `data/features/game_matchup_features.csv` -- the feature source
+
 ---
 
 *Concerns audit: 2026-03-01*
+*Stale feature bug analysis: 2026-03-11*

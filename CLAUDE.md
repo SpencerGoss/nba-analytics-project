@@ -101,5 +101,22 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 | CLAUDE.md feeling stale or bloated | `rule-freshness-audit` |
 | Weekly meta-review | `weekly-review` |
 
+## Plugin Integration
+
+| Workflow | Plugin / Skill | Trigger |
+|----------|---------------|---------|
+| ML model training, retrain, HPO | `machine-learning-ops` + `scientific-skills:scikit-learn` | Model work in `src/models/` |
+| Statistical analysis, calibration | `scientific-skills:statsmodels` | Regression, Brier scores, significance tests |
+| Data pipeline, backfill, ETL | `data-engineering` | Pipeline changes in `update.py`, `backfill.py`, `src/data/` |
+| Dashboard charts, visualizations | `scientific-skills:plotly` + `playground` | Chart work, data exploration prototyping |
+| Betting analysis, Kelly, CLV, ATS | `quantitative-trading` | Odds, spreads, value bets, risk metrics |
+| Forecasting (game totals, player props) | `scientific-skills:timesfm-forecasting` | Time-series prediction tasks |
+| PR review | `code-review` (5 parallel agents) or `pr-review-toolkit` | `/code-review` or PR creation |
+| Git commit, push, PR | `commit-commands` | `/commit`, `/push`, `/commit-push-pr` |
+| Python type checking | `pyright-lsp` | Auto-activates on `.py` file edits |
+| Security monitoring | `security-guidance` | Passive hook — runs automatically |
+
+Existing custom skills (nba-feature-dev, nba-model-evaluation, etc.) remain primary for NBA-specific workflows. Plugins provide supplementary tooling — use both together when applicable.
+
 ## See Also
 `AI_INDEX.md` (task routing) | `ARCHITECTURE.md` | `AGENTS.md` | `CONTEXT.md` | `DECISIONS.md` | `HANDOFF.md` | `WORKING_NOTES.md` | `PROJECT_JOURNAL.md` | Global rules: `~/.claude/rules/common/`

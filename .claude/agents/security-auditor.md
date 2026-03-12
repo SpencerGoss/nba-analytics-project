@@ -14,6 +14,8 @@ Scan the codebase for security issues. Check:
 
 Report findings only. Do not fix code.
 
+**Plugin:** `security-guidance` provides passive security monitoring as a complement to this agent's active scanning.
+
 Format:
 - [CRITICAL] file:line — description
 - [HIGH] file:line — description

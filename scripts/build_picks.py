@@ -139,11 +139,21 @@ def _build_margin_lookup(
         matchup_df = pd.read_csv(MATCHUP_CSV, low_memory=False)
         matchup_df["game_date"] = pd.to_datetime(
             matchup_df["game_date"], format="mixed"
-        ).dt.date.astype(str)
+        )
 
-        # Build most-recent-row index per (home_team, away_team)
+        from src.models.game_outcome_model import (
+            _get_current_season_code,
+            _synthesize_matchup_row,
+        )
+
+        current_season = _get_current_season_code()
+
+        # Build most-recent-row index per (home, away) — current season only
+        current_df = matchup_df[
+            matchup_df["season"].astype(str) == current_season
+        ]
         latest = (
-            matchup_df.sort_values("game_date")
+            current_df.sort_values("game_date")
             .groupby(["home_team", "away_team"], sort=False)
             .last()
             .reset_index()
@@ -155,12 +165,18 @@ def _build_margin_lookup(
         for p in preds:
             home = p["home_team"]
             away = p["away_team"]
-            game_date = p.get("game_date", "")
-            key = (home, away, game_date)
+            game_date_str = p.get("game_date", "")
+            key = (home, away, game_date_str)
 
             feat_row = feat_index.get((home, away))
             if feat_row is None:
-                continue
+                # Synthesize from each team's most recent game
+                feat_row = _synthesize_matchup_row(
+                    matchup_df, home, away,
+                    ensemble.margin_feats or [],
+                )
+                if feat_row is None:
+                    continue
 
             margin_feats = ensemble.margin_feats
             if margin_feats is not None:

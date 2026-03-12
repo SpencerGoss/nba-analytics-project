@@ -38,11 +38,11 @@
 | `nba-backfill` | backfilling or fetching historical data |
 | `nba-model-evaluation` | evaluating or comparing model performance |
 | `tdd-workflow` | TDD implementation step-by-step |
-| `superpowers:test-driven-development` | implementing any feature or fix (TDD superpowers) |
+| `tdd-workflow` | implementing any feature or fix (TDD superpowers) |
 | `superpowers:verification-before-completion` | before claiming work is complete |
-| `superpowers:writing-plans` | writing a multi-step implementation plan |
+| `spec-driven-dev` | writing a multi-step implementation plan |
 | `superpowers:brainstorming` | brainstorming approach or architecture |
-| `superpowers:requesting-code-review` | requesting a code review |
+| `code-review-session` | requesting a code review |
 | `superpowers:dispatching-parallel-agents` | independent tasks that can run in parallel |
 | `refactor-session` | cleaning up code structure without changing behavior |
 | `code-review-session` | reviewing code just written |
@@ -58,3 +58,18 @@
 | `python-development:uv-package-manager` | managing packages with uv |
 | `context-file-maintainer` | CLAUDE.md too long or stale |
 | `vscode-ai-project-scaffolder` | architecture change / new agent role |
+
+## Available Plugins
+
+Plugins provide specialized capabilities agents can leverage automatically:
+
+| Plugin | Purpose |
+|--------|---------|
+| `code-review` | 5 parallel review agents for PR reviews |
+| `pr-review-toolkit` | 6 specialized agents for deep PR analysis |
+| `machine-learning-ops` | ML pipeline work (training, evaluation, deployment) |
+| `quantitative-trading` | Betting/risk analysis and strategy evaluation |
+| `data-engineering` | ETL/pipeline design and optimization |
+| `scientific-skills` | scikit-learn, statsmodels, plotly, TimesFM |
+| `pyright-lsp` | Auto-activates on .py files for type checking |
+| `security-guidance` | Passive security monitoring on all changes |

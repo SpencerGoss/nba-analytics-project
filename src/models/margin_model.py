@@ -349,22 +349,31 @@ def predict_margin(
     df = pd.read_csv(matchup_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
-    exact = df[
-        (df["home_team"] == home_team) & (df["away_team"] == away_team)
+    # FIX: Only consider rows from the most recent season to avoid stale
+    # cross-season features that can catastrophically invert predictions.
+    # Always fall back to the synthesized-row path if no current-season exact
+    # matchup exists — this uses each team's latest stats rather than a frozen
+    # historical snapshot.
+    latest_season = str(df["season"].astype(str).max())
+    current_df = df[df["season"].astype(str) == latest_season]
+
+    exact = current_df[
+        (current_df["home_team"] == home_team) & (current_df["away_team"] == away_team)
     ]
     if not exact.empty:
         row = exact.sort_values("game_date").iloc[-1].copy()
     else:
-        home_rows = df[df["home_team"] == home_team].sort_values("game_date")
-        away_rows = df[df["away_team"] == away_team].sort_values("game_date")
+        # Synthesize from each team's most recent current-season row
+        home_rows = current_df[current_df["home_team"] == home_team].sort_values("game_date")
+        away_rows = current_df[current_df["away_team"] == away_team].sort_values("game_date")
         if home_rows.empty or away_rows.empty:
             raise ValueError(
-                f"Not enough history to build features"
+                f"Not enough current-season history to build features"
                 f" for {home_team} vs {away_team}."
             )
         row = home_rows.iloc[-1].copy()
         away_source = away_rows.iloc[-1]
-        for col in df.columns:
+        for col in current_df.columns:
             if col.startswith("away_"):
                 row[col] = away_source.get(col, row.get(col, np.nan))
         for col in feat_cols:

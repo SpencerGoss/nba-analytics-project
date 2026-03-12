@@ -317,7 +317,7 @@ def test_predict_margin_raises_on_unknown_team(tmp_path):
         test_seasons=["201920"],
     )
 
-    with pytest.raises(ValueError, match="Not enough history"):
+    with pytest.raises(ValueError, match="Not enough current-season history"):
         predict_margin(
             home_team="UNKNOWN_TEAM_XYZ",
             away_team="ANOTHER_UNKNOWN",

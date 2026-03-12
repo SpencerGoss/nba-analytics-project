@@ -90,3 +90,16 @@ Read: `src/validation/data_integrity.py` (data validation utilities — v2 addit
 
 ### Isolate feature work from main branch
 Use a separate git branch via `git-workflow` skill
+
+## Plugin Routing
+
+| Task | Plugin | Notes |
+|------|--------|-------|
+| Retrain/evaluate ML models | `machine-learning-ops` + `scientific-skills:scikit-learn` | HPO, experiment tracking, pipeline management |
+| Statistical calibration, Brier scores | `scientific-skills:statsmodels` | Regression, significance testing |
+| Dashboard chart creation/updates | `scientific-skills:plotly` + `playground` | Interactive prototyping |
+| Betting analysis, Kelly criterion, CLV | `quantitative-trading` | Risk metrics, portfolio optimization |
+| Time-series forecasting | `scientific-skills:timesfm-forecasting` | Player props, game totals |
+| Data backfill, ETL pipeline work | `data-engineering` | Pairs with batch-data-processing skill |
+| PR or pre-commit code review | `code-review` or `pr-review-toolkit` | 5-6 parallel review agents |
+| Git operations | `commit-commands` | /commit, /push, /commit-push-pr |

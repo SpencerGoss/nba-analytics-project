@@ -67,25 +67,33 @@ def _handle_ats(args) -> dict:
     df = pd.read_csv(matchup_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
-    exact = df[(df["home_team"] == args.home) & (df["away_team"] == args.away)]
+    from src.models.game_outcome_model import _get_current_season_code, _synthesize_matchup_row
+    current_season = _get_current_season_code()
+
+    # Try current-season exact matchup first; fall back to synthesis
+    exact = df[
+        (df["home_team"] == args.home)
+        & (df["away_team"] == args.away)
+        & (df["season"].astype(str) == current_season)
+    ]
     if not exact.empty:
         row = exact.sort_values("game_date").iloc[-1].copy()
+        # Refresh Elo ratings
+        try:
+            from src.features.elo import get_current_elos
+            current_elos = get_current_elos()
+            home_elo = current_elos.get(args.home, row.get("home_elo", 1500.0))
+            away_elo = current_elos.get(args.away, row.get("away_elo", 1500.0))
+            row["home_elo"] = home_elo
+            row["away_elo"] = away_elo
+            row["diff_elo"] = home_elo - away_elo
+        except Exception:
+            pass
     else:
-        home_rows = df[df["home_team"] == args.home].sort_values("game_date")
-        away_rows = df[df["away_team"] == args.away].sort_values("game_date")
-        if home_rows.empty or away_rows.empty:
+        feat_cols = [c for c in df.columns if c.startswith("diff_")]
+        row = _synthesize_matchup_row(df, args.home, args.away, feat_cols)
+        if row is None:
             return {"error": f"Not enough history for {args.home} vs {args.away}."}
-        row = home_rows.iloc[-1].copy()
-        away_source = away_rows.iloc[-1]
-        for c in df.columns:
-            if c.startswith("away_"):
-                row[c] = away_source.get(c, row.get(c, np.nan))
-        for c in df.columns:
-            if c.startswith("diff_"):
-                base = c.replace("diff_", "")
-                h_col, a_col = f"home_{base}", f"away_{base}"
-                if h_col in row.index and a_col in row.index:
-                    row[c] = row[h_col] - row[a_col]
 
     row["spread"] = args.spread
     if args.home_ml is not None and args.away_ml is not None:

@@ -18,3 +18,5 @@ Output format:
 - [SUGGESTION] file:line — description
 
 Do not rewrite code. Report findings only.
+
+**Plugins:** `pyright-lsp` provides type checking on .py files; `security-guidance` monitors for vulnerabilities passively.
