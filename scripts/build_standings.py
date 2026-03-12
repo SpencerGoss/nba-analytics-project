@@ -35,6 +35,11 @@ OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "standings.json"
 
 CURRENT_SEASON = 202526
 LAST_N = 10
+TOTAL_GAMES = 82  # NBA regular season length
+
+# Playoff structure: seeds 1-6 direct, 7-10 play-in, 11-15 out
+PLAYOFF_SEEDS = 6
+PLAYIN_SEEDS = 10
 
 # ---------------------------------------------------------------------------
 # Conference / division mappings (stable -- hardcoded per task spec)
@@ -93,6 +98,67 @@ def _current_streak(wl_series: pd.Series) -> str:
 def _games_behind(leader_wins: int, leader_losses: int, team_wins: int, team_losses: int) -> float:
     """Standard GB formula: ((leader_W - team_W) + (team_L - leader_L)) / 2."""
     return ((leader_wins - team_wins) + (team_losses - leader_losses)) / 2.0
+
+
+def _compute_clinch_status(rows: list[dict]) -> None:
+    """
+    Mutate rows in-place to add 'clinch' field based on mathematical
+    elimination / clinching logic.
+
+    Clinch values:
+      'z'  - clinched #1 seed (conference)
+      'x'  - clinched playoff berth (top 6)
+      'pi' - clinched play-in spot (top 10)
+      'e'  - eliminated from play-in (cannot reach top 10)
+      'o'  - eliminated from playoffs (cannot reach top 6, but may reach play-in)
+      None - still in contention, nothing clinched
+    """
+    for row in rows:
+        row["clinch"] = None
+        row["games_remaining"] = TOTAL_GAMES - row["w"] - row["l"]
+
+    # Max possible wins for each team
+    for row in rows:
+        row["_max_wins"] = row["w"] + row["games_remaining"]
+
+    # --- Clinch #1 seed: team's current wins > every other team's max wins ---
+    first = rows[0]
+    if len(rows) > 1:
+        second_max = max(r["_max_wins"] for r in rows[1:])
+        if first["w"] > second_max:
+            first["clinch"] = "z"
+
+    # --- Clinched playoff (top 6): team's wins > 7th place team's max wins ---
+    if len(rows) > PLAYOFF_SEEDS:
+        seventh_max = rows[PLAYOFF_SEEDS]["_max_wins"]
+        for row in rows[:PLAYOFF_SEEDS]:
+            if row["clinch"] is None and row["w"] > seventh_max:
+                row["clinch"] = "x"
+
+    # --- Clinched play-in (top 10): team's wins > 11th place team's max wins ---
+    if len(rows) > PLAYIN_SEEDS:
+        eleventh_max = rows[PLAYIN_SEEDS]["_max_wins"]
+        for row in rows[:PLAYIN_SEEDS]:
+            if row["clinch"] is None and row["w"] > eleventh_max:
+                row["clinch"] = "pi"
+
+    # --- Eliminated from play-in: team's max wins < 10th place current wins ---
+    if len(rows) >= PLAYIN_SEEDS:
+        tenth_wins = rows[PLAYIN_SEEDS - 1]["w"]
+        for row in rows[PLAYIN_SEEDS:]:
+            if row["_max_wins"] < tenth_wins:
+                row["clinch"] = "e"
+
+    # --- Eliminated from direct playoff (top 6): max wins < 6th place wins ---
+    if len(rows) >= PLAYOFF_SEEDS:
+        sixth_wins = rows[PLAYOFF_SEEDS - 1]["w"]
+        for row in rows[PLAYOFF_SEEDS:PLAYIN_SEEDS]:
+            if row["clinch"] is None and row["_max_wins"] < sixth_wins:
+                row["clinch"] = "o"
+
+    # Clean up temp field
+    for row in rows:
+        del row["_max_wins"]
 
 
 def _load_team_names() -> dict[str, str]:
@@ -204,6 +270,9 @@ def build_conference_standings(
     for i, row in enumerate(rows):
         row["rank"] = i + 1
         row["games_behind"] = _games_behind(leader_w, leader_l, row["w"], row["l"])
+
+    # Compute clinch / elimination status
+    _compute_clinch_status(rows)
 
     return rows
 
