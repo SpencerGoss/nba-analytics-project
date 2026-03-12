@@ -2715,6 +2715,14 @@ function mapJsonPlayer(p){
     thr:      cStats.thr,
     ft:       cStats.ft,
     ts:       cStats.ts,
+    // Advanced stats from build script
+    usg_pct:  ca.usg_pct||null,
+    ast_pct:  ca.ast_pct||null,
+    tov_pct:  ca.tov_pct||null,
+    efg_pct:  ca.efg_pct||null,
+    oreb_pct: ca.oreb_pct||null,
+    dreb_pct: ca.dreb_pct||null,
+    stl_pct:  ca.stl_pct||null,
     position: p.position||'',
     positions: p.positions||'',
     position_primary: p.position_primary||'',
@@ -4162,7 +4170,7 @@ function _loadPlayerComparison(){
       parent.insertBefore(spinner,parent.firstChild);
     }
   }
-  fetch('data/player_comparison.json').then(r=>r.ok?r.json():null).then(playerJson=>{
+  fetch('data/player_comparison.json?v='+Date.now()).then(r=>r.ok?r.json():null).then(playerJson=>{
     try{
     const loadEl=document.getElementById('player-comp-loading');
     if(loadEl)loadEl.remove();
@@ -4221,7 +4229,9 @@ function _loadPlayerDetail(callback){
   }).catch(()=>{_playerDetailLoading=false;callback();});
 }
 function showPlayerDetail(name){
-  const p=DATA.players.find(x=>x.name===name);
+  var p=DATA.players.find(x=>x.name===name);
+  // Fallback to current season players if not in career dataset
+  if(!p&&DATA.seasonPlayers)p=DATA.seasonPlayers.find(x=>x.name===name);
   if(!p)return;
   // Open modal immediately with available data, then enhance with lazy-loaded detail
   _loadPlayerDetail(()=>_renderPlayerDetail(name,p));
@@ -5465,107 +5475,220 @@ function setCmpPlayer(name){
   updateComparison();
 }
 
-// Position to numeric (for distance calc): PG=1, SG=2, SF=3, PF=4, C=5
+// ── Composite-Axes Similarity Engine ──
+// 6 composite axes built from advanced stats, then percentile-ranked.
+// Distance = 70% cosine shape similarity + 30% volume proximity.
+// Archetypes auto-labeled from dominant axis peaks.
+
+// Position to numeric (for position-group matching, not used in distance)
 function _posNum(p){
   var pp=(p.position_primary||'').toUpperCase();
   if(pp==='PG')return 1;if(pp==='SG')return 2;if(pp==='SF')return 3;
   if(pp==='PF')return 4;if(pp==='C')return 5;
-  // Fallback: infer from stats
-  if((p.ast||0)>6)return 1; if((p.reb||0)>9)return 5;
-  if((p.reb||0)>7)return 4; return 3;
+  if((p.ast_pct||0)>20)return 1;
+  if((p.oreb_pct||0)>8&&(p.dreb_pct||0)>18)return 5;
+  if((p.dreb_pct||0)>17)return 4;
+  return 3;
 }
 
-// Build playstyle profile vector for a player (10 dimensions)
-function _playstyleVec(p){
+// Position similarity: same=1.0, adjacent=0.7, two apart=0.3, opposite=0.1
+function _posSim(a,b){
+  var d=Math.abs(a-b);
+  if(d===0)return 1.0;if(d===1)return 0.7;if(d===2)return 0.3;return 0.1;
+}
+
+// Position group: 'guard'=PG/SG, 'wing'=SF, 'big'=PF/C
+function _posGroup(n){return n<=2?'guard':n===3?'wing':'big';}
+
+// Compute MPG from seasons (with 20-min floor to prevent per-36 inflation)
+function _mpgFromSeasons(p){
   var seasons=p._seasons||[];
-  // Compute per36 and shooting style from seasons
-  var totalMin=0,totalFga=0,totalFg3a=0,totalAst=0,totalTov=0,totalPaintPts=0,totalPts=0,gpT=0;
+  var totalMin=0,gpT=0;
   seasons.forEach(function(s){
     var gp=s.gp||0,min=s.min||0;if(gp<=0||min<=0)return;
-    totalMin+=min*gp; totalFga+=(s.fga||0)*gp; gpT+=gp;
-    totalFg3a+=(s.fg3_pct!=null&&s.fga?s.fga*s.fg3_pct:0)*gp; // approximate 3PA
-    totalAst+=(s.ast||0)*gp; totalTov+=(s.tov||0)*gp;
-    totalPts+=(s.pts||0)*gp;
+    totalMin+=min*gp;gpT+=gp;
   });
-  var mpg=gpT>0?totalMin/gpT:0;
-  // Normalize stats to per-36 if we have minutes
-  var scale=mpg>0?36/mpg:1;
-  var per36pts=(p.pts||0)*scale;
-  var per36reb=(p.reb||0)*scale;
-  var per36ast=(p.ast||0)*scale;
-  var per36def=((p.stl||0)+(p.blk||0))*scale;
-  // Assist ratio: ast/(ast+tov) — measures pure playmaking
-  var astRatio=(totalAst+totalTov)>0?totalAst/(totalAst+totalTov):0.5;
-  // 3PT reliance: fg3a/fga
-  var thr_reliance=totalFga>0?totalFg3a/totalFga:0;
-  // Rebounding style: reb per36 (bigs vs guards)
-  var rebRate=per36reb;
-  // Usage proxy: pts share relative to minutes
-  var usage=mpg>0?(p.pts||0)/mpg:0;
-  return [
-    per36pts,        // 0: scoring volume (per36)
-    per36ast,        // 1: playmaking (per36)
-    per36reb,        // 2: rebounding (per36)
-    per36def,        // 3: defense stl+blk (per36)
-    p.ts||0,         // 4: efficiency (TS%)
-    usage,           // 5: usage/ball dominance
-    astRatio,        // 6: playmaking style
-    thr_reliance,    // 7: 3PT reliance (shooting style)
-    _posNum(p),      // 8: position (1-5)
-    p.fg||0          // 9: FG% (inside vs outside scorer)
-  ];
+  return gpT>0?totalMin/gpT:0;
+}
+
+// Build 6 composite axes for a player:
+// [Scoring, Playmaking, InsideGame, PerimeterD, RimProtection, Efficiency]
+function _compositeAxes(p){
+  var mpg=_mpgFromSeasons(p);
+  // Per-36 with 20-min floor to prevent inflation for bench players
+  var scale=36/Math.max(mpg,20);
+  var p36pts=(p.pts||0)*scale;
+  var p36ast=(p.ast||0)*scale;
+  var p36reb=(p.reb||0)*scale;
+  var p36stl=(p.stl||0)*scale;
+  var p36blk=(p.blk||0)*scale;
+  var usg=p.usg_pct, ast_pct=p.ast_pct, tov_pct=p.tov_pct;
+  var efg=p.efg_pct, oreb=p.oreb_pct, dreb=p.dreb_pct, stl_pct=p.stl_pct;
+  var ts=p.ts||0;
+  // Axis 0: Scoring = 0.4*USG% + 0.35*per36PTS + 0.25*eFG%_scaled
+  // eFG% scaled to ~0-50 range to match USG% scale
+  var scoring=(usg!=null?usg*0.4:p36pts*0.55) + p36pts*0.35 + (efg!=null?efg*50*0.25:ts*0.25);
+  // Axis 1: Playmaking = 0.55*AST% + 0.3*per36AST - 0.15*TOV%
+  var playmaking=(ast_pct!=null?ast_pct*0.55:p36ast*1.5) + p36ast*0.3 - (tov_pct!=null?tov_pct*0.15:0);
+  // Axis 2: Inside Game = 0.4*OREB% + 0.35*DREB% + 0.25*per36REB
+  var insideGame=(oreb!=null?oreb*0.4:0) + (dreb!=null?dreb*0.35:p36reb*0.5) + p36reb*0.25;
+  // Axis 3: Perimeter Defense = 0.6*STL% + 0.4*per36STL
+  var perimD=(stl_pct!=null?stl_pct*0.6:p36stl*0.8) + p36stl*0.4;
+  // Axis 4: Rim Protection = 0.5*per36BLK + 0.3*DREB% + 0.2*OREB%
+  var rimProt=p36blk*0.5 + (dreb!=null?dreb*0.3:p36reb*0.2) + (oreb!=null?oreb*0.2:0);
+  // Axis 5: Efficiency = 0.5*eFG%_scaled + 0.3*TS% - 0.2*TOV%
+  var efficiency=(efg!=null?efg*50*0.5:ts*0.5) + ts*0.3 - (tov_pct!=null?tov_pct*0.2:0);
+  return [scoring, playmaking, insideGame, perimD, rimProt, efficiency];
+}
+
+// Volume score: raw career PPG (for star-vs-role-player separation)
+function _volumeScore(p){return p.pts||0;}
+
+// Convert raw values to percentile ranks (0-100) within population
+function _percentileRank(allVals){
+  var sorted=allVals.slice().sort(function(a,b){return a-b;});
+  var n=sorted.length;
+  return allVals.map(function(v){
+    // Count values below v
+    var lo=0,hi=0;
+    for(var i=0;i<n;i++){if(sorted[i]<v)lo++;else if(sorted[i]===v)hi++;}
+    return Math.round(100*(lo+hi*0.5)/n);
+  });
+}
+
+// Cosine similarity between two vectors (centered around 50 for percentiles)
+function _cosineSim(a,b){
+  var dot=0,magA=0,magB=0;
+  for(var i=0;i<a.length;i++){
+    var ca=a[i]-50,cb=b[i]-50;
+    dot+=ca*cb;magA+=ca*ca;magB+=cb*cb;
+  }
+  magA=Math.sqrt(magA);magB=Math.sqrt(magB);
+  if(magA<0.001||magB<0.001)return 0;
+  return dot/(magA*magB);
+}
+
+// Archetype labels based on percentile peaks
+var _ARCHETYPES=[
+  // PG-specific: must be PG position
+  {name:'Floor General',      test:function(p){var pn=_posNum(p._src);return p[1]>=80&&p[0]<70&&pn===1;}},
+  {name:'Scoring Point Guard',test:function(p){var pn=_posNum(p._src);return p[1]>=65&&p[0]>=65&&pn===1;}},
+  // Scoring archetypes (guards/wings)
+  {name:'Shot Creator',       test:function(p){return p[0]>=75&&p[1]>=40&&_posGroup(_posNum(p._src))!='big';}},
+  {name:'Pure Scorer',        test:function(p){return p[0]>=75&&_posGroup(_posNum(p._src))!='big';}},
+  // Defense-first (guards/wings)
+  {name:'Two-Way Wing',       test:function(p){return p[3]>=65&&p[0]>=55&&_posGroup(_posNum(p._src))!='big';}},
+  {name:'3-and-D Wing',       test:function(p){return p[3]>=60&&p[5]>=55&&p[0]<65&&_posGroup(_posNum(p._src))!='big';}},
+  // Big-man archetypes
+  {name:'Paint Beast',        test:function(p){return p[2]>=75&&p[4]>=65&&_posGroup(_posNum(p._src))=='big';}},
+  {name:'Rim Protector',      test:function(p){return p[4]>=70&&p[0]<55&&_posGroup(_posNum(p._src))=='big';}},
+  {name:'Playmaking Big',     test:function(p){return p[2]>=55&&p[1]>=45&&_posGroup(_posNum(p._src))=='big';}},
+  {name:'Stretch Big',        test:function(p){return p[5]>=60&&_posGroup(_posNum(p._src))=='big'&&p[2]<70;}},
+  {name:'Traditional Big',    test:function(p){return p[2]>=60&&_posGroup(_posNum(p._src))=='big';}},
+  // Versatile / fallbacks
+  {name:'Versatile Wing',     test:function(p){return p[0]>=50&&p[1]>=40&&p[2]>=35&&_posGroup(_posNum(p._src))!='big';}},
+  {name:'Energy Guard',       test:function(p){return p[3]>=50&&_posGroup(_posNum(p._src))=='guard';}},
+  {name:'Role Player',        test:function(p){return true;}}
+];
+function _getArchetype(pctVec){
+  for(var i=0;i<_ARCHETYPES.length;i++){
+    if(_ARCHETYPES[i].test(pctVec))return _ARCHETYPES[i].name;
+  }
+  return 'Role Player';
+}
+
+// Cache for similarity engine (invalidated if DATA changes)
+var _simCache=null;var _simCacheKey=null;
+function _buildSimCache(){
+  var key=DATA&&DATA.players?DATA.players.length:0;
+  if(_simCache&&_simCacheKey===key)return _simCache;
+  var allP=DATA.players||[];
+  var n=allP.length;
+  // Compute raw composite axes for all players
+  var rawAxes=allP.map(function(p){return _compositeAxes(p);});
+  var volumes=allP.map(function(p){return _volumeScore(p);});
+  // Percentile-rank each axis across population
+  var numAxes=6;
+  var pctAxes=[];
+  for(var i=0;i<n;i++)pctAxes.push(new Array(numAxes));
+  for(var a=0;a<numAxes;a++){
+    var col=rawAxes.map(function(r){return r[a];});
+    var ranked=_percentileRank(col);
+    for(var i=0;i<n;i++)pctAxes[i][a]=ranked[i];
+  }
+  // Percentile-rank volumes too
+  var volRanked=_percentileRank(volumes);
+  // Attach source player ref to pctVec for archetype position checks
+  for(var i=0;i<n;i++){pctAxes[i]._src=allP[i];}
+  // Precompute archetypes
+  var archetypes=pctAxes.map(function(pv){return _getArchetype(pv);});
+  _simCache={players:allP,pct:pctAxes,vol:volumes,volPct:volRanked,arch:archetypes,n:n};
+  _simCacheKey=key;
+  return _simCache;
 }
 
 function renderCmpSimilar(pA,pB,aA,aB,colA,colB){
   var el=document.getElementById('cmp-similar');
   if(!el||!DATA||!DATA.players)return;
-  var allP=DATA.players;
-  // Build all profile vectors + compute z-score normalization
-  var dims=10;
-  var profiles=allP.map(function(p){return{p:p,v:_playstyleVec(p)};});
-  var means=new Array(dims).fill(0),stds=new Array(dims).fill(0);
-  var n=profiles.length;
-  for(var d=0;d<dims;d++){
-    var sum=0;for(var i=0;i<n;i++)sum+=profiles[i].v[d];
-    means[d]=sum/n;
-    var varSum=0;for(var i=0;i<n;i++)varSum+=Math.pow(profiles[i].v[d]-means[d],2);
-    stds[d]=Math.sqrt(varSum/n)||1;
-  }
-  // Weights: position and playstyle metrics weighted higher than raw volume
-  var weights=[1.0, 1.2, 1.0, 1.0, 0.8, 0.8, 1.3, 1.3, 1.5, 0.7];
-  function dist(va,vb){
-    var s=0;
-    for(var d=0;d<dims;d++){
-      var za=(va[d]-means[d])/stds[d], zb=(vb[d]-means[d])/stds[d];
-      s+=weights[d]*Math.pow(za-zb,2);
-    }
-    return Math.sqrt(s);
-  }
+  var cache=_buildSimCache();
+  var allP=cache.players,pct=cache.pct,vol=cache.vol,volPct=cache.volPct,arch=cache.arch,n=cache.n;
+
   function getSimilar(target,excludeNames){
-    var tv=_playstyleVec(target);
-    return profiles.filter(function(x){return excludeNames.indexOf(x.p.name)===-1;})
-      .map(function(x){return{p:x.p,dist:dist(tv,x.v)};})
-      .sort(function(a,b){return a.dist-b.dist;})
-      .slice(0,3).map(function(x){return x.p;});
+    // Find target index
+    var ti=-1;
+    for(var i=0;i<n;i++){if(allP[i].name===target.name){ti=i;break;}}
+    if(ti<0)return [];
+    var tPct=pct[ti], tVol=volPct[ti], tPos=_posNum(target);
+    var results=[];
+    for(var i=0;i<n;i++){
+      if(excludeNames.indexOf(allP[i].name)!==-1)continue;
+      // Shape similarity (70%): cosine on percentile vectors
+      var shapeSim=_cosineSim(tPct,pct[i]);
+      // Volume proximity (20%): 1 - |volPctDiff|/100
+      var volSim=1-Math.abs(tVol-volPct[i])/100;
+      // Position similarity (10%): soft positional affinity
+      var posSim=_posSim(tPos,_posNum(allP[i]));
+      // Combined score (higher=more similar)
+      var score=shapeSim*0.70 + volSim*0.20 + posSim*0.10;
+      results.push({p:allP[i],score:score,arch:arch[i]});
+    }
+    results.sort(function(a,b){return b.score-a.score;});
+    return results.slice(0,3);
   }
   var simA=getSimilar(pA,[pA.name,pB.name]);
   var simB=getSimilar(pB,[pA.name,pB.name]);
-  function pillsFor(players,labelName,col){
-    if(!players.length)return '';
-    var pills=players.map(function(q){
+
+  function pillsFor(results,labelName,col){
+    if(!results.length)return '';
+    var pills=results.map(function(r){
+      var q=r.p;
       var qc=getPlayerColors(q);
       var qCol=qc?qc[0]:'var(--t1)';
       var safeQ=esc(q.name);
-      return '<button onclick="setCmpPlayer(&quot;'+safeQ+'&quot;)" style="display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:10px;border:1px solid '+qCol+'44;background:'+qCol+'11;cursor:pointer;white-space:nowrap">'+
+      var matchPct=Math.round(r.score*100);
+      return '<button onclick="setCmpPlayer(&quot;'+safeQ+'&quot;)" style="display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:10px;border:1px solid '+qCol+'44;background:'+qCol+'11;cursor:pointer;white-space:nowrap">'+
         headshot(q.nbaId,q.ini,24,q.team||q.primaryTeam,q.jersey)+
         '<span style="font-size:12px;font-weight:700;color:var(--t0)">'+esc(q.name)+'</span>'+
-        '<span style="font-size:11px;color:var(--t2)">'+(q.pts||0)+' pts</span></button>';
+        '<span style="font-size:10px;padding:2px 6px;border-radius:6px;background:var(--gold,#D4A843)22;color:var(--gold,#D4A843);font-weight:600">'+esc(r.arch)+'</span>'+
+        '<span style="font-size:11px;color:var(--t2)">'+matchPct+'%</span></button>';
     }).join('');
     return '<div style="margin-bottom:8px"><span style="font-size:11px;color:'+col+';font-weight:700">'+esc(labelName.split(' ').pop())+' comps: </span>'+pills+'</div>';
   }
+  // Get archetype for the two compared players
+  var tiA=-1,tiB=-1;
+  for(var i=0;i<n;i++){if(allP[i].name===pA.name)tiA=i;if(allP[i].name===pB.name)tiB=i;}
+  var archA=tiA>=0?arch[tiA]:'',archB=tiB>=0?arch[tiB]:'';
+  var archHeader='';
+  if(archA||archB){
+    archHeader='<div style="display:flex;justify-content:space-between;margin-bottom:12px">';
+    if(archA)archHeader+='<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:'+colA+'22;color:'+colA+';font-weight:700">'+esc(archA)+'</span>';
+    archHeader+='<span style="flex:1"></span>';
+    if(archB)archHeader+='<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:'+colB+'22;color:'+colB+';font-weight:700">'+esc(archB)+'</span>';
+    archHeader+='</div>';
+  }
   var innerHtml=pillsFor(simA,pA.name,colA)+pillsFor(simB,pB.name,colB);
   if(!innerHtml){_setHtml(el,'');return;}
-  _setHtml(el,'<div class="card" style="padding:16px 20px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:12px">Similar Players</div><div style="display:flex;flex-direction:column;gap:8px">'+innerHtml+'</div></div>');
+  _setHtml(el,'<div class="card" style="padding:16px 20px"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);margin-bottom:12px">Similar Players</div>'+archHeader+'<div style="display:flex;flex-direction:column;gap:8px">'+innerHtml+'</div></div>');
 }
 
 // ── Radar Chart (6-axis: PTS, REB, AST, STL, BLK, TS%) ──

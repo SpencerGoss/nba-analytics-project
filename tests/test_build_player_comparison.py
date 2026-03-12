@@ -41,11 +41,17 @@ from scripts.build_player_comparison import (
     load_existing_seasons,
     compute_league_averages,
     enrich_player_seasons,
+    compute_advanced_stats,
     build_player_records,
     build_league_by_season,
     build_player_index,
     _round_or_none,
     _safe_div,
+    _build_team_season_lookup,
+    _build_abbr_to_name_map,
+    _league_avg_reb_by_season,
+    _infer_position,
+    TEAM_CSV_COLUMNS,
 )
 
 
@@ -61,29 +67,35 @@ def synthetic_players() -> pd.DataFrame:
         dict(player_id=1, player_name="Player A", season_str="2000-01", season=200001,
              gp=80, min=35.0, pts=25.0, reb=10.0, ast=5.0, stl=1.5, blk=1.0,
              fgm=9.0, fga=20.0, fg_pct=0.450, fg3m=1.0, fg3a=3.0, fg3_pct=0.333,
-             ftm=6.0, fta=7.0, ft_pct=0.857, team_abbreviation="LAL", age=22),
+             ftm=6.0, fta=7.0, ft_pct=0.857, oreb=2.0, dreb=8.0, tov=3.0,
+             team_abbreviation="LAL", age=22),
         dict(player_id=1, player_name="Player A", season_str="2001-02", season=200102,
              gp=82, min=36.0, pts=27.0, reb=9.0, ast=6.0, stl=1.2, blk=0.8,
              fgm=10.0, fga=22.0, fg_pct=0.455, fg3m=1.0, fg3a=3.0, fg3_pct=0.333,
-             ftm=5.0, fta=6.0, ft_pct=0.833, team_abbreviation="LAL", age=23),
+             ftm=5.0, fta=6.0, ft_pct=0.833, oreb=1.5, dreb=7.5, tov=3.5,
+             team_abbreviation="LAL", age=23),
         dict(player_id=1, player_name="Player A", season_str="2002-03", season=200203,
              gp=75, min=34.0, pts=26.0, reb=9.5, ast=5.5, stl=1.3, blk=0.9,
              fgm=9.5, fga=21.0, fg_pct=0.452, fg3m=1.0, fg3a=3.0, fg3_pct=0.333,
-             ftm=6.0, fta=7.0, ft_pct=0.857, team_abbreviation="LAL", age=24),
+             ftm=6.0, fta=7.0, ft_pct=0.857, oreb=1.8, dreb=7.7, tov=3.2,
+             team_abbreviation="LAL", age=24),
         # Player B — 2 seasons (below min_seasons=3, above min_games=400)
         dict(player_id=2, player_name="Player B", season_str="2000-01", season=200001,
              gp=78, min=30.0, pts=18.0, reb=6.0, ast=3.0, stl=0.9, blk=0.5,
              fgm=7.0, fga=16.0, fg_pct=0.438, fg3m=2.0, fg3a=5.0, fg3_pct=0.400,
-             ftm=2.0, fta=3.0, ft_pct=0.667, team_abbreviation="BOS", age=25),
+             ftm=2.0, fta=3.0, ft_pct=0.667, oreb=1.0, dreb=5.0, tov=2.0,
+             team_abbreviation="BOS", age=25),
         dict(player_id=2, player_name="Player B", season_str="2001-02", season=200102,
              gp=76, min=28.0, pts=16.0, reb=5.5, ast=3.5, stl=1.0, blk=0.4,
              fgm=6.0, fga=15.0, fg_pct=0.400, fg3m=1.0, fg3a=4.0, fg3_pct=0.250,
-             ftm=3.0, fta=4.0, ft_pct=0.750, team_abbreviation="BOS", age=26),
+             ftm=3.0, fta=4.0, ft_pct=0.750, oreb=0.8, dreb=4.7, tov=2.5,
+             team_abbreviation="BOS", age=26),
         # Player C — 1 season, 600 games (should pass via min_career_games)
         dict(player_id=3, player_name="Player C", season_str="2000-01", season=200001,
              gp=600, min=20.0, pts=10.0, reb=4.0, ast=2.0, stl=0.5, blk=0.2,
              fgm=4.0, fga=9.0, fg_pct=0.444, fg3m=0.5, fg3a=2.0, fg3_pct=0.250,
-             ftm=1.5, fta=2.0, ft_pct=0.750, team_abbreviation="CHI", age=30),
+             ftm=1.5, fta=2.0, ft_pct=0.750, oreb=0.5, dreb=3.5, tov=1.5,
+             team_abbreviation="CHI", age=30),
     ]
     return pd.DataFrame(rows)
 
@@ -367,3 +379,232 @@ def test_legend_best_season_is_string():
         assert isinstance(leg.get("best_season", ""), str), (
             f"{leg['player_name']} best_season is {type(leg['best_season'])}, expected str"
         )
+
+
+# ---------------------------------------------------------------------------
+# 12. Advanced stats helpers
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def synthetic_teams() -> pd.DataFrame:
+    """Team data matching synthetic_players' teams and seasons."""
+    # One row per team per season, per-game averages (no header in real file)
+    rows = []
+    for season_str, season in [("2000-01", 200001), ("2001-02", 200102), ("2002-03", 200203)]:
+        for team_name in ["Los Angeles Lakers", "Boston Celtics", "Chicago Bulls"]:
+            rows.append({
+                "team_id": 0, "team_name": team_name,
+                "gp": 82, "w": 50, "l": 32, "w_pct": 0.610,
+                "min": 48.0,
+                "fgm": 38.0, "fga": 84.0, "fg_pct": 0.452,
+                "fg3m": 8.0, "fg3a": 22.0, "fg3_pct": 0.364,
+                "ftm": 18.0, "fta": 24.0, "ft_pct": 0.750,
+                "oreb": 11.0, "dreb": 30.0, "reb": 41.0,
+                "ast": 24.0, "tov": 14.0, "stl": 8.0, "blk": 5.0,
+                "blka": 4.0, "pf": 20.0, "pfd": 20.0,
+                "pts": 102.0, "plus_minus": 3.0,
+                "season_str": season_str, "season": season,
+            })
+    df = pd.DataFrame(rows)
+    # Add rank columns (fill with 1)
+    for col in TEAM_CSV_COLUMNS:
+        if col.endswith("_rank") and col not in df.columns:
+            df[col] = 1
+    # Reorder to match TEAM_CSV_COLUMNS
+    df = df.reindex(columns=TEAM_CSV_COLUMNS, fill_value=0)
+    return df
+
+
+def test_build_team_season_lookup(synthetic_teams):
+    lookup = _build_team_season_lookup(synthetic_teams)
+    assert ("Los Angeles Lakers", "2000-01") in lookup
+    tm = lookup[("Los Angeles Lakers", "2000-01")]
+    assert tm["fga"] == 84.0
+    assert tm["min"] == 48.0
+
+
+def test_build_abbr_to_name_map(synthetic_teams):
+    mapping = _build_abbr_to_name_map(synthetic_teams)
+    assert ("LAL", "2000-01") in mapping
+    assert mapping[("LAL", "2000-01")] == "Los Angeles Lakers"
+    assert ("BOS", "2001-02") in mapping
+
+
+def test_league_avg_reb_by_season(synthetic_teams):
+    lg = _league_avg_reb_by_season(synthetic_teams)
+    assert "2000-01" in lg
+    assert abs(lg["2000-01"]["oreb"] - 11.0) < 0.1
+    assert abs(lg["2000-01"]["dreb"] - 30.0) < 0.1
+
+
+# ---------------------------------------------------------------------------
+# 13. compute_advanced_stats
+# ---------------------------------------------------------------------------
+
+def test_compute_advanced_stats_adds_columns(synthetic_players, synthetic_teams):
+    result = compute_advanced_stats(synthetic_players.copy(), synthetic_teams)
+    for col in ("usg_pct", "ast_pct", "tov_pct", "efg_pct", "oreb_pct", "dreb_pct", "stl_pct"):
+        assert col in result.columns, f"Missing column: {col}"
+
+
+def test_compute_advanced_stats_usg_range(synthetic_players, synthetic_teams):
+    """USG% should be in reasonable range (5-45%) for non-zero players."""
+    result = compute_advanced_stats(synthetic_players.copy(), synthetic_teams)
+    valid = result["usg_pct"].dropna()
+    assert len(valid) > 0
+    assert (valid >= 5).all(), f"USG% too low: {valid.min()}"
+    assert (valid <= 45).all(), f"USG% too high: {valid.max()}"
+
+
+def test_compute_advanced_stats_efg_range(synthetic_players, synthetic_teams):
+    """eFG% should be between 0 and 1."""
+    result = compute_advanced_stats(synthetic_players.copy(), synthetic_teams)
+    valid = result["efg_pct"].dropna()
+    assert len(valid) > 0
+    assert (valid >= 0).all()
+    assert (valid <= 1).all()
+
+
+def test_compute_advanced_stats_tov_range(synthetic_players, synthetic_teams):
+    """TOV% should be in reasonable range (0-30%)."""
+    result = compute_advanced_stats(synthetic_players.copy(), synthetic_teams)
+    valid = result["tov_pct"].dropna()
+    assert len(valid) > 0
+    assert (valid >= 0).all()
+    assert (valid <= 40).all()
+
+
+def test_compute_advanced_stats_no_teams_returns_nan(synthetic_players):
+    """When teams=None, all advanced stat columns should be NaN."""
+    result = compute_advanced_stats(synthetic_players.copy(), None)
+    for col in ("usg_pct", "ast_pct", "tov_pct", "oreb_pct", "dreb_pct", "stl_pct"):
+        assert result[col].isna().all(), f"{col} should be all NaN when no teams"
+
+
+def test_compute_advanced_stats_efg_formula(synthetic_players, synthetic_teams):
+    """Verify eFG% = (FGM + 0.5*FG3M) / FGA for Player A season 1."""
+    result = compute_advanced_stats(synthetic_players.copy(), synthetic_teams)
+    row = result[(result["player_id"] == 1) & (result["season_str"] == "2000-01")].iloc[0]
+    expected = (9.0 + 0.5 * 1.0) / 20.0  # 0.475
+    assert abs(row["efg_pct"] - expected) < 0.001
+
+
+def test_compute_advanced_stats_tov_formula(synthetic_players, synthetic_teams):
+    """Verify TOV% = 100 * TOV / (FGA + 0.44*FTA + TOV)."""
+    df = synthetic_players.copy()
+    df["tov"] = 3.0  # Add TOV to all rows
+    result = compute_advanced_stats(df, synthetic_teams)
+    # Player A 2000-01: fga=20, fta=7, tov=3
+    row = result[(result["player_id"] == 1) & (result["season_str"] == "2000-01")].iloc[0]
+    expected = 100 * 3.0 / (20.0 + 0.44 * 7.0 + 3.0)  # ~11.6%
+    assert abs(row["tov_pct"] - expected) < 0.5
+
+
+# ---------------------------------------------------------------------------
+# 14. Season row includes advanced stats
+# ---------------------------------------------------------------------------
+
+def test_season_row_includes_advanced_stats(synthetic_players, league_averages, synthetic_teams):
+    hist_avgs = {"pts": 14.5, "reb": 7.0, "ast": 3.5, "stl": 0.9, "blk": 0.4, "pace": 95.0}
+    enriched = enrich_player_seasons(synthetic_players, league_averages, hist_avgs)
+    enriched = compute_advanced_stats(enriched, synthetic_teams)
+    records = build_player_records(enriched, min_seasons=1, min_career_games=0)
+    player_a = next(r for r in records if r["player_name"] == "Player A")
+    season_row = player_a["seasons"][0]
+    for key in ("usg_pct", "ast_pct", "tov_pct", "efg_pct", "oreb_pct", "dreb_pct", "stl_pct"):
+        assert key in season_row, f"Missing key in season row: {key}"
+
+
+def test_career_avgs_include_advanced_stats(synthetic_players, league_averages, synthetic_teams):
+    hist_avgs = {"pts": 14.5, "reb": 7.0, "ast": 3.5, "stl": 0.9, "blk": 0.4, "pace": 95.0}
+    enriched = enrich_player_seasons(synthetic_players, league_averages, hist_avgs)
+    enriched = compute_advanced_stats(enriched, synthetic_teams)
+    records = build_player_records(enriched, min_seasons=1, min_career_games=0)
+    player_a = next(r for r in records if r["player_name"] == "Player A")
+    for key in ("usg_pct", "ast_pct", "tov_pct", "efg_pct", "oreb_pct", "dreb_pct", "stl_pct"):
+        assert key in player_a["career_avgs"], f"Missing key in career_avgs: {key}"
+
+
+# ---------------------------------------------------------------------------
+# 15. Position inference (_infer_position)
+# ---------------------------------------------------------------------------
+
+def test_infer_position_center_advanced():
+    """High OREB%+DREB% and blocks -> C."""
+    ca = {"ast_pct": 9.0, "oreb_pct": 11.0, "dreb_pct": 24.0, "blk": 1.2, "ast": 1.5, "reb": 8.0}
+    assert _infer_position(ca) == "C"
+
+
+def test_infer_position_pf_advanced():
+    """High DREB%, moderate OREB%, low AST% -> PF."""
+    ca = {"ast_pct": 8.0, "oreb_pct": 7.5, "dreb_pct": 20.0, "blk": 0.6, "ast": 1.5, "reb": 6.5}
+    assert _infer_position(ca) == "PF"
+
+
+def test_infer_position_pg_advanced():
+    """High AST%, low rebound rates -> PG."""
+    ca = {"ast_pct": 25.0, "oreb_pct": 2.0, "dreb_pct": 10.0, "blk": 0.2, "ast": 5.0, "reb": 3.0}
+    assert _infer_position(ca) == "PG"
+
+
+def test_infer_position_sg_advanced():
+    """Moderate AST%, low rebounds -> SG."""
+    ca = {"ast_pct": 13.0, "oreb_pct": 2.5, "dreb_pct": 11.0, "blk": 0.3, "ast": 2.0, "reb": 3.0}
+    assert _infer_position(ca) == "SG"
+
+
+def test_infer_position_sf_advanced():
+    """Moderate DREB%, moderate OREB%, low AST% -> SF."""
+    ca = {"ast_pct": 10.0, "oreb_pct": 4.5, "dreb_pct": 16.0, "blk": 0.5, "ast": 1.5, "reb": 4.5}
+    assert _infer_position(ca) == "SF"
+
+
+def test_infer_position_generic_pos_constrains():
+    """Generic position 'G' constrains to PG or SG even if stats look like SF."""
+    ca = {"ast_pct": 10.0, "oreb_pct": 4.0, "dreb_pct": 14.0, "blk": 0.4, "ast": 2.0, "reb": 4.0}
+    # Without constraint this might be SF
+    result_constrained = _infer_position(ca, "G")
+    assert result_constrained in ("PG", "SG")
+
+
+def test_infer_position_basic_stats_center():
+    """Pre-tracking era: high reb + blocks -> C."""
+    ca = {"ast_pct": 0, "oreb_pct": 0, "dreb_pct": 0, "blk": 1.5, "ast": 2.0, "reb": 10.0}
+    assert _infer_position(ca) == "C"
+
+
+def test_infer_position_basic_stats_pg():
+    """Pre-tracking era: high ast -> PG."""
+    ca = {"ast_pct": 0, "oreb_pct": 0, "dreb_pct": 0, "blk": 0.1, "ast": 7.0, "reb": 3.0}
+    assert _infer_position(ca) == "PG"
+
+
+def test_infer_position_basic_stats_sf():
+    """Pre-tracking era: moderate rebounds -> SF."""
+    ca = {"ast_pct": 0, "oreb_pct": 0, "dreb_pct": 0, "blk": 0.3, "ast": 2.0, "reb": 5.0}
+    assert _infer_position(ca) == "SF"
+
+
+def test_infer_position_not_always_sg():
+    """The old heuristic defaulted 73.5% to SG; the new one should produce variety."""
+    positions = set()
+    test_profiles = [
+        {"ast_pct": 25.0, "oreb_pct": 2.0, "dreb_pct": 10.0, "blk": 0.2, "ast": 5.0, "reb": 3.0},
+        {"ast_pct": 12.0, "oreb_pct": 3.0, "dreb_pct": 12.0, "blk": 0.3, "ast": 2.0, "reb": 3.5},
+        {"ast_pct": 9.0, "oreb_pct": 5.0, "dreb_pct": 16.0, "blk": 0.5, "ast": 1.5, "reb": 5.0},
+        {"ast_pct": 8.0, "oreb_pct": 8.0, "dreb_pct": 21.0, "blk": 0.8, "ast": 1.0, "reb": 7.0},
+        {"ast_pct": 8.0, "oreb_pct": 11.0, "dreb_pct": 24.0, "blk": 1.2, "ast": 1.0, "reb": 9.0},
+    ]
+    for p in test_profiles:
+        positions.add(_infer_position(p))
+    assert len(positions) == 5, f"Expected all 5 positions, got {positions}"
+
+
+def test_infer_position_pg_sg_tiebreaker():
+    """PG/SG tiebreaker uses ast/reb ratio (PG >= 0.95)."""
+    # High ast/reb ratio -> PG
+    ca_pg = {"ast_pct": 18.0, "oreb_pct": 2.5, "dreb_pct": 11.0, "blk": 0.3, "ast": 4.0, "reb": 3.0}
+    # Low ast/reb ratio -> SG
+    ca_sg = {"ast_pct": 18.0, "oreb_pct": 2.5, "dreb_pct": 11.0, "blk": 0.3, "ast": 2.0, "reb": 4.0}
+    assert _infer_position(ca_pg) == "PG"
+    assert _infer_position(ca_sg) == "SG"
