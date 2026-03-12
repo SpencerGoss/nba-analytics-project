@@ -380,6 +380,7 @@ def _load_positions() -> dict[int, dict]:
             "position": str(row.get("position") or ""),
             "positions": str(row.get("positions") or ""),
             "position_primary": str(row.get("position_primary") or ""),
+            "jersey_number": str(int(row["jersey_number"])) if pd.notna(row.get("jersey_number")) else "",
         }
     return result
 
@@ -450,6 +451,7 @@ def build_player_detail() -> dict:
             "position":       pos_info.get("position", ""),
             "positions":      pos_info.get("positions", ""),
             "position_primary": pos_info.get("position_primary", ""),
+            "jersey_number":  pos_info.get("jersey_number", ""),
             "season_stats":   season_stats,
             "shooting_splits": scoring_by_pid.get(pid),
             "clutch_stats":   clutch_by_pid.get(pid),

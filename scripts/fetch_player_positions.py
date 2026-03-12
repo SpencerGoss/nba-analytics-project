@@ -135,6 +135,7 @@ def fetch_all_positions() -> pd.DataFrame:
                 apg = apg_lookup.get(pid, 0.0)
                 positions = _map_positions(nba_pos, height_in, apg)
                 primary = positions.split(",")[0].strip() if positions else ""
+                jersey = str(row.get("NUM") or "")
 
                 rows.append({
                     "player_id": pid,
@@ -144,6 +145,7 @@ def fetch_all_positions() -> pd.DataFrame:
                     "apg": apg,
                     "positions": positions,
                     "position_primary": primary,
+                    "jersey_number": jersey,
                     "team": abbr,
                 })
         except Exception as e:

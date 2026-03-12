@@ -1,5 +1,5 @@
-const CACHE = 'nba-analytics-v3';
-const STATIC_ASSETS = ['./', './index.html', './about.html', './manifest.json'];
+const CACHE = 'nba-analytics-v4';
+const STATIC_ASSETS = ['./', './about.html', './manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC_ASSETS)));
@@ -16,10 +16,11 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  const isJSON = url.pathname.endsWith('.json') && url.pathname.includes('/data/');
+  const isData = url.pathname.endsWith('.json') && url.pathname.includes('/data/');
+  const isHTML = url.pathname.endsWith('.html') || url.pathname.endsWith('/');
 
-  if (isJSON) {
-    // Network-first for JSON data files: fresh data when online, cache fallback offline
+  if (isData || isHTML) {
+    // Network-first for JSON data AND HTML — always serve fresh content
     e.respondWith(
       fetch(e.request)
         .then(resp => {
@@ -30,7 +31,7 @@ self.addEventListener('fetch', e => {
         .catch(() => caches.match(e.request))
     );
   } else {
-    // Cache-first for static assets (HTML, CSS, JS, fonts)
+    // Cache-first for static assets (fonts, images)
     e.respondWith(
       caches.match(e.request).then(cached => {
         if (cached) return cached;
