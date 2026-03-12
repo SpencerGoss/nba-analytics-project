@@ -2720,7 +2720,7 @@ function mapJsonPlayer(p){
     position_primary: p.position_primary||'',
     jersey: p.jersey_number||'',
     ini:      playerIni(p.player_name),
-    nbaId:    p.player_id>0?p.player_id:null,
+    nbaId:    p.nba_id||( p.player_id>0?p.player_id:null),
     debutYear:debutYear,
     primaryTeam:team||'N/A',
     allTeams: allTeams,

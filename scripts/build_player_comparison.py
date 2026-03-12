@@ -491,7 +491,7 @@ def build_player_index(player_records: list[dict]) -> list[dict]:
 
 _LEGENDS: list[dict] = [
     {
-        "player_id": -1, "player_name": "Michael Jordan",
+        "player_id": -1, "nba_id": 893, "player_name": "Michael Jordan",
         "positions": "SG", "position_primary": "SG", "jersey_number": "23",
         "seasons_span": "1984-2003", "career_gp": 1072,
         "career_avgs": {"pts": 30.1, "reb": 6.2, "ast": 5.3, "stl": 2.35, "blk": 0.83,
@@ -512,7 +512,7 @@ _LEGENDS: list[dict] = [
         "_legend": True, "_note": "Career stats from Basketball Reference. NBA API only covers 1996-2003.",
     },
     {
-        "player_id": -2, "player_name": "Larry Bird",
+        "player_id": -2, "nba_id": 1449, "player_name": "Larry Bird",
         "positions": "SF, PF", "position_primary": "SF", "jersey_number": "33",
         "seasons_span": "1979-1992", "career_gp": 897,
         "career_avgs": {"pts": 24.3, "reb": 10.0, "ast": 6.3, "stl": 1.74, "blk": 0.84,
@@ -523,7 +523,7 @@ _LEGENDS: list[dict] = [
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
-        "player_id": -3, "player_name": "Magic Johnson",
+        "player_id": -3, "nba_id": 77142, "player_name": "Magic Johnson",
         "positions": "PG", "position_primary": "PG", "jersey_number": "32",
         "seasons_span": "1979-1996", "career_gp": 906,
         "career_avgs": {"pts": 19.5, "reb": 7.2, "ast": 11.2, "stl": 1.90, "blk": 0.37,
@@ -534,7 +534,7 @@ _LEGENDS: list[dict] = [
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
-        "player_id": -4, "player_name": "Kareem Abdul-Jabbar",
+        "player_id": -4, "nba_id": 76003, "player_name": "Kareem Abdul-Jabbar",
         "positions": "C", "position_primary": "C", "jersey_number": "33",
         "seasons_span": "1969-1989", "career_gp": 1560,
         "career_avgs": {"pts": 24.6, "reb": 11.2, "ast": 3.6, "stl": 0.94, "blk": 2.60,
@@ -545,7 +545,7 @@ _LEGENDS: list[dict] = [
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
-        "player_id": -5, "player_name": "Kobe Bryant",
+        "player_id": -5, "nba_id": 977, "player_name": "Kobe Bryant",
         "positions": "SG", "position_primary": "SG", "jersey_number": "24",
         "seasons_span": "1996-2016", "career_gp": 1346,
         "career_avgs": {"pts": 25.0, "reb": 5.2, "ast": 4.7, "stl": 1.38, "blk": 0.52,
@@ -556,7 +556,7 @@ _LEGENDS: list[dict] = [
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
-        "player_id": -6, "player_name": "Wilt Chamberlain",
+        "player_id": -6, "nba_id": 76375, "player_name": "Wilt Chamberlain",
         "positions": "C", "position_primary": "C", "jersey_number": "13",
         "seasons_span": "1959-1973", "career_gp": 1045,
         "career_avgs": {"pts": 30.1, "reb": 22.9, "ast": 4.4, "stl": None, "blk": None,
@@ -569,9 +569,30 @@ _LEGENDS: list[dict] = [
 ]
 
 
-def _inject_legends(player_records: list[dict]) -> list[dict]:
-    """Replace partial API records with curated legend stats; append if not present."""
-    existing_names = {r["player_name"] for r in player_records}
+def _inject_legends(player_records: list[dict],
+                    enriched: pd.DataFrame | None = None) -> list[dict]:
+    """Replace partial API records with curated legend stats; append if not present.
+
+    If *enriched* is provided and a legend has an empty ``seasons`` list, populate
+    it from the enriched DataFrame (which already has normalized/per36/pace stats)
+    so the output matches the format produced by ``build_player_records()``.
+    """
+    # Build a lookup: legend player_name -> enriched rows from CSV
+    _legend_seasons_from_csv: dict[str, list[dict]] = {}
+    if enriched is not None and not enriched.empty:
+        for leg in _LEGENDS:
+            if leg["seasons"]:
+                # Legend already has hardcoded season data — skip CSV lookup
+                continue
+            name = leg["player_name"]
+            mask = enriched["player_name"] == name
+            grp = enriched.loc[mask].sort_values("season")
+            if grp.empty:
+                continue
+            _legend_seasons_from_csv[name] = [
+                _season_row(row) for _, row in grp.iterrows()
+            ]
+
     result = []
     replaced = set()
     for rec in player_records:
@@ -583,7 +604,11 @@ def _inject_legends(player_records: list[dict]) -> list[dict]:
             result.append(rec)
     # Add all legends (replaced or new)
     for leg in _LEGENDS:
-        result.append(dict(leg))
+        entry = dict(leg)
+        # Fill empty seasons from CSV-enriched data when available
+        if not entry["seasons"] and entry["player_name"] in _legend_seasons_from_csv:
+            entry["seasons"] = _legend_seasons_from_csv[entry["player_name"]]
+        result.append(entry)
     return result
 
 
@@ -765,7 +790,7 @@ def run(min_seasons: int = DEFAULT_MIN_SEASONS,
     # Inject curated legend overrides for pre-1996 players missing from NBA API.
     # Stats sourced from Basketball Reference career regular-season averages.
     # Must happen BEFORE building the player index so legends appear in search.
-    player_records = _inject_legends(player_records)
+    player_records = _inject_legends(player_records, enriched=enriched)
     print(f"  {len(player_records):,} players after legend injection")
 
     player_index = build_player_index(player_records)
