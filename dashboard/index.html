@@ -75,11 +75,11 @@
 .theme-toggle svg{width:14px;height:14px;pointer-events:none}
 
 /* ── LIGHT MODE ── */
-body.light{--bg:#F0F4FF;--bg-mid:#E4EAF8;--bg2:#E8EDF8;--bg3:#DDE4F5;--card:rgba(0,0,0,.04);--card-h:rgba(0,0,0,.07);--card-border:rgba(0,0,0,.06);--card-border-h:rgba(0,0,0,.10);--b0:rgba(0,0,0,.08);--b1:rgba(0,0,0,.14);--t0:#0D1117;--t1:#3D4C6B;--t2:#8892AA;--green:#00A87A;--green-d:rgba(0,168,122,0.12);--gold:#D4891E;--gold-d:rgba(212,137,30,0.10);--blue:#2C80E8;--blue-d:rgba(44,128,232,0.10);--red:#E04040;--red-d:rgba(224,64,64,0.10);--accent-glow:rgba(0,168,122,0.05);--aurora-1:rgba(0,168,122,0.04);--aurora-2:rgba(44,128,232,0.03);--aurora-3:rgba(167,139,250,0.02);--shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08);--shadow-h:0 1px 2px rgba(0,0,0,.14),0 16px 40px rgba(0,0,0,.12);--glow-g:none;--glow-b:none}
-body.light .nav{background-image:linear-gradient(rgba(240,244,255,.94),rgba(240,244,255,.94)),linear-gradient(90deg,transparent,rgba(0,168,122,.2),rgba(44,128,232,.15),transparent)}
-body.light .bgl::before{opacity:.10}
-body.light .blob{opacity:.15}
-body.light .bgl::after{opacity:.015}
+body.light{--bg:#E8ECF4;--bg-mid:#DEE3EF;--bg2:#E2E7F0;--bg3:#D6DCEB;--card:rgba(255,255,255,.65);--card-h:rgba(255,255,255,.80);--card-border:rgba(0,0,0,.08);--card-border-h:rgba(0,0,0,.13);--b0:rgba(0,0,0,.08);--b1:rgba(0,0,0,.14);--t0:#1A1F2E;--t1:#3D4C6B;--t2:#6B7A99;--green:#00916A;--green-d:rgba(0,145,106,0.10);--gold:#C07818;--gold-d:rgba(192,120,24,0.10);--blue:#2870D0;--blue-d:rgba(40,112,208,0.10);--red:#D03838;--red-d:rgba(208,56,56,0.10);--accent-glow:rgba(0,145,106,0.06);--aurora-1:rgba(0,145,106,0.06);--aurora-2:rgba(40,112,208,0.05);--aurora-3:rgba(140,120,220,0.04);--shadow:0 1px 3px rgba(0,0,0,.10),0 6px 20px rgba(0,0,0,.06);--shadow-h:0 1px 3px rgba(0,0,0,.12),0 12px 32px rgba(0,0,0,.09);--glow-g:0 0 16px rgba(0,145,106,.08);--glow-b:0 0 16px rgba(40,112,208,.06)}
+body.light .nav{background-image:linear-gradient(rgba(232,236,244,.92),rgba(232,236,244,.92)),linear-gradient(90deg,transparent,rgba(0,145,106,.18),rgba(40,112,208,.12),transparent)}
+body.light .bgl::before{opacity:.35}
+body.light .blob{opacity:.25}
+body.light .bgl::after{opacity:.2}
 
 /* ── SORTABLE STANDINGS ── */
 .sort-th{cursor:pointer;transition:color 120ms;user-select:none;white-space:nowrap}
@@ -159,7 +159,7 @@ body.light .bgl::after{opacity:.015}
 .ticker-track{display:inline-flex;gap:28px;white-space:nowrap;animation:ticker-scroll 45s linear infinite}
 .ticker-track:hover{animation-play-state:paused}
 @keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.ticker-track{animation-duration:120s!important}
+.ticker-track{animation-duration:600s!important}
 .t-item{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--fm);color:var(--t1)}
 .t-item .t-sep{color:var(--t2);font-size:9px}
 .t-item .t-pick{color:var(--green);font-weight:700}
@@ -219,9 +219,20 @@ html{background:var(--bg);background-attachment:fixed}
 /* ── BACKGROUND ── */
 .bgl{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:var(--bg)}
 .bgl::before{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(0,200,150,.03),transparent 70%)}
-.bgl::after{display:none}
-.blob{display:none}
+  background:
+    radial-gradient(ellipse 90% 45% at 15% -5%,rgba(0,200,150,.14),transparent 60%),
+    radial-gradient(ellipse 75% 50% at 85% 5%,rgba(79,158,255,.11),transparent 55%),
+    radial-gradient(ellipse 65% 40% at 50% 55%,rgba(167,139,250,.09),transparent 50%),
+    radial-gradient(ellipse 100% 50% at 50% 100%,rgba(0,200,150,.07),transparent 50%)}
+.bgl::after{content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 55% 35% at 70% 35%,rgba(79,158,255,.08),transparent 60%),
+    radial-gradient(ellipse 45% 30% at 25% 65%,rgba(167,139,250,.07),transparent 55%);
+  opacity:.85}
+.blob{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none}
+.blob:nth-child(1){width:600px;height:350px;top:-5%;left:8%;background:rgba(0,200,150,.13)}
+.blob:nth-child(2){width:500px;height:300px;top:28%;right:3%;background:rgba(79,158,255,.11)}
+.blob:nth-child(3){width:450px;height:250px;bottom:8%;left:25%;background:rgba(167,139,250,.10)}
 
 /* ── CARD ENTRANCE ANIMATION ── */
 .card,.gc,.sc{animation:cardIn .4s cubic-bezier(.16,1,.3,1) both}
@@ -245,14 +256,14 @@ html{background:var(--bg);background-attachment:fixed}
 
 /* ── LOGO ── */
 .nav-logo{
-  display:flex;align-items:center;gap:8px;padding-right:20px;margin-right:4px;
+  display:flex;align-items:center;gap:2px;padding-right:20px;margin-right:4px;
   flex-shrink:0
 }
 .nav-logo-icon{
   width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center
 }
-.nav-logo-txt{font-size:14px;font-weight:800;letter-spacing:-.3px;color:var(--t0)}
-.nav-logo-txt span{color:var(--green)}
+.nav-logo-txt{font-size:14px;font-weight:400;letter-spacing:-.2px;color:var(--t1)}
+.nav-logo-txt b{font-weight:800;color:var(--t0)}
 
 /* ── NAV TABS ── */
 .nav-tabs{display:flex;align-items:center;gap:0;height:48px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -282,8 +293,7 @@ html{background:var(--bg);background-attachment:fixed}
   font-size:10px;font-weight:700;
   color:var(--green);letter-spacing:.06em;white-space:nowrap
 }
-.ldot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2.4s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.8)}}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--green)}
 
 /* ── ACCOUNT ── */
 .acct{position:relative;margin-left:3px}
@@ -1068,6 +1078,21 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   .tg-banner{flex-direction:column;gap:8px;padding:12px}
   .tg-banner-btn{width:100%}
 }
+/* ── 375px BREAKPOINT (small phones) ── */
+@media(max-width:375px){
+  .tw table{min-width:320px}
+  .tw table td,.tw table th{padding:6px 4px;font-size:10px}
+  .hide-xs{display:none!important}
+  .wrap{padding:56px 6px 80px!important}
+  .card{padding:10px;border-radius:10px}
+  .pt{font-size:17px}
+}
+/* ── SCROLL INDICATOR for table wrappers ── */
+.tw{position:relative}
+.tw::after{content:'';position:absolute;top:0;right:0;bottom:0;width:24px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(8,9,14,.6));opacity:1;transition:opacity .3s;z-index:2;border-radius:0 var(--r-card) var(--r-card) 0}
+.tw.scrolled-end::after{opacity:0}
+body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,244,.7))}
+
 /* Modal mobile sizing */
 @media(max-width:768px){
   #player-modal,#game-modal,#team-modal{width:min(96vw,580px)!important;max-height:90vh;border-radius:16px!important}
@@ -1086,42 +1111,31 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <button class="tg-banner-btn" onclick="tgAccept()">Got it</button>
 </div>
 
-<div class="bgl" aria-hidden="true"></div>
+<div class="bgl" aria-hidden="true"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
 
 <!-- ═══ NAV ═══ -->
 <nav class="nav" aria-label="Main navigation">
   <div class="nav-logo">
     <div class="nav-logo-icon">
-      <svg width="26" height="26" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="lg1" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#00C896"/>
-            <stop offset="100%" stop-color="#F5A623"/>
-          </linearGradient>
-          <linearGradient id="lg2" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#00C896" stop-opacity="0.3"/>
-            <stop offset="100%" stop-color="#F5A623" stop-opacity="0.3"/>
-          </linearGradient>
-        </defs>
-        <path d="M15 2L27 8.5V21.5L15 28L3 21.5V8.5L15 2Z" stroke="url(#lg1)" stroke-width="1.5" fill="url(#lg2)"/>
-        <path d="M8 15 A7 7 0 0 1 22 15" stroke="url(#lg1)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <circle cx="15" cy="15" r="1.8" fill="url(#lg1)"/>
-        <rect x="10" y="17" width="2" height="4" rx=".8" fill="url(#lg1)" opacity=".9"/>
-        <rect x="14" y="15.5" width="2" height="5.5" rx=".8" fill="url(#lg1)" opacity=".9"/>
-        <rect x="18" y="18.5" width="2" height="2.5" rx=".8" fill="url(#lg1)" opacity=".9"/>
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="lg1" x1="2" y1="30" x2="30" y2="2" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#00C896"/><stop offset="100%" stop-color="#4F9EFF"/></linearGradient></defs>
+        <!-- Bold B lettermark -->
+        <path d="M8 4H18C22.4 4 25 6.5 25 10C25 12.5 23.5 14 21.5 14.8C24 15.6 26 17.5 26 20.5C26 24.5 23 27 18.5 27H8V4Z" fill="url(#lg1)"/>
+        <!-- B cutouts (negative space) -->
+        <rect x="13" y="8.5" width="5" height="4.5" rx="2.25" fill="var(--bg)"/>
+        <rect x="13" y="17" width="6" height="5.5" rx="2.75" fill="var(--bg)"/>
       </svg>
     </div>
-    <span class="nav-logo-txt">Baseline<span>Analytics</span></span>
+    <span class="nav-logo-txt"><b>aseline</b>Analytics</span>
   </div>
 
   <div class="nav-tabs" role="tablist" aria-label="Dashboard sections" id="main-tablist">
-  <button class="nb active" onclick="showFreeTab('today')" id="nb-today" role="tab" aria-selected="true" aria-controls="page-today">Today</button>
+  <button class="nb active" onclick="showFreeTab('today')" id="nb-today" role="tab" aria-selected="true" aria-controls="page-today">Home</button>
   <button class="nb" onclick="showFreeTab('players')" id="nb-players" role="tab" aria-selected="false" aria-controls="page-players">Players</button>
   <button class="nb" onclick="showFreeTab('teams')" id="nb-teams" role="tab" aria-selected="false" aria-controls="page-teams">Teams</button>
   <button class="nb" onclick="showFreeTab('h2h')" id="nb-h2h" role="tab" aria-selected="false" aria-controls="page-h2h">H2H</button>
   <button class="nb" onclick="showFreeTab('standings')" id="nb-standings" role="tab" aria-selected="false" aria-controls="page-standings">Standings</button>
   <button class="nb" onclick="showFreeTab('injuries')" id="nb-injuries" role="tab" aria-selected="false" aria-controls="page-injuries">Injuries</button>
-  <button class="nb" onclick="showFreeTab('rankings')" id="nb-rankings" role="tab" aria-selected="false" aria-controls="page-rankings">Rankings</button>
   <button class="nb" onclick="showFreeTab('history')" id="nb-history" role="tab" aria-selected="false" aria-controls="page-history">History</button>
   <div class="nav-divider"></div>
   <button class="nb-betting" onclick="toggleBettingDropdown()" id="nb-betting" aria-expanded="false">
@@ -1181,17 +1195,76 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     </div>
   </section>
   <section class="featured-comparison">
-    <div class="fc-label">Featured Comparison <span class="fc-badge">NEW</span></div>
-    <div class="fc-card card">
-      <div class="fc-placeholder" id="fc-featured-cmp">
-        <div class="fc-placeholder-icon">&#128101;</div>
-        <div class="fc-placeholder-title">Player Comparison</div>
-        <div style="font-size:12px;color:var(--t2);font-weight:500">Compare any two players across any era</div>
-        <button onclick="showFreeTab('players')" style="margin-top:8px;padding:8px 20px;border-radius:var(--r-pill);border:1px solid var(--b1);background:transparent;color:var(--t0);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--f)">Open Comparison Tool</button>
+    <div class="fc-label">Featured Comparison</div>
+    <div class="fc-card card" style="padding:20px 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <img src="https://cdn.nba.com/headshots/nba/latest/260x190/2544.png" alt="LeBron" style="width:80px;height:80px;border-radius:50%;object-fit:cover;object-position:top;border:3px solid var(--gold);background:var(--bg3)">
+          <div>
+            <div style="font-size:17px;font-weight:800;color:var(--gold);letter-spacing:-.3px">LeBron James</div>
+            <div style="font-size:10px;color:var(--t2);font-weight:600;letter-spacing:.3px">22 SEASONS &middot; 4x CHAMP &middot; 4x MVP</div>
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:900;color:var(--t2);letter-spacing:2px;padding:6px 14px;border:1px solid var(--b0);border-radius:8px">VS</div>
+        <div style="display:flex;align-items:center;gap:14px;flex-direction:row-reverse">
+          <img src="https://cdn.nba.com/headshots/nba/latest/260x190/893.png" alt="Jordan" style="width:80px;height:80px;border-radius:50%;object-fit:cover;object-position:top;border:3px solid var(--red);background:var(--bg3)">
+          <div style="text-align:right">
+            <div style="font-size:17px;font-weight:800;color:var(--red);letter-spacing:-.3px">Michael Jordan</div>
+            <div style="font-size:10px;color:var(--t2);font-weight:600;letter-spacing:.3px">15 SEASONS &middot; 6x CHAMP &middot; 5x MVP</div>
+          </div>
+        </div>
+      </div>
+      <div id="fc-bars" style="display:flex;flex-direction:column;gap:10px"></div>
+      <!-- Accolade badges -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;justify-content:center">
+        <span style="font-size:9px;font-weight:700;padding:3px 9px;border-radius:100px;background:var(--gold-d);color:var(--gold)">All-Time Points Leader</span>
+        <span style="font-size:9px;font-weight:700;padding:3px 9px;border-radius:100px;background:var(--red-d);color:var(--red)">10x Scoring Champ</span>
+        <span style="font-size:9px;font-weight:700;padding:3px 9px;border-radius:100px;background:var(--gold-d);color:var(--gold)">20x All-Star</span>
+        <span style="font-size:9px;font-weight:700;padding:3px 9px;border-radius:100px;background:var(--red-d);color:var(--red)">6-0 in Finals</span>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <button onclick="showFreeTab('players');setTimeout(function(){switchTab('players','compare');initPickers();},200)" style="padding:7px 18px;border-radius:var(--r-pill);border:1px solid var(--b1);background:transparent;color:var(--t1);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--f)">Compare Any Two Players &rarr;</button>
       </div>
     </div>
-    <div id="featured-insight" style="display:none;font-size:12px;color:var(--t1);padding:8px 4px 2px;line-height:1.5"></div>
   </section>
+  <script>
+  (function(){
+    var stats=[
+      {label:'PPG',a:27.1,b:30.1,max:35},
+      {label:'RPG',a:7.5,b:6.2,max:12},
+      {label:'APG',a:7.4,b:5.3,max:12},
+      {label:'FG%',a:50.6,b:49.7,max:65},
+      {label:'Rings',a:4,b:6,max:8},
+      {label:'MVPs',a:4,b:5,max:7}
+    ];
+    var el=document.getElementById('fc-bars');
+    if(!el)return;
+    var h='';
+    stats.forEach(function(s){
+      var aPct=Math.round(s.a/s.max*100);
+      var bPct=Math.round(s.b/s.max*100);
+      var aWin=s.a>s.b,bWin=s.b>s.a,tie=s.a===s.b;
+      var aCol=aWin?'var(--gold)':'var(--t2)',bCol=bWin?'var(--red)':'var(--t2)';
+      var aOp=aWin?'1':'.3',bOp=bWin?'1':'.3';
+      h+='<div style="display:grid;grid-template-columns:1fr 56px 1fr;align-items:center;gap:6px;padding:6px 0">'
+        +'<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">'
+          +'<span style="font-family:var(--fm);font-size:14px;font-weight:'+(aWin?'800':'500')+';color:'+aCol+';min-width:36px;text-align:right">'+s.a+'</span>'
+          +'<div style="flex:1;max-width:160px;height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;direction:rtl">'
+            +'<div style="width:'+aPct+'%;height:100%;border-radius:4px;background:'+aCol+';opacity:'+aOp+';transition:width .6s ease"></div>'
+          +'</div>'
+        +'</div>'
+        +'<div style="text-align:center;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t1)">'+s.label+'</div>'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+          +'<div style="flex:1;max-width:160px;height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden">'
+            +'<div style="width:'+bPct+'%;height:100%;border-radius:4px;background:'+bCol+';opacity:'+bOp+';transition:width .6s ease"></div>'
+          +'</div>'
+          +'<span style="font-family:var(--fm);font-size:14px;font-weight:'+(bWin?'800':'500')+';color:'+bCol+';min-width:36px">'+s.b+'</span>'
+        +'</div>'
+      +'</div>';
+    });
+    el.outerHTML=h.replace(/^/,'<div id="fc-bars" style="display:flex;flex-direction:column;gap:10px">')+('</div>');
+  })();
+  </script>
   <div id="standings-mini" class="card" style="margin-bottom:16px;display:none">
     <div class="sh">
       <div class="st">Standings Snapshot</div>
@@ -1208,26 +1281,6 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     <div class="sc accent-green"><span class="sl">Hottest Team</span><span id="home-hot-team" class="sv g" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px">-</span><div class="schange up" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg><span id="home-hot-team-sub">Loading...</span></div></div>
     <div class="sc accent-red"><span class="sl">Coldest Team</span><span id="home-cold-team" class="sv" style="font-size:18px;letter-spacing:-.2px;line-height:1.35;margin-top:6px;color:var(--red)">-</span><div class="schange dn" style="margin-top:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg><span id="home-cold-team-sub">Loading...</span></div></div>
   </div>
-  <!-- BETTING SUMMARY STRIP (populated by renderTodayBettingSummary()) -->
-  <div class="today-bet-summary" id="today-bet-summary" style="display:none">
-    <div class="tbs-item">
-      <span class="tbs-val" id="tbs-picks-count">-</span>
-      <span class="tbs-lbl">Strong Picks</span>
-    </div>
-    <div class="tbs-item">
-      <span class="tbs-val" id="tbs-best-bet">-</span>
-      <span class="tbs-lbl">Best Value Bet</span>
-    </div>
-    <div class="tbs-item">
-      <span class="tbs-val" id="tbs-total-edge">-</span>
-      <span class="tbs-lbl">Total Edge</span>
-    </div>
-  </div>
-  <div id="steam-alert" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.25);margin-bottom:16px">
-    <span style="font-size:18px">&#9889;</span>
-    <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--gold)" id="steam-alert-title">Steam Moves Detected</div><div style="font-size:11px;color:var(--t1)" id="steam-alert-desc">Sharp money moving lines today</div></div>
-    <button onclick="showBettingTab('linemovement',null)" style="margin-left:auto;padding:5px 12px;border-radius:8px;border:1px solid rgba(245,166,35,0.3);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)">View -&gt;</button>
-  </div>
   <!-- INJURY IMPACT (populated by buildInjurySummary()) -->
   <div id="injury-summary-card" style="display:none;margin-bottom:16px" class="card">
     <div class="sh"><div class="st">&#127973; Injury Impact</div><div class="ss" id="inj-summary-sub">Key absences affecting tonight's games</div></div>
@@ -1238,47 +1291,10 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
     <div class="sh"><div class="st">&#127916; Tonight's Storylines</div><div class="ss" id="storylines-subtitle">Key factors shaping tonight's slate</div></div>
     <div id="storylines-list" style="display:flex;flex-direction:column;gap:8px"></div>
   </div>
-  <!-- BEST PICK OF THE DAY (populated by JS if picks exist) -->
-  <div id="best-pick-callout" style="display:none;margin-bottom:16px;border-radius:14px;background:linear-gradient(135deg,rgba(0,200,150,.09),rgba(79,158,255,.07));border:1px solid rgba(0,200,150,.2);padding:16px 18px">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green);margin-bottom:8px">&#11088; Pick of the Day</div>
-    <div id="bpd-matchup" style="font-size:16px;font-weight:700;color:var(--t0);margin-bottom:4px">-</div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div id="bpd-pick" style="font-size:13px;color:var(--t1)">-</div>
-      <div id="bpd-conf" style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(0,200,150,.12);color:var(--green)">-</div>
-      <button onclick="showBettingTab('picks',null)" style="margin-left:auto;padding:5px 13px;border-radius:8px;border:1px solid rgba(0,200,150,.3);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)">See all picks -&gt;</button>
-    </div>
-  </div>
-  <div class="dl">
-    <div class="dm">
-      <div class="card" style="margin-bottom:14px">
-        <div class="sh"><div><div class="st">Today's Games</div><div class="ss" id="dash-games-subtitle">Loading...</div></div><button class="fc" onclick="showFreeTab('standings')" style="font-size:11px;padding:5px 11px">Standings -&gt;</button></div>
-        <div class="gg" id="dash-games">
-          <div class="skeleton" style="height:90px;margin-bottom:8px"></div>
-          <div class="skeleton" style="height:90px;margin-bottom:8px"></div>
-          <div class="skeleton" style="height:90px;margin-bottom:8px"></div>
-          <div class="skeleton" style="height:90px"></div>
-        </div>
-      </div>
-      <div class="g2">
-        <div class="card"><div class="sh"><div class="st">Scoring Leaders</div><div class="ss">Season PPG</div></div><div class="tw"><table><thead><tr><th>#</th><th>Player</th><th>PPG</th><th></th></tr></thead><tbody id="dash-leaders"></tbody></table></div></div>
-        <div class="card"><div class="sh"><div class="st">Model Win Rate Trend</div><div class="ss">Rolling accuracy</div></div><div id="dash-chart" style="height:175px"></div></div>
-      </div>
-    </div>
-    <div class="dsb">
-      <div class="card">
-        <div class="sbh"><div class="sbhl">Today's Picks</div><span class="sbt">ATS</span><span style="font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(0,200,150,.12);color:var(--green);font-weight:700;margin-left:6px">Live</span></div>
-        <div style="display:flex;flex-direction:column;gap:8px" id="dash-picks"></div>
-        <button onclick="showBettingTab('picks',null)" class="fc active" style="width:100%;margin-top:12px;display:flex;justify-content:center;font-size:12px">Full picks -&gt;</button>
-      </div>
-      <div class="card">
-        <div class="sbh"><div class="sbhl">Model Record</div><span style="font-size:10px;padding:2px 8px;border-radius:100px;background:rgba(79,158,255,.12);color:var(--blue);font-weight:700;letter-spacing:.3px">v2.2</span></div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div><div class="sl">Season ATS</div><div style="font-family:var(--fm);font-size:26px;font-weight:700;color:var(--t0)" data-count-str="67-55">-</div><div class="schange" style="margin-top:3px"><span class="badge g">54.9% ATS accuracy</span></div></div>
-          <div style="padding-top:12px;border-top:1px solid var(--b0)"><div class="sl">Last 10 Picks</div><div style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--green)" data-count-str="7-3">-</div><div class="schange up" style="margin-top:3px">Hot streak</div></div>
-          <div style="padding-top:12px;border-top:1px solid var(--b0)"><div class="sl">Overall Win Rate</div><div style="display:flex;align-items:baseline;gap:4px"><span style="font-family:var(--fm);font-size:22px;font-weight:700" data-count="67.1">0</span><span style="font-family:var(--fm);font-size:14px;color:var(--t2)">%</span></div><div class="schange up" style="margin-top:3px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>+2.1% vs last week</div></div>
-        </div>
-      </div>
-    </div>
+  <!-- POTD spotlight inserted here by JS -->
+  <div id="best-pick-callout" style="display:none"></div>
+  <div style="margin-top:8px">
+    <div class="card"><div class="sh"><div class="st">Scoring Leaders</div><div class="ss">2025-26 Season</div></div><div class="tw"><table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>PPG</th></tr></thead><tbody id="dash-leaders"></tbody></table></div></div>
   </div>
   <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="dash-updated">Baseline Analytics &#183; Model v2.2</span></p>
 </section>
@@ -1493,15 +1509,72 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
 
 <!-- STANDINGS (free) -->
 <section id="page-standings" class="page" role="tabpanel" aria-labelledby="nb-standings">
-  <div class="ph"><h1 class="pt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Standings<button onclick="exportStandingsCsv()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t2);font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap" title="Export standings to CSV">&#8595; CSV</button></h1><p class="pd">Conference standings and today's game scores</p></div>
+  <div class="ph"><h1 class="pt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Standings &amp; Rankings<button onclick="exportStandingsCsv()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--b1);background:var(--card);color:var(--t2);font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap" title="Export standings to CSV">&#8595; CSV</button></h1><p class="pd">Conference standings, power rankings, and today's scores</p></div>
   <div class="tab-bar">
     <button class="tab active" data-tab="conf" onclick="switchTab('standings','conf')">Standings</button>
+    <button class="tab" data-tab="rankings" onclick="switchTab('standings','rankings');initRankings();">Rankings</button>
     <button class="tab" data-tab="scores" onclick="switchTab('standings','scores')">Today's Games</button>
   </div>
   <div class="tab-content active" id="standings-tab-conf">
     <div class="g2" style="margin-top:4px">
       <div class="card" style="padding:0;overflow:hidden"><div class="confh">Eastern Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','east')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-east-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','east')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-east-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','east')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-east-pct">&#8597;</span></th><th>GB</th><th>Home</th><th>Away</th><th>L10</th><th>Streak</th><th class="hide-mobile" title="Last 10 form">Form</th></tr></thead><tbody id="east-tb"></tbody></table></div></div>
       <div class="card" style="padding:0;overflow:hidden"><div class="confh">Western Conference</div><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="sort-th sort-active" onclick="sortStand('w','west')" title="Sort by wins">W <span class="sort-arrow-s" id="sarr-west-w">&#9660;</span></th><th class="sort-th" onclick="sortStand('l','west')" title="Sort by losses">L <span class="sort-arrow-s" id="sarr-west-l">&#8597;</span></th><th class="sort-th" onclick="sortStand('pct','west')" title="Sort by win %">PCT <span class="sort-arrow-s" id="sarr-west-pct">&#8597;</span></th><th>GB</th><th>Home</th><th>Away</th><th>L10</th><th>Streak</th><th class="hide-mobile" title="Last 10 form">Form</th></tr></thead><tbody id="west-tb"></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="tab-content" id="standings-tab-rankings">
+    <!-- Hero row -->
+    <div id="rk-hero" class="card" style="display:none;margin-bottom:20px;padding:20px 24px;background:linear-gradient(135deg,rgba(0,200,150,.08),rgba(79,158,255,.06));border:1px solid rgba(0,200,150,.18)">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px 24px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green);flex-shrink:0">#1 Team</div>
+        <div id="rk-hero-name" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--t0)">---</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-left:auto">
+          <div style="text-align:center"><div id="rk-hero-score" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--green);letter-spacing:-1px">---</div><div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Score</div></div>
+          <div style="text-align:center"><div id="rk-hero-net" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--blue);letter-spacing:-1px">---</div><div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Net Rtg</div></div>
+          <div style="text-align:center"><div id="rk-hero-l10" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--gold);letter-spacing:-1px">---</div><div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Last 10</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)">Score Formula</div>
+      <div style="font-size:11px;color:var(--t1);background:var(--card);border:1px solid var(--b0);border-radius:8px;padding:4px 10px">Season Win% <span style="color:var(--purple);font-weight:700">35%</span> &nbsp;+&nbsp; Pyth Win% L20 <span style="color:var(--gold);font-weight:700">25%</span> &nbsp;+&nbsp; Net Rtg L20 <span style="color:var(--green);font-weight:700">25%</span> &nbsp;+&nbsp; Net Rtg L10 <span style="color:var(--blue);font-weight:700">15%</span> &nbsp;&rarr; normalised 0-100</div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
+      <div id="rk-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <div id="rk-loading" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:10px;color:var(--t2);font-size:13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Loading power rankings...</div>
+        <table id="rk-table" style="display:none;width:100%;border-collapse:collapse;font-size:13px;min-width:700px">
+          <thead><tr style="border-bottom:1px solid var(--b0)">
+            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">#</th>
+            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Team</th>
+            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap;min-width:140px">Score</th>
+            <th class="hide-mobile" style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 20 games">Net Rtg L20</th>
+            <th class="hide-xs" style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 10 games">Net Rtg L10</th>
+            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Last 10</th>
+            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Record over last 20 games">Last 20</th>
+            <th class="hide-xs" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Trend</th>
+            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">vs Last Wk</th>
+            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Last 10 form sparkline">Form</th>
+          </tr></thead>
+          <tbody id="rk-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="rk-divergence" style="display:none;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Model Divergence -- Teams the model rates differently than their record</div>
+      <div id="rk-divergence-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+    </div>
+    <p id="rk-updated" class="lu" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Power rankings -- Source: team_game_features.csv</p>
+    <div class="card" style="padding:20px 24px;margin-top:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div><div style="font-size:15px;font-weight:800;color:var(--t0);letter-spacing:-.3px">Elo Ratings Across the Season</div><div style="font-size:11px;color:var(--t2);margin-top:2px">Click team chips to toggle visibility</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="eloQuickSelect('top5')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Top 5</button>
+          <button onclick="eloQuickSelect('bot5')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Bottom 5</button>
+          <button onclick="eloQuickSelect('all')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">All</button>
+          <button onclick="eloQuickSelect('none')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Clear</button>
+        </div>
+      </div>
+      <div id="elo-team-picker" class="elo-team-picker"></div>
+      <div id="elo-timeline-chart" style="width:100%;height:450px"></div>
     </div>
   </div>
   <div class="tab-content" id="standings-tab-scores">
@@ -1528,100 +1601,7 @@ button:focus-visible{outline:2px solid rgba(0,200,150,.45);outline-offset:2px}
   <p class="lu" id="injuries-updated"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Injury data updated daily &middot; Source: nba_api player logs</p>
 </section>
 
-<!-- RANKINGS (free) -->
-<section id="page-rankings" class="page" role="tabpanel" aria-labelledby="nb-rankings">
-  <div class="ph"><h1 class="pt">Rankings</h1><p class="pd">Composite power rankings built from net rating, Pythagorean win%, and recent form</p></div>
-
-  <!-- Hero row -->
-  <div id="rk-hero" class="card" style="display:none;margin-bottom:20px;padding:20px 24px;background:linear-gradient(135deg,rgba(0,200,150,.08),rgba(79,158,255,.06));border:1px solid rgba(0,200,150,.18)">
-    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px 24px">
-      <div style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green);flex-shrink:0">#1 Team</div>
-      <div id="rk-hero-name" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--t0)">—</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-left:auto">
-        <div style="text-align:center">
-          <div id="rk-hero-score" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--green);letter-spacing:-1px">—</div>
-          <div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Score</div>
-        </div>
-        <div style="text-align:center">
-          <div id="rk-hero-net" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--blue);letter-spacing:-1px">—</div>
-          <div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Net Rtg</div>
-        </div>
-        <div style="text-align:center">
-          <div id="rk-hero-l10" style="font-family:var(--fm);font-size:22px;font-weight:700;color:var(--gold);letter-spacing:-1px">—</div>
-          <div style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2)">Last 10</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Legend -->
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-    <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)">Score Formula</div>
-    <div style="font-size:11px;color:var(--t1);background:var(--card);border:1px solid var(--b0);border-radius:8px;padding:4px 10px">
-      Season Win% <span style="color:var(--purple);font-weight:700">35%</span>
-      &nbsp;+&nbsp; Pyth Win% L20 <span style="color:var(--gold);font-weight:700">25%</span>
-      &nbsp;+&nbsp; Net Rtg L20 <span style="color:var(--green);font-weight:700">25%</span>
-      &nbsp;+&nbsp; Net Rtg L10 <span style="color:var(--blue);font-weight:700">15%</span>
-      &nbsp;&rarr; normalised 0–100
-    </div>
-  </div>
-
-  <!-- Rankings table -->
-  <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
-    <div id="rk-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <div id="rk-loading" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:10px;color:var(--t2);font-size:13px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-        Loading power rankings…
-      </div>
-      <table id="rk-table" style="display:none;width:100%;border-collapse:collapse;font-size:13px;min-width:1100px">
-        <thead>
-          <tr style="border-bottom:1px solid var(--b0)">
-            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">#</th>
-            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Team</th>
-            <th style="padding:11px 16px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap;min-width:140px">Score</th>
-            <th class="hide-mobile" style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 20 games">Net Rtg L20</th>
-            <th style="padding:11px 16px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Net rating over last 10 games">Net Rtg L10</th>
-            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Last 10</th>
-            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Record over last 20 games">Last 20</th>
-            <th style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">Trend</th>
-            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap">vs Last Wk</th>
-            <th class="hide-mobile" style="padding:11px 16px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t2);white-space:nowrap" title="Last 10 form sparkline">Form</th>
-          </tr>
-        </thead>
-        <tbody id="rk-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Divergence callout -->
-  <div id="rk-divergence" style="display:none;margin-bottom:20px">
-    <div style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Model Divergence — Teams the model rates differently than their record</div>
-    <div id="rk-divergence-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
-  </div>
-
-  <p id="rk-updated" class="lu" style="display:none">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    Power rankings · Source: team_game_features.csv
-  </p>
-
-  <!-- Elo Timeline -->
-  <div class="card" style="padding:20px 24px;margin-top:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-      <div>
-        <div style="font-size:15px;font-weight:800;color:var(--t0);letter-spacing:-.3px">Elo Ratings Across the Season</div>
-        <div style="font-size:11px;color:var(--t2);margin-top:2px">Click team chips to toggle visibility</div>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button onclick="eloQuickSelect('top5')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Top 5</button>
-        <button onclick="eloQuickSelect('bot5')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Bottom 5</button>
-        <button onclick="eloQuickSelect('all')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">All</button>
-        <button onclick="eloQuickSelect('none')" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;border:1px solid var(--b1);background:var(--card);color:var(--t1);cursor:pointer;font-family:var(--f)">Clear</button>
-      </div>
-    </div>
-    <div id="elo-team-picker" class="elo-team-picker"></div>
-    <div id="elo-timeline-chart" style="width:100%;height:450px"></div>
-  </div>
-</section>
+<!-- Rankings section merged into Standings tab above -->
 
 <!-- HISTORY (free) -->
 <section id="page-history" class="page" role="tabpanel" aria-labelledby="nb-history">
@@ -2173,6 +2153,30 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 });
 
+// ── Scroll indicator: hide right-fade when table is scrolled to end ──
+document.addEventListener('DOMContentLoaded',function(){
+  function checkTwScroll(tw){
+    if(!tw)return;
+    var atEnd=tw.scrollLeft+tw.clientWidth>=tw.scrollWidth-2;
+    tw.classList.toggle('scrolled-end',atEnd);
+  }
+  document.querySelectorAll('.tw').forEach(function(tw){
+    checkTwScroll(tw);
+    tw.addEventListener('scroll',function(){checkTwScroll(tw);},{passive:true});
+  });
+  // Also observe for dynamically-added .tw wrappers
+  new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      m.addedNodes.forEach(function(n){
+        if(n.nodeType===1){
+          if(n.classList&&n.classList.contains('tw')){checkTwScroll(n);n.addEventListener('scroll',function(){checkTwScroll(n);},{passive:true});}
+          n.querySelectorAll&&n.querySelectorAll('.tw').forEach(function(tw){checkTwScroll(tw);tw.addEventListener('scroll',function(){checkTwScroll(tw);},{passive:true});});
+        }
+      });
+    });
+  }).observe(document.body,{childList:true,subtree:true});
+});
+
 // Safe DOM setter: sets markup on an element using insertAdjacentHTML after clearing it.
 // Only called with server-controlled or fully-escaped markup — never with raw user input.
 function setMarkup(el, markup){
@@ -2685,7 +2689,7 @@ function showFreeTab(id){
   const nb=document.getElementById('nb-'+id);
   if(nb){nb.classList.add('active');nb.setAttribute('aria-current','page');nb.setAttribute('aria-selected','true');}
   // Update document title
-  const _freeTabNames={today:'Today',players:'Players',teams:'Teams',h2h:'Head-to-Head',standings:'Standings',injuries:'Injuries',rankings:'Rankings',history:'Season History',deep:'Deep Dive'};
+  const _freeTabNames={today:'Home',players:'Players',teams:'Teams',h2h:'Head-to-Head',standings:'Standings & Rankings',injuries:'Injuries',history:'Season History',deep:'Deep Dive'};
   document.title='Baseline Analytics'+((_freeTabNames[id])?' \u2014 '+_freeTabNames[id]:'');
   // ─── URL HASH ROUTING — update hash on tab change ───
   history.replaceState(null, '', '#' + id);
@@ -2693,7 +2697,7 @@ function showFreeTab(id){
   if(id==='players'){_loadPlayerComparison();}
   if(id==='deep'){renderMatchups();renderPlayoff();renderStreaks();}
   if(id==='h2h'){initH2H();}
-  if(id==='rankings'){initRankings();}
+  if(id==='rankings'){id='standings';showFreeTab('standings');switchTab('standings','rankings');initRankings();return;}
   if(id==='injuries'){initInjuries();}
   if(id==='history'){initSeasonHistory();}
   // Sync mobile nav
@@ -3072,16 +3076,22 @@ function filterGames(type,btn){
   {const _ag=document.getElementById('all-games');if(_ag)_setHtml(_ag,list.length?list.map(gameCard).join(''):`<p style="color:var(--t2);padding:20px;font-size:13px">No games match this filter.</p>`);}
 }
 
-// ─── LEADERS ───
+// ─── LEADERS (current season from player_detail.json) ───
 function renderLeaders(){
-  const top=[...DATA.players].sort((a,b)=>b.pts-a.pts).slice(0,5);
-  {const _dl=document.getElementById('dash-leaders');if(_dl)_setHtml(_dl,top.map((p,i)=>`
-    <tr>
-      <td><span class="rn">${i+1}</span></td>
-      <td class="nc">${headshot(p.nbaId,p.ini,28)}<span style="font-family:var(--f);font-weight:600;font-size:13px">${p.name?p.name.split(' ').pop():''}</span></td>
-      <td style="color:var(--gold);font-weight:700">${p.pts}</td>
-      <td style="color:${i<2?'var(--green)':'var(--t2)'};font-size:11px">${i<2?'↑ Top 2':''}</td>
-    </tr>`).join(''));}
+  fetch('data/player_detail.json').then(r=>r.ok?r.json():null).then(d=>{
+    if(!d||!d.players)return;
+    const arr=Object.entries(d.players).map(([name,p])=>({name,team:p.team,ppg:p.season_stats?p.season_stats.ppg:0,gp:p.season_stats?p.season_stats.gp:0,nbaId:p.player_id})).filter(p=>p.gp>20);
+    arr.sort((a,b)=>b.ppg-a.ppg);
+    const top=arr.slice(0,8);
+    const _dl=document.getElementById('dash-leaders');
+    if(_dl)_setHtml(_dl,top.map((p,i)=>`
+      <tr style="cursor:pointer" onclick="showFreeTab('players')">
+        <td><span class="rn">${i+1}</span></td>
+        <td class="nc">${headshot(p.nbaId,p.name.split(' ').map(w=>w[0]).join(''),28)}<span style="font-family:var(--f);font-weight:600;font-size:13px">${esc(p.name)}</span></td>
+        <td style="font-size:11px;color:var(--t2)">${esc(p.team)}</td>
+        <td style="color:var(--gold);font-weight:700;font-family:var(--fm)">${p.ppg.toFixed(1)}</td>
+      </tr>`).join(''));
+  }).catch(()=>{});
 }
 
 // ─── PLAYERS TABLE — clickable stat headers, headshots, filters ───
@@ -5274,20 +5284,57 @@ function _whyThisPickHtml(pick, contexts){
   return html;
 }
 
+// ─── WHY THIS PICK (always visible, for POTD) ───
+function _whyThisPickOpen(pick, contexts){
+  if(!contexts)return'';
+  var ctx=null;
+  if(Array.isArray(contexts)){for(var i=0;i<contexts.length;i++){var c=contexts[i];if(c&&((c.home_team||'')===(pick.home_team||'')||(c.away_team||'')===(pick.away_team||''))){ctx=c;break;}}}
+  if(!ctx)return'';
+  var factors=[];
+  if(ctx.situational_flags&&ctx.situational_flags.length){for(var j=0;j<Math.min(ctx.situational_flags.length,4);j++){factors.push(ctx.situational_flags[j].replace(/_/g,' '));}}
+  if(ctx.home_streak&&Math.abs(ctx.home_streak)>=3)factors.push((pick.home_team||'Home')+' on '+(ctx.home_streak>0?ctx.home_streak+'W streak':Math.abs(ctx.home_streak)+'L streak'));
+  if(ctx.away_streak&&Math.abs(ctx.away_streak)>=3)factors.push((pick.away_team||'Away')+' on '+(ctx.away_streak>0?ctx.away_streak+'W streak':Math.abs(ctx.away_streak)+'L streak'));
+  if(!factors.length)return'';
+  var html='<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">';
+  for(var k=0;k<factors.length;k++)html+=_factorBadgeHtml(factors[k]);
+  html+='</div>';
+  return html;
+}
+
 // ─── EMPTY STATE HELPER ───
 function _emptyStateHtml(icon,msg){return'<div class="empty-state"><div class="empty-state-icon">'+esc(icon)+'</div><div>'+esc(msg)+'</div></div>'}
 
 // ─── PICK OF THE DAY BUILDER ───
 function _buildPickOfDay(picks){
   if(!picks||!picks.length)return'';
+  // Score each pick: value edge > kelly > model confidence
+  function _valScore(p){
+    var s=0;
+    if(p.value_bet)s+=50;
+    if(p.edge_pct)s+=(p.edge_pct*100)||0;
+    if(p.kelly_fraction)s+=(p.kelly_fraction*20)||0;
+    s+=(p.model_confidence||p.confidence||0)/2;
+    return s;
+  }
   var best=picks[0];
-  for(var i=1;i<picks.length;i++){if((picks[i].confidence||0)>(best.confidence||0))best=picks[i]}
-  var conf=best.confidence||best.home_win_prob||0;
+  for(var i=1;i<picks.length;i++){if(_valScore(picks[i])>_valScore(best))best=picks[i];}
+  var rawConf=best.model_confidence||0;
+  var conf=rawConf>1?rawConf/100:rawConf;
+  if(!conf){var hp=best.home_win_prob||0;var ap=best.away_win_prob||0;conf=Math.max(hp,ap);}
+  var label='Best Value Bet';
+  var edgeStr='';
+  if(best.edge_pct){edgeStr=' · Edge: '+(best.edge_pct*100).toFixed(1)+'%';}
+  if(best.kelly_fraction){edgeStr+=' · Kelly: '+(best.kelly_fraction*100).toFixed(1)+'%';}
+  if(!best.value_bet&&!best.edge_pct)label='Top Pick';
   return'<div class="potd-spotlight"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
-    +'<span style="font-size:18px;font-weight:700;color:var(--t0)">'+esc(best.away_team||'')+' @ '+esc(best.home_team||'')+'</span></div>'
+    +'<span style="font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green)">'+label+'</span>'
+    +(best.value_bet?'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;background:var(--green-d);color:var(--green)">VALUE BET</span>':'')
+    +'</div>'
+    +'<div style="font-size:18px;font-weight:700;color:var(--t0);margin-bottom:6px">'+esc(best.away_team||'')+' @ '+esc(best.home_team||'')+'</div>'
     +'<div style="margin:8px 0">'+_confMeterHtml(conf)+'</div>'
-    +'<div style="font-size:13px;color:var(--t1)">'+(best.pick_summary||('Model favors '+(conf>0.5?esc(best.home_team||'Home'):esc(best.away_team||'Away'))))+'</div>'
-    +_whyThisPickHtml(best,window._GAME_CONTEXTS)+'</div>';
+    +'<div style="font-size:13px;color:var(--t1)">'+(best.pick_summary||('Model favors '+(conf>0.5?esc(best.home_team||'Home'):esc(best.away_team||'Away'))))+edgeStr+'</div>'
+    +_whyThisPickOpen(best,window._GAME_CONTEXTS)
+    +'<div style="margin-top:10px"><button onclick="showBettingTab(\'picks\',null)" style="padding:6px 16px;border-radius:var(--r-pill);border:1px solid rgba(0,200,150,.3);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)">See all picks &rarr;</button></div></div>';
 }
 
 // ─── SHARP MONEY / LINE MOVEMENT ───
@@ -5903,8 +5950,16 @@ function renderShotMaps(){
   }],{...ML({y:{},x:{range:[.9,1.5]},margin:{l:72,r:12,t:8,b:28}})},{responsive:true,displayModeBar:false});
 
   // Shot zone chart — illustrative distribution using current season top scorers
-  const _szColors=['rgba(245,166,35,.7)','rgba(0,200,150,.65)','rgba(79,158,255,.65)'];
+  const _szFallbackColors=['rgba(245,166,35,.7)','rgba(0,200,150,.65)','rgba(79,158,255,.65)'];
   const _szZones=["At Rim", "Paint", "Mid-Range", "3-Pointers", "Long 2s"];
+  // Convert hex color to rgba string
+  function _hexToRgba(hex,alpha){
+    if(!hex||hex.length<4)return null;
+    var h=hex.replace('#','');
+    if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var r=parseInt(h.substring(0,2),16),g=parseInt(h.substring(2,4),16),b=parseInt(h.substring(4,6),16);
+    return 'rgba('+r+','+g+','+b+','+alpha+')';
+  }
   // Default distributions by scoring profile (placeholder until shot chart API is integrated)
   const _szDefaults=[[26,8,10,32,12],[31,9,16,18,14],[22,10,12,38,10]];
   const _szPlayers=DATA.players.filter(p=>!p.retired).sort((a,b)=>b.pts-a.pts).slice(0,3);
@@ -5913,7 +5968,11 @@ function renderShotMaps(){
     const adv=window.ADVANCED_STATS&&window.ADVANCED_STATS[p.name];
     // Use live shot distribution if available, else illustrative default
     const dist=(adv&&adv.shot_zones)||_szDefaults[i];
-    return {x:_szZones,y:dist,type:'bar',name:short,marker:{color:_szColors[i],line:{width:0}},hovertemplate:'<b>'+short+'</b> -- %{x}: %{y}%<extra></extra>'};
+    // Use team color if available, else fallback
+    const teamAbbr=p.team||p.primaryTeam;
+    const tcArr=teamAbbr&&TEAM_COLORS[teamAbbr];
+    const barColor=tcArr?_hexToRgba(tcArr[0],0.7):_szFallbackColors[i];
+    return {x:_szZones,y:dist,type:'bar',name:short,marker:{color:barColor,line:{width:0}},hovertemplate:'<b>'+short+'</b> -- %{x}: %{y}%<extra></extra>'};
   });
   _plotlyNewPlot('shot-zone-chart',_szTraces,{...ML({y:{ticksuffix:'%'}}),barmode:'group',bargap:.25,bargroupgap:.08,
     legend:{font:{color:'#8892AA',size:12,family:'Plus Jakarta Sans'},bgcolor:'transparent'}},
@@ -6340,7 +6399,7 @@ async function loadDashboardData(){
         return r.json();
       }).catch(()=>{_fetchErrors.push(url);return fallback;});
     }
-    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson,gameDetailJson]=await Promise.all([
+    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson,gameDetailJson,streaksJson]=await Promise.all([
       _trackFetch('data/todays_picks.json',[]),
       _trackFetch('data/accuracy_history.json',[]),
       _trackFetch('data/value_bets.json',[]),
@@ -6362,6 +6421,7 @@ async function loadDashboardData(){
       _trackFetch('data/trends.json',{}),
       _trackFetch('data/totals.json',[]),
       _trackFetch('data/game_detail.json',{games:[]}),
+      _trackFetch('data/streaks.json',null),
     ]);
     // player_comparison.json is lazy-loaded on first Players tab open (see _loadPlayerComparison)
     // Start with LEGENDS only so the page is never empty
@@ -6443,47 +6503,27 @@ async function loadDashboardData(){
           kelly:p.kelly_fraction!=null?p.kelly_fraction:null
         };
       });
+      // ── Populate home tab hot/cold cards from streaks ──
+      if(streaksJson){
+        const _st=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+        if(streaksJson.hot&&streaksJson.hot.length){const h=streaksJson.hot[0];_st('home-hot-player',h.name);_st('home-hot-player-sub',h.stat+' \u00b7 '+h.team+' \u00b7 '+h.sub);}
+        if(streaksJson.team_streaks&&streaksJson.team_streaks.length){
+          const _ht=streaksJson.team_streaks.find(t=>t.streak>0);
+          const _ct=streaksJson.team_streaks.slice().sort((a,b)=>a.streak-b.streak)[0];
+          if(_ht){_st('home-hot-team',_ht.team);_st('home-hot-team-sub','W'+_ht.streak+' streak');}
+          if(_ct&&_ct.streak<0){_st('home-cold-team',_ct.team);_st('home-cold-team-sub','L'+Math.abs(_ct.streak)+' streak');}
+        }
+      }
       // ── Build hero spotlight and pick grid (must run inside Promise.all callback) ──
       buildHeroSection(picks, valueBets, explainers, contexts);
       buildTodayGamesStrip(picks);
       buildFeaturedMatchupComparison(picks);
       buildStorylines();
       buildInjurySummary();
-      // ── Best Pick of the Day callout ──
-      const bpdEl = document.getElementById('best-pick-callout');
-      if(bpdEl && Array.isArray(picks) && picks.length){
-        const upcoming = picks.filter(p => !p.result);
-        if(upcoming.length){
-          const best = upcoming.reduce((a,b) => {
-            const aScore = (a.model_confidence||0) + (a.value_bet ? 15 : 0);
-            const bScore = (b.model_confidence||0) + (b.value_bet ? 15 : 0);
-            return bScore > aScore ? b : a;
-          }, upcoming[0]);
-          const matchupStr = (best.away_team||'') + ' @ ' + (best.home_team||'');
-          const pickTeam = best.ats_pick || best.predicted_winner || '--';
-          const confPct = best.model_confidence ? best.model_confidence + '% confidence' : '';
-          const isVal = best.value_bet ? ' · \u2605 VALUE' : '';
-          const bpdM = document.getElementById('bpd-matchup');
-          const bpdP = document.getElementById('bpd-pick');
-          const bpdC = document.getElementById('bpd-conf');
-          if(bpdM) bpdM.textContent = matchupStr;
-          if(bpdP) bpdP.textContent = 'Pick: ' + pickTeam + (best.spread ? ' ' + best.spread : '');
-          if(bpdC) bpdC.textContent = confPct + isVal;
-          bpdEl.style.display = 'block';
-        }
-      }
-      // Insert POTD spotlight below best-pick-callout
+      // ── Single Pick of the Day (highest confidence) ──
       var potdHtml=_buildPickOfDay(picks);
-      if(potdHtml){
-        var potdEl=document.getElementById('potd-spotlight-container');
-        if(!potdEl){
-          potdEl=document.createElement('div');
-          potdEl.id='potd-spotlight-container';
-          var bpdRef=document.getElementById('best-pick-callout');
-          if(bpdRef&&bpdRef.parentNode)bpdRef.parentNode.insertBefore(potdEl,bpdRef.nextSibling);
-        }
-        if(potdEl)_setHtml(potdEl,potdHtml);
-      }
+      var bpdEl=document.getElementById('best-pick-callout');
+      if(potdHtml&&bpdEl){_setHtml(bpdEl,potdHtml);bpdEl.style.display='block';}
     }
     // ── Wire matchup_analysis.json -> MATCHUP_DATA ──
     window.MATCHUP_JSON=matchupJson;
@@ -7334,10 +7374,10 @@ if ('serviceWorker' in navigator) {
           + '</td>'
           + '<td style="' + rp + 'min-width:150px">' + _scoreBar(r.composite_score) + '</td>'
           + '<td class="hide-mobile" style="' + rp + 'text-align:right;font-family:var(--fm);font-size:13px;font-weight:700;color:' + net20Color + '">' + net20Sign + r.net_rating.toFixed(1) + '</td>'
-          + '<td style="' + rp + 'text-align:right;font-family:var(--fm);font-size:12px;color:' + net10Color + '">' + net10Sign + net10Val.toFixed(1) + '</td>'
+          + '<td class="hide-xs" style="' + rp + 'text-align:right;font-family:var(--fm);font-size:12px;color:' + net10Color + '">' + net10Sign + net10Val.toFixed(1) + '</td>'
           + '<td style="' + rp + 'text-align:center;font-family:var(--fm);font-size:12px;color:var(--t1)">' + r.last10_record + '</td>'
           + '<td class="hide-mobile" style="' + rp + 'text-align:center;font-family:var(--fm);font-size:12px;color:var(--t2)">' + (r.last20_record||'—') + '</td>'
-          + '<td style="' + rp + 'text-align:center">' + _trendArrow(r.trend) + '</td>'
+          + '<td class="hide-xs" style="' + rp + 'text-align:center">' + _trendArrow(r.trend) + '</td>'
           + '<td class="hide-mobile" style="' + rp + 'text-align:center">' + rdHtml + '</td>'
           + '<td class="hide-mobile" style="' + rp + 'text-align:center">' + _sparklineHtml(_sparklineFromRecord(r.last10_record)) + '</td>'
           + '</tr>';
