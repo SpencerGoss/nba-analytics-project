@@ -354,3 +354,16 @@ def test_safe_div_zero_denominator():
 
 def test_safe_div_normal():
     assert abs(_safe_div(10.0, 4.0) - 2.5) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# 11. Legend data integrity
+# ---------------------------------------------------------------------------
+
+def test_legend_best_season_is_string():
+    """All legend entries must have best_season as a string, not a dict."""
+    from scripts.build_player_comparison import _LEGENDS
+    for leg in _LEGENDS:
+        assert isinstance(leg.get("best_season", ""), str), (
+            f"{leg['player_name']} best_season is {type(leg['best_season'])}, expected str"
+        )

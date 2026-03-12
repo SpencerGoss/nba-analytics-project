@@ -38,6 +38,7 @@ DASHBOARD_DATA.mkdir(parents=True, exist_ok=True)
 PLAYERS_CSV = RAW_DIR / "historical_player_seasons.csv"
 TEAMS_CSV = RAW_DIR / "historical_team_seasons.csv"
 POS_CSV = PROJECT_ROOT / "data" / "processed" / "player_positions.csv"
+GAME_LOGS_DIR = RAW_DIR / "player_game_logs"
 
 OUT_COMPARISON = DASHBOARD_DATA / "player_comparison.json"
 OUT_INDEX = DASHBOARD_DATA / "player_index.json"
@@ -340,6 +341,7 @@ def _load_position_lookup() -> dict[int, dict]:
                 "position": str(row.get("position") or ""),
                 "positions": str(row.get("positions") or ""),
                 "position_primary": str(row.get("position_primary") or ""),
+                "jersey_number": str(int(row["jersey_number"])) if pd.notna(row.get("jersey_number")) else "",
             }
         return result
     except Exception:
@@ -425,6 +427,7 @@ def build_player_records(enriched: pd.DataFrame,
         position = pos_info.get("position", "")
         positions = pos_info.get("positions", "")
         position_primary = pos_info.get("position_primary", "")
+        jersey_number = pos_info.get("jersey_number", "")
         if not positions:
             positions = _heuristic_positions(career_avgs)
             position_primary = positions
@@ -435,6 +438,7 @@ def build_player_records(enriched: pd.DataFrame,
             "position": position,
             "positions": positions,
             "position_primary": position_primary,
+            "jersey_number": jersey_number,
             "seasons": season_rows,
             "career_avgs": career_avgs,
             "best_season": str(best_season_str),
@@ -488,11 +492,11 @@ def build_player_index(player_records: list[dict]) -> list[dict]:
 _LEGENDS: list[dict] = [
     {
         "player_id": -1, "player_name": "Michael Jordan",
-        "positions": "SG", "position_primary": "SG",
+        "positions": "SG", "position_primary": "SG", "jersey_number": "23",
         "seasons_span": "1984-2003", "career_gp": 1072,
         "career_avgs": {"pts": 30.1, "reb": 6.2, "ast": 5.3, "stl": 2.35, "blk": 0.83,
                         "pts_normalized": None},
-        "best_season": {"season_str": "1986-87", "pts": 37.1, "reb": 5.2, "ast": 4.6},
+        "best_season": "1986-87",
         "ts_pct": 0.570, "fg_pct": 0.497, "fg3_pct": 0.327, "ft_pct": 0.835,
         "seasons": [
             {"season_str": "1984-85", "pts": 28.2, "reb": 6.5, "ast": 5.9},
@@ -509,55 +513,55 @@ _LEGENDS: list[dict] = [
     },
     {
         "player_id": -2, "player_name": "Larry Bird",
-        "positions": "SF, PF", "position_primary": "SF",
+        "positions": "SF, PF", "position_primary": "SF", "jersey_number": "33",
         "seasons_span": "1979-1992", "career_gp": 897,
         "career_avgs": {"pts": 24.3, "reb": 10.0, "ast": 6.3, "stl": 1.74, "blk": 0.84,
                         "pts_normalized": None},
-        "best_season": {"season_str": "1987-88", "pts": 29.9, "reb": 9.3, "ast": 6.1},
+        "best_season": "1987-88",
         "ts_pct": 0.584, "fg_pct": 0.496, "fg3_pct": 0.376, "ft_pct": 0.886,
         "seasons": [],
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
         "player_id": -3, "player_name": "Magic Johnson",
-        "positions": "PG", "position_primary": "PG",
+        "positions": "PG", "position_primary": "PG", "jersey_number": "32",
         "seasons_span": "1979-1996", "career_gp": 906,
         "career_avgs": {"pts": 19.5, "reb": 7.2, "ast": 11.2, "stl": 1.90, "blk": 0.37,
                         "pts_normalized": None},
-        "best_season": {"season_str": "1988-89", "pts": 22.5, "reb": 7.9, "ast": 12.8},
+        "best_season": "1988-89",
         "ts_pct": 0.584, "fg_pct": 0.520, "fg3_pct": 0.303, "ft_pct": 0.848,
         "seasons": [],
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
         "player_id": -4, "player_name": "Kareem Abdul-Jabbar",
-        "positions": "C", "position_primary": "C",
+        "positions": "C", "position_primary": "C", "jersey_number": "33",
         "seasons_span": "1969-1989", "career_gp": 1560,
         "career_avgs": {"pts": 24.6, "reb": 11.2, "ast": 3.6, "stl": 0.94, "blk": 2.60,
                         "pts_normalized": None},
-        "best_season": {"season_str": "1971-72", "pts": 34.8, "reb": 16.6, "ast": 4.6},
+        "best_season": "1971-72",
         "ts_pct": 0.579, "fg_pct": 0.559, "fg3_pct": 0.056, "ft_pct": 0.721,
         "seasons": [],
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
         "player_id": -5, "player_name": "Kobe Bryant",
-        "positions": "SG", "position_primary": "SG",
+        "positions": "SG", "position_primary": "SG", "jersey_number": "24",
         "seasons_span": "1996-2016", "career_gp": 1346,
         "career_avgs": {"pts": 25.0, "reb": 5.2, "ast": 4.7, "stl": 1.38, "blk": 0.52,
                         "pts_normalized": None},
-        "best_season": {"season_str": "2005-06", "pts": 35.4, "reb": 5.3, "ast": 4.5},
+        "best_season": "2005-06",
         "ts_pct": 0.551, "fg_pct": 0.447, "fg3_pct": 0.329, "ft_pct": 0.837,
         "seasons": [],
         "_legend": True, "_note": "Career stats from Basketball Reference.",
     },
     {
         "player_id": -6, "player_name": "Wilt Chamberlain",
-        "positions": "C", "position_primary": "C",
+        "positions": "C", "position_primary": "C", "jersey_number": "13",
         "seasons_span": "1959-1973", "career_gp": 1045,
         "career_avgs": {"pts": 30.1, "reb": 22.9, "ast": 4.4, "stl": None, "blk": None,
                         "pts_normalized": None},
-        "best_season": {"season_str": "1961-62", "pts": 50.4, "reb": 25.7, "ast": 2.4},
+        "best_season": "1961-62",
         "ts_pct": 0.541, "fg_pct": 0.540, "fg3_pct": None, "ft_pct": 0.511,
         "seasons": [],
         "_legend": True, "_note": "Career stats from Basketball Reference.",
@@ -581,6 +585,133 @@ def _inject_legends(player_records: list[dict]) -> list[dict]:
     for leg in _LEGENDS:
         result.append(dict(leg))
     return result
+
+
+# ---------------------------------------------------------------------------
+# Single-game records (computed from game logs + pre-1996 historical floor)
+# ---------------------------------------------------------------------------
+
+# Pre-1996 records that can't be derived from game logs (NBA API starts 1996-97)
+_PRE_1996_RECORDS: dict[str, list[dict]] = {
+    "pts": [
+        {"name": "Wilt Chamberlain", "team": "PHI", "val": 100, "detail": "vs NYK, Mar 2 1962"},
+        {"name": "Wilt Chamberlain", "team": "PHI", "val": 78, "detail": "vs LAL, Dec 8 1961"},
+        {"name": "David Thompson", "team": "DEN", "val": 73, "detail": "vs DET, Apr 9 1978"},
+        {"name": "Wilt Chamberlain", "team": "SFW", "val": 73, "detail": "vs NYK, Nov 16 1962"},
+        {"name": "Elgin Baylor", "team": "LAL", "val": 71, "detail": "vs NYK, Nov 15 1960"},
+        {"name": "Wilt Chamberlain", "team": "PHI", "val": 68, "detail": "vs CHI, Dec 16 1967"},
+        {"name": "Pete Maravich", "team": "NOJ", "val": 68, "detail": "vs NYK, Feb 25 1977"},
+    ],
+    "reb": [
+        {"name": "Wilt Chamberlain", "team": "PHI", "val": 55, "detail": "vs BOS, Nov 24 1960"},
+        {"name": "Bill Russell", "team": "BOS", "val": 51, "detail": "vs SYR, Feb 5 1960"},
+        {"name": "Bill Russell", "team": "BOS", "val": 49, "detail": "vs PHI, Nov 16 1957"},
+        {"name": "Bill Russell", "team": "BOS", "val": 49, "detail": "vs DET, Mar 11 1965"},
+        {"name": "Wilt Chamberlain", "team": "PHI", "val": 45, "detail": "vs SYR, Feb 6 1960"},
+        {"name": "Wilt Chamberlain", "team": "PHI", "val": 45, "detail": "vs LAL, Jan 21 1961"},
+        {"name": "Wilt Chamberlain", "team": "SFW", "val": 43, "detail": "vs BOS, Jan 15 1963"},
+        {"name": "Bill Russell", "team": "BOS", "val": 43, "detail": "vs LAL, Jan 20 1963"},
+        {"name": "Wilt Chamberlain", "team": "PHI", "val": 42, "detail": "vs BOS, Mar 6 1965"},
+        {"name": "Nate Thurmond", "team": "SFW", "val": 42, "detail": "vs DET, Nov 9 1965"},
+    ],
+    "ast": [
+        {"name": "Bob Cousy", "team": "BOS", "val": 28, "detail": "vs MIN, Feb 27 1959"},
+        {"name": "Guy Rodgers", "team": "SFW", "val": 28, "detail": "vs STL, Mar 14 1963"},
+        {"name": "Nate McMillan", "team": "SEA", "val": 25, "detail": "vs LAC, Feb 23 1987"},
+    ],
+}
+
+# Map NBA API team abbreviations to standard 3-letter codes
+_TEAM_ABB_MAP = {
+    "PHX": "PHX", "PHO": "PHX",
+    "BKN": "BKN", "NJN": "NJN",
+    "CHA": "CHA", "CHH": "CHA",
+    "NOH": "NOP", "NOK": "NOP", "NOP": "NOP",
+}
+
+
+def _build_single_game_records(top_n: int = 15) -> dict[str, list[dict]]:
+    """Compute top single-game performances from player game logs.
+
+    Merges with pre-1996 historical records and returns top_n per stat.
+    """
+    stat_cols = {"pts": "PTS", "reb": "REB", "ast": "AST"}
+    records: dict[str, list[dict]] = {s: list(recs) for s, recs in _PRE_1996_RECORDS.items()}
+
+    if not GAME_LOGS_DIR.exists():
+        print("  WARN: game logs directory not found, using pre-1996 records only")
+        for stat in records:
+            records[stat].sort(key=lambda r: r["val"], reverse=True)
+            records[stat] = records[stat][:top_n]
+        return records
+
+    # Load all game log CSVs
+    csv_files = sorted(GAME_LOGS_DIR.glob("*.csv"))
+    if not csv_files:
+        print("  WARN: no game log CSVs found")
+        for stat in records:
+            records[stat].sort(key=lambda r: r["val"], reverse=True)
+            records[stat] = records[stat][:top_n]
+        return records
+
+    for stat_key, col_name in stat_cols.items():
+        best_from_logs: list[dict] = []
+        for csv_path in csv_files:
+            try:
+                df = pd.read_csv(csv_path, usecols=["PLAYER_NAME", "MATCHUP", "GAME_DATE", col_name],
+                                 low_memory=False)
+            except (ValueError, KeyError):
+                continue
+            df = df.dropna(subset=[col_name])
+            df[col_name] = pd.to_numeric(df[col_name], errors="coerce")
+            df = df.dropna(subset=[col_name])
+            # Keep top performances from this file
+            top = df.nlargest(top_n, col_name)
+            for _, row in top.iterrows():
+                matchup = str(row.get("MATCHUP", ""))
+                game_date = str(row.get("GAME_DATE", ""))
+                # Parse matchup for team abbreviation
+                team = matchup.split(" ")[0] if matchup else ""
+                # Format detail string
+                opponent = ""
+                if " vs. " in matchup:
+                    opponent = "vs " + matchup.split(" vs. ")[-1]
+                elif " @ " in matchup:
+                    opponent = "@ " + matchup.split(" @ ")[-1]
+                # Format date
+                try:
+                    dt = pd.to_datetime(game_date, format="mixed")
+                    detail = f"{opponent}, {dt.strftime('%b %-d %Y')}" if opponent else game_date
+                except Exception:
+                    detail = f"{opponent}, {game_date}" if opponent else game_date
+                # Windows strftime doesn't support %-d, use %#d instead
+                try:
+                    dt = pd.to_datetime(game_date, format="mixed")
+                    detail = f"{opponent}, {dt.strftime('%b %d %Y').replace(' 0', ' ')}" if opponent else game_date
+                except Exception:
+                    pass
+
+                best_from_logs.append({
+                    "name": str(row["PLAYER_NAME"]),
+                    "team": _TEAM_ABB_MAP.get(team, team),
+                    "val": int(row[col_name]),
+                    "detail": detail,
+                })
+
+        # Merge with pre-1996 records, sort, dedupe, take top_n
+        combined = records.get(stat_key, []) + best_from_logs
+        combined.sort(key=lambda r: r["val"], reverse=True)
+        # Deduplicate by (name, val, detail prefix) — keep first occurrence
+        seen = set()
+        deduped = []
+        for r in combined:
+            key = (r["name"], r["val"])
+            if key not in seen:
+                seen.add(key)
+                deduped.append(r)
+        records[stat_key] = deduped[:top_n]
+
+    return records
 
 
 # ---------------------------------------------------------------------------
@@ -628,19 +759,28 @@ def run(min_seasons: int = DEFAULT_MIN_SEASONS,
           f"(min_seasons={min_seasons}, min_career_games={min_career_games})...")
     player_records = build_player_records(enriched, min_seasons, min_career_games, pos_lookup)
     league_rows = build_league_by_season(league)
-    player_index = build_player_index(player_records)
 
     print(f"  {len(player_records):,} eligible players")
 
     # Inject curated legend overrides for pre-1996 players missing from NBA API.
     # Stats sourced from Basketball Reference career regular-season averages.
+    # Must happen BEFORE building the player index so legends appear in search.
     player_records = _inject_legends(player_records)
     print(f"  {len(player_records):,} players after legend injection")
+
+    player_index = build_player_index(player_records)
+
+    # Build single-game records from game logs + historical floor
+    print("build_player_comparison: computing single-game records...")
+    single_game_records = _build_single_game_records(top_n=15)
+    for stat_key, recs in single_game_records.items():
+        print(f"  {stat_key}: top={recs[0]['name']} ({recs[0]['val']})" if recs else f"  {stat_key}: empty")
 
     # Write comparison JSON
     comparison = {
         "players": player_records,
         "league_by_season": league_rows,
+        "single_game_records": single_game_records,
         "meta": {
             "seasons_covered": league["season_str"].tolist(),
             "total_seasons": len(league),
