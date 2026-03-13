@@ -37,7 +37,9 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `pd.to_datetime()` on game_date must use `format="mixed"` — NBA API sends "YYYY-MM-DD 00:00:00" for current season, plain dates for history; `player_game_logs.csv` uses `season_id=22025` for 202526 (all other CSVs use `season=202526`)
 - `update.py` step 3: call both `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` writes to predictions_history.db
 - If injury cols missing from matchup CSV — `player_absences.csv` may be missing; run `get_historical_absences.py` first, then rebuild injury_proxy + matchup
-- ATS model selection uses `min(brier_score_loss)` NOT accuracy — never revert to accuracy; CALIBRATION_SEASON="202122" is permanently held out from CV
+- ATS model selection uses `min(brier_score_loss)` NOT accuracy — never revert to accuracy; CALIBRATION_SEASON=202122 (int) is permanently held out from CV
+- Season codes are 6-digit INTEGERS — ALWAYS use `.astype(int)` for comparisons, NEVER `.astype(str)`; string comparison is lexicographic (bug found in 10+ files)
+- Never use `fillna(0)` in prediction/inference paths — sklearn Pipeline has imputer as first step that handles NaN with mean strategy matching training; fillna(0) causes train/inference skew
 - Never use Unicode → in print() — Windows cp1252 raises UnicodeEncodeError; use -> instead
 - Any feature col with `_roll` in name is auto-captured by `roll_cols` in build_matchup_dataset(); never also add to `context_cols` -- duplicates cause ValueError
 - CLV formula: `clv = opening_spread - closing_spread` (positive = better line than closing); do NOT invert; `closing_spread` is NULL in DB until game closes — always guard with `pd.isna()` before `float()` cast

@@ -1,42 +1,50 @@
-# Handoff — NBA Analytics Project
+# Handoff -- NBA Analytics Project
 
-_Last updated: 2026-03-13 Session 15 (Config wiring + dedup + test coverage)_
+_Last updated: 2026-03-13 Session 16 (Bug fixes, extended Elo, test coverage, dashboard refactor)_
 
 ## What Was Done This Session
 
-### Config Centralization (continued from Session 14)
-- Wired `src/config.py` into 14+ builder scripts — all hardcoded `CURRENT_SEASON = 202526` replaced
-- Added `get_current_season_id()` for player_game_logs format
-- Added `EAST_DIVISIONS`/`WEST_DIVISIONS` to config — replaced 60+ lines of duplicate dicts in standings/playoff_odds
-- Fixed 3 remaining hardcoded seasons: `tune_hyperparams.py`, `fetch_historical_players.py`, `fetch_player_positions.py`
-- Fixed string-based season comparisons (`.astype(str) >= "202122"`) to integer comparisons in 4 files — string comparison is lexicographic, not numeric
+### Bug Fixes
+- **cv_utils.py off-by-one**: First CV fold was using `min_train_seasons - 1` training seasons, not `min_train_seasons` as documented. Also fixed same off-by-one in `tune_hyperparams.py`
+- **Confidence tier suppression**: All games without market odds were getting "Skip" tier. Added probability-based fallback tiering (>=70% Best Bet, >=62% Solid Pick, >=55% Lean)
+- **Dashboard tierPill CSS mismatch**: CSS class was derived from edge magnitude but label was downgraded by model disagreement. Added `_confLevelFromTier()` to derive class from label
+- **predict_cli.py**: Fixed `.astype(str)` season comparison bug
+- **Eliminated ALL remaining `.astype(str)` season comparisons**: 7 files fixed (ats_model.py, ats_backtest.py, player_performance_model.py, playoff_odds_model.py, build_picks.py, tune_hyperparams.py, predict_cli.py). ATS model constants changed from strings to ints.
 
-### Duplicate Helper Extraction
-- Created `scripts/builder_helpers.py` with: `load_team_names()`, `record_str()`, `games_behind()`, `safe_float()`, `write_json()`, `load_json()`
-- Wired 8 builder scripts to delegate to shared helpers (was 4x `_load_team_names`, 3x `_record_str`, 2x `_games_behind`)
+### Extended Elo API (Phase 3 TODO resolved)
+- `get_current_elos(extended=True)` returns `{team: {elo, elo_fast, momentum}}` per team
+- `margin_model.py` now injects fast Elo + momentum signals in prediction path
+- Backward-compatible: `get_current_elos()` still returns simple `{team: elo}` dict
 
-### Test Coverage
-- Added `tests/test_builder_helpers.py` (20 tests) — all helper functions
-- Added `tests/test_fetch_odds.py` (19 tests) — implied prob, team mapping, game lines (mocked API), model_vs_odds assembly
-- Added `tests/test_pipeline_runner.py` (18 tests) — registry, modes, dry-run, state
-- Added `tests/test_build_elo_timeline.py` (7 tests) + `tests/test_build_game_detail.py` (9 tests)
-- Test baseline: 1582 -> 1621 (+39 tests)
+### Dashboard Refactor
+- **Promise.allSettled fragile array pattern resolved**: Replaced 3 parallel arrays (20 fetch calls, 20 fallbacks, 20-variable destructuring) with named config objects `{k, url, fb}`. Adding/removing fetches now requires editing only one place.
+
+### Test Coverage (+47 new tests)
+- `tests/test_predict_cli.py` (12 tests) -- arg parsing, missing matchup, no history
+- `tests/test_retrain_all.py` (7 tests) -- step runner, pipeline orchestration, step ordering
+- `tests/test_sync_to_sqlserver.py` (28 tests) -- clean_value, coerce_dates, sql_type, table naming, conn_string, create SQL
+- Extended Elo tests: 2 new tests in test_elo.py
+- Test baseline: 1621 -> 1668
 
 ## What's Next
 
 ### Remaining Work
-- **Dashboard tiered loading** (Plan D Task 4): deferred — high-risk for 9K-line file
-- **Full model retrain** (Plan B Task 8): Huber GBM candidate + ensemble optimizer ready
-- Add tests for: `sync_to_sqlserver.py`, `predict_cli.py`, `retrain_all.py`
+- **Full model retrain**: Huber GBM candidate + ensemble optimizer ready but not yet executed
+- **Dashboard tiered loading** (Plan D Task 4): deferred -- high-risk for 9K-line file
+- **Additional test coverage**: nba_api data fetchers (`get_player_stats.py`, `get_team_stats.py`) still lack unit tests
 
 ### Known Issues
-- CLV closing_spread always NULL (data-over-time issue — pipeline needs daily runs to accumulate)
+- CLV closing_spread always NULL (data-over-time issue -- pipeline needs daily runs to accumulate)
 - Lineup features missing for 2025-26 season
 - ATS features stop at 2024-25
+- Zero TODOs remaining in src/ and scripts/
 
 ## Test Baseline
-- 1621 tests passing (0 failures)
+- 1668 tests passing (0 failures)
 
-## Session Intent 2026-03-13
-Goal: Continue project quality improvements — config wiring, dedup, test coverage
-Outcome: achieved
+## Git State
+- Branch: main
+- Recent commits:
+  - `4a83dcb` fix: eliminate remaining .astype(str) season comparisons across 7 files
+  - `cace168` feat: extended Elo API, named fetch config, +47 tests, predict_cli season fix
+  - `5dc7804` fix: cv_utils off-by-one, confidence tier fallback, tierPill CSS alignment

@@ -2,16 +2,15 @@
 
 ## Core Insights (loaded by session-kickoff)
 
-- [model] `shift(1)` before ALL rolling features; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON="202122" permanently held out
-- [model] GBM: n_estimators=500 + early stopping (n_iter_no_change=15), min_samples_leaf=20, max_features=0.7; auto-prunes features < 0.001 importance; diff_elo is #1 feature (37.3%)
+- [model] `shift(1)` before ALL rolling features; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON=202122 (int) permanently held out
+- [model] Season codes are 6-digit INTEGERS (e.g. 202526) -- ALWAYS use `.astype(int)` for comparisons, NEVER `.astype(str)`; config constants are ints; fillna(0) in inference paths is WRONG -- let sklearn Pipeline imputer handle NaN
 - [model] Ensemble: confidence-dependent weights (ATS=0.0, removed as noise); high-conf 0.75/0.25, default 0.65/0.35, uncertain 0.55/0.45; calibration auto-selects Platt vs Isotonic by Brier
-- [model] Elo system: K=20 standard + K=40 fast; `elo_momentum = fast - standard` detects surges/slumps; interaction features: elo_x_rest, elo_x_b2b, elo_x_streak
+- [model] Elo: K=20 standard + K=40 fast; `get_current_elos(extended=True)` returns elo, elo_fast, momentum per team; margin model uses all 3; diff_elo is #1 feature (37.3%)
 - [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_stats.csv stores TOTALS -- divide by gp
 - [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols; `game_lines.csv` at `data/odds/`; `dashboard/data/*.json` COMMITTED to git
 - [pipeline] update.py: Step 3 calls BOTH build_team_game_features() AND build_matchup_dataset(); Step 3b: backfill_closing_lines(); Step 7: all 29 builders; Step 8: SQL Server sync
-- [dashboard] ALL DOM writes use `_setHtml(el,html)` — for tbody/thead/tfoot it uses `createElement('table')+innerHTML` (NOT createContextualFragment which strips `<tr>`/`<td>`); helpers: _confMeterHtml(), _whyThisPickHtml(), _factorBadgeHtml(), _emptyStateHtml(), _sparklineHtml()
-- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free)
-- [agents] Worktree agents may commit on branch that gets deleted -- always verify changes landed on main; prefer non-worktree for single-file edits
+- [dashboard] ALL DOM writes use `_setHtml(el,html)` -- for tbody/thead/tfoot it uses `createElement('table')+innerHTML`; data loader uses named `_fetchCfg` objects (not parallel arrays)
+- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1668 tests passing
 
 ## Domain Notes
 
