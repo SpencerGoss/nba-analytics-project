@@ -241,3 +241,14 @@
 
 [2026-03-07] [pipeline] INSIGHT: player_stats.csv stores season TOTALS (pts=1736 for 60 games), not per-game averages. Must divide all stat columns by gp before computing projections.
 [2026-03-07] [pipeline] WHY: This caused build_player_props.py to produce absurdly high projections (1736 PPG) in early drafts. Always check whether a stats CSV is per-game or totals by inspecting a known player's row.
+
+### [code-review]
+
+[2026-03-13] [code-review] INSIGHT: over_prob formula in betting_router.py divided by `spread_width * 2` — compressed all prop estimates toward 0.5 (line at p50 read 0.75 instead of 0.50). Fix: divide by `spread_width` only.
+[2026-03-13] [code-review] WHY: Linear interpolation across IQR should map p25->1.0, p50->0.5, p75->0.0. The `* 2` doubled the denominator, halving the effective range.
+
+[2026-03-13] [code-review] INSIGHT: game_outcome_model.py final refit passed X_test/y_test as eval_set for XGBoost early stopping — test labels influenced n_estimators in the saved model. Fix: carve validation split from X_train.
+[2026-03-13] [code-review] WHY: Early stopping monitors loss on eval_set to decide when to stop training. Using test set means test labels leak into the training process, inflating reported test metrics.
+
+[2026-03-13] [code-review] INSIGHT: Code reviewer agents produce false positives ~25% of the time — always verify findings by reading the actual code before fixing. season_game_num via cumcount()+1 was flagged as leakage but it's public pre-game knowledge.
+[2026-03-13] [code-review] WHY: Agents apply rules mechanically ("shift(1) before ALL sequential features") without domain judgment about what constitutes look-ahead vs public information.
