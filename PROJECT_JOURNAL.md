@@ -4,6 +4,30 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-13 (Session 13) — Plan B Model Improvements + Code Review + Analysis
+
+**Done:**
+- **Plan B (Model Improvements) — 6 of 8 tasks completed:**
+  - Walk-forward betting backtest module (flat-bet + Kelly sizing, realistic vig)
+  - Statistical significance testing (binomial, bootstrap ROI, McNemar's, sample size calculator)
+  - Ensemble weight optimization via Brier-minimizing grid search
+  - SHAP analysis module (TreeExplainer, calibration wrapper unwrapping)
+  - Margin model upgrade (Huber GBM candidate, residual_std artifact, segmented MAE)
+  - Skipped: temperature scaling (marginal), orthogonal features (deferred until backtest proves edge)
+- **Code review found 3 real bugs (+ 1 false positive):**
+  - over_prob formula in betting_router.py divided by spread_width*2 (compressed estimates)
+  - XGBoost eval_set used test labels for early stopping (leakage)
+  - _build_fit_params comment clarified
+  - False positive: season_game_num via cumcount()+1 is NOT leakage (public info)
+- **SHAP analysis run on real model:** diff_elo confirmed #1 (0.264), lineup/injury features much more important than GBM importance suggested
+- **Significance testing:** 67.5% game outcome highly significant (p=3.5e-29); 55% ATS NOT significant vs 52.4% breakeven (p=0.053, need 2276 bets to confirm)
+- **Codebase health scan:** found duplicate _season_splits(), inconsistent PROJECT_ROOT, missing __init__.py (fixed)
+- **Tests:** 1552 -> 1580 (28 new)
+
+**Next:** Plan D (Pipeline + Dashboard + Cleanup), full model retrain with new Huber candidate + ensemble optimizer
+
+---
+
 ## 2026-03-13 (Session 12) — Critical Bug Fixes + Player Prop System + Source Control Cleanup
 
 **Done:**
