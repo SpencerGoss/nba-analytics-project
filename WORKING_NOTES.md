@@ -10,7 +10,7 @@
 - [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols; `game_lines.csv` at `data/odds/`; `dashboard/data/*.json` COMMITTED to git
 - [pipeline] update.py: Step 3 calls BOTH build_team_game_features() AND build_matchup_dataset(); Step 3b: backfill_closing_lines(); Step 7: all 29 builders; Step 8: SQL Server sync
 - [dashboard] ALL DOM writes use `_setHtml(el,html)` -- for tbody/thead/tfoot it uses `createElement('table')+innerHTML`; data loader uses named `_fetchCfg` objects (not parallel arrays)
-- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1668 tests passing
+- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1675 tests passing
 
 ## Domain Notes
 
@@ -278,6 +278,11 @@
 [2026-03-13] [refactor] INSIGHT: Season code comparisons using `.astype(str) >= "202122"` are lexicographic, not numeric — produces wrong results for edge cases. Must use `.astype(int)` for season filtering.
 [2026-03-13] [refactor] WHY: Found in tune_hyperparams.py, player_features.py, player_performance_model.py. String "9xxxx" > "2xxxx" even though numerically smaller. All season codes are 6-digit integers.
 
+### [lineup]
+
+[2026-03-13] [lineup] INSIGHT: NBA API TeamDashLineups returns empty JSON for 2025-26 season — all 30 teams fail with "Expecting value: line 1 column 1 (char 0)". Lineup data only available through 2024-25.
+[2026-03-13] [lineup] WHY: NBA may delay lineup data availability for current season, or the endpoint may not support current-season queries mid-season. Models handle this via imputation for current-season predictions. Retry periodically or after season ends.
+
 ### [cv]
 
 [2026-03-13] [cv] INSIGHT: expanding_season_splits had off-by-one — `range(max(1, min_train_seasons - 1), ...)` gave first fold min_train_seasons-1 training seasons, not min_train_seasons as documented. Fixed to `range(max(1, min_train_seasons), ...)`.
@@ -285,3 +290,11 @@
 
 [2026-03-13] [cv] INSIGHT: When no market odds exist, confidence tier fallback must use model probability — not return "Skip" unconditionally. Added probability-based tiering: >=70% Best Bet (if agree), >=62% Solid Pick, >=55% Lean, else Skip.
 [2026-03-13] [cv] WHY: Without odds, edge_pct is None, so the BettingRouter path was skipped entirely. Every no-odds game was "Skip" even when model was 85% confident. Affects all games early in pipeline before odds are fetched.
+
+### [retrain]
+
+[2026-03-13] [retrain] INSIGHT: retrain_all.py subprocess calls fail with ModuleNotFoundError on `from src.*` imports — must pass PYTHONPATH=PROJECT_ROOT in env to subprocess.run().
+[2026-03-13] [retrain] WHY: os.chdir() and sys.path.insert() affect the parent process only; child processes inherit env vars but not sys.path. Fixed by building env dict with PYTHONPATH prepended.
+
+[2026-03-13] [retrain] INSIGHT: calibration.py had 4 latent .astype(str) bugs (BRIER_MIN_SEASON, calibration_season, era_breaks) — calibration SEEMED to work because the str/int mismatch caused zero-row test sets silently. The model was saved correctly but calibration analysis metrics were wrong.
+[2026-03-13] [retrain] WHY: `.isin(test_seasons)` where test_seasons=[202324,202425] (int) but df["season"].astype(str) produced "202324" (str) — pandas returns empty mask. No error, just empty results that get skipped by `len(test) < 50` guards.

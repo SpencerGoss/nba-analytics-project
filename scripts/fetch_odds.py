@@ -32,6 +32,7 @@ from pathlib import Path
 import requests
 import pandas as pd
 from dotenv import load_dotenv
+from src.models.odds_utils import american_to_implied_prob as _odds_utils_implied_prob
 
 # -- Setup ---------------------------------------------------------------------
 
@@ -123,13 +124,13 @@ def get_pinnacle(endpoint: str) -> list | dict | None:
 
 
 def american_odds_to_implied_prob(ml: int | None) -> float | None:
-    """Convert American moneyline odds to implied probability (vig-inclusive)."""
-    if ml is None:
-        return None
-    if ml > 0:
-        return round(100 / (ml + 100), 4)
-    else:
-        return round(abs(ml) / (abs(ml) + 100), 4)
+    """Convert American moneyline odds to implied probability (vig-inclusive).
+
+    Delegates to odds_utils.american_to_implied_prob for the core math
+    (includes zero-odds guard). Rounds to 4 decimal places for CSV output.
+    """
+    result = _odds_utils_implied_prob(ml)
+    return round(result, 4) if result is not None else None
 
 
 def team_name_to_abb(name: str) -> str:

@@ -31,7 +31,10 @@ def run_step(description: str, cmd: list) -> bool:
     print(f"\n{'='*60}")
     print(f"STEP: {description}")
     print(f"{'='*60}")
-    result = subprocess.run(cmd, capture_output=False, text=True)
+    # Ensure project root is on PYTHONPATH so 'from src...' imports work
+    env = os.environ.copy()
+    env["PYTHONPATH"] = PROJECT_ROOT + os.pathsep + env.get("PYTHONPATH", "")
+    result = subprocess.run(cmd, capture_output=False, text=True, env=env)
     if result.returncode != 0:
         print(f"ERROR: Step failed with return code {result.returncode}")
         return False

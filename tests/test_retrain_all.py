@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, ANY
 
 import pytest
 
@@ -27,7 +27,7 @@ class TestRunStep:
         with patch("subprocess.run", return_value=result) as mock_run:
             assert run_step("Test step", ["echo", "hello"]) is True
             mock_run.assert_called_once_with(
-                ["echo", "hello"], capture_output=False, text=True
+                ["echo", "hello"], capture_output=False, text=True, env=ANY
             )
 
     def test_failure_returns_false(self):

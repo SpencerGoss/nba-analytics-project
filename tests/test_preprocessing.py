@@ -368,20 +368,20 @@ class TestMergeIncremental:
 
     def test_appends_new_seasons_to_existing(self, tmp_path):
         existing = pd.DataFrame({
-            "season": ["202324", "202324"],
+            "season": [202324, 202324],
             "player_id": [1, 2],
             "pts": [20, 15],
         })
         processed_path = str(tmp_path / "player_stats.csv")
         existing.to_csv(processed_path, index=False)
 
-        new_df = pd.DataFrame({"season": ["202425"], "player_id": [3], "pts": [25]})
+        new_df = pd.DataFrame({"season": [202425], "player_id": [3], "pts": [25]})
         stale = [str(tmp_path / "player_stats_202425.csv")]
 
         result = merge_incremental(new_df, processed_path, stale, prefix="player_stats_")
 
         assert len(result) == 3
-        assert set(result["season"].unique()) == {"202324", "202425"}
+        assert set(result["season"].astype(int).unique()) == {202324, 202425}
 
     def test_replaces_existing_rows_for_updated_season(self, tmp_path):
         """Stale season rows replaced, not duplicated."""

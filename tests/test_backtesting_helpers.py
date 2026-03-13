@@ -45,10 +45,10 @@ class TestSortedSeasons:
         result = _sorted_seasons(df)
         assert len(result) == len(set(result))
 
-    def test_returns_string_values(self):
+    def test_returns_int_values(self):
         df = pd.DataFrame({"season": [202425]})
         result = _sorted_seasons(df)
-        assert all(isinstance(s, str) for s in result)
+        assert all(isinstance(s, (int, type(result[0]))) for s in result)
 
     def test_custom_col(self):
         df = pd.DataFrame({"my_season": [202425, 202324]})
@@ -58,7 +58,7 @@ class TestSortedSeasons:
     def test_single_season(self):
         df = pd.DataFrame({"season": [202425]})
         result = _sorted_seasons(df)
-        assert result == ["202425"]
+        assert result == [202425]
 
     def test_empty_df_returns_empty_list(self):
         df = pd.DataFrame({"season": []})

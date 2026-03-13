@@ -179,8 +179,10 @@ def merge_incremental(
         existing_df = pd.read_csv(processed_path)
         # Keep only rows from seasons that were NOT rebuilt
         if "season" in existing_df.columns:
-            existing_df["season"] = existing_df["season"].astype(str)
-            kept_df = existing_df[~existing_df["season"].isin(stale_seasons)]
+            existing_df["season"] = existing_df["season"].astype(int)
+            # stale_seasons are filename-derived strings; convert to int for matching
+            stale_int = {int(s) for s in stale_seasons if s.isdigit()}
+            kept_df = existing_df[~existing_df["season"].isin(stale_int)]
         else:
             # No season column — full replace
             kept_df = pd.DataFrame(columns=existing_df.columns)

@@ -255,7 +255,7 @@ def _plot_calibration_curve(
 
 # -- Per-season Brier score trend -----------------------------------------------
 
-BRIER_MIN_SEASON = "200001"   # only walk-forward from modern era (avoids 70+ fits)
+BRIER_MIN_SEASON = 200001   # only walk-forward from modern era (avoids 70+ fits)
 
 
 def _compute_season_brier(
@@ -326,12 +326,12 @@ def _plot_brier_trend(df: pd.DataFrame, output_dir: str) -> None:
     # Era shading
     era_colors = ["#eaf4fb", "#fef9e7", "#eafaf1", "#fdf2f8", "#f0f3fd", "#fef5e7"]
     era_breaks = [
-        ("194647", "195354", "Pre-Shot Clock", era_colors[0]),
-        ("195455", "197879", "Shot Clock Era", era_colors[1]),
-        ("197980", "199394", "3-Point Intro",  era_colors[2]),
-        ("199495", "200304", "Physical / Iso", era_colors[3]),
-        ("200405", "201415", "Open Court",     era_colors[4]),
-        ("201516", "202526", "3-Pt Revolution",era_colors[5]),
+        (194647, 195354, "Pre-Shot Clock", era_colors[0]),
+        (195455, 197879, "Shot Clock Era", era_colors[1]),
+        (197980, 199394, "3-Point Intro",  era_colors[2]),
+        (199495, 200304, "Physical / Iso", era_colors[3]),
+        (200405, 201415, "Open Court",     era_colors[4]),
+        (201516, 202526, "3-Pt Revolution",era_colors[5]),
     ]
     all_seasons = df["season"].tolist()
 
@@ -370,7 +370,7 @@ def run_calibration_analysis(
     artifacts_dir: str  = ARTIFACTS_DIR,
     output_dir:    str  = OUTPUT_DIR,
     test_seasons:  list = TEST_SEASONS,
-    calibration_season: str = "202122",
+    calibration_season: int = 202122,
 ) -> dict:
     """
     Run the full calibration analysis suite.
@@ -388,12 +388,12 @@ def run_calibration_analysis(
 
     df = pd.read_csv(matchup_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
-    df["season"]    = df["season"].astype(str)
+    df["season"]    = df["season"].astype(int)
     df = df.sort_values("game_date").reset_index(drop=True)
     df = df.dropna(subset=[TARGET])         # drop unplayed / future games
 
     test = df[df["season"].isin(test_seasons)].copy()
-    print(f"\nTest set: {len(test):,} games  ({', '.join(test_seasons)})")
+    print(f"\nTest set: {len(test):,} games  ({', '.join(str(s) for s in test_seasons)})")
 
     X_test = test[feat_cols]
     y_test = test[TARGET].values

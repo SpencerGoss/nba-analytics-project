@@ -62,11 +62,11 @@ MIN_TRAIN_SEASONS = 5
 
 # For the player model, we only backtest the modern era (data is richer).
 # Full historical player game logs only exist from ~2000 onward.
-PLAYER_BACKTEST_START = "200001"
+PLAYER_BACKTEST_START = 200001
 
 # Restrict game outcome backtest to modern era -- pre-2000 seasons have different
 # statistical distributions that add noise for predicting modern games.
-GAME_BACKTEST_START = "200001"
+GAME_BACKTEST_START = 200001
 
 # Minimum games played in a training set for a player to be included.
 MIN_PLAYER_GAMES = 20
@@ -78,7 +78,7 @@ PLAYER_TARGETS = ["pts", "reb", "ast"]
 # -- Helpers --------------------------------------------------------------------
 
 def _sorted_seasons(df: pd.DataFrame, col: str = "season") -> list:
-    return sorted(df[col].astype(str).unique())
+    return sorted(df[col].astype(int).unique())
 
 
 def _get_feature_cols_game(df: pd.DataFrame) -> list:
@@ -160,7 +160,7 @@ def run_game_outcome_backtest(
 
     df = pd.read_csv(matchup_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
-    df["season"]    = df["season"].astype(str)
+    df["season"]    = df["season"].astype(int)
     df = df.sort_values("game_date").reset_index(drop=True)
     df = df.dropna(subset=[TARGET_CLASS])           # drop unplayed / future games
     df = df[df["season"] >= GAME_BACKTEST_START]    # modern era only
@@ -270,7 +270,7 @@ def run_player_model_backtest(
     player_path:  str  = PLAYER_PATH,
     reports_dir:  str  = REPORTS_DIR,
     targets:      list = PLAYER_TARGETS,
-    start_season: str  = PLAYER_BACKTEST_START,
+    start_season: int  = PLAYER_BACKTEST_START,
 ) -> dict:
     """
     Walk-forward backtest for the player performance regression models.
@@ -290,7 +290,7 @@ def run_player_model_backtest(
 
     df = pd.read_csv(player_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
-    df["season"]    = df["season"].astype(str)
+    df["season"]    = df["season"].astype(int)
     df = df.sort_values("game_date").reset_index(drop=True)
 
     all_seasons = _sorted_seasons(df)

@@ -202,7 +202,7 @@ def explain_game_outcome_model(
 
     df = pd.read_csv(matchup_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
-    df["season"]    = df["season"].astype(str)
+    df["season"]    = df["season"].astype(int)
 
     test = df[df["season"].isin(test_seasons)].copy()
     print(f"\nTest set size: {len(test):,} games  |  Features: {len(feat_cols)}")
@@ -351,12 +351,12 @@ def explain_player_model(
     _csv_header = pd.read_csv(player_path, nrows=0).columns.tolist()
     _usecols = [c for c in _csv_header if c in _needed_features or c in _meta_cols]
 
-    test_season_set = set(str(s) for s in test_seasons)
+    test_season_set = set(int(s) for s in test_seasons)
     chunks = []
     for chunk in pd.read_csv(
         player_path, chunksize=50_000, low_memory=False, usecols=_usecols
     ):
-        chunk["season"] = chunk["season"].astype(str)
+        chunk["season"] = chunk["season"].astype(int)
         sub = chunk[chunk["season"].isin(test_season_set)]
         if len(sub):
             chunks.append(sub)
