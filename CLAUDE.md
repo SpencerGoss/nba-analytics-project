@@ -1,7 +1,7 @@
 # NBA Analytics Project
 
 ## What This Is
-Python NBA analytics pipeline: data ingestion → feature engineering (Elo ratings, EWMA, streaks, cross-matchup interactions) → game outcome prediction (67.5%, AUC 0.7422) → ATS betting model (55.0%, Brier-optimized) → margin regression model (Ridge, MAE 10.52) → NBAEnsemble (3-model blend, confidence-dependent weights, ATS=0) → prediction store → dashboard v3 (9 tabs: Today, Players, Teams, H2H, Standings, Injuries, Rankings, Season History, Betting Tools [Picks/Value Bets/Props/Sharp Money/Performance/Bet Tracker]) + CLV tracking + SQL Server warehouse. Dashboard live at GitHub Pages. Optuna HPO complete: gradient_boosting confirmed best. Odds: Pinnacle guest API (free, keyless).
+Python NBA analytics pipeline: data ingestion → feature engineering (Elo ratings, EWMA, streaks, cross-matchup interactions) → game outcome prediction (67.7%, AUC 0.7427) → ATS betting model (54.9%, Brier-optimized) → margin regression model (Ridge, MAE 10.52) → NBAEnsemble (3-model blend, confidence-dependent weights, ATS=0) → prediction store → dashboard v3 (9 tabs: Today, Players, Teams, H2H, Standings, Injuries, Rankings, Season History, Betting Tools [Picks/Value Bets/Props/Sharp Money/Performance/Bet Tracker]) + CLV tracking + SQL Server warehouse. Dashboard live at GitHub Pages. Optuna HPO complete: gradient_boosting confirmed best. Odds: Pinnacle guest API (free, keyless).
 
 ## Stack
 Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js dashboard, Node.js (dashboard optimizer).
