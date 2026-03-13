@@ -6,10 +6,12 @@ Covers:
   - CLVTracker.update_closing_line: computes CLV, handles missing opening, NULL opening
   - CLVTracker.get_clv_summary: empty DB, single game, has_edge threshold
   - CLV formula: opening - closing (positive = better than closing)
+  - Code quality: no deprecated utcnow(), uses cursor.rowcount not conn.total_changes
 """
 
 from __future__ import annotations
 
+import inspect
 import sys
 from pathlib import Path
 
@@ -19,6 +21,25 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.models.clv_tracker import CLVTracker
+
+
+# ---------------------------------------------------------------------------
+# Code quality checks
+# ---------------------------------------------------------------------------
+
+def test_clv_tracker_no_utcnow():
+    """Must not use deprecated datetime.utcnow()."""
+    from src.models import clv_tracker
+    source = inspect.getsource(clv_tracker)
+    assert "utcnow()" not in source, "clv_tracker.py still uses deprecated utcnow()"
+
+
+def test_clv_tracker_uses_cursor_rowcount():
+    """Must use cursor.rowcount, not conn.total_changes."""
+    from src.models import clv_tracker
+    source = inspect.getsource(clv_tracker)
+    assert "total_changes" not in source, "clv_tracker.py still uses unreliable conn.total_changes"
+    assert "cursor.rowcount" in source
 
 
 # ---------------------------------------------------------------------------

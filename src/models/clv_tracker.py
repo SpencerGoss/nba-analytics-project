@@ -89,7 +89,7 @@ class CLVTracker:
         now = datetime.now(timezone.utc).isoformat()
         try:
             with self._connect() as conn:
-                conn.execute(
+                cursor = conn.execute(
                     f"""
                     INSERT OR IGNORE INTO {CLV_TABLE}
                     (game_date, home_team, away_team,
@@ -99,7 +99,7 @@ class CLVTracker:
                     (game_date, home_team, away_team,
                      opening_spread, opening_home_ml, opening_away_ml, now),
                 )
-                inserted = conn.total_changes > 0
+                inserted = cursor.rowcount > 0
                 conn.commit()
             if inserted:
                 log.info(
