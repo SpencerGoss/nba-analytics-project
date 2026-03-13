@@ -177,9 +177,9 @@ def _build_margin_lookup(
 
             margin_feats = ensemble.margin_feats
             if margin_feats is not None:
-                X = pd.DataFrame([feat_row]).reindex(columns=margin_feats).fillna(0)
+                X = pd.DataFrame([feat_row]).reindex(columns=margin_feats)
             else:
-                X = pd.DataFrame([feat_row]).fillna(0)
+                X = pd.DataFrame([feat_row])
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")

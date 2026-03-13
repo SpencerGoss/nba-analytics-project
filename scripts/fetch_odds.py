@@ -427,7 +427,7 @@ def load_model_game_projections() -> pd.DataFrame:
         with open(feats_path, "rb") as f:
             feature_cols = pickle.load(f)
 
-        X = recent[feature_cols].fillna(0)
+        X = recent[feature_cols]  # Pipeline imputer handles NaN (mean strategy)
         probs = model.predict_proba(X)[:, 1]
         recent = recent.copy()
         recent["model_win_prob"] = probs
@@ -479,7 +479,7 @@ def load_model_player_projections() -> pd.DataFrame:
                 model = pickle.load(f)
             with open(feats_path, "rb") as f:
                 feature_cols = pickle.load(f)
-            X = latest[feature_cols].fillna(0)
+            X = latest[feature_cols]  # Pipeline imputer handles NaN
             # Wrap numpy array as a Series keyed by latest.index -- prevents positional misalignment
             raw_preds = model.predict(X)
             model_pred_series = pd.Series(raw_preds, index=latest.index)
