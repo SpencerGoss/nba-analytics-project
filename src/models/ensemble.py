@@ -365,6 +365,49 @@ class NBAEnsemble:
         return config_path
 
 
+def optimize_ensemble_weights(
+    win_probs: np.ndarray,
+    margin_preds: np.ndarray,
+    actuals: np.ndarray,
+    margin_norm_factors: list[float] | None = None,
+) -> dict:
+    """Find optimal ensemble weights by minimizing Brier score via grid search.
+
+    Searches game_outcome_weight from 0.0 to 1.0 in 0.05 increments.
+    margin_weight = 1.0 - game_outcome_weight (ATS is always 0).
+    Also searches MARGIN_NORM_FACTOR across candidates.
+
+    Returns dict with keys: game_outcome, margin, margin_norm_factor, brier_score.
+    """
+    if margin_norm_factors is None:
+        margin_norm_factors = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0]
+
+    best_brier = float("inf")
+    best_params = {"game_outcome": 0.65, "margin": 0.35, "margin_norm_factor": 15.0}
+
+    for norm_factor in margin_norm_factors:
+        # Convert margin predictions to probabilities
+        margin_probs = 1 / (1 + np.exp(-margin_preds / norm_factor))
+
+        for w_go_int in range(0, 21):  # 0.0, 0.05, ..., 1.0
+            w_go = w_go_int * 0.05
+            w_margin = 1.0 - w_go
+
+            blended = w_go * win_probs + w_margin * margin_probs
+            brier = float(np.mean((blended - actuals) ** 2))
+
+            if brier < best_brier:
+                best_brier = brier
+                best_params = {
+                    "game_outcome": round(w_go, 2),
+                    "margin": round(w_margin, 2),
+                    "margin_norm_factor": norm_factor,
+                    "brier_score": brier,
+                }
+
+    return best_params
+
+
 def run_ensemble_on_predictions(predictions_df, artifacts_dir=ARTIFACTS_DIR):
     """Run ensemble over a predictions DataFrame. Returns df with ensemble cols."""
     ensemble = NBAEnsemble.load(artifacts_dir)

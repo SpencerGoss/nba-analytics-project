@@ -446,3 +446,42 @@ def test_ensemble_predict_still_works_with_ats_disabled(tmp_path):
     assert (result["ensemble_score"] <= 1).all()
     expected_cols = {"win_prob", "ats_prob", "margin_pred", "ensemble_score", "confidence"}
     assert expected_cols.issubset(set(result.columns))
+
+
+# -- Test 16: optimize_ensemble_weights --------------------------------------
+
+def test_optimize_weights_valid():
+    """Optimized weights should sum to 1.0 (game_outcome + margin)."""
+    from src.models.ensemble import optimize_ensemble_weights
+
+    win_probs = np.array([0.6, 0.4, 0.7, 0.55, 0.3, 0.8, 0.45, 0.6, 0.35, 0.7])
+    margin_preds = np.array([3.0, -2.0, 5.0, 1.0, -4.0, 6.0, -1.0, 2.0, -3.0, 4.0])
+    actuals = np.array([1, 0, 1, 1, 0, 1, 0, 1, 0, 1])
+    weights = optimize_ensemble_weights(win_probs, margin_preds, actuals)
+    assert 0 <= weights["game_outcome"] <= 1
+    assert abs(weights["game_outcome"] + weights["margin"] - 1.0) < 0.01
+
+
+def test_optimize_weights_returns_norm_factor():
+    """Should also optimize MARGIN_NORM_FACTOR."""
+    from src.models.ensemble import optimize_ensemble_weights
+
+    win_probs = np.array([0.6, 0.4, 0.7, 0.55, 0.8])
+    margin_preds = np.array([3.0, -2.0, 5.0, 1.0, 6.0])
+    actuals = np.array([1, 0, 1, 1, 1])
+    weights = optimize_ensemble_weights(win_probs, margin_preds, actuals)
+    assert "margin_norm_factor" in weights
+    assert weights["margin_norm_factor"] > 0
+
+
+def test_optimize_weights_perfect_game_outcome():
+    """When game outcome model is perfect, it should get high weight."""
+    from src.models.ensemble import optimize_ensemble_weights
+
+    # Perfect game outcome predictions
+    win_probs = np.array([0.9, 0.1, 0.9, 0.1, 0.9])
+    # Bad margin predictions (wrong direction)
+    margin_preds = np.array([-5.0, 5.0, -5.0, 5.0, -5.0])
+    actuals = np.array([1, 0, 1, 0, 1])
+    weights = optimize_ensemble_weights(win_probs, margin_preds, actuals)
+    assert weights["game_outcome"] >= 0.6  # should favor game outcome
