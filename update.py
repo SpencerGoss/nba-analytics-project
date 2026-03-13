@@ -234,6 +234,31 @@ def main() -> None:
         if not refresh_odds_data():
             print("Odds refresh skipped/failed; continuing update pipeline.")
 
+        print("\n=== Step 4b: Weekly prop model retraining ===")
+        try:
+            from datetime import date as _date_cls
+            if _date_cls.today().weekday() == 0:  # Monday
+                from src.features.player_features import build_player_prop_features
+                from src.models.player_minutes_model import train_minutes_model
+                from src.models.player_stat_models import train_stat_models, train_quantile_models
+
+                prop_features = build_player_prop_features()
+                if not prop_features.empty:
+                    min_meta = train_minutes_model(prop_features)
+                    print(f"  Minutes model retrained: CV MAE = {min_meta['cv_mae']}")
+                    stat_meta = train_stat_models(prop_features)
+                    for stat, info in stat_meta.items():
+                        print(f"  {stat} model retrained: CV MAE = {info['cv_mae']}")
+                    train_quantile_models(prop_features)
+                    print("  Quantile models retrained")
+                else:
+                    print("  Prop features empty -- skipping retraining")
+            else:
+                print("  Skipped (only runs on Monday)")
+        except Exception as prop_train_err:
+            log_pipeline_error("update.py:prop_model_retrain", prop_train_err)
+            print(f"  Prop model retraining failed (non-fatal): {prop_train_err}")
+
         print("\n=== Step 5: Fetching today's injury report ===")
         try:
             injury_df = get_injury_report(season_year=current_year)
