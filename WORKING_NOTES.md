@@ -242,6 +242,14 @@
 [2026-03-07] [pipeline] INSIGHT: player_stats.csv stores season TOTALS (pts=1736 for 60 games), not per-game averages. Must divide all stat columns by gp before computing projections.
 [2026-03-07] [pipeline] WHY: This caused build_player_props.py to produce absurdly high projections (1736 PPG) in early drafts. Always check whether a stats CSV is per-game or totals by inspecting a known player's row.
 
+### [significance]
+
+[2026-03-13] [significance] INSIGHT: 55% ATS is significant vs coin flip (p=0.00087) but NOT vs 52.4% breakeven (p=0.053). Need 2,276 bets to confirm ATS beats vig. Validates ATS weight=0 decision.
+[2026-03-13] [significance] WHY: -110 vig means you need 52.4% to break even, not 50%. The 2.6% edge (55% - 52.4%) is too small to confirm with current sample size.
+
+[2026-03-13] [significance] INSIGHT: SHAP confirms diff_elo as #1 feature (0.264 mean abs SHAP) but reveals lineup features (#4, #13, #15) and injury features (#6, #9, #11) as much more important than GBM importance suggested.
+[2026-03-13] [significance] WHY: GBM feature importance counts splits, biasing toward high-cardinality features. SHAP measures actual contribution to predictions. Lineup and injury features have fewer splits but larger individual effects.
+
 ### [code-review]
 
 [2026-03-13] [code-review] INSIGHT: over_prob formula in betting_router.py divided by `spread_width * 2` — compressed all prop estimates toward 0.5 (line at p50 read 0.75 instead of 0.50). Fix: divide by `spread_width` only.
