@@ -426,7 +426,7 @@ def run_ats_backtest(
 
     # -- Holdout-only metrics (honest out-of-sample) -------------------------
     print(f"\n--- Holdout Seasons Only ({test_seasons}) ---")
-    holdout_df = df[df["season"].astype(str).isin(test_seasons)].copy()
+    holdout_df = df[df["season"].astype(int).isin(test_seasons)].copy()
     if len(holdout_df) > 0:
         h_correct = int(holdout_df["bet_correct"].sum())
         h_hit_rate = float(h_correct / len(holdout_df))

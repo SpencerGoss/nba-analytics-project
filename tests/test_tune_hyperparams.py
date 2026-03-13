@@ -376,7 +376,7 @@ def test_parse_args_overrides():
 def test_season_splits_train_always_precedes_val():
     """In every split, all training seasons sort before the validation season."""
     rng = np.random.default_rng(99)
-    seasons = [str(201314 + i) for i in range(8)]
+    seasons = [201314 + i for i in range(8)]
     records = []
     for i, season in enumerate(seasons):
         for j in range(15):
@@ -392,8 +392,11 @@ def test_season_splits_train_always_precedes_val():
     assert len(splits) >= 1
 
     for tr, va, label in splits:
-        tr_seasons = set(tr["season"].astype(str).unique())
-        va_seasons = set(va["season"].astype(str).unique())
+        if label == "date_fallback":
+            # date_fallback splits by index, not season — overlap is expected
+            continue
+        tr_seasons = set(tr["season"].astype(int).unique())
+        va_seasons = set(va["season"].astype(int).unique())
         # No season appears in both train and val
         assert tr_seasons.isdisjoint(va_seasons), (
             f"Split '{label}': season overlap between train {tr_seasons} and val {va_seasons}"

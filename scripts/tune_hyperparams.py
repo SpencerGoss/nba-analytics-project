@@ -168,13 +168,13 @@ def season_splits(train_df: pd.DataFrame) -> list:
     Each entry is (train_subset, val_subset, season_label).
     No future data ever enters the training window -- fully leakage-free.
     """
-    seasons = sorted(train_df["season"].astype(str).unique())
+    seasons = sorted(train_df["season"].astype(int).unique())
     splits = []
-    for i in range(max(1, MIN_TRAIN_SEASONS_FOR_TUNING - 1), len(seasons)):
+    for i in range(max(1, MIN_TRAIN_SEASONS_FOR_TUNING), len(seasons)):
         train_seasons = seasons[:i]
         valid_season = seasons[i]
-        tr = train_df[train_df["season"].astype(str).isin(train_seasons)].copy()
-        va = train_df[train_df["season"].astype(str) == valid_season].copy()
+        tr = train_df[train_df["season"].astype(int).isin(train_seasons)].copy()
+        va = train_df[train_df["season"].astype(int) == valid_season].copy()
         if not tr.empty and not va.empty:
             splits.append((tr, va, valid_season))
 

@@ -147,7 +147,7 @@ def _build_margin_lookup(
 
         # Build most-recent-row index per (home, away) — current season only
         current_df = matchup_df[
-            matchup_df["season"].astype(str) == current_season
+            matchup_df["season"].astype(int) == int(current_season)
         ]
         latest = (
             current_df.sort_values("game_date")

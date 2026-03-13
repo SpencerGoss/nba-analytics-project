@@ -150,8 +150,8 @@ def train_player_models(
     df = df.sort_values("game_date").reset_index(drop=True)
     print(f"  Total rows: {len(df):,} | Players: {df.player_id.nunique():,} | Seasons: {df.season.nunique()}")
 
-    train_df = df[~df["season"].astype(str).isin(test_seasons)].copy()
-    test_df = df[df["season"].astype(str).isin(test_seasons)].copy()
+    train_df = df[~df["season"].astype(int).isin(test_seasons)].copy()
+    test_df = df[df["season"].astype(int).isin(test_seasons)].copy()
     print(f"  Train: {len(train_df):,} | Test: {len(test_df):,}")
 
     train_counts = train_df.groupby("player_id")["game_id"].transform("count")

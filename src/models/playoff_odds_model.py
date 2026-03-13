@@ -291,8 +291,8 @@ def simulate_playoff_odds(
     # ── Load standings ────────────────────────────────────────────────────────
     standings = pd.read_csv(standings_path)
     if season is None:
-        season = standings["season"].astype(str).max()
-    standings = standings[standings["season"].astype(str) == season].copy()
+        season = int(standings["season"].astype(int).max())
+    standings = standings[standings["season"].astype(int) == int(season)].copy()
 
     if standings.empty:
         raise ValueError(f"No standings found for season {season}")
@@ -317,7 +317,7 @@ def simulate_playoff_odds(
     # ── Load game logs for games-played count ─────────────────────────────────
     game_logs = pd.read_csv(game_log_path)
     played = (
-        game_logs[game_logs["season"].astype(str) == season]
+        game_logs[game_logs["season"].astype(int) == int(season)]
         .groupby("team_id")["game_id"].nunique()
         .to_dict()
     )

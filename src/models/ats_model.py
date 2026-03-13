@@ -47,10 +47,10 @@ ATS_FEATURES_PATH = "data/features/game_ats_features.csv"
 ARTIFACTS_DIR = "models/artifacts"
 TARGET = "covers_spread"
 from src.models.game_outcome_model import TEST_SEASONS, _best_threshold
-EXCLUDED_SEASONS = ["201920", "202021"]
+EXCLUDED_SEASONS = [201920, 202021]
 # Held-out calibration season: excluded from train CV, used to fit isotonic calibrator
 # University of Bath research: calibration-optimized = +34.69% ROI vs accuracy -35.17%
-CALIBRATION_SEASON = "202122"
+CALIBRATION_SEASON = 202122
 # Kaggle data starts ~2007-08; MIN_TRAIN_SEASONS=4 gives first validation split
 # at season 5 (roughly 2011-12), leaving enough expanding windows.
 MIN_TRAIN_SEASONS = 4
@@ -201,16 +201,16 @@ def train_ats_model(
     # Exclude anomalous seasons
     if excluded_seasons:
         before = len(df)
-        df = df[~df["season"].astype(str).isin(excluded_seasons)].copy()
+        df = df[~df["season"].astype(int).isin(excluded_seasons)].copy()
         n_excluded = before - len(df)
         print(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
 
     # Train / calibration / test split
     # calibration_season is held out from CV -- used by calibration.py for isotonic fit
-    train = df[~df["season"].astype(str).isin(test_seasons)].copy()
-    test = df[df["season"].astype(str).isin(test_seasons)].copy()
-    calib = train[train["season"].astype(str) == calibration_season].copy()
-    train_cv = train[train["season"].astype(str) != calibration_season].copy()
+    train = df[~df["season"].astype(int).isin(test_seasons)].copy()
+    test = df[df["season"].astype(int).isin(test_seasons)].copy()
+    calib = train[train["season"].astype(int) == calibration_season].copy()
+    train_cv = train[train["season"].astype(int) != calibration_season].copy()
     print(f"  Train (all): {len(train):,} games | Test: {len(test):,} games")
     print(f"  Calibration season ({calibration_season}): {len(calib):,} games (held out from CV)")
     print(f"  Train for CV: {len(train_cv):,} games")
