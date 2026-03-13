@@ -296,7 +296,7 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
         if missing_features:
             print(f"  NOTE: {len(missing_features)} features missing from data (will be imputed as 0)")
 
-        X = ats_df.reindex(columns=feature_cols).fillna(0)
+        X = ats_df.reindex(columns=feature_cols)
         probs = model.predict_proba(X)[:, 1]
         ats_df = ats_df.copy()
         ats_df["model_win_prob"] = probs
@@ -363,7 +363,7 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
                     if h_col in feature_row.index and a_col in feature_row.index:
                         feature_row[c] = feature_row[h_col] - feature_row[a_col]
 
-            X_row = pd.DataFrame([feature_row]).reindex(columns=feature_cols).fillna(0)
+            X_row = pd.DataFrame([feature_row]).reindex(columns=feature_cols)
             model_prob = float(model.predict_proba(X_row)[0][1])
 
             home_no_vig, away_no_vig = no_vig_prob(
@@ -592,7 +592,7 @@ def _score_bets_with_ats(candidate_bets, ats_features_path=ATS_FEATURES_PATH):
 
             if not matched.empty:
                 try:
-                    X_row    = matched.reindex(columns=ats_feat_cols).fillna(0).head(1)
+                    X_row    = matched.reindex(columns=ats_feat_cols).head(1)
                     ats_prob = float(ats_model.predict_proba(X_row)[0][1])
                     ats_used = True
                 except Exception as exc:

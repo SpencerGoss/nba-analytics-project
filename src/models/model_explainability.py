@@ -553,7 +553,7 @@ def explain_prediction(
     elif isinstance(sv, np.ndarray) and sv.ndim == 3:
         sv = sv[:, :, 1]
 
-    win_prob = float(model.predict_proba(row_df.fillna(0))[0][1])
+    win_prob = float(model.predict_proba(row_df)[0][1])
 
     shap_series = pd.Series(sv[0], index=feat_cols).sort_values(key=abs, ascending=False)
 

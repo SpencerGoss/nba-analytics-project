@@ -153,7 +153,7 @@ def _build_matchup_row(
             # Column with no prefix — look in both, prefer home
             row[fc] = home_feats.get(fc, away_feats.get(fc, np.nan))
 
-    return pd.DataFrame([row])[feat_cols].fillna(0)
+    return pd.DataFrame([row])[feat_cols]
 
 
 # ── Win probability ────────────────────────────────────────────────────────────

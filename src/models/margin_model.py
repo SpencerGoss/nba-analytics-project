@@ -401,7 +401,7 @@ def predict_margin(
     # diff_elo which is 37.3% feature importance.
     # TODO (Phase 3): extend get_current_elos() to return fast + momentum Elo.
 
-    row_df = row.to_frame().T.reindex(columns=feat_cols).fillna(0)
+    row_df = row.to_frame().T.reindex(columns=feat_cols)
     prediction = float(model.predict(row_df)[0])
     return round(prediction, 2)
 

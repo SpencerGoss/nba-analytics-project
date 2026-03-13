@@ -749,7 +749,7 @@ def predict_game(
                          f"{home_team_abbr} vs {away_team_abbr}."
             }
 
-    row_df = row.to_frame().T.reindex(columns=feat_cols).fillna(0)
+    row_df = row.to_frame().T.reindex(columns=feat_cols)
     prob = model.predict_proba(row_df)[0]
 
     # ── Prediction store + JSON export (FR-6.1, FR-6.3, FR-6.4) ──────────────

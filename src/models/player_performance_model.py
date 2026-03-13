@@ -264,7 +264,7 @@ def predict_player_next_game(
         with open(model_path, "rb") as f:
             model = pickle.load(f)
 
-        X = latest[feat_cols].to_frame().T.fillna(0)
+        X = latest[feat_cols].to_frame().T
         results[f"pred_{target}"] = round(float(model.predict(X)[0]), 1)
 
     return results

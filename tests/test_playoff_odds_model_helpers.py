@@ -137,12 +137,12 @@ class TestBuildMatchupRow:
         result = _build_matchup_row(home, away, feat_cols=["season"])
         assert result["season"].iloc[0] == pytest.approx(202425)
 
-    def test_missing_feature_filled_with_zero(self):
-        """A feature column not present in either feats series should be filled with 0."""
+    def test_missing_feature_left_as_nan(self):
+        """A feature column not present in either feats series should be NaN (pipeline imputer handles it)."""
         home = self._make_feats(pts=110.0)
         away = self._make_feats(pts=105.0)
         result = _build_matchup_row(home, away, feat_cols=["home_missing_col"])
-        assert result["home_missing_col"].iloc[0] == pytest.approx(0.0)
+        assert pd.isna(result["home_missing_col"].iloc[0])
 
     def test_multiple_feat_cols_all_populated(self):
         home = self._make_feats(pts=110.0, reb=45.0, ast=25.0)
