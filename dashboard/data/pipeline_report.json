@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-03-13T17:13:26.122660",
+  "mode": "full",
+  "dry_run": true,
+  "duration_seconds": 0.0,
+  "summary": {
+    "succeeded": 0,
+    "failed": 0,
+    "timed_out": 0,
+    "missing": 0,
+    "skipped": 1,
+    "total": 1
+  },
+  "results": [
+    {
+      "name": "build_standings",
+      "status": "dry_run",
+      "duration": 0
+    }
+  ]
+}

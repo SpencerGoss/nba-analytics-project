@@ -260,3 +260,13 @@
 
 [2026-03-13] [code-review] INSIGHT: Code reviewer agents produce false positives ~25% of the time — always verify findings by reading the actual code before fixing. season_game_num via cumcount()+1 was flagged as leakage but it's public pre-game knowledge.
 [2026-03-13] [code-review] WHY: Agents apply rules mechanically ("shift(1) before ALL sequential features") without domain judgment about what constitutes look-ahead vs public information.
+
+### [refactor]
+
+[2026-03-13] [refactor] INSIGHT: Duplicate `_season_splits()` across game_outcome_model.py, margin_model.py, ats_model.py extracted to `src/models/cv_utils.py::expanding_season_splits()`. Each model now delegates with its own `min_train_seasons` parameter.
+[2026-03-13] [refactor] WHY: Three near-identical 20-line functions differed only in the min_train constant (4 for ATS, 6 for game outcome and margin). Shared function takes it as a parameter.
+
+### [betting]
+
+[2026-03-13] [betting] INSIGHT: Confidence tiers unified across codebase — `build_picks.py` now uses BettingRouter's edge-based system (Best Bet >=8%, Solid Pick >=4%, Lean >=2%, Skip) instead of old probability-based HIGH/MEDIUM/LOW. Dashboard updated to display and style new labels.
+[2026-03-13] [betting] WHY: Old system classified based on win probability alone (70%+ = HIGH). New system uses market edge + model agreement, which is what actually matters for betting decisions. BettingRouter is the single source of truth for tier definitions.

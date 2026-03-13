@@ -4,7 +4,7 @@
 
 ## Framework
 pytest. Run with: `pytest -v` or `python -m pytest tests/ -q`
-Current baseline: 1415 tests passing (as of 2026-03-11).
+Current baseline: 1540 tests passing (as of 2026-03-13).
 
 ## Coverage Target
 80%+ for any new module added in v2.0.

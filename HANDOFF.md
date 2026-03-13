@@ -1,35 +1,34 @@
 # Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-13 Session 13 (Plan B model improvements + code review)_
+_Last updated: 2026-03-13 Session 14 (Plan D pipeline + dashboard + cleanup)_
 
 ## What Was Done This Session
 
-### Plan B: Model Improvements (6 of 8 tasks COMPLETE)
-- Walk-forward betting backtest (`src/models/backtest.py`) — flat-bet + Kelly, realistic vig
-- Statistical significance (`src/models/significance.py`) — binomial, bootstrap, McNemar's
-- Ensemble weight optimizer (`optimize_ensemble_weights()` in ensemble.py) — Brier grid search
-- SHAP analysis (`src/models/shap_analysis.py`) — TreeExplainer with calibration unwrapping
-- Margin model upgrade — Huber GBM candidate, residual_std JSON artifact, segmented MAE
-- Skipped: temperature scaling (marginal value), orthogonal features (deferred)
+### Plan D: Pipeline + Dashboard + Cleanup (7 of 8 tasks COMPLETE)
+- **Task 1**: Unified pipeline runner (`scripts/pipeline_runner.py`) — 30 builders, 7 phases, 3 modes, --dry-run, --resume
+- **Task 2**: Config module (`src/config.py`) — centralized seasons, teams, paths, model defaults
+- **Task 3**: Windows Task Scheduler (`scripts/setup_scheduler.ps1`) — 4AM full, 11:30AM injuries, 6:30PM pretip
+- **Task 5 partial**: Confidence tiers wired — `build_picks.py` now uses BettingRouter (Best Bet/Solid Pick/Lean/Skip); dashboard updated
+- **Task 6**: Dead code deleted — 8 files, ~2,084 lines removed
+- **Task 7**: CI/CD repurposed — `daily_deploy.yml` now CI-only (tests on push/PR)
 
-### Code Review Fixes
-- over_prob formula: `spread_width * 2` -> `spread_width` (was compressing estimates)
-- XGBoost eval_set: was using test labels for early stopping (leakage)
-- False positive dismissed: season_game_num via cumcount()+1 is public info, not leakage
+### Code Cleanup
+- Extracted duplicate `_season_splits()` to shared `src/models/cv_utils.py::expanding_season_splits()`
+- Dashboard: Promise.allSettled, ticker pause on hover, new tier labels + pill styling
+- Updated test baseline in CLAUDE.md and testing.md
 
-### Key Analysis Results
-- SHAP: diff_elo #1 (0.264), lineup features #4/#13/#15, injury features #6/#9
-- Significance: 67.5% game outcome p=3.5e-29; 55% ATS NOT significant vs 52.4% breakeven (p=0.053)
-- Need 2,276 bets to confirm ATS beats vig — validates ATS weight=0 decision
-
-### Codebase Health
-- Missing `src/processing/__init__.py` — fixed
-- Identified: duplicate `_season_splits()`, inconsistent PROJECT_ROOT definitions (Plan D cleanup)
+### Confidence Tier Unification
+- `build_picks.py`: old `_confidence_tier(home_prob, winner, home)` -> new `_confidence_tier(edge, home_prob, projected_margin)` using BettingRouter
+- Dashboard `_confLabel()` and `_confLevel()`: thresholds aligned to 8%/4%/2% (was 10%/5%)
+- Pick cards now show tier pill badge (Best Bet/Solid Pick/Lean)
+- Value bets section: tier labels updated from HIGH/MED to Best Bet/Solid Pick/Lean
 
 ## What's Next
 
-### Plan D: Pipeline + Dashboard + Cleanup (not started)
-8 tasks: pipeline runner with retry, config module, dashboard performance, betting UX, dead code removal. Spec at `docs/superpowers/plans/2026-03-13-pipeline-dashboard-cleanup.md`.
+### Plan D Remaining
+- **Task 4**: Dashboard tiered loading (only Today tab on page open, defer others)
+- **Task 5 remaining**: Kelly opt-in toggle, bankroll management, Sharp Money CLV disclaimer, actionable empty states
+- **Task 8**: Final verification (dashboard loads, confidence tiers display correctly)
 
 ### Full Model Retrain (Task 8 from Plan B)
 Now that Huber GBM candidate and ensemble optimizer exist, a full retrain would:
@@ -42,14 +41,13 @@ Now that Huber GBM candidate and ensemble optimizer exist, a full retrain would:
 - CLV closing_spread always NULL (update_closing_line never called)
 - Lineup features missing for 2025-26 season
 - ATS features stop at 2024-25
-- Duplicate `_season_splits()` in game_outcome_model.py and margin_model.py
-- Inconsistent PROJECT_ROOT derivation across model files
+- Inconsistent PROJECT_ROOT derivation across model files (cosmetic, all compute same path)
 - Orchestration scripts (predict_cli.py, retrain_all.py) have no test coverage
 
 ## Test Baseline
-- 1580 tests passing (0 failures)
+- 1546 tests passing (0 failures)
 
 ## Session Intent 2026-03-13
-Goal: Execute Plan B (Model Improvements) + comprehensive project health check
+Goal: Execute Plan D (Pipeline + Dashboard + Cleanup)
 Completed: 2026-03-13
-Outcome: achieved (6/8 tasks, 2 intentionally skipped as low-value)
+Outcome: achieved (7/8 tasks; Task 4 deferred as high-risk for 9K-line file)
