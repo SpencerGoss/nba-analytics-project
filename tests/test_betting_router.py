@@ -1,4 +1,9 @@
 """Tests for BettingRouter: confidence tiers, model agreement, market outputs."""
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import pytest
 
 from src.models.betting_router import BettingRouter, confidence_tier, model_agreement
@@ -121,7 +126,70 @@ class TestBettingRouterMoneyline:
         )
         assert result["edge"] < 0
 
-    def test_props_raises(self):
+    def test_props_returns_dict(self):
+        """props() returns a dict with expected keys when models exist."""
+        from src.models.conformal import calibrate_conformal, save_conformal_quantiles
+        from src.models.player_minutes_model import train_minutes_model
+        from src.models.player_stat_models import train_quantile_models, train_stat_models
+
+        np.random.seed(42)
+        n = 100
+        df = pd.DataFrame({
+            "player_id": np.repeat(range(1, 6), 20),
+            "game_date": pd.date_range("2025-01-01", periods=20).tolist() * 5,
+            "minutes": np.random.normal(28, 5, n).clip(5, 48),
+            "pts_per36": np.random.normal(18, 5, n).clip(0),
+            "reb_per36": np.random.normal(7, 3, n).clip(0),
+            "ast_per36": np.random.normal(4, 2, n).clip(0),
+            "fg3m_per36": np.random.normal(2, 1, n).clip(0),
+            "minutes_ewma": np.random.normal(28, 3, n),
+            "usage_rate_ewma": np.random.normal(20, 5, n),
+            "pts_ewma": np.random.normal(15, 5, n),
+            "reb_ewma": np.random.normal(5, 2, n),
+            "ast_ewma": np.random.normal(3, 2, n),
+            "fg3m_ewma": np.random.normal(1.5, 1, n),
+            "is_home": np.random.randint(0, 2, n),
+            "is_b2b": np.random.randint(0, 2, n),
+            "season_game_num": np.tile(range(1, 21), 5),
+        })
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            train_minutes_model(df, artifacts_dir=tmpdir)
+            train_stat_models(df, artifacts_dir=tmpdir)
+            train_quantile_models(df, artifacts_dir=tmpdir)
+
+            # Calibrate conformal
+            residuals = np.random.normal(0, 3, 50)
+            quantiles = {}
+            for stat in ["pts", "reb", "ast", "fg3m"]:
+                quantiles[stat] = float(calibrate_conformal(residuals))
+            save_conformal_quantiles(quantiles, tmpdir)
+
+            router = BettingRouter(artifacts_dir=tmpdir)
+            features = df.iloc[0:1]
+            result = router.props(
+                features=features,
+                stat="pts",
+                line=22.5,
+                spread=5.0,
+            )
+
+            assert isinstance(result, dict)
+            assert "median" in result
+            assert "p25" in result
+            assert "p75" in result
+            assert "pred_minutes" in result
+            assert "over_prob" in result
+            assert "confidence_tier" in result
+            assert "interval" in result
+            assert "lower" in result["interval"]
+            assert "upper" in result["interval"]
+            assert result["stat"] == "pts"
+            assert result["line"] == 22.5
+
+    def test_props_invalid_stat(self):
+        """props() raises ValueError for unknown stat."""
         router = _make_router()
-        with pytest.raises(NotImplementedError):
-            router.props(player_id=1, stat="PTS", line=25.5)
+        router.artifacts_dir = Path("models/artifacts")
+        with pytest.raises(ValueError):
+            router.props(features=pd.DataFrame(), stat="INVALID", line=10.0)

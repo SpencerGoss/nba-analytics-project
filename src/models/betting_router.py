@@ -8,7 +8,7 @@ The spec's team-based interface would couple BettingRouter to model loading.
 Wraps NBAEnsemble outputs and provides separate outputs per betting market:
 - Moneyline: calibrated P(home_win)
 - Spread: P(cover) via normal CDF on (pred_margin - spread) / residual_std
-- Props: stub for Phase 4
+- Props: player prop predictions (minutes -> per-stat -> quantiles -> conformal)
 
 Confidence tiers (strict, plain English, no jargon):
 - Best Bet:   edge >= 8%, models agree
@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pandas as pd
 from scipy.stats import norm
 
 from src.models.odds_utils import expected_value, no_vig_odds_ratio
@@ -130,12 +131,84 @@ class BettingRouter:
 
     def props(
         self,
-        player_id: int,
+        features: pd.DataFrame,
         stat: str,
         line: float,
-        date: str | None = None,
+        spread: float = 0.0,
     ) -> dict:
-        """Player prop output. Stub until Phase 4."""
-        raise NotImplementedError(
-            "Player prop predictions not yet implemented. See Phase 4."
+        """Player prop prediction with quantiles and conformal intervals.
+
+        Args:
+            features: Single-row DataFrame with player prop features.
+            stat: One of "pts", "reb", "ast", "fg3m".
+            line: The sportsbook prop line (e.g., 22.5 points).
+            spread: Expected game spread for blowout adjustment.
+
+        Returns:
+            Dict with median, p25, p75, pred_minutes, interval, over_prob,
+            confidence_tier.
+        """
+        from src.models.conformal import conformal_interval, load_conformal_quantiles
+        from src.models.player_minutes_model import predict_minutes
+        from src.models.player_stat_models import (
+            STAT_TARGETS,
+            predict_player_stat,
+            predict_player_stat_quantiles,
         )
+
+        if stat not in STAT_TARGETS:
+            raise ValueError(
+                f"Unknown stat: {stat}. Must be one of {STAT_TARGETS}"
+            )
+
+        artifacts = str(self.artifacts_dir)
+
+        # Stage 1: predict minutes
+        pred_minutes = predict_minutes(
+            features, spread=spread, artifacts_dir=artifacts
+        )
+
+        # Stage 2: predict stat (point estimate + quantiles)
+        point_pred = predict_player_stat(
+            stat, features, pred_minutes, artifacts_dir=artifacts
+        )
+        quantiles = predict_player_stat_quantiles(
+            stat, features, pred_minutes, artifacts_dir=artifacts
+        )
+
+        # Conformal interval
+        try:
+            conf_quantiles = load_conformal_quantiles(artifacts)
+            interval = conformal_interval(
+                quantiles["p50"], conf_quantiles.get(stat, 5.0)
+            )
+        except FileNotFoundError:
+            interval = {
+                "lower": quantiles["p25"],
+                "upper": quantiles["p75"],
+                "width": round(quantiles["p75"] - quantiles["p25"], 1),
+            }
+
+        # Over probability: where does the line sit relative to p25/p75?
+        spread_width = max(quantiles["p75"] - quantiles["p25"], 0.1)
+        over_prob = 1.0 - (line - quantiles["p25"]) / (spread_width * 2)
+        over_prob = max(0.05, min(0.95, over_prob))
+
+        # Edge and confidence
+        edge = abs(over_prob - 0.5)
+        agree = True  # Props have no model disagreement (single pipeline)
+        tier = confidence_tier(edge, agree)
+
+        return {
+            "stat": stat,
+            "line": line,
+            "median": round(quantiles["p50"], 1),
+            "p25": round(quantiles["p25"], 1),
+            "p75": round(quantiles["p75"], 1),
+            "point_pred": round(point_pred, 1),
+            "pred_minutes": round(pred_minutes, 1),
+            "over_prob": round(over_prob, 3),
+            "interval": interval,
+            "edge": round(edge, 4),
+            "confidence_tier": tier,
+        }
