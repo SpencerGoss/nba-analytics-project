@@ -147,17 +147,11 @@
 - Calibrated model (`game_outcome_model_calibrated.pkl`) is now loaded first in `scripts/fetch_odds.py` and `src/models/value_bet_detector.py` (fixed 2026-03-05, commit 942d909).
 - sys.path guard added to ensure model wrapper class is importable during deserialization.
 
-**Player Model Prediction Confidence Intervals:**
-- Problem: Player points/rebounds/assists projections are point estimates with no uncertainty
-- Blocks: Cannot distinguish high-confidence from low-confidence projections; flagging logic treats all disagreements equally
-- Current status: Not implemented; listed as Proposal 8 in `docs/model_advisor_notes.md`
-- Documentation: Feature described in model advisor notes; no ticket created
+**Player Model Prediction Confidence Intervals: RESOLVED**
+- **RESOLVED (2026-03-13):** Conformal prediction intervals implemented with distribution-free 90% coverage guarantees (PTS +/-7.93, REB +/-2.96, AST +/-2.14, 3PM +/-2.30). Quantile regression (p25/p50/p75) with monotonicity enforcement.
 
-**Minutes Projection for Player Model:**
-- Problem: Player models predict points/rebounds/assists but not minutes; minutes allocation is volatile and affects accuracy
-- Blocks: Cannot adjust for load management; may systematically overestimate players coming off injury
-- Current status: Not implemented; listed as Proposal 9 in `docs/model_advisor_notes.md`
-- Documentation: Feature described in notes; no implementation started
+**Minutes Projection for Player Model: RESOLVED**
+- **RESOLVED (2026-03-13):** Two-stage architecture: Stage 1 GBM with Huber loss predicts minutes (MAE 5.03), Stage 2 uses per-36 rates scaled by predicted minutes. Isolates playing-time signal from skill.
 
 ## Test Coverage Gaps
 

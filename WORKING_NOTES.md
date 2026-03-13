@@ -107,7 +107,7 @@
 ### [bugfix]
 
 [2026-03-13] [bugfix] INSIGHT: fillna(0) in prediction paths causes train/inference skew — training pipeline uses SimpleImputer(strategy="mean") but inference was replacing NaN with 0. diff_elo at 37.3% importance means a 0-filled Elo diff massively distorts predictions.
-[2026-03-13] [bugfix] WHY: 8 occurrences in game_outcome_model.py and margin_model.py. Fix: remove fillna(0), let the pipeline imputer handle NaN consistently.
+[2026-03-13] [bugfix] WHY: Fixed in fetch_odds.py (2 occurrences) and build_picks.py (1 occurrence). sklearn Pipeline has imputer as first step — just pass raw X and the pipeline handles NaN with mean imputation matching training.
 
 [2026-03-13] [bugfix] INSIGHT: Season code comparisons using .astype(str) >= "202122" produce wrong results — "9" > "2" so season 9xxxx would pass. Must use .astype(int) for numeric comparison.
 [2026-03-13] [bugfix] WHY: String comparison is lexicographic; integer comparison is numeric. Season codes are 6-digit integers (e.g., 202425).
@@ -270,3 +270,11 @@
 
 [2026-03-13] [betting] INSIGHT: Confidence tiers unified across codebase — `build_picks.py` now uses BettingRouter's edge-based system (Best Bet >=8%, Solid Pick >=4%, Lean >=2%, Skip) instead of old probability-based HIGH/MEDIUM/LOW. Dashboard updated to display and style new labels.
 [2026-03-13] [betting] WHY: Old system classified based on win probability alone (70%+ = HIGH). New system uses market edge + model agreement, which is what actually matters for betting decisions. BettingRouter is the single source of truth for tier definitions.
+
+### [refactor]
+
+[2026-03-13] [refactor] INSIGHT: 4x `_load_team_names()`, 3x `_record_str()`, 2x `_games_behind()` duplicated across builder scripts. Extracted to `scripts/builder_helpers.py` — single source of truth with fallback to `config.TEAM_ABBREV_TO_FULL` when CSV missing.
+[2026-03-13] [refactor] WHY: Each copy had slightly different error handling (some checked `.exists()`, some used try/except, some didn't guard). Shared module normalizes behavior.
+
+[2026-03-13] [refactor] INSIGHT: Season code comparisons using `.astype(str) >= "202122"` are lexicographic, not numeric — produces wrong results for edge cases. Must use `.astype(int)` for season filtering.
+[2026-03-13] [refactor] WHY: Found in tune_hyperparams.py, player_features.py, player_performance_model.py. String "9xxxx" > "2xxxx" even though numerically smaller. All season codes are 6-digit integers.
