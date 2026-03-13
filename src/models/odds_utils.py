@@ -8,6 +8,8 @@ from __future__ import annotations
 
 def american_to_decimal(american: int | float) -> float:
     """Convert American odds to decimal odds."""
+    if american == 0:
+        raise ValueError("American odds cannot be 0 (invalid odds value)")
     if american >= 100:
         return (american / 100) + 1
     return (100 / abs(american)) + 1
@@ -17,6 +19,8 @@ def american_to_implied_prob(american: int | float | None) -> float | None:
     """Convert American odds to implied probability (vig-inclusive)."""
     if american is None:
         return None
+    if american == 0:
+        raise ValueError("American odds cannot be 0 (invalid odds value)")
     if american >= 100:
         return 100 / (american + 100)
     return abs(american) / (abs(american) + 100)

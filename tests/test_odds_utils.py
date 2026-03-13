@@ -84,3 +84,19 @@ class TestExpectedValue:
 
     def test_negative_market(self):
         assert expected_value(0.5, -0.1) is None
+
+
+class TestZeroOddsGuard:
+    """American odds of 0 are invalid -- functions should raise ValueError."""
+
+    def test_decimal_zero_raises(self):
+        with pytest.raises(ValueError, match="cannot be 0"):
+            american_to_decimal(0)
+
+    def test_implied_prob_zero_raises(self):
+        with pytest.raises(ValueError, match="cannot be 0"):
+            american_to_implied_prob(0)
+
+    def test_implied_prob_zero_float_raises(self):
+        with pytest.raises(ValueError, match="cannot be 0"):
+            american_to_implied_prob(0.0)

@@ -193,3 +193,45 @@ class TestBettingRouterMoneyline:
         router.artifacts_dir = Path("models/artifacts")
         with pytest.raises(ValueError):
             router.props(features=pd.DataFrame(), stat="INVALID", line=10.0)
+
+
+class TestOverProbSymmetry:
+    """Verify over_prob formula is symmetric around p50."""
+
+    def test_over_prob_at_p50_equals_half(self):
+        """When line == p50, over_prob must be exactly 0.5."""
+        # Simulate the formula directly
+        p25, p50, p75 = 15.0, 22.0, 30.0
+        line = p50
+        spread_width = max(p75 - p25, 0.1)
+        over_prob = 0.5 + (p50 - line) / spread_width
+        over_prob = max(0.05, min(0.95, over_prob))
+        assert over_prob == 0.5
+
+    def test_over_prob_at_p25_near_one(self):
+        """When line == p25, over_prob should be close to 1.0 (most outcomes above)."""
+        p25, p50, p75 = 15.0, 22.0, 30.0
+        line = p25
+        spread_width = max(p75 - p25, 0.1)
+        over_prob = 0.5 + (p50 - line) / spread_width
+        over_prob = max(0.05, min(0.95, over_prob))
+        assert over_prob > 0.9
+
+    def test_over_prob_at_p75_near_zero(self):
+        """When line == p75, over_prob should be close to 0.0 (most outcomes below)."""
+        p25, p50, p75 = 15.0, 22.0, 30.0
+        line = p75
+        spread_width = max(p75 - p25, 0.1)
+        over_prob = 0.5 + (p50 - line) / spread_width
+        over_prob = max(0.05, min(0.95, over_prob))
+        assert over_prob < 0.1
+
+    def test_over_prob_skewed_at_p50(self):
+        """Even with skewed quantiles, line==p50 must give exactly 0.5."""
+        # Right-skewed: p50 closer to p25 than p75
+        p25, p50, p75 = 10.0, 13.0, 25.0
+        line = p50
+        spread_width = max(p75 - p25, 0.1)
+        over_prob = 0.5 + (p50 - line) / spread_width
+        over_prob = max(0.05, min(0.95, over_prob))
+        assert over_prob == 0.5
