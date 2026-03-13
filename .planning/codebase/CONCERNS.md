@@ -177,9 +177,11 @@
 **Integration Tests Only; No End-to-End Validation: RESOLVED**
 - **RESOLVED (2026-03-05):** `tests/test_data_integrity.py` added with 17 tests: game_id uniqueness, season integer dtype, home_win valid values, (game_id, player_id) pair uniqueness, rolling feature leakage spot-check. All tests skip cleanly on fresh clones via `pytest.mark.skipif` guards.
 
-## Critical: Stale Feature Bug in predict_game() (2026-03-11)
+## Critical: Stale Feature Bug in predict_game() (2026-03-11): RESOLVED
 
-**SEVERITY: HIGH -- predictions for 3 of 6 games today are materially wrong**
+**RESOLVED (2026-03-12):** `predict_game()` now filters for current-season exact matchups only (line 714-718). When no current-season matchup exists, `_synthesize_matchup_row()` builds a fresh row from each team's most recent game, injects current Elo from `get_current_elos()`, and recomputes all `diff_*` columns. Same fix applied to `predict_cli.py` and `build_picks.py`.
+
+**SEVERITY: HIGH -- predictions for 3 of 6 games today are materially wrong** (original severity, now fixed)
 
 ### Root Cause
 
