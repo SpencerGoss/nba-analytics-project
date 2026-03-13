@@ -54,7 +54,7 @@ MATCHUP_FEATURES_PATH = str(PROJECT_ROOT / "data" / "features" / "game_matchup_f
 
 # Configurable threshold: flag games where |model_prob - market_prob| > threshold
 # Default 5pp (same as WINPROB_FLAG_PP in fetch_odds.py)
-VALUE_BET_THRESHOLD = float(os.getenv("VALUE_BET_THRESHOLD", "0.05"))
+VALUE_BET_THRESHOLD = float(os.getenv("VALUE_BET_THRESHOLD", "0.03"))
 
 # -- Probability helpers --------------------------------------------------------
 
@@ -138,6 +138,22 @@ def detect_value_bets(games_df, threshold=VALUE_BET_THRESHOLD):
     df["edge_magnitude"] = df["edge"].abs()
     df["is_value_bet"] = df["edge_magnitude"] > threshold
     df["bet_side"] = df["edge"].apply(lambda e: "home" if e > 0 else "away")
+
+    # EV and confidence tier enrichment
+    try:
+        from src.models.odds_utils import expected_value
+        df["ev"] = df.apply(
+            lambda r: expected_value(r["model_win_prob"], r["market_implied_prob"])
+            if r["market_implied_prob"] > 0 else None, axis=1)
+    except ImportError:
+        df["ev"] = None
+
+    try:
+        from src.models.betting_router import confidence_tier
+        df["confidence_tier"] = df["edge_magnitude"].apply(
+            lambda e: confidence_tier(e, True))
+    except ImportError:
+        df["confidence_tier"] = "Unknown"
 
     n_value_bets = int(df["is_value_bet"].sum())
     n_games = len(df)
@@ -363,6 +379,15 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
                     if h_col in feature_row.index and a_col in feature_row.index:
                         feature_row[c] = feature_row[h_col] - feature_row[a_col]
 
+            # Refresh Elo ratings from latest data
+            try:
+                from src.features.elo import get_current_elos
+                current_elos = get_current_elos()
+                if home_abb in current_elos and away_abb in current_elos:
+                    feature_row["diff_elo"] = current_elos[home_abb] - current_elos[away_abb]
+            except Exception:
+                pass  # Elo refresh is best-effort; stale values still usable
+
             X_row = pd.DataFrame([feature_row]).reindex(columns=feature_cols)
             model_prob = float(model.predict_proba(X_row)[0][1])
 
@@ -416,6 +441,7 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
         "home_team", "away_team", "game_date", "season",
         "model_win_prob", "market_implied_prob",
         "edge", "edge_magnitude", "is_value_bet", "bet_side",
+        "ev", "confidence_tier",
     ]
     out_cols = [c for c in output_cols if c in result_df.columns]
     result_records = result_df[out_cols].copy()
@@ -466,7 +492,10 @@ def _compute_kelly_fraction(bet: dict, kelly_scale: float = 0.5) -> float:
     b = (1.0 - q) / q
 
     kelly = (p * b - (1.0 - p)) / b
-    return round(max(0.0, kelly_scale * kelly), 4)
+    fraction = max(0.0, kelly_scale * kelly)
+    # Hard cap at 5% to limit maximum bet size
+    fraction = min(fraction, 0.05)
+    return round(fraction, 4)
 
 
 # -- Strong value-bet filter ----------------------------------------------------
@@ -477,7 +506,7 @@ STRONG_BET_THRESHOLD = float(os.getenv("STRONG_BET_THRESHOLD", "0.08"))
 #   composite_score = COMPOSITE_EDGE_WEIGHT * edge_magnitude
 #                   + COMPOSITE_ATS_WEIGHT  * (ats_prob - 0.5)
 COMPOSITE_EDGE_WEIGHT = float(os.getenv("COMPOSITE_EDGE_WEIGHT", "0.6"))
-COMPOSITE_ATS_WEIGHT  = float(os.getenv("COMPOSITE_ATS_WEIGHT",  "0.4"))
+COMPOSITE_ATS_WEIGHT  = float(os.getenv("COMPOSITE_ATS_WEIGHT",  "0.0"))
 
 # Minimum composite_score to qualify as a strong bet.
 COMPOSITE_THRESHOLD = float(os.getenv("COMPOSITE_THRESHOLD", "0.04"))

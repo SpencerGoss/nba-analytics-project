@@ -337,12 +337,14 @@ class TestComputeKellyFraction:
         assert result > 0.0
 
     def test_half_kelly_scale(self):
-        """Default scale is 0.5 (half Kelly)."""
+        """Default scale is 0.5 (half Kelly), capped at 5%."""
         from src.models.value_bet_detector import _compute_kelly_fraction
-        p, q = 0.65, 0.50
+        # Use a small edge so half-Kelly stays under the 5% cap
+        p, q = 0.54, 0.50
         b = (1 - q) / q
         full_kelly = (p * b - (1 - p)) / b
         expected = round(0.5 * full_kelly, 4)
+        assert expected <= 0.05, "Test setup: expected should be under cap"
         bet = {"model_win_prob": p, "market_implied_prob": q, "bet_side": "home"}
         assert _compute_kelly_fraction(bet) == pytest.approx(expected, abs=0.001)
 
@@ -351,4 +353,70 @@ class TestComputeKellyFraction:
         from src.models.value_bet_detector import _compute_kelly_fraction
         bet = {"model_win_prob": 0.30, "market_implied_prob": 0.70, "bet_side": "home"}
         assert _compute_kelly_fraction(bet) >= 0.0
+
+    def test_kelly_capped(self):
+        """Kelly fraction must never exceed 5%."""
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": 0.90, "market_implied_prob": 0.50, "bet_side": "home"}
+        result = _compute_kelly_fraction(bet)
+        assert result <= 0.05
+
+    def test_kelly_cap_at_extreme_edge(self):
+        """Even with huge model confidence, Kelly stays capped at 5%."""
+        from src.models.value_bet_detector import _compute_kelly_fraction
+        bet = {"model_win_prob": 0.99, "market_implied_prob": 0.10, "bet_side": "home"}
+        result = _compute_kelly_fraction(bet)
+        assert result <= 0.05
+        assert result == pytest.approx(0.05)
+
+
+# ---------------------------------------------------------------------------
+# Test: VALUE_BET_THRESHOLD default
+# ---------------------------------------------------------------------------
+
+def test_value_bet_threshold_default():
+    """VALUE_BET_THRESHOLD should be 0.03 (code default or env var)."""
+    import os
+    import importlib
+    import src.models.value_bet_detector as vbd
+    # Temporarily clear env var to test code default
+    old_val = os.environ.pop("VALUE_BET_THRESHOLD", None)
+    try:
+        importlib.reload(vbd)
+        assert vbd.VALUE_BET_THRESHOLD == pytest.approx(0.03)
+    finally:
+        if old_val is not None:
+            os.environ["VALUE_BET_THRESHOLD"] = old_val
+            importlib.reload(vbd)
+
+
+# ---------------------------------------------------------------------------
+# Test: COMPOSITE_ATS_WEIGHT default
+# ---------------------------------------------------------------------------
+
+def test_composite_ats_weight_default():
+    """COMPOSITE_ATS_WEIGHT should default to 0.0 (ATS model disabled)."""
+    from src.models.value_bet_detector import COMPOSITE_ATS_WEIGHT
+    assert COMPOSITE_ATS_WEIGHT == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# Test: detect_value_bets includes ev and confidence_tier
+# ---------------------------------------------------------------------------
+
+def test_detect_value_bets_includes_ev_and_tier():
+    """detect_value_bets output includes ev and confidence_tier columns."""
+    import pandas as pd
+    from src.models.value_bet_detector import detect_value_bets
+    games = pd.DataFrame({
+        "model_win_prob": [0.65, 0.55],
+        "market_implied_prob": [0.50, 0.52],
+        "home_team": ["LAL", "BOS"],
+        "away_team": ["GSW", "NYK"],
+    })
+    result = detect_value_bets(games)
+    assert "ev" in result.columns, "ev column missing"
+    assert "confidence_tier" in result.columns, "confidence_tier column missing"
+    # EV should be positive when model_prob > market_prob
+    assert result.iloc[0]["ev"] > 0
 
