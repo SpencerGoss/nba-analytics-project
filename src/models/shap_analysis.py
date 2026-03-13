@@ -39,6 +39,10 @@ def compute_shap_values(
     """
     _require_shap()
 
+    # Unwrap calibration wrapper if present (e.g., _PlattWrapper)
+    if hasattr(pipeline, "base_model"):
+        pipeline = pipeline.base_model
+
     # Extract preprocessing steps and classifier
     steps = list(pipeline.named_steps.keys())
     clf_name = steps[-1]
