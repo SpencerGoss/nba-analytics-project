@@ -85,14 +85,20 @@ def test_outcomes_run_first():
 # Pipeline runner (dry-run, no subprocess)
 # ---------------------------------------------------------------------------
 
-def test_dry_run_returns_all_dry_run_statuses():
+def test_dry_run_returns_all_dry_run_statuses(tmp_path, monkeypatch):
+    monkeypatch.setattr(pr, "STATE_FILE", tmp_path / "state.json")
+    monkeypatch.setattr(pr, "PROJECT_ROOT", tmp_path)
+    (tmp_path / "dashboard" / "data").mkdir(parents=True, exist_ok=True)
     result = pr.run_pipeline(mode="full", dry_run=True)
     assert "results" in result
     for r in result["results"]:
         assert r["status"] == "dry_run"
 
 
-def test_single_builder_dry_run():
+def test_single_builder_dry_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(pr, "STATE_FILE", tmp_path / "state.json")
+    monkeypatch.setattr(pr, "PROJECT_ROOT", tmp_path)
+    (tmp_path / "dashboard" / "data").mkdir(parents=True, exist_ok=True)
     result = pr.run_pipeline(mode="full", dry_run=True, single_builder="build_standings")
     assert len(result["results"]) == 1
     assert result["results"][0]["name"] == "build_standings"
@@ -149,6 +155,9 @@ def test_load_state_missing_file(tmp_path, monkeypatch):
 
 def test_dry_run_writes_report(tmp_path, monkeypatch):
     monkeypatch.setattr(pr, "STATE_FILE", tmp_path / "state.json")
+    # Prevent writing to actual dashboard/data/
+    monkeypatch.setattr(pr, "PROJECT_ROOT", tmp_path)
+    (tmp_path / "dashboard" / "data").mkdir(parents=True, exist_ok=True)
 
     result = pr.run_pipeline(mode="full", dry_run=True)
     full_count = len([n for n, i in pr.BUILDERS.items() if "full" in i["modes"]])
