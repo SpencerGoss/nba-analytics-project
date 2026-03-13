@@ -33,7 +33,7 @@ ARTIFACTS_DIR = "models/artifacts"
 TARGETS = ["pts", "reb", "ast"]
 from src.models.game_outcome_model import TEST_SEASONS
 MIN_TRAIN_GAMES = 20
-VALIDATION_SEASON = "202223"
+VALIDATION_SEASON = 202223
 
 
 # -- Feature selection ----------------------------------------------------------
@@ -113,8 +113,8 @@ def _build_candidates() -> dict:
 
 
 def _split_train_validation(train_df: pd.DataFrame) -> tuple:
-    subtrain = train_df[train_df["season"].astype(str) < VALIDATION_SEASON].copy()
-    valid = train_df[train_df["season"].astype(str) == VALIDATION_SEASON].copy()
+    subtrain = train_df[train_df["season"].astype(int) < VALIDATION_SEASON].copy()
+    valid = train_df[train_df["season"].astype(int) == VALIDATION_SEASON].copy()
     if valid.empty or subtrain.empty:
         cutoff = int(len(train_df) * 0.85)
         subtrain = train_df.iloc[:cutoff].copy()

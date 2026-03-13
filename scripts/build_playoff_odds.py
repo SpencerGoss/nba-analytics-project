@@ -55,7 +55,8 @@ WEST = WEST_DIVISIONS
 # ---------------------------------------------------------------------------
 
 def _games_behind(leader_w: int, leader_l: int, team_w: int, team_l: int) -> float:
-    return ((leader_w - team_w) + (team_l - leader_l)) / 2.0
+    from scripts.builder_helpers import games_behind
+    return games_behind(leader_w, leader_l, team_w, team_l)
 
 
 def _playoff_pct(rank: int, gb: float) -> float:
@@ -75,11 +76,8 @@ def _playoff_pct(rank: int, gb: float) -> float:
 
 
 def _load_team_names() -> dict[str, str]:
-    try:
-        df = pd.read_csv(TEAMS_CSV, usecols=["abbreviation", "full_name"])
-        return dict(zip(df["abbreviation"], df["full_name"]))
-    except Exception:
-        return {}
+    from scripts.builder_helpers import load_team_names
+    return load_team_names(TEAMS_CSV)
 
 
 # ---------------------------------------------------------------------------

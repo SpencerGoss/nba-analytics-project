@@ -331,7 +331,7 @@ def build_player_game_features(
     )
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
-    df = df[df["season"].astype(str) >= start_season].copy()
+    df = df[df["season"].astype(int) >= int(start_season)].copy()
     df = df.sort_values(["player_id", "game_date"]).reset_index(drop=True)
     print(f"  Filtered to {start_season}+: {len(df):,} rows | "
           f"{df.player_id.nunique():,} players | {df.season.nunique()} seasons")

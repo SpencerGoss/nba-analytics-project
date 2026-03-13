@@ -48,7 +48,8 @@ LAST_N = 10
 # ---------------------------------------------------------------------------
 
 def _record_str(wins: int, losses: int) -> str:
-    return f"{wins}-{losses}"
+    from scripts.builder_helpers import record_str
+    return record_str(wins, losses)
 
 
 def _current_streak(wl_series: pd.Series) -> int:

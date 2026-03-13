@@ -62,7 +62,8 @@ for _div, _teams in WEST.items():
 # ---------------------------------------------------------------------------
 
 def _record_str(wins: int, losses: int) -> str:
-    return f"{wins}-{losses}"
+    from scripts.builder_helpers import record_str
+    return record_str(wins, losses)
 
 
 def _current_streak(wl_series: pd.Series) -> str:
@@ -86,8 +87,8 @@ def _current_streak(wl_series: pd.Series) -> str:
 
 
 def _games_behind(leader_wins: int, leader_losses: int, team_wins: int, team_losses: int) -> float:
-    """Standard GB formula: ((leader_W - team_W) + (team_L - leader_L)) / 2."""
-    return ((leader_wins - team_wins) + (team_losses - leader_losses)) / 2.0
+    from scripts.builder_helpers import games_behind
+    return games_behind(leader_wins, leader_losses, team_wins, team_losses)
 
 
 def _compute_clinch_status(rows: list[dict]) -> None:
@@ -152,9 +153,8 @@ def _compute_clinch_status(rows: list[dict]) -> None:
 
 
 def _load_team_names() -> dict[str, str]:
-    """Return {abbreviation: full_name} from teams.csv."""
-    df = pd.read_csv(TEAMS_CSV)
-    return dict(zip(df["abbreviation"], df["full_name"]))
+    from scripts.builder_helpers import load_team_names
+    return load_team_names(TEAMS_CSV)
 
 
 # ---------------------------------------------------------------------------

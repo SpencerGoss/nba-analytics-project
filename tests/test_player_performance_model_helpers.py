@@ -173,14 +173,14 @@ class TestSplitTrainValidation:
         df = _make_multi_season_df()
         subtrain, valid = _split_train_validation(df)
         if not valid.empty:
-            subtrain_seasons = set(subtrain["season"].astype(str))
+            subtrain_seasons = set(subtrain["season"].astype(int))
             assert all(s < VALIDATION_SEASON for s in subtrain_seasons)
 
     def test_valid_contains_only_validation_season(self):
         df = _make_multi_season_df()
         _, valid = _split_train_validation(df)
         if not valid.empty:
-            assert set(valid["season"].astype(str)) == {VALIDATION_SEASON}
+            assert set(valid["season"].astype(int)) == {VALIDATION_SEASON}
 
     def test_fallback_when_validation_season_absent(self):
         """If validation season is not in data, falls back to 85/15 index split."""
@@ -207,7 +207,7 @@ class TestSplitTrainValidation:
         intentionally excluded (reserved as future test data)."""
         df = _make_multi_season_df()
         subtrain, valid = _split_train_validation(df)
-        relevant = df[df["season"].astype(str) <= VALIDATION_SEASON]
+        relevant = df[df["season"].astype(int) <= VALIDATION_SEASON]
         assert len(subtrain) + len(valid) == len(relevant)
 
 

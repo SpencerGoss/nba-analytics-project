@@ -70,7 +70,8 @@ def _safe_float(value: object, default: float = 0.0) -> float:
 
 
 def _record_str(wins: int, losses: int) -> str:
-    return f"{wins}-{losses}"
+    from scripts.builder_helpers import record_str
+    return record_str(wins, losses)
 
 
 def _normalise(value: float, lo: float, hi: float) -> float:

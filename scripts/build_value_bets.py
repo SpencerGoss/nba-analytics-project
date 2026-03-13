@@ -38,11 +38,8 @@ EDGE_THRESHOLD = 0.05
 # ---------------------------------------------------------------------------
 
 def _load_team_names() -> dict[str, str]:
-    """Return {abbreviation: full_name} from teams.csv."""
-    if not TEAMS_CSV.exists():
-        return {}
-    df = pd.read_csv(TEAMS_CSV)
-    return dict(zip(df["abbreviation"], df["full_name"]))
+    from scripts.builder_helpers import load_team_names
+    return load_team_names(TEAMS_CSV)
 
 
 def _load_all_predictions(conn: sqlite3.Connection) -> list[dict]:

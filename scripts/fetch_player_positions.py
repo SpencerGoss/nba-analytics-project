@@ -26,10 +26,12 @@ from nba_api.stats.static import teams
 
 OUT_CSV = PROJECT_ROOT / "data" / "processed" / "player_positions.csv"
 STATS_CSV = PROJECT_ROOT / "data" / "processed" / "player_stats.csv"
-SEASON = "2024-25"
 from src.config import get_current_season
 
 CURRENT_SEASON_INT = get_current_season()
+# NBA API expects "2025-26" format string
+_s = str(CURRENT_SEASON_INT)
+SEASON = f"{_s[:4]}-{_s[4:]}"
 
 
 def _parse_height_inches(height_str: str) -> int | None:

@@ -61,10 +61,14 @@ MATCHUP_PATH = str(PROJECT_ROOT / "data" / "features" / "game_matchup_features.c
 ARTIFACTS_DIR = str(PROJECT_ROOT / "models" / "artifacts")
 FEATURES_PKL = str(PROJECT_ROOT / "models" / "artifacts" / "game_outcome_features.pkl")
 
+from src.config import get_current_season
+
 TARGET = "home_win"
-TEST_SEASONS = ["202324", "202425"]
-MODERN_ERA_START = "201314"
-EXCLUDED_SEASONS = ["201920", "202021"]
+# Last 2 complete seasons are holdout test set
+_cur = get_current_season()
+TEST_SEASONS = [_cur - 202, _cur - 101]  # e.g. 202526 -> [202324, 202425]
+MODERN_ERA_START = 201314
+EXCLUDED_SEASONS = [201920, 202021]  # COVID bubble seasons (historical constant)
 MIN_TRAIN_SEASONS_FOR_TUNING = 6
 
 DEFAULT_N_TRIALS = 50
@@ -96,8 +100,8 @@ def load_data(matchup_path: str = MATCHUP_PATH) -> pd.DataFrame:
     if len(df) < n_before:
         log.info("Dropped %d rows with missing target", n_before - len(df))
 
-    df = df[df["season"].astype(str) >= MODERN_ERA_START].copy()
-    df = df[~df["season"].astype(str).isin(EXCLUDED_SEASONS)].copy()
+    df = df[df["season"].astype(int) >= MODERN_ERA_START].copy()
+    df = df[~df["season"].astype(int).isin(EXCLUDED_SEASONS)].copy()
     log.info("Loaded %d games across %d seasons", len(df), df["season"].nunique())
     return df
 
@@ -438,7 +442,7 @@ def main(argv=None):
             )
 
     # Exclude holdout test seasons -- same as game_outcome_model.py
-    train_df = df[~df["season"].astype(str).isin(TEST_SEASONS)].copy()
+    train_df = df[~df["season"].astype(int).isin(TEST_SEASONS)].copy()
     log.info(
         "Train set: %d games across %d seasons (test seasons excluded: %s)",
         len(train_df), train_df["season"].nunique(), TEST_SEASONS,

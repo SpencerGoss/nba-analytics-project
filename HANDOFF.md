@@ -1,53 +1,42 @@
 # Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-13 Session 14 (Plan D pipeline + dashboard + cleanup)_
+_Last updated: 2026-03-13 Session 15 (Config wiring + dedup + test coverage)_
 
 ## What Was Done This Session
 
-### Plan D: Pipeline + Dashboard + Cleanup (7 of 8 tasks COMPLETE)
-- **Task 1**: Unified pipeline runner (`scripts/pipeline_runner.py`) — 30 builders, 7 phases, 3 modes, --dry-run, --resume
-- **Task 2**: Config module (`src/config.py`) — centralized seasons, teams, paths, model defaults
-- **Task 3**: Windows Task Scheduler (`scripts/setup_scheduler.ps1`) — 4AM full, 11:30AM injuries, 6:30PM pretip
-- **Task 5 partial**: Confidence tiers wired — `build_picks.py` now uses BettingRouter (Best Bet/Solid Pick/Lean/Skip); dashboard updated
-- **Task 6**: Dead code deleted — 8 files, ~2,084 lines removed
-- **Task 7**: CI/CD repurposed — `daily_deploy.yml` now CI-only (tests on push/PR)
+### Config Centralization (continued from Session 14)
+- Wired `src/config.py` into 14+ builder scripts — all hardcoded `CURRENT_SEASON = 202526` replaced
+- Added `get_current_season_id()` for player_game_logs format
+- Added `EAST_DIVISIONS`/`WEST_DIVISIONS` to config — replaced 60+ lines of duplicate dicts in standings/playoff_odds
+- Fixed 3 remaining hardcoded seasons: `tune_hyperparams.py`, `fetch_historical_players.py`, `fetch_player_positions.py`
+- Fixed string-based season comparisons (`.astype(str) >= "202122"`) to integer comparisons in 4 files — string comparison is lexicographic, not numeric
 
-### Code Cleanup
-- Extracted duplicate `_season_splits()` to shared `src/models/cv_utils.py::expanding_season_splits()`
-- Dashboard: Promise.allSettled, ticker pause on hover, new tier labels + pill styling
-- Updated test baseline in CLAUDE.md and testing.md
+### Duplicate Helper Extraction
+- Created `scripts/builder_helpers.py` with: `load_team_names()`, `record_str()`, `games_behind()`, `safe_float()`, `write_json()`, `load_json()`
+- Wired 8 builder scripts to delegate to shared helpers (was 4x `_load_team_names`, 3x `_record_str`, 2x `_games_behind`)
 
-### Confidence Tier Unification
-- `build_picks.py`: old `_confidence_tier(home_prob, winner, home)` -> new `_confidence_tier(edge, home_prob, projected_margin)` using BettingRouter
-- Dashboard `_confLabel()` and `_confLevel()`: thresholds aligned to 8%/4%/2% (was 10%/5%)
-- Pick cards now show tier pill badge (Best Bet/Solid Pick/Lean)
-- Value bets section: tier labels updated from HIGH/MED to Best Bet/Solid Pick/Lean
+### Test Coverage
+- Added `tests/test_builder_helpers.py` (20 tests) — all helper functions
+- Added `tests/test_fetch_odds.py` (19 tests) — implied prob, team mapping, game lines (mocked API), model_vs_odds assembly
+- Added `tests/test_pipeline_runner.py` (18 tests) — registry, modes, dry-run, state
+- Added `tests/test_build_elo_timeline.py` (7 tests) + `tests/test_build_game_detail.py` (9 tests)
+- Test baseline: 1582 -> 1621 (+39 tests)
 
 ## What's Next
 
-### Plan D Remaining
-- **Task 4**: Dashboard tiered loading (only Today tab on page open, defer others)
-- **Task 5 remaining**: Kelly opt-in toggle, bankroll management, Sharp Money CLV disclaimer, actionable empty states
-- **Task 8**: Final verification (dashboard loads, confidence tiers display correctly)
-
-### Full Model Retrain (Task 8 from Plan B)
-Now that Huber GBM candidate and ensemble optimizer exist, a full retrain would:
-1. Rebuild features, retrain game outcome + margin models
-2. Run ensemble weight optimization on validation data
-3. Compare to current baseline (67.5% acc, AUC 0.7422, MAE 10.52)
-4. Run walk-forward backtest to estimate real betting ROI
+### Remaining Work
+- **Dashboard tiered loading** (Plan D Task 4): deferred — high-risk for 9K-line file
+- **Full model retrain** (Plan B Task 8): Huber GBM candidate + ensemble optimizer ready
+- Add tests for: `sync_to_sqlserver.py`, `predict_cli.py`, `retrain_all.py`
 
 ### Known Issues
-- CLV closing_spread always NULL (update_closing_line never called)
+- CLV closing_spread always NULL (data-over-time issue — pipeline needs daily runs to accumulate)
 - Lineup features missing for 2025-26 season
 - ATS features stop at 2024-25
-- Inconsistent PROJECT_ROOT derivation across model files (cosmetic, all compute same path)
-- Orchestration scripts (predict_cli.py, retrain_all.py) have no test coverage
 
 ## Test Baseline
-- 1546 tests passing (0 failures)
+- 1621 tests passing (0 failures)
 
 ## Session Intent 2026-03-13
-Goal: Execute Plan D (Pipeline + Dashboard + Cleanup)
-Completed: 2026-03-13
-Outcome: achieved (7/8 tasks; Task 4 deferred as high-risk for 9K-line file)
+Goal: Continue project quality improvements — config wiring, dedup, test coverage
+Outcome: achieved

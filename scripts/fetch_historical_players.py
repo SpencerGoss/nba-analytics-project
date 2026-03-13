@@ -29,7 +29,9 @@ TEAMS_CSV = RAW_DIR / "historical_team_seasons.csv"
 
 # NBA's first season. Three-point line started 1979-80 — fg3 cols will be 0 before that.
 FIRST_SEASON_YEAR = 1946
-LAST_SEASON_YEAR = 2024  # "2024-25"
+sys.path.insert(0, str(PROJECT_ROOT))
+from src.config import get_current_season
+LAST_SEASON_YEAR = get_current_season() // 100  # e.g. 202526 -> 2025
 
 THROTTLE_SEC = 0.7  # slightly above the 0.6 floor for safety
 RETRY_SLEEP_SEC = 2.0
