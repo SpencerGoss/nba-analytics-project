@@ -399,3 +399,39 @@ def test_pipeline_serialisable(tmp_path):
     X = _make_matchup_df(n=5)[feat_cols].fillna(0)
     preds = loaded.predict(X)
     assert len(preds) == 5
+
+
+# -- Test: predict_margin refreshes Elo ------------------------------------
+
+
+def test_predict_margin_refreshes_elo(tmp_path):
+    """predict_margin must call get_current_elos() to get fresh Elo values."""
+    from unittest.mock import patch
+
+    # Train a model first so artifacts exist
+    matchup = _make_matchup_df(n=N_ROWS)
+    matchup_path = str(tmp_path / "matchup.csv")
+    matchup.to_csv(matchup_path, index=False)
+
+    logs = _make_logs_df(matchup)
+    logs_path = str(tmp_path / "logs.csv")
+    logs.to_csv(logs_path, index=False)
+
+    artifacts_dir = str(tmp_path / "artifacts")
+    train_margin_model(
+        matchup_path=matchup_path,
+        game_logs_path=logs_path,
+        artifacts_dir=artifacts_dir,
+        test_seasons=["201920"],
+    )
+
+    with patch("src.models.margin_model.get_current_elos") as mock_elos:
+        mock_elos.return_value = {"LAL": 1550.0, "GSW": 1450.0}
+        result = predict_margin(
+            home_team="LAL",
+            away_team="GSW",
+            matchup_path=matchup_path,
+            artifacts_dir=artifacts_dir,
+        )
+        mock_elos.assert_called_once()
+        assert isinstance(result, float)

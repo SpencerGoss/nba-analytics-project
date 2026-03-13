@@ -8,6 +8,8 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from src.features.elo import get_current_elos
+
 warnings.filterwarnings("ignore")
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -382,6 +384,22 @@ def predict_margin(
                 h_col, a_col = f"home_{base}", f"away_{base}"
                 if h_col in row.index and a_col in row.index:
                     row[col] = row[h_col] - row[a_col]
+
+    # Refresh Elo with current ratings (not stale CSV values)
+    current_elos = get_current_elos()
+    home_elo = current_elos.get(home_team, 1500.0)
+    away_elo = current_elos.get(away_team, 1500.0)
+    if "diff_elo" in row.index:
+        row["diff_elo"] = home_elo - away_elo
+    if "home_elo_pre" in row.index:
+        row["home_elo_pre"] = home_elo
+    if "away_elo_pre" in row.index:
+        row["away_elo_pre"] = away_elo
+    # Note: diff_elo_fast (K=40) and diff_elo_momentum are separate signals.
+    # get_current_elos() only returns standard Elo (K=20). Leave fast/momentum
+    # from the CSV row (still fresher than cross-season data). Only override
+    # diff_elo which is 37.3% feature importance.
+    # TODO (Phase 3): extend get_current_elos() to return fast + momentum Elo.
 
     row_df = row.to_frame().T.reindex(columns=feat_cols).fillna(0)
     prediction = float(model.predict(row_df)[0])
