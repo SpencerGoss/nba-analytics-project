@@ -152,10 +152,12 @@ class NBAEnsemble:
     def load(cls, artifacts_dir=ARTIFACTS_DIR):
         """Load model artifacts from artifacts_dir.
 
-        Outcome + ATS models are required. Margin is optional (warns if absent).
+        Outcome model is required. ATS is loaded only when ATS_WEIGHT > 0.
+        Margin is optional (warns if absent).
 
         Raises:
-            FileNotFoundError: If required outcome or ATS artifacts are missing.
+            FileNotFoundError: If required outcome artifacts are missing, or
+                ATS artifacts are missing when ATS_WEIGHT > 0.
         """
         artifacts_dir = Path(artifacts_dir)
 
@@ -187,13 +189,18 @@ class NBAEnsemble:
         ats_path = artifacts_dir / "ats_model.pkl"
         ats_feat_path = artifacts_dir / "ats_model_features.pkl"
 
-        if not ats_path.exists():
-            raise FileNotFoundError(
-                f"ATS model artifact not found at {str(ats_path)!r}. "
-                "Run: python src/models/ats_model.py"
-            )
-        ats_model = _load_artifact(ats_path)
-        ats_feats = _load_artifact(ats_feat_path) if ats_feat_path.exists() else []
+        if ATS_WEIGHT > 0:
+            if not ats_path.exists():
+                raise FileNotFoundError(
+                    f"ATS model artifact not found at {str(ats_path)!r}. "
+                    "Run: python src/models/ats_model.py"
+                )
+            ats_model = _load_artifact(ats_path)
+            ats_feats = _load_artifact(ats_feat_path) if ats_feat_path.exists() else []
+        else:
+            ats_model = None
+            ats_feats = []
+            logger.info("ATS_WEIGHT=0.0 -- skipping ATS model load")
 
         margin_model = None
         margin_feats = None
@@ -241,8 +248,11 @@ class NBAEnsemble:
         X_outcome = X.reindex(columns=self.outcome_feats)
         win_prob = self.outcome_model.predict_proba(X_outcome)[:, 1]
 
-        X_ats = X.reindex(columns=self.ats_feats) if self.ats_feats else X
-        ats_prob = self.ats_model.predict_proba(X_ats)[:, 1]
+        if self.ats_model is not None and ATS_WEIGHT > 0:
+            X_ats = X.reindex(columns=self.ats_feats) if self.ats_feats else X
+            ats_prob = self.ats_model.predict_proba(X_ats)[:, 1]
+        else:
+            ats_prob = np.full(n, 0.5)  # Neutral when ATS disabled
 
         if self.margin_model is not None:
             X_margin = (

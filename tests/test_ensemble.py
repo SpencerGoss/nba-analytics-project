@@ -92,8 +92,13 @@ def _build(tmp_path, margin=True):
 # -- Test 1: NBAEnsemble.load() -----------------------------------------------
 
 def test_loads_all_three_models(tmp_path):
-    """load() succeeds when all three model artifacts are present."""
-    ens = NBAEnsemble.load(_build(tmp_path, margin=True))
+    """load() succeeds when all three model artifacts are present and ATS_WEIGHT > 0."""
+    import src.models.ensemble as ens_module
+    from unittest.mock import patch
+
+    ad = _build(tmp_path, margin=True)
+    with patch.object(ens_module, "ATS_WEIGHT", 0.1):
+        ens = NBAEnsemble.load(ad)
     assert ens.outcome_model is not None
     assert ens.ats_model is not None
     assert ens.margin_model is not None
@@ -115,8 +120,11 @@ def test_load_raises_missing_outcome_model(tmp_path):
         NBAEnsemble.load(empty)
 
 
-def test_load_raises_missing_ats_model(tmp_path):
-    """FileNotFoundError raised when ATS model is missing."""
+def test_load_raises_missing_ats_model_when_weight_nonzero(tmp_path):
+    """FileNotFoundError raised when ATS model is missing and ATS_WEIGHT > 0."""
+    import src.models.ensemble as ens_module
+    from unittest.mock import patch
+
     ad = tmp_path / "p"
     ad.mkdir()
     rng = np.random.default_rng(1)
@@ -125,8 +133,9 @@ def test_load_raises_missing_ats_model(tmp_path):
     y = (rng.random(n) > 0.5).astype(int)
     _save_pkl(ad / "game_outcome_model_calibrated.pkl", _clf(X, y, FEAT))
     _save_pkl(ad / "game_outcome_features.pkl", FEAT)
-    with pytest.raises(FileNotFoundError, match="ATS model"):
-        NBAEnsemble.load(ad)
+    with patch.object(ens_module, "ATS_WEIGHT", 0.1):
+        with pytest.raises(FileNotFoundError, match="ATS model"):
+            NBAEnsemble.load(ad)
 
 
 # -- Test 2: predict() returns expected columns --------------------------------
@@ -380,3 +389,60 @@ def test_ensemble_score_in_range_dynamic(tmp_path):
         result = ens.predict(_make_df(n=20, seed=seed))
         assert (result["ensemble_score"] >= 0).all(), f"Below 0 at seed {seed}"
         assert (result["ensemble_score"] <= 1).all(), f"Above 1 at seed {seed}"
+
+
+# -- Test 15: ATS model guarded behind ATS_WEIGHT check ----------------------
+
+def test_ensemble_skips_ats_load_when_weight_zero(tmp_path):
+    """When ATS_WEIGHT=0, load() should not load ats_model.pkl."""
+    import src.models.ensemble as ens_module
+    from unittest.mock import patch
+
+    ad = _build(tmp_path, margin=True)
+    with patch.object(ens_module, "ATS_WEIGHT", 0.0):
+        ens = NBAEnsemble.load(ad)
+    assert ens.ats_model is None
+    assert ens.ats_feats == []
+
+
+def test_ensemble_loads_without_ats_file_when_weight_zero(tmp_path):
+    """When ATS_WEIGHT=0, load() should succeed even if ats_model.pkl is missing."""
+    import src.models.ensemble as ens_module
+    from unittest.mock import patch
+
+    ad = _build(tmp_path, margin=True)
+    # Remove ATS artifacts
+    (ad / "ats_model.pkl").unlink()
+    (ad / "ats_model_features.pkl").unlink()
+    with patch.object(ens_module, "ATS_WEIGHT", 0.0):
+        ens = NBAEnsemble.load(ad)
+    assert ens.ats_model is None
+    assert ens.outcome_model is not None
+
+
+def test_ensemble_predict_uses_neutral_ats_when_disabled(tmp_path):
+    """predict() should use ats_prob=0.5 when ATS model is None."""
+    import src.models.ensemble as ens_module
+    from unittest.mock import patch
+
+    ad = _build(tmp_path, margin=True)
+    with patch.object(ens_module, "ATS_WEIGHT", 0.0):
+        ens = NBAEnsemble.load(ad)
+        result = ens.predict(_make_df(n=5))
+    assert (result["ats_prob"] == 0.5).all(), "ATS prob should be 0.5 when disabled"
+
+
+def test_ensemble_predict_still_works_with_ats_disabled(tmp_path):
+    """Full predict pipeline works when ATS is disabled (weight=0)."""
+    import src.models.ensemble as ens_module
+    from unittest.mock import patch
+
+    ad = _build(tmp_path, margin=True)
+    with patch.object(ens_module, "ATS_WEIGHT", 0.0):
+        ens = NBAEnsemble.load(ad)
+        result = ens.predict(_make_df(n=10, seed=7))
+    assert len(result) == 10
+    assert (result["ensemble_score"] >= 0).all()
+    assert (result["ensemble_score"] <= 1).all()
+    expected_cols = {"win_prob", "ats_prob", "margin_pred", "ensemble_score", "confidence"}
+    assert expected_cols.issubset(set(result.columns))
