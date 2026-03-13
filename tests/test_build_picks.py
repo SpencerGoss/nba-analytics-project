@@ -305,44 +305,52 @@ def test_kelly_half_kelly():
 
 
 # ---------------------------------------------------------------------------
-# _confidence_tier
+# _confidence_tier (edge-based, delegates to BettingRouter)
 # ---------------------------------------------------------------------------
 
-def test_confidence_high():
+def test_confidence_best_bet():
     from scripts.build_picks import _confidence_tier
-    assert _confidence_tier(0.75, "BOS", "BOS") == "HIGH"
+    # 10% edge, models agree (margin positive, prob > 0.5)
+    assert _confidence_tier(0.10, 0.65, 5.0) == "Best Bet"
 
 
-def test_confidence_high_away():
+def test_confidence_solid_pick():
     from scripts.build_picks import _confidence_tier
-    # Away win prob = 1 - 0.25 = 0.75
-    assert _confidence_tier(0.25, "NYK", "BOS") == "HIGH"
+    # 5% edge, models agree
+    assert _confidence_tier(0.05, 0.60, 3.0) == "Solid Pick"
 
 
-def test_confidence_medium():
+def test_confidence_lean():
     from scripts.build_picks import _confidence_tier
-    assert _confidence_tier(0.62, "BOS", "BOS") == "MEDIUM"
+    # 3% edge, models agree
+    assert _confidence_tier(0.03, 0.55, 2.0) == "Lean"
 
 
-def test_confidence_low():
+def test_confidence_skip_low_edge():
     from scripts.build_picks import _confidence_tier
-    assert _confidence_tier(0.55, "BOS", "BOS") == "LOW"
+    # 1% edge -> Skip
+    assert _confidence_tier(0.01, 0.52, 1.0) == "Skip"
 
 
-def test_confidence_boundary_70():
+def test_confidence_skip_no_edge():
     from scripts.build_picks import _confidence_tier
-    # Exactly 70% -> HIGH
-    assert _confidence_tier(0.70, "BOS", "BOS") == "HIGH"
+    assert _confidence_tier(None, 0.50, None) == "Skip"
 
 
-def test_confidence_boundary_60():
+def test_confidence_skip_models_disagree():
     from scripts.build_picks import _confidence_tier
-    # Exactly 60% -> MEDIUM
-    assert _confidence_tier(0.60, "BOS", "BOS") == "MEDIUM"
+    # High edge but models disagree (prob > 0.5 but margin < -1.5)
+    assert _confidence_tier(0.10, 0.65, -5.0) == "Skip"
+
+
+def test_confidence_no_margin_available():
+    from scripts.build_picks import _confidence_tier
+    # No margin data — should still tier on edge alone (assumes agree)
+    assert _confidence_tier(0.10, 0.65, None) == "Best Bet"
 
 
 def test_confidence_returns_string():
     from scripts.build_picks import _confidence_tier
-    result = _confidence_tier(0.65, "BOS", "BOS")
+    result = _confidence_tier(0.05, 0.60, 3.0)
     assert isinstance(result, str)
-    assert result in ("HIGH", "MEDIUM", "LOW")
+    assert result in ("Best Bet", "Solid Pick", "Lean", "Skip")

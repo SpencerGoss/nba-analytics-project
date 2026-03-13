@@ -236,14 +236,24 @@ def _compute_kelly_fraction(
     return round(max(0.0, 0.5 * kelly), 4)
 
 
-def _confidence_tier(home_prob: float, predicted_winner: str, home: str) -> str:
-    """Classify model confidence into HIGH / MEDIUM / LOW based on win probability."""
-    winner_prob = home_prob if predicted_winner == home else 1.0 - home_prob
-    if winner_prob >= 0.70:
-        return "HIGH"
-    if winner_prob >= 0.60:
-        return "MEDIUM"
-    return "LOW"
+def _confidence_tier(
+    edge: float | None,
+    home_prob: float,
+    projected_margin: float | None,
+) -> str:
+    """Assign confidence tier using BettingRouter's edge-based system.
+
+    Tiers: Best Bet (>=8% edge + agree), Solid Pick (>=4%), Lean (>=2%), Skip.
+    Falls back to edge-only when projected_margin is unavailable.
+    """
+    from src.models.betting_router import confidence_tier, model_agreement
+
+    if edge is None or edge <= 0:
+        return "Skip"
+    agree = True
+    if projected_margin is not None:
+        agree = model_agreement(home_prob, projected_margin)
+    return confidence_tier(edge, agree)
 
 
 def _build_pick_row(
@@ -282,15 +292,15 @@ def _build_pick_row(
     else:
         ats_pick = predicted_winner
 
+    # Projected margin: pull from margin_lookup keyed by (home, away, game_date)
+    projected_margin: float | None = (margin_lookup or {}).get((home, away, game_date))
+
     # Derived enrichment fields
     kelly = _compute_kelly_fraction(edge_pct, market_prob, ats_pick, home, home_prob)
-    tier = _confidence_tier(home_prob, predicted_winner, home)
+    tier = _confidence_tier(edge_pct, home_prob, projected_margin)
     model_confidence = round(
         home_prob * 100 if predicted_winner == home else away_prob * 100
     )
-
-    # Projected margin: pull from margin_lookup keyed by (home, away, game_date)
-    projected_margin: float | None = (margin_lookup or {}).get((home, away, game_date))
 
     return {
         "game_date": game_date,

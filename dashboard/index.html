@@ -195,6 +195,7 @@ body.light .ticker-strip{color:var(--t1)}
 .ticker-overflow{flex:1;overflow:hidden}
 .ticker-track{display:inline-flex;gap:28px;white-space:nowrap;animation:ticker-scroll 45s linear infinite}
 .ticker-track:hover{animation-play-state:paused}
+.ticker-wrap:hover .ticker-track{animation-play-state:paused}
 @keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .ticker-track{animation-duration:600s!important}
 .t-item{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--fm);color:var(--t1)}
@@ -497,6 +498,7 @@ html{background:var(--bg);background-attachment:fixed}
 .pill-high{background:var(--green-d);color:var(--green)}
 .pill-med {background:var(--gold-d); color:var(--gold)}
 .pill-low {background:var(--red-d);  color:var(--red)}
+.pill-skip{background:rgba(255,255,255,.06);color:rgba(255,255,255,.35)}
 
 /* ── MARKET PILLS ── */
 .pill-ml  {background:var(--blue-d);  color:var(--blue)}
@@ -2348,14 +2350,16 @@ function _sitBadge(flag){
 }
 
 function _confLevel(edgePct){
-  if(edgePct>=0.10)return 'pill-high';
-  if(edgePct>=0.05)return 'pill-med';
-  return 'pill-low';
+  if(edgePct>=0.08)return 'pill-high';
+  if(edgePct>=0.04)return 'pill-med';
+  if(edgePct>=0.02)return 'pill-low';
+  return 'pill-skip';
 }
 function _confLabel(edgePct){
-  if(edgePct>=0.10)return 'HIGH';
-  if(edgePct>=0.05)return 'MED';
-  return 'LOW';
+  if(edgePct>=0.08)return 'Best Bet';
+  if(edgePct>=0.04)return 'Solid Pick';
+  if(edgePct>=0.02)return 'Lean';
+  return 'Skip';
 }
 
 function buildSpotlight(valueBets, explainers, contexts){
@@ -2390,7 +2394,7 @@ function buildSpotlight(valueBets, explainers, contexts){
   const confPill=document.getElementById('sp-conf-pill');
   if(confPill){
     confPill.className='sp-pill '+_confLevel(top.edge_pct);
-    confPill.textContent=_confLabel(top.edge_pct)+' CONFIDENCE';
+    confPill.textContent=_confLabel(top.edge_pct);
   }
 
   const betPill=document.getElementById('sp-bet-pill');
@@ -2472,7 +2476,7 @@ function _buildPickCard(p){
   // Confidence level + color coding — use confidence_tier from data if available
   const conf=Math.max(homePct,awayPct);
   const tierFromData=p.confidence_tier||null;
-  const confCls=tierFromData==='HIGH'?'conf-high':tierFromData==='MEDIUM'?'conf-med':tierFromData==='LOW'?'conf-low':(conf>=70?'conf-high':conf>=60?'conf-med':'conf-low');
+  const confCls=(tierFromData==='Best Bet'||tierFromData==='HIGH')?'conf-high':(tierFromData==='Solid Pick'||tierFromData==='MEDIUM')?'conf-med':(tierFromData==='Skip')?'conf-low':tierFromData==='Lean'?'conf-low':(conf>=70?'conf-high':conf>=60?'conf-med':'conf-low');
   const confColor=confCls==='conf-high'?'var(--green)':confCls==='conf-med'?'var(--gold)':'rgba(255,255,255,.4)';
 
   // Recommended bet type
@@ -2483,8 +2487,10 @@ function _buildPickCard(p){
 
   let marketPill='<span class="phc-pill pill-ats">ATS</span>';
   const edgePill=isValue&&edgePct
-    ? '<span class="vb-edge '+(parseFloat(edgePct)>=10?'hi':'md')+'">+'+edgePct+'%</span>'
+    ? '<span class="vb-edge '+(parseFloat(edgePct)>=8?'hi':'md')+'">+'+edgePct+'%</span>'
     : '';
+  const tierLabel=tierFromData||(edgePct?_confLabel(parseFloat(edgePct)/100):'');
+  const tierPill=tierLabel&&tierLabel!=='Skip'?'<span class="phc-pill '+_confLevel(parseFloat(edgePct||0)/100)+'">'+esc(tierLabel)+'</span>':'';
 
   const d=new Date(p.game_date);
   const dateStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -2534,7 +2540,7 @@ function _buildPickCard(p){
         '<div class="phc-teams" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+awLogoTag+esc(p.away_team)+' @ '+hmLogoTag+esc(p.home_team)+'</div>'+ 
         '<div class="phc-date">'+esc(dateStr)+'</div>'+ 
       '</div>'+ 
-      '<div class="phc-pills">'+marketPill+edgePill+'</div>'+ 
+      '<div class="phc-pills">'+tierPill+marketPill+edgePill+'</div>'+
     '</div>'+ 
     (spreadLineHtml||betRec? 
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">'+ 
@@ -2857,7 +2863,7 @@ function headshot(nbaId, ini, size=36, team, jersey) {
   const safeTeam=esc(team||'');
   const safeJersey=esc(jersey||'');
   return `<div class="player-shot-wrap" style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,rgba(0,200,150,.15),rgba(232,197,71,.1));border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-    <img src="${url}" alt="${safeIni}"
+    <img src="${url}" alt="${safeIni}" loading="lazy"
       style="width:${Math.round(size*1.5)}px;height:${Math.round(size*1.2)}px;object-fit:cover;object-position:top center;margin-top:${Math.round(size*.1)}px"
       onerror="hsErr(this,'${safeIni}','${safeTeam}','${safeJersey}')"
     />
@@ -2912,7 +2918,17 @@ function showMacro(macro){
   if(subs.length)showSubTab(subs[0]);
 }
 
+// Purge Plotly charts in pages that are being hidden to free memory
+var _PLOTLY_CHART_IDS=['dash-chart','bt-chart','bt-type-chart','bt-conf-chart','radar','champ-chart','streak-chart','homeway-chart','shot-quality-chart','efficiency-chart','shot-zone-chart','elo-timeline-chart','bet-tracker-chart'];
+function _purgeHiddenPlotlyCharts(){
+  if(!window.Plotly||!window.Plotly.purge)return;
+  _PLOTLY_CHART_IDS.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el&&el.data){try{window.Plotly.purge(el)}catch(e){}}
+  });
+}
 function showSubTab(sub){
+  _purgeHiddenPlotlyCharts();
   if(sub==='oddsconverter'){openBettingDrawer();return;}
   document.querySelectorAll('.sub-tab').forEach(function(b){b.classList.remove('active')});
   var btn=document.getElementById('st-'+sub);
@@ -5324,7 +5340,7 @@ function renderTradingCard(elId,p,col){
   const colors=TEAM_COLORS[getPlayerPrimaryTeam(p)]||[col,col];
   const nbaId=p.nbaId||0;
   const imgUrl=nbaId>0?'https://cdn.nba.com/headshots/nba/latest/1040x760/'+nbaId+'.png':'';
-  const imgHtml=imgUrl?'<img src="'+imgUrl+'" class="cmp-card-headshot" onerror="this.style.display=\'none\'" alt="'+esc(p.name)+'"/>':'<div class="cmp-card-headshot" style="display:flex;align-items:center;justify-content:center;font-size:28px;color:rgba(255,255,255,.4)">'+esc(p.ini||'?')+'</div>';
+  const imgHtml=imgUrl?'<img src="'+imgUrl+'" class="cmp-card-headshot" loading="lazy" onerror="this.style.display=\'none\'" alt="'+esc(p.name)+'"/>':'<div class="cmp-card-headshot" style="display:flex;align-items:center;justify-content:center;font-size:28px;color:rgba(255,255,255,.4)">'+esc(p.ini||'?')+'</div>';
   const pts=eraAdjustCareer(p,'pts');
   const reb=eraAdjustCareer(p,'reb');
   const ast=eraAdjustCareer(p,'ast');
@@ -6860,8 +6876,8 @@ function renderValueBets(){
       const edge=(b.edge_pct*100).toFixed(1);
       const mp=(b.model_prob*100).toFixed(1);
       const mkp=(b.market_prob*100).toFixed(1);
-      const ecls=b.edge_pct>=0.1?'hi':'md';
-      const confLabel=b.edge_pct>=0.1?'HIGH':'MED';
+      const ecls=b.edge_pct>=0.08?'hi':'md';
+      const confLabel=b.edge_pct>=0.08?'Best Bet':b.edge_pct>=0.04?'Solid Pick':'Lean';
       const marketType='ML';
       const isBest=bIdx===0;
       const ex=explainers.find(e=>e.home_team===b.home_team&&e.away_team===b.away_team)||null;
@@ -7204,7 +7220,7 @@ async function loadDashboardData(){
     }
     const _skelPicks=document.getElementById('skeleton-picks');
     if(_skelPicks)_skelPicks.style.display='grid';
-    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson,gameDetailJson,streaksJson]=await Promise.all([
+    const _settled=await Promise.allSettled([
       _trackFetch('data/todays_picks.json',[]),
       _trackFetch('data/accuracy_history.json',[]),
       _trackFetch('data/value_bets.json',[]),
@@ -7228,6 +7244,9 @@ async function loadDashboardData(){
       _trackFetch('data/game_detail.json',{games:[]}),
       _trackFetch('data/streaks.json',null),
     ]);
+    // Extract values from allSettled results — rejected promises get their fallback
+    const _fallbacks=[[],[],[],{}, [],[], [],null,null,[],null,[],[],null,[],[],{},[], {games:[]},null];
+    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson,gameDetailJson,streaksJson]=_settled.map(function(r,i){return r.status==='fulfilled'?r.value:_fallbacks[i];});
     if(_skelPicks)_skelPicks.style.display='none';
     // player_comparison.json is lazy-loaded on first Players tab open (see _loadPlayerComparison)
     // Start with LEGENDS only so the page is never empty
