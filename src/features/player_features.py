@@ -33,6 +33,9 @@ CLUTCH_STATS_PATH = "data/processed/player_stats_clutch.csv"
 TEAM_FEATURES_PATH = "data/features/team_game_features.csv"
 OUTPUT_PATH = "data/features/player_game_features.csv"
 
+PROP_OUTPUT_PATH = "data/features/player_prop_features.csv"
+PROP_EWMA_SPAN = 10
+
 ROLL_WINDOWS = [5, 10, 20]
 
 ROLL_STATS = [
@@ -209,6 +212,100 @@ def _add_derived_context_features(df: pd.DataFrame) -> pd.DataFrame:
         out["rest_advantage"] = out["team_days_rest"] - out["opp_days_rest"]
 
     return out
+
+
+# ── Player Prop Feature Builder ────────────────────────────────────────────────
+
+def build_player_prop_features(
+    game_logs: pd.DataFrame | None = None,
+    output_path: str | None = None,
+) -> pd.DataFrame:
+    """Build features for player prop predictions (PTS, REB, AST, 3PM o/u).
+
+    Args:
+        game_logs: If provided, use this DataFrame instead of loading from disk.
+                   Useful for testing.
+        output_path: If provided, save output to this path.
+
+    Returns:
+        DataFrame with player-game rows enriched with prop features.
+    """
+    if game_logs is not None:
+        df = game_logs.copy()
+    else:
+        df = pd.read_csv(GAME_LOG_PATH)
+
+    df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
+
+    # Parse minutes: handle "MM:SS" string format if present
+    if df["min"].dtype == object:
+        def _parse_min(val):
+            if pd.isna(val):
+                return 0.0
+            val = str(val)
+            if ":" in val:
+                parts = val.split(":")
+                return float(parts[0]) + float(parts[1]) / 60.0
+            try:
+                return float(val)
+            except ValueError:
+                return 0.0
+        df["min"] = df["min"].apply(_parse_min)
+    df["min"] = pd.to_numeric(df["min"], errors="coerce").fillna(0.0)
+
+    # Rename for clarity
+    df["minutes"] = df["min"]
+
+    # Per-36 rates (current-game actuals -- targets/labels, not features)
+    safe_min = df["minutes"].replace(0, np.nan)
+    for stat, col in [("pts", "pts_per36"), ("reb", "reb_per36"),
+                      ("ast", "ast_per36"), ("fg3m", "fg3m_per36")]:
+        df[col] = (df[stat] / safe_min * 36.0).fillna(0.0)
+
+    # Contextual: is_home
+    df["is_home"] = _parse_home_away(df["matchup"])
+
+    # Sort for rolling/EWMA
+    df = df.sort_values(["player_id", "game_date"]).reset_index(drop=True)
+
+    # Usage proxy: per-36 FGA (raw, before shifting)
+    df["_usage_raw"] = (df["fga"] / safe_min * 36.0).fillna(0.0)
+
+    # EWMA features grouped by player, all shifted by 1
+    ewma_sources = {
+        "minutes_ewma": "minutes",
+        "usage_rate_ewma": "_usage_raw",
+        "pts_ewma": "pts",
+        "reb_ewma": "reb",
+        "ast_ewma": "ast",
+        "fg3m_ewma": "fg3m",
+    }
+
+    for out_col, src_col in ewma_sources.items():
+        df[out_col] = (
+            df.groupby("player_id")[src_col]
+            .transform(lambda s: s.shift(1).ewm(span=PROP_EWMA_SPAN, min_periods=1).mean())
+        )
+
+    # is_b2b: 1 if previous game was within 1 calendar day (per player)
+    days_since = df.groupby("player_id")["game_date"].diff().dt.days
+    df["is_b2b"] = (days_since <= 1).fillna(False).astype(int)
+
+    # Season game number per player
+    df["season_game_num"] = df.groupby(["player_id", "season"]).cumcount() + 1
+
+    # Drop internal helper columns
+    df = df.drop(columns=["_usage_raw"], errors="ignore")
+
+    # Save if requested
+    if output_path is None and game_logs is None:
+        output_path = PROP_OUTPUT_PATH
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        df.to_csv(output_path, index=False)
+        print(f"Saved {len(df):,} rows -> {output_path}")
+
+    return df
 
 
 # ── Main builder ───────────────────────────────────────────────────────────────
