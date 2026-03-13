@@ -79,7 +79,9 @@ POS_CSV       = PROJECT_ROOT / "data" / "processed" / "player_positions.csv"
 # --- Output path ---
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "player_detail.json"
 
-CURRENT_SEASON = 202526
+from src.config import get_current_season
+
+CURRENT_SEASON = get_current_season()
 MIN_GP = 5           # minimum games played to include
 LAST_N_GAMES = 5     # number of recent games for form section
 TREND_THRESHOLD = 0.10  # 10% above/below season avg -> up/down

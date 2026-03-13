@@ -38,26 +38,16 @@ TEAM_LOGS = PROJECT_ROOT / "data" / "processed" / "team_game_logs.csv"
 TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "playoff_odds.json"
 
-CURRENT_SEASON = 202526
+from src.config import (
+    get_current_season, EAST_DIVISIONS, WEST_DIVISIONS,
+    EAST_TEAMS, WEST_TEAMS,
+)
 
-# ---------------------------------------------------------------------------
-# Conference / division mappings (mirrors build_standings.py)
-# ---------------------------------------------------------------------------
+CURRENT_SEASON = get_current_season()
 
-EAST: dict[str, list[str]] = {
-    "Atlantic":  ["BOS", "BKN", "NYK", "PHI", "TOR"],
-    "Central":   ["CHI", "CLE", "DET", "IND", "MIL"],
-    "Southeast": ["ATL", "CHA", "MIA", "ORL", "WAS"],
-}
-
-WEST: dict[str, list[str]] = {
-    "Northwest": ["DEN", "MIN", "OKC", "POR", "UTA"],
-    "Pacific":   ["GSW", "LAC", "LAL", "PHX", "SAC"],
-    "Southwest": ["DAL", "HOU", "MEM", "NOP", "SAS"],
-}
-
-EAST_TEAMS: list[str] = [t for teams in EAST.values() for t in teams]
-WEST_TEAMS: list[str] = [t for teams in WEST.values() for t in teams]
+# Conference / division mappings from config
+EAST = EAST_DIVISIONS
+WEST = WEST_DIVISIONS
 
 
 # ---------------------------------------------------------------------------

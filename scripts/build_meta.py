@@ -23,7 +23,10 @@ DB_PATH = PROJECT_ROOT / "database" / "predictions_history.db"
 METADATA_PATH = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_metadata.json"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "meta.json"
 
-CURRENT_SEASON = "2025-26"
+from src.config import get_current_season
+
+_s = str(get_current_season())
+CURRENT_SEASON = f"{_s[:4]}-{_s[4:]}"
 DEFAULT_MODEL_VERSION = "gradient_boosting_v2.3"
 
 

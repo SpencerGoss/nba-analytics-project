@@ -36,6 +36,16 @@ def get_current_season() -> int:
     return int(f"{start_year}{str(end_year)[-2:]}")
 
 
+def get_current_season_id() -> int:
+    """Derive season_id used by player_game_logs.csv.
+
+    Format: prefix '2' + start year. E.g. 202526 season -> 22025.
+    """
+    today = date.today()
+    start_year = today.year if today.month >= 10 else today.year - 1
+    return int(f"2{start_year}")
+
+
 # -- Teams -----------------------------------------------------------------
 EAST_TEAMS = [
     "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND",
@@ -46,6 +56,18 @@ WEST_TEAMS = [
     "NOP", "OKC", "PHX", "POR", "SAC", "SAS", "UTA",
 ]
 ALL_TEAMS = sorted(EAST_TEAMS + WEST_TEAMS)
+
+# Division mappings
+EAST_DIVISIONS: dict[str, list[str]] = {
+    "Atlantic":  ["BOS", "BKN", "NYK", "PHI", "TOR"],
+    "Central":   ["CHI", "CLE", "DET", "IND", "MIL"],
+    "Southeast": ["ATL", "CHA", "MIA", "ORL", "WAS"],
+}
+WEST_DIVISIONS: dict[str, list[str]] = {
+    "Northwest": ["DEN", "MIN", "OKC", "POR", "UTA"],
+    "Pacific":   ["GSW", "LAC", "LAL", "PHX", "SAC"],
+    "Southwest": ["DAL", "HOU", "MEM", "NOP", "SAS"],
+}
 
 TEAM_ABBREV_TO_FULL = {
     "ATL": "Atlanta Hawks", "BOS": "Boston Celtics", "BKN": "Brooklyn Nets",

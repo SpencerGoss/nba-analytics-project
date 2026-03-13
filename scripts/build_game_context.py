@@ -45,8 +45,9 @@ def load_game_logs() -> pd.DataFrame:
 
 
 def current_season_logs(df: pd.DataFrame) -> pd.DataFrame:
-    """Return only current (202526) season rows, sorted ascending."""
-    curr = df[df["season"] == 202526].copy()
+    """Return only current season rows, sorted ascending."""
+    from src.config import get_current_season
+    curr = df[df["season"] == get_current_season()].copy()
     curr = curr.sort_values("game_date", ascending=True)
     return curr
 
@@ -441,7 +442,7 @@ def build_game_context(
     print(f"Loading team game logs from {logs_path} ...")
     all_logs = load_game_logs()
     season_logs = current_season_logs(all_logs)
-    print(f"  All-time rows: {len(all_logs):,}  |  202526 rows: {len(season_logs):,}")
+    print(f"  All-time rows: {len(all_logs):,}  |  current season rows: {len(season_logs):,}")
 
     injuries_index = _load_injuries_index(INJURIES_JSON)
     if injuries_index:

@@ -47,7 +47,9 @@ GAME_LINES = PROJECT_ROOT / "data" / "odds" / "game_lines.csv"
 PREDICTIONS_DB = PROJECT_ROOT / "database" / "predictions_history.db"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "live_scores.json"
 
-CURRENT_SEASON = 202526
+from src.config import get_current_season
+
+CURRENT_SEASON = get_current_season()
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,9 @@ FEATURES_CSV = PROJECT_ROOT / "data" / "features" / "team_game_features.csv"
 TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "power_rankings.json"
 
-CURRENT_SEASON = 202526
+from src.config import get_current_season
+
+CURRENT_SEASON = get_current_season()
 LAST_N = 20   # primary recency window (last 20 games)
 LAST_10 = 10  # hot-streak window
 

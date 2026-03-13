@@ -2,7 +2,7 @@
 build_elo_timeline.py -- produce dashboard/data/elo_timeline.json
 
 Reads data/features/elo_ratings.csv and extracts each team's Elo rating
-over time for the current season (202526).
+over time for the current season.
 
 Output format:
 {
@@ -31,7 +31,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 ELO_CSV = PROJECT_ROOT / "data" / "features" / "elo_ratings.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "elo_timeline.json"
 
-CURRENT_SEASON = 202526
+from src.config import get_current_season
+
+CURRENT_SEASON = get_current_season()
 SAMPLE_EVERY_N = 3
 
 

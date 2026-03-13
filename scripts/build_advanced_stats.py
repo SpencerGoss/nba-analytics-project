@@ -38,7 +38,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 ADV_CSV = PROJECT_ROOT / "data" / "processed" / "player_stats_advanced.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "advanced_stats.json"
 
-CURRENT_SEASON = 202526
+from src.config import get_current_season
+
+CURRENT_SEASON = get_current_season()
 MIN_GP = 5  # minimum games played to include
 
 

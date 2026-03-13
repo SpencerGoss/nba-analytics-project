@@ -43,8 +43,10 @@ PLAYER_LOGS = PROJECT_ROOT / "data" / "processed" / "player_game_logs.csv"
 TEAM_LOGS = PROJECT_ROOT / "data" / "processed" / "team_game_logs.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "streaks.json"
 
-CURRENT_SEASON_ID = 22025    # player_game_logs uses season_id column
-CURRENT_SEASON = 202526      # team_game_logs uses season column
+from src.config import get_current_season, get_current_season_id
+
+CURRENT_SEASON_ID = get_current_season_id()  # player_game_logs uses season_id column
+CURRENT_SEASON = get_current_season()  # team_game_logs uses season column
 
 MIN_GAMES = 10
 LAST_N = 5

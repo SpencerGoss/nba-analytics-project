@@ -1,7 +1,7 @@
 """
 build_standings.py -- produce dashboard/data/standings.json
 
-Builds full NBA conference standings for the current season (202526) from
+Builds full NBA conference standings for the current season from
 data/processed/team_game_logs.csv.
 
 Per-team stats computed:
@@ -33,7 +33,9 @@ TEAM_LOGS = PROJECT_ROOT / "data" / "processed" / "team_game_logs.csv"
 TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "standings.json"
 
-CURRENT_SEASON = 202526
+from src.config import get_current_season, EAST_DIVISIONS, WEST_DIVISIONS
+
+CURRENT_SEASON = get_current_season()
 LAST_N = 10
 TOTAL_GAMES = 82  # NBA regular season length
 
@@ -41,21 +43,9 @@ TOTAL_GAMES = 82  # NBA regular season length
 PLAYOFF_SEEDS = 6
 PLAYIN_SEEDS = 10
 
-# ---------------------------------------------------------------------------
-# Conference / division mappings (stable -- hardcoded per task spec)
-# ---------------------------------------------------------------------------
-
-EAST: dict[str, list[str]] = {
-    "Atlantic":  ["BOS", "BKN", "NYK", "PHI", "TOR"],
-    "Central":   ["CHI", "CLE", "DET", "IND", "MIL"],
-    "Southeast": ["ATL", "CHA", "MIA", "ORL", "WAS"],
-}
-
-WEST: dict[str, list[str]] = {
-    "Northwest": ["DEN", "MIN", "OKC", "POR", "UTA"],
-    "Pacific":   ["GSW", "LAC", "LAL", "PHX", "SAC"],
-    "Southwest": ["DAL", "HOU", "MEM", "NOP", "SAS"],
-}
+# Conference / division mappings from config
+EAST = EAST_DIVISIONS
+WEST = WEST_DIVISIONS
 
 # Flat lookup: abbreviation -> (conference, division)
 _CONF_DIV: dict[str, tuple[str, str]] = {}

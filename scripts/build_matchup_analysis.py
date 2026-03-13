@@ -54,7 +54,9 @@ FEATURES_CSV = PROJECT_ROOT / "data" / "features" / "team_game_features.csv"
 PICKS_JSON = PROJECT_ROOT / "dashboard" / "data" / "todays_picks.json"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "matchup_analysis.json"
 
-CURRENT_SEASON = 202526
+from src.config import get_current_season
+
+CURRENT_SEASON = get_current_season()
 DIMENSIONS = ["Offense", "Defense", "Pace", "3PT Rate", "Recent Form"]
 
 # Columns to pull from team_game_features

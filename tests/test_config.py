@@ -61,3 +61,25 @@ def test_team_name_mapping():
     assert TEAM_ABBREV_TO_FULL["BOS"] == "Boston Celtics"
     assert TEAM_ABBREV_TO_FULL["LAL"] == "Los Angeles Lakers"
     assert len(TEAM_ABBREV_TO_FULL) == 30
+
+
+def test_current_season_id():
+    """Season ID format: prefix '2' + start year, e.g. 22025 for 202526."""
+    from src.config import get_current_season_id, get_current_season
+    sid = get_current_season_id()
+    assert isinstance(sid, int)
+    assert sid > 20000
+    # Consistent with get_current_season: season 202526 -> season_id 22025
+    season = get_current_season()
+    expected_id = int(f"2{str(season)[:4]}")
+    assert sid == expected_id
+
+
+def test_division_mappings():
+    from src.config import EAST_DIVISIONS, WEST_DIVISIONS, EAST_TEAMS, WEST_TEAMS
+    east_flat = [t for teams in EAST_DIVISIONS.values() for t in teams]
+    west_flat = [t for teams in WEST_DIVISIONS.values() for t in teams]
+    assert sorted(east_flat) == sorted(EAST_TEAMS)
+    assert sorted(west_flat) == sorted(WEST_TEAMS)
+    assert len(EAST_DIVISIONS) == 3  # Atlantic, Central, Southeast
+    assert len(WEST_DIVISIONS) == 3  # Northwest, Pacific, Southwest
