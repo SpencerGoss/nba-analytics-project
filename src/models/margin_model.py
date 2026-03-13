@@ -1,4 +1,4 @@
-import os, pickle, sys, warnings
+import json, os, pickle, sys, warnings
 import numpy as np, pandas as pd
 from datetime import datetime
 from sklearn.ensemble import GradientBoostingRegressor
@@ -230,6 +230,23 @@ def train_margin_model(
                 random_state=42,
             )),
         ]),
+        "huber_gbm": Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("scaler", StandardScaler()),
+            ("reg", GradientBoostingRegressor(
+                loss="huber",
+                alpha=0.9,
+                n_estimators=500,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.9,
+                min_samples_leaf=20,
+                max_features=0.7,
+                validation_fraction=0.1,
+                n_iter_no_change=15,
+                random_state=42,
+            )),
+        ]),
     }
 
     splits = _season_splits(train)
@@ -289,6 +306,33 @@ def train_margin_model(
         pickle.dump(feat_cols, fh)
     print(f"\nModel saved -> {model_path}")
     print(f"Features saved -> {feat_path}")
+
+    # Compute and save residual_std for BettingRouter spread probability
+    y_train_pred = best_pipe.predict(X_train)
+    residual_std = float(np.std(y_train.values - y_train_pred))
+    residual_std_path = os.path.join(artifacts_dir, "margin_residual_std.json")
+    with open(residual_std_path, "w") as f:
+        json.dump({"residual_std": residual_std}, f)
+    print(f"  Residual std: {residual_std:.2f} (saved to {residual_std_path})")
+
+    # Segmented MAE by predicted margin bucket
+    if len(X_test) > 0:
+        y_test_arr = y_test.values if hasattr(y_test, "values") else np.array(y_test)
+        abs_pred = np.abs(test_pred)
+        residuals = np.abs(y_test_arr - test_pred)
+
+        tight = abs_pred <= 3
+        medium = (abs_pred > 3) & (abs_pred <= 7)
+        wide = abs_pred > 7
+
+        for label, mask in [
+            ("Tight (0-3)", tight),
+            ("Medium (3-7)", medium),
+            ("Wide (7+)", wide),
+        ]:
+            if np.sum(mask) > 0:
+                seg_mae = float(np.mean(residuals[mask]))
+                print(f"  MAE [{label}]: {seg_mae:.2f} ({np.sum(mask)} games)")
 
     metrics = {
         "selected_model": best_name,

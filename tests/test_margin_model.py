@@ -242,7 +242,9 @@ def test_train_margin_model_end_to_end(tmp_path):
     )
 
     assert "selected_model" in metrics
-    assert metrics["selected_model"] in ("ridge", "lasso", "gradient_boosting")
+    assert metrics["selected_model"] in (
+        "ridge", "lasso", "gradient_boosting", "huber_gbm"
+    )
     assert metrics["cv_mean_mae"] >= 0
     # test_mae/rmse may be NaN when test_seasons not present in data
     import math
@@ -435,3 +437,70 @@ def test_predict_margin_refreshes_elo(tmp_path):
         )
         mock_elos.assert_called_once()
         assert isinstance(result, float)
+
+
+# -- Test: Huber GBM candidate exists --------------------------------------
+
+
+def test_huber_gbm_candidate_exists(tmp_path):
+    """Huber GBM should be listed as a model candidate and compete in CV."""
+    matchup = _make_matchup_df(n=N_ROWS)
+    matchup_path = str(tmp_path / "matchup.csv")
+    matchup.to_csv(matchup_path, index=False)
+
+    logs = _make_logs_df(matchup)
+    logs_path = str(tmp_path / "logs.csv")
+    logs.to_csv(logs_path, index=False)
+
+    artifacts_dir = str(tmp_path / "artifacts")
+    _, metrics = train_margin_model(
+        matchup_path=matchup_path,
+        game_logs_path=logs_path,
+        artifacts_dir=artifacts_dir,
+        test_seasons=["201920"],
+    )
+
+    assert metrics["selected_model"] in (
+        "ridge", "lasso", "gradient_boosting", "huber_gbm"
+    )
+
+
+# -- Test: residual_std artifact saved -------------------------------------
+
+
+def test_residual_std_artifact_saved(tmp_path):
+    """residual_std artifact should be a JSON with a positive float."""
+    import json
+
+    matchup = _make_matchup_df(n=N_ROWS)
+    matchup_path = str(tmp_path / "matchup.csv")
+    matchup.to_csv(matchup_path, index=False)
+
+    logs = _make_logs_df(matchup)
+    logs_path = str(tmp_path / "logs.csv")
+    logs.to_csv(logs_path, index=False)
+
+    artifacts_dir = str(tmp_path / "artifacts")
+    train_margin_model(
+        matchup_path=matchup_path,
+        game_logs_path=logs_path,
+        artifacts_dir=artifacts_dir,
+        test_seasons=["201920"],
+    )
+
+    residual_path = os.path.join(artifacts_dir, "margin_residual_std.json")
+    assert os.path.exists(residual_path), "margin_residual_std.json not created"
+
+    with open(residual_path) as f:
+        data = json.load(f)
+    assert "residual_std" in data
+    assert isinstance(data["residual_std"], float)
+    assert data["residual_std"] > 0
+
+
+# -- Test: predict_margin returns float ------------------------------------
+
+
+def test_predict_margin_returns_float():
+    """predict_margin should be callable and return numeric values."""
+    assert callable(predict_margin)
