@@ -315,28 +315,9 @@ def _prune_low_importance_features(
 
 
 def _season_splits(train_df: pd.DataFrame) -> list:
-    """
-    Create expanding season splits:
-      train up to season i-1, validate on season i.
-    """
-    seasons = sorted(train_df["season"].astype(int).unique())
-    splits = []
-    for i in range(max(1, MIN_TRAIN_SEASONS_FOR_TUNING - 1), len(seasons)):
-        train_seasons = seasons[:i]
-        valid_season = seasons[i]
-        tr = train_df[train_df["season"].astype(int).isin(train_seasons)].copy()
-        va = train_df[train_df["season"].astype(int) == valid_season].copy()
-        if not tr.empty and not va.empty:
-            splits.append((tr, va, valid_season))
-
-    # fallback when dataset has very few seasons
-    if not splits:
-        cutoff = int(len(train_df) * 0.85)
-        tr = train_df.iloc[:cutoff].copy()
-        va = train_df.iloc[cutoff:].copy()
-        if not tr.empty and not va.empty:
-            splits.append((tr, va, "date_fallback"))
-    return splits
+    """Create expanding season splits — delegates to shared cv_utils."""
+    from src.models.cv_utils import expanding_season_splits
+    return expanding_season_splits(train_df, min_train_seasons=MIN_TRAIN_SEASONS_FOR_TUNING)
 
 
 # ── Train / evaluate ───────────────────────────────────────────────────────────

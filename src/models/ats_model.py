@@ -121,31 +121,9 @@ def get_ats_feature_cols(df: pd.DataFrame) -> list:
 # -- Season splits ------------------------------------------------------------
 
 def _ats_season_splits(train_df: pd.DataFrame, min_train: int = MIN_TRAIN_SEASONS) -> list:
-    """Create expanding season splits for ATS model validation.
-
-    Mirrors _season_splits() from game_outcome_model.py exactly:
-      train up to season i-1, validate on season i.
-
-    Uses MIN_TRAIN_SEASONS (default 4) as first split point.
-    """
-    seasons = sorted(train_df["season"].astype(str).unique())
-    splits = []
-    for i in range(max(1, min_train - 1), len(seasons)):
-        train_seasons = seasons[:i]
-        valid_season = seasons[i]
-        tr = train_df[train_df["season"].astype(str).isin(train_seasons)].copy()
-        va = train_df[train_df["season"].astype(str) == valid_season].copy()
-        if not tr.empty and not va.empty:
-            splits.append((tr, va, valid_season))
-
-    # fallback when dataset has very few seasons
-    if not splits:
-        cutoff = int(len(train_df) * 0.85)
-        tr = train_df.iloc[:cutoff].copy()
-        va = train_df.iloc[cutoff:].copy()
-        if not tr.empty and not va.empty:
-            splits.append((tr, va, "date_fallback"))
-    return splits
+    """Create expanding season splits — delegates to shared cv_utils."""
+    from src.models.cv_utils import expanding_season_splits
+    return expanding_season_splits(train_df, min_train_seasons=min_train)
 
 
 # -- Helpers ------------------------------------------------------------------

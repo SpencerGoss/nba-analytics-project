@@ -117,30 +117,9 @@ def _derive_point_diff(matchup, game_logs_path=GAME_LOGS_PATH):
 
 
 def _season_splits(train_df):
-    """Build expanding-window season splits for CV.
-
-    Each split: train on seasons 0..i-1, validate on season i.
-    Falls back to an 85/15 index split when there are too few seasons.
-
-    Returns:
-        List of (train_subset, valid_subset, valid_season_label) tuples.
-    """
-    seasons = sorted(train_df["season"].astype(int).unique())
-    splits = []
-    for i in range(max(1, MIN_TRAIN_SEASONS_FOR_CV - 1), len(seasons)):
-        train_seasons = seasons[:i]
-        valid_season = seasons[i]
-        tr = train_df[train_df["season"].astype(int).isin(train_seasons)].copy()
-        va = train_df[train_df["season"].astype(int) == valid_season].copy()
-        if not tr.empty and not va.empty:
-            splits.append((tr, va, valid_season))
-    if not splits:
-        cutoff = int(len(train_df) * 0.85)
-        tr = train_df.iloc[:cutoff].copy()
-        va = train_df.iloc[cutoff:].copy()
-        if not tr.empty and not va.empty:
-            splits.append((tr, va, "date_fallback"))
-    return splits
+    """Create expanding season splits — delegates to shared cv_utils."""
+    from src.models.cv_utils import expanding_season_splits
+    return expanding_season_splits(train_df, min_train_seasons=MIN_TRAIN_SEASONS_FOR_CV)
 
 
 def train_margin_model(
