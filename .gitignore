@@ -64,3 +64,6 @@ freqtrade/
 # Claude Code local state (never commit)
 .claude/settings.local.json
 .claude/worktrees/
+
+# Superpowers brainstorm temp files
+.superpowers/
