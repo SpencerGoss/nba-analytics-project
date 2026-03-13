@@ -240,6 +240,8 @@ body.light .ticker-strip{color:var(--t1)}
 /* ── PICK CARD ENHANCEMENTS ── */
 .phc-margin{font-size:12px;color:var(--gold);font-weight:600;margin-top:4px;font-family:var(--fm)}
 .phc-kelly{background:rgba(0,200,150,.08);border:1px solid rgba(0,200,150,.2);border-radius:8px;padding:6px 10px;margin-top:8px;display:flex;align-items:center;justify-content:space-between}
+.kelly-content{display:none}
+body.kelly-on .kelly-content{display:flex}
 .phc-kelly-label{font-size:10px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
 .phc-kelly-val{font-family:var(--fm);font-size:14px;font-weight:800;color:var(--green)}
 .phc-ctx-summary{font-size:11px;color:var(--t2);font-weight:500;line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
@@ -1773,6 +1775,7 @@ body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,
       <button class="pf" data-filter="ats" onclick="heroFilter('ats',this)">ATS</button>
     </div>
     <button class="sort-toggle" id="hero-sort-btn" onclick="heroToggleSort()">Sort: Edge% &#8595;</button>
+    <button class="sort-toggle" id="kelly-toggle" onclick="toggleKelly()" style="margin-left:6px">Kelly: Off</button>
   </div>
   <div class="picks-hero-grid" id="hero-picks-grid" style="display:none"></div>
   <div class="sgrid" style="margin-top:28px;margin-bottom:22px">
@@ -1893,6 +1896,26 @@ body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,
     <div class="sc accent-blue"><span class="sl">Record</span><span class="sv b" id="btt-record">0-0</span><span class="schange" id="btt-push-note"></span></div>
     <div class="sc accent-gold"><span class="sl">ROI</span><span class="sv" id="btt-roi">--</span><span class="schange" id="btt-roi-note"></span></div>
     <div class="sc"><span class="sl">Net P&amp;L</span><span class="sv" id="btt-pnl">$0</span><span class="schange" id="btt-pnl-note"></span></div>
+  </div>
+  <!-- Bankroll Management -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="sh" style="margin-bottom:12px">
+      <div><div class="st">Bankroll</div><div class="ss">Set your starting bankroll to track performance</div></div>
+      <div style="display:flex;gap:6px">
+        <button onclick="btExportJSON()" style="font-size:10px;color:var(--blue);background:var(--blue-d);border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:var(--f);font-weight:600" title="Export bets as JSON">Export</button>
+        <label style="font-size:10px;color:var(--gold);background:var(--gold-d);border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:var(--f);font-weight:600" title="Import bets from JSON"><input type="file" accept=".json" onchange="btImportJSON(event)" style="display:none"/>Import</label>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:0 0 auto">
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);display:block;margin-bottom:5px">Starting Bankroll ($)</label>
+        <input id="bt-bankroll" type="number" placeholder="1000" min="0" step="1" value="" style="width:140px;box-sizing:border-box;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--fm);outline:none" oninput="btSaveBankroll()"/>
+      </div>
+      <div style="flex:1;display:flex;gap:18px;align-items:center;padding-top:14px">
+        <div><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2)">Current</span><br/><span style="font-family:var(--fm);font-size:18px;font-weight:800;color:var(--t0)" id="bt-current-bankroll">--</span></div>
+        <div><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2)">ROI</span><br/><span style="font-family:var(--fm);font-size:18px;font-weight:800" id="bt-bankroll-roi">--</span></div>
+      </div>
+    </div>
   </div>
   <!-- Add Bet Form -->
   <div class="card" style="margin-bottom:16px">
@@ -2522,9 +2545,9 @@ function _buildPickCard(p){
   if(b2bNote.trim()){dhItems+='<div class="phc-dh-item b2b-flag" style="grid-column:1/-1"><span>'+esc(b2bNote.trim())+'</span></div>';}
   else if(formNote){dhItems+='<div class="phc-dh-item" style="grid-column:1/-1"><span>'+esc(formNote)+'</span></div>';}
   const decisionHelper='<div class="phc-decision-helper">'+dhItems+'</div>';
-  // Kelly fraction row
+  // Kelly fraction row (hidden unless Kelly toggle is on)
   const kellyHtml=p.kelly_fraction!=null
-    ? '<div class="phc-kelly"><span class="phc-kelly-label">Kelly Size</span><span class="phc-kelly-val">'+(p.kelly_fraction*100).toFixed(1)+'% of bankroll</span></div>'
+    ? '<div class="phc-kelly kelly-content"><span class="phc-kelly-label">Kelly Size</span><span class="phc-kelly-val">'+(p.kelly_fraction*100).toFixed(1)+'% of bankroll</span></div>'
     : '';
 
   const awUrl=teamLogoUrl(p.away_team);const hmUrl=teamLogoUrl(p.home_team);
@@ -2630,6 +2653,19 @@ function heroToggleSort(){
     if(btn)btn.textContent='Sort: Edge% \u2193';
   }
   _applyFilterSort();
+}
+
+function toggleKelly(){
+  var on=document.body.classList.toggle('kelly-on');
+  localStorage.setItem('nba-kelly',on?'1':'0');
+  var btn=document.getElementById('kelly-toggle');
+  if(btn)btn.textContent='Kelly: '+(on?'On':'Off');
+}
+// Restore Kelly preference on load
+if(localStorage.getItem('nba-kelly')==='1'){
+  document.body.classList.add('kelly-on');
+  var _kb=document.getElementById('kelly-toggle');
+  if(_kb)_kb.textContent='Kelly: On';
 }
 
 function buildHeroSection(picks, valueBets, explainers, contexts){
@@ -4949,7 +4985,7 @@ function renderPicks(){
   });
 
   if(!filtered.length){
-    _setHtml(grid,totalN===0?_emptyStateHtml('','No picks available for today. Check back when games are scheduled.'):'<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--t2);font-size:13px">No picks match this filter.</div>');
+    _setHtml(grid,totalN===0?_emptyStateHtml('','Predictions generated daily at 10am ET. Check back soon for today\'s picks.'):'<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--t2);font-size:13px">No picks match this filter.</div>');
     return;
   }
 
@@ -6238,7 +6274,7 @@ function renderSharpMoney(){
     smHtml='<div class="tab-placeholder" style="margin-bottom:28px">'
       +'<div class="tp-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 5-9"/></svg></div>'
       +'<div class="tp-title">No sharp signals today</div>'
-      +'<div class="tp-desc">Check back when today\'s lines are posted</div>'
+      +'<div class="tp-desc">Sharp signals appear once today\'s lines are posted and the pipeline runs. CLV tracking begins after daily runs capture closing lines.</div>'
       +'</div>';
   }
 
@@ -6903,7 +6939,7 @@ function renderValueBets(){
         const kv=parseFloat(kellyPct);
         const kellyNote=kv<1?'Small edge — consider skipping':kv>=5?'Strong edge — worth sizing up':'Moderate edge';
         kellyHtml=
-          '<div class="vb-kelly-row" style="margin-top:8px">'+
+          '<div class="vb-kelly-row kelly-content" style="margin-top:8px">'+
           '<span class="vb-kelly-label">Kelly: </span>'+
           '<span class="vb-kelly-val" style="color:var(--gold)">'+kellyPct+'% of bankroll</span>'+
           '<span style="font-size:10px;color:var(--t2);margin-left:auto">'+esc(kellyNote)+'</span>'+
@@ -7174,7 +7210,15 @@ function updateCLVSummary(){
     if(clvMean)clvMean.textContent='N/A';
     if(clvRate)clvRate.textContent='N/A';
     if(clvGames)clvGames.textContent='0';
-    if(clvBadge){clvBadge.textContent='No Data';clvBadge.className='badge o';}
+    if(clvBadge){clvBadge.textContent='Awaiting Data';clvBadge.className='badge o';}
+    var clvNote=document.getElementById('clv-disclaimer');
+    if(!clvNote){
+      clvNote=document.createElement('div');clvNote.id='clv-disclaimer';
+      clvNote.style.cssText='font-size:11px;color:var(--t2);margin-top:8px;padding:8px 12px;background:var(--b0);border-radius:8px;border:1px solid var(--b1)';
+      clvNote.textContent='Closing line data not yet available. CLV tracking begins once the pipeline runs daily and captures pre-game spreads before tip-off.';
+      var grid=document.getElementById('clv-summary-grid');
+      if(grid&&grid.parentNode)grid.parentNode.insertBefore(clvNote,grid.nextSibling);
+    }
     return;
   }
   const mean=d.mean_clv!=null?(d.mean_clv>=0?'+':'')+d.mean_clv.toFixed(2):'N/A';
@@ -8841,8 +8885,78 @@ function renderSeasonComparison() {
 
 // ─── BET TRACKER ───────────────────────────────────────────────────────────────
 const BT_KEY='baseline_bets_v1';
+const BT_BANKROLL_KEY='baseline_bankroll_v1';
 function btLoad(){try{return JSON.parse(localStorage.getItem(BT_KEY)||'[]');}catch{return [];}}
 function btSave(bets){localStorage.setItem(BT_KEY,JSON.stringify(bets));}
+function btSaveBankroll(){
+  var el=document.getElementById('bt-bankroll');
+  if(el)localStorage.setItem(BT_BANKROLL_KEY,el.value||'');
+  btUpdateBankroll();
+}
+function btLoadBankroll(){
+  var val=localStorage.getItem(BT_BANKROLL_KEY)||'';
+  var el=document.getElementById('bt-bankroll');
+  if(el&&val)el.value=val;
+  btUpdateBankroll();
+}
+function btUpdateBankroll(){
+  var startEl=document.getElementById('bt-bankroll');
+  var curEl=document.getElementById('bt-current-bankroll');
+  var roiEl=document.getElementById('bt-bankroll-roi');
+  var start=parseFloat((startEl||{}).value)||0;
+  if(!start||start<=0){
+    if(curEl)curEl.textContent='--';
+    if(roiEl){roiEl.textContent='--';roiEl.style.color='var(--t0)';}
+    return;
+  }
+  var bets=btLoad();
+  var pnl=0;
+  bets.forEach(function(b){
+    if(b.result==='W'&&b.stake&&b.odds){
+      var dec=btAmericanToDecimal(b.odds);
+      if(dec)pnl+=b.stake*(dec-1);
+    } else if(b.result==='L'&&b.stake){
+      pnl-=b.stake;
+    }
+  });
+  var current=start+pnl;
+  var roi=((current-start)/start*100);
+  if(curEl)curEl.textContent='$'+current.toFixed(0);
+  if(roiEl){
+    roiEl.textContent=(roi>=0?'+':'')+roi.toFixed(1)+'%';
+    roiEl.style.color=roi>=0?'var(--green)':'var(--red)';
+  }
+}
+function btExportJSON(){
+  var data={bets:btLoad(),bankroll:localStorage.getItem(BT_BANKROLL_KEY)||''};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='nba_bets_export.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function btImportJSON(ev){
+  var file=ev.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      if(data.bets&&Array.isArray(data.bets)){
+        btSave(data.bets);
+        if(data.bankroll){
+          localStorage.setItem(BT_BANKROLL_KEY,data.bankroll);
+          var el=document.getElementById('bt-bankroll');
+          if(el)el.value=data.bankroll;
+        }
+        btRender();
+      }
+    }catch(err){/* ignore bad JSON */}
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
 function btAmericanToDecimal(ml){
   const n=parseFloat(ml);
   if(isNaN(n))return null;
@@ -8962,6 +9076,7 @@ function btRender(){
     }
   }
   btRenderList(bets);
+  btLoadBankroll();
 }
 function btRenderList(bets){
   const list=document.getElementById('bt-history-list');
