@@ -21,10 +21,10 @@ ARTIFACTS_DIR = "models/artifacts"
 OUTCOME_FEATURES_PKL = "models/artifacts/game_outcome_features.pkl"
 
 TARGET = "point_diff"
-TEST_SEASONS = ["202324", "202425"]
-MODERN_ERA_START = "201314"
+TEST_SEASONS = [202324, 202425]
+MODERN_ERA_START = 201314
 MIN_TRAIN_SEASONS_FOR_CV = 6
-EXCLUDED_SEASONS = ["201920", "202021"]
+EXCLUDED_SEASONS = [201920, 202021]
 
 
 def _validate_null_rates(df, feat_cols, threshold=0.95):
@@ -123,13 +123,13 @@ def _season_splits(train_df):
     Returns:
         List of (train_subset, valid_subset, valid_season_label) tuples.
     """
-    seasons = sorted(train_df["season"].astype(str).unique())
+    seasons = sorted(train_df["season"].astype(int).unique())
     splits = []
     for i in range(max(1, MIN_TRAIN_SEASONS_FOR_CV - 1), len(seasons)):
         train_seasons = seasons[:i]
         valid_season = seasons[i]
-        tr = train_df[train_df["season"].astype(str).isin(train_seasons)].copy()
-        va = train_df[train_df["season"].astype(str) == valid_season].copy()
+        tr = train_df[train_df["season"].astype(int).isin(train_seasons)].copy()
+        va = train_df[train_df["season"].astype(int) == valid_season].copy()
         if not tr.empty and not va.empty:
             splits.append((tr, va, valid_season))
     if not splits:
@@ -176,12 +176,12 @@ def train_margin_model(
     print("\nDeriving point_diff target from team_game_logs...")
     df = _derive_point_diff(matchup, game_logs_path)
 
-    df = df[df["season"].astype(str) >= MODERN_ERA_START].copy()
-    df = df[~df["season"].astype(str).isin(EXCLUDED_SEASONS)].copy()
+    df = df[df["season"].astype(int) >= int(MODERN_ERA_START)].copy()
+    df = df[~df["season"].astype(int).isin(EXCLUDED_SEASONS)].copy()
     print(f"  After era/exclusion filter: {len(df):,} games")
 
-    train = df[~df["season"].astype(str).isin(test_seasons)].copy()
-    test = df[df["season"].astype(str).isin(test_seasons)].copy()
+    train = df[~df["season"].astype(int).isin(test_seasons)].copy()
+    test = df[df["season"].astype(int).isin(test_seasons)].copy()
     print(f"  Train: {len(train):,} | Test: {len(test):,}")
     print(f"  Test seasons: {test_seasons}")
 
@@ -354,8 +354,8 @@ def predict_margin(
     # Always fall back to the synthesized-row path if no current-season exact
     # matchup exists — this uses each team's latest stats rather than a frozen
     # historical snapshot.
-    latest_season = str(df["season"].astype(str).max())
-    current_df = df[df["season"].astype(str) == latest_season]
+    latest_season = int(df["season"].astype(int).max())
+    current_df = df[df["season"].astype(int) == latest_season]
 
     exact = current_df[
         (current_df["home_team"] == home_team) & (current_df["away_team"] == away_team)

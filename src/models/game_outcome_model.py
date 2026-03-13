@@ -47,8 +47,8 @@ except ImportError:
 MATCHUP_PATH = "data/features/game_matchup_features.csv"
 ARTIFACTS_DIR = "models/artifacts"
 TARGET = "home_win"
-TEST_SEASONS = ["202324", "202425"]
-TRAIN_START_SEASON = "200001"
+TEST_SEASONS = [202324, 202425]
+TRAIN_START_SEASON = 200001
 MIN_TRAIN_SEASONS_FOR_TUNING = 6
 
 # When True, restrict training data to the modern 3-Point Revolution era
@@ -57,9 +57,9 @@ MIN_TRAIN_SEASONS_FOR_TUNING = 6
 # CHANGED: default to modern era (was False)
 MODERN_ERA_ONLY = True
 # CHANGED: include 2013-14 per SC1 (was "201415")
-MODERN_ERA_START = "201314"
+MODERN_ERA_START = 201314
 # NEW: exclude anomalous seasons (bubble + shortened COVID)
-EXCLUDED_SEASONS = ["201920", "202021"]
+EXCLUDED_SEASONS = [201920, 202021]
 
 
 # ── Null-rate guard ────────────────────────────────────────────────────────────
@@ -316,13 +316,13 @@ def _season_splits(train_df: pd.DataFrame) -> list:
     Create expanding season splits:
       train up to season i-1, validate on season i.
     """
-    seasons = sorted(train_df["season"].astype(str).unique())
+    seasons = sorted(train_df["season"].astype(int).unique())
     splits = []
     for i in range(max(1, MIN_TRAIN_SEASONS_FOR_TUNING - 1), len(seasons)):
         train_seasons = seasons[:i]
         valid_season = seasons[i]
-        tr = train_df[train_df["season"].astype(str).isin(train_seasons)].copy()
-        va = train_df[train_df["season"].astype(str) == valid_season].copy()
+        tr = train_df[train_df["season"].astype(int).isin(train_seasons)].copy()
+        va = train_df[train_df["season"].astype(int) == valid_season].copy()
         if not tr.empty and not va.empty:
             splits.append((tr, va, valid_season))
 
@@ -371,18 +371,18 @@ def train_game_outcome_model(
         print(f"  Dropped {n_before - len(df):,} rows with missing target")
 
     start_season = MODERN_ERA_START if modern_era_only else TRAIN_START_SEASON
-    df = df[df["season"].astype(str) >= start_season].copy()
+    df = df[df["season"].astype(int) >= int(start_season)].copy()
     label = f"modern era only ({MODERN_ERA_START}+)" if modern_era_only else f"from {TRAIN_START_SEASON}"
     print(f"  Training data {label}: {len(df):,} games")
 
     if modern_era_only and excluded_seasons:
         before = len(df)
-        df = df[~df["season"].astype(str).isin(excluded_seasons)].copy()
+        df = df[~df["season"].astype(int).isin(excluded_seasons)].copy()
         n_excluded = before - len(df)
         print(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
 
-    train = df[~df["season"].astype(str).isin(test_seasons)].copy()
-    test = df[df["season"].astype(str).isin(test_seasons)].copy()
+    train = df[~df["season"].astype(int).isin(test_seasons)].copy()
+    test = df[df["season"].astype(int).isin(test_seasons)].copy()
     print(f"  Train: {len(train):,} games | Test: {len(test):,} games")
     print(f"  Test seasons: {test_seasons}")
 
@@ -601,13 +601,13 @@ def train_game_outcome_model(
     return best_pipe, metrics
 
 
-def _get_current_season_code() -> str:
-    """Return the current NBA season code (e.g. '202526')."""
+def _get_current_season_code() -> int:
+    """Return the current NBA season code (e.g. 202526)."""
     now = datetime.now()
     # NBA season starts in October; if month >= 10, season is thisYear_nextYear
     if now.month >= 10:
-        return f"{now.year}{(now.year + 1) % 100:02d}"
-    return f"{now.year - 1}{now.year % 100:02d}"
+        return int(f"{now.year}{(now.year + 1) % 100:02d}")
+    return int(f"{now.year - 1}{now.year % 100:02d}")
 
 
 def _synthesize_matchup_row(
@@ -627,7 +627,7 @@ def _synthesize_matchup_row(
     current_season = _get_current_season_code()
 
     # Each team's most recent game in current season
-    current_df = df[df["season"].astype(str) == current_season]
+    current_df = df[df["season"].astype(int) == int(current_season)]
     if current_df.empty:
         current_df = df  # fall back to all data if no current-season rows
 
@@ -725,7 +725,7 @@ def predict_game(
     exact = df[
         (df["home_team"] == home_team_abbr)
         & (df["away_team"] == away_team_abbr)
-        & (df["season"].astype(str) == current_season)
+        & (df["season"].astype(int) == int(current_season))
     ]
     if not exact.empty:
         row = exact.sort_values("game_date").iloc[-1].copy()
