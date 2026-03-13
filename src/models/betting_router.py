@@ -190,8 +190,9 @@ class BettingRouter:
             }
 
         # Over probability: where does the line sit relative to p25/p75?
+        # Linear interpolation: p25 -> 1.0, p75 -> 0.0, p50 -> ~0.5
         spread_width = max(quantiles["p75"] - quantiles["p25"], 0.1)
-        over_prob = 1.0 - (line - quantiles["p25"]) / (spread_width * 2)
+        over_prob = 1.0 - (line - quantiles["p25"]) / spread_width
         over_prob = max(0.05, min(0.95, over_prob))
 
         # Edge and confidence

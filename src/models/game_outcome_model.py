@@ -233,11 +233,14 @@ def _build_fit_params(
     if imputer is None:
         return {}
 
-    # Fit-transform imputer on validation data using training params
-    # Note: imputer will be fit on training data during pipe.fit(),
-    # so we use a clone to avoid contamination
+    # Transform validation data through the pipeline's pre-processing steps
+    # (imputer + scaler) so XGBoost eval_set receives clean arrays.
+    # We use the pipe's fitted steps if available, otherwise clone and fit.
     from sklearn.base import clone
     imp_clone = clone(imputer)
+    # During CV, the pipeline hasn't been fit yet on this fold's training data,
+    # so we must fit the clone on X_val. For the final refit, the caller should
+    # pass a held-out validation split from training data (not test data).
     X_val_imp = imp_clone.fit_transform(X_val)
     if scaler is not None:
         scl_clone = clone(scaler)
@@ -501,8 +504,13 @@ def train_game_outcome_model(
     )
 
     best_pipe = candidates[best_name]
-    final_fit_params = _build_fit_params(best_name, best_pipe, X_test, y_test)
-    best_pipe.fit(X_train, y_train, **final_fit_params)
+    # Use a validation split from training data for early stopping (not test set)
+    from sklearn.model_selection import train_test_split as _tts
+    X_tr_final, X_val_final, y_tr_final, y_val_final = _tts(
+        X_train, y_train, test_size=0.15, random_state=42
+    )
+    final_fit_params = _build_fit_params(best_name, best_pipe, X_val_final, y_val_final)
+    best_pipe.fit(X_tr_final, y_tr_final, **final_fit_params)
     test_proba = best_pipe.predict_proba(X_test)[:, 1]
     test_pred = (test_proba >= best_threshold).astype(int)
 
