@@ -499,3 +499,30 @@ def test_get_current_elos_returns_all_teams():
     known_teams = {"BOS", "LAL", "GSW", "MIL", "PHX"}
     for t in known_teams:
         assert t in current, f"Expected {t} in current Elos"
+
+
+def test_get_current_elos_extended():
+    """get_current_elos(extended=True) returns elo, elo_fast, and momentum per team."""
+    extended = get_current_elos(extended=True)
+    assert isinstance(extended, dict)
+    assert len(extended) >= 30
+    for team, vals in extended.items():
+        assert isinstance(vals, dict), f"{team}: expected dict, got {type(vals)}"
+        assert "elo" in vals, f"{team}: missing 'elo' key"
+        assert "elo_fast" in vals, f"{team}: missing 'elo_fast' key"
+        assert "momentum" in vals, f"{team}: missing 'momentum' key"
+        assert isinstance(vals["elo"], float)
+        assert isinstance(vals["elo_fast"], float)
+        assert isinstance(vals["momentum"], float)
+        # Momentum should be elo_fast - elo (within rounding)
+        assert abs(vals["momentum"] - (vals["elo_fast"] - vals["elo"])) < 0.01, (
+            f"{team}: momentum {vals['momentum']} != elo_fast - elo "
+            f"({vals['elo_fast']} - {vals['elo']})"
+        )
+
+
+def test_get_current_elos_extended_false_matches_default():
+    """extended=False should return the same dict as the default call."""
+    default = get_current_elos()
+    explicit = get_current_elos(extended=False)
+    assert default == explicit

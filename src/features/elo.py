@@ -203,10 +203,17 @@ def build_elo_ratings(
     return result
 
 
-def get_current_elos(input_path: str = OUTPUT_PATH) -> dict[str, float]:
+def get_current_elos(
+    input_path: str = OUTPUT_PATH,
+    extended: bool = False,
+) -> dict[str, float] | dict[str, dict[str, float]]:
     """
-    Return a dict of {team_abbreviation: current_elo} based on each team's
-    most recent game.
+    Return current Elo ratings for every team based on their most recent game.
+
+    Args:
+        input_path: Path to the Elo ratings CSV.
+        extended: If False (default), returns {team: elo_pre}.
+                  If True, returns {team: {elo: float, elo_fast: float, momentum: float}}.
 
     If the Elo ratings file doesn't exist, builds it first.
     """
@@ -223,7 +230,18 @@ def get_current_elos(input_path: str = OUTPUT_PATH) -> dict[str, float]:
         .tail(1)
         .set_index("team_abbreviation")
     )
-    return latest["elo_pre"].to_dict()
+
+    if not extended:
+        return latest["elo_pre"].to_dict()
+
+    result: dict[str, dict[str, float]] = {}
+    for team, row in latest.iterrows():
+        result[str(team)] = {
+            "elo": float(row["elo_pre"]),
+            "elo_fast": float(row.get("elo_pre_fast", row["elo_pre"])),
+            "momentum": float(row.get("elo_momentum", 0.0)),
+        }
+    return result
 
 
 if __name__ == "__main__":

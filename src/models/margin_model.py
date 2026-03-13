@@ -409,20 +409,26 @@ def predict_margin(
                     row[col] = row[h_col] - row[a_col]
 
     # Refresh Elo with current ratings (not stale CSV values)
-    current_elos = get_current_elos()
-    home_elo = current_elos.get(home_team, 1500.0)
-    away_elo = current_elos.get(away_team, 1500.0)
+    # Use extended=True to get standard, fast, and momentum Elo in one call
+    ext_elos = get_current_elos(extended=True)
+    h_ext = ext_elos.get(home_team, {})
+    a_ext = ext_elos.get(away_team, {})
+    home_elo = h_ext.get("elo", 1500.0) if isinstance(h_ext, dict) else float(h_ext)
+    away_elo = a_ext.get("elo", 1500.0) if isinstance(a_ext, dict) else float(a_ext)
     if "diff_elo" in row.index:
         row["diff_elo"] = home_elo - away_elo
     if "home_elo_pre" in row.index:
         row["home_elo_pre"] = home_elo
     if "away_elo_pre" in row.index:
         row["away_elo_pre"] = away_elo
-    # Note: diff_elo_fast (K=40) and diff_elo_momentum are separate signals.
-    # get_current_elos() only returns standard Elo (K=20). Leave fast/momentum
-    # from the CSV row (still fresher than cross-season data). Only override
-    # diff_elo which is 37.3% feature importance.
-    # TODO (Phase 3): extend get_current_elos() to return fast + momentum Elo.
+    # Fast Elo + momentum (available from extended dict)
+    if isinstance(h_ext, dict) and isinstance(a_ext, dict):
+        h_fast = h_ext.get("elo_fast", home_elo)
+        a_fast = a_ext.get("elo_fast", away_elo)
+        if "diff_elo_fast" in row.index:
+            row["diff_elo_fast"] = h_fast - a_fast
+        if "diff_elo_momentum" in row.index:
+            row["diff_elo_momentum"] = h_ext.get("momentum", 0.0) - a_ext.get("momentum", 0.0)
 
     row_df = row.to_frame().T.reindex(columns=feat_cols)
     prediction = float(model.predict(row_df)[0])

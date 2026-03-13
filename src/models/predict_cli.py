@@ -74,7 +74,7 @@ def _handle_ats(args) -> dict:
     exact = df[
         (df["home_team"] == args.home)
         & (df["away_team"] == args.away)
-        & (df["season"].astype(str) == current_season)
+        & (df["season"].astype(int) == int(current_season))
     ]
     if not exact.empty:
         row = exact.sort_values("game_date").iloc[-1].copy()

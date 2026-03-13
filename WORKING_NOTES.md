@@ -278,3 +278,11 @@
 
 [2026-03-13] [refactor] INSIGHT: Season code comparisons using `.astype(str) >= "202122"` are lexicographic, not numeric — produces wrong results for edge cases. Must use `.astype(int)` for season filtering.
 [2026-03-13] [refactor] WHY: Found in tune_hyperparams.py, player_features.py, player_performance_model.py. String "9xxxx" > "2xxxx" even though numerically smaller. All season codes are 6-digit integers.
+
+### [cv]
+
+[2026-03-13] [cv] INSIGHT: expanding_season_splits had off-by-one — `range(max(1, min_train_seasons - 1), ...)` gave first fold min_train_seasons-1 training seasons, not min_train_seasons as documented. Fixed to `range(max(1, min_train_seasons), ...)`.
+[2026-03-13] [cv] WHY: This meant ATS model (min_train=4) got its first fold with only 3 training seasons, and game outcome model (min_train=6) with 5. Subtle because it still produces valid folds — just violates the min_train contract.
+
+[2026-03-13] [cv] INSIGHT: When no market odds exist, confidence tier fallback must use model probability — not return "Skip" unconditionally. Added probability-based tiering: >=70% Best Bet (if agree), >=62% Solid Pick, >=55% Lean, else Skip.
+[2026-03-13] [cv] WHY: Without odds, edge_pct is None, so the BettingRouter path was skipped entirely. Every no-odds game was "Skip" even when model was 85% confident. Affects all games early in pipeline before odds are fetched.

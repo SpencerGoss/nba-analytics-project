@@ -7270,33 +7270,34 @@ async function loadDashboardData(){
     }
     const _skelPicks=document.getElementById('skeleton-picks');
     if(_skelPicks)_skelPicks.style.display='grid';
-    const _settled=await Promise.allSettled([
-      _trackFetch('data/todays_picks.json',[]),
-      _trackFetch('data/accuracy_history.json',[]),
-      _trackFetch('data/value_bets.json',[]),
-      _trackFetch('data/meta.json',{}),
-      _trackFetch('data/explainers.json',[]),
-      _trackFetch('data/game_context.json',[]),
-      // player_comparison.json (4MB+) is lazy-loaded on first Players tab open (see _loadPlayerComparison)
-      _trackFetch('data/live_scores.json',[]),
-      _trackFetch('data/standings.json',null),
-      _trackFetch('data/advanced_stats.json',null),
-      _trackFetch('data/matchup_analysis.json',[]),
-      _trackFetch('data/performance.json',null),
-      _trackFetch('data/line_movement.json',[]),
-      _trackFetch('data/player_props.json',[]),
-      _trackFetch('data/clv_summary.json',null),
-      _trackFetch('data/bet_tracker.json',[]),
-      _trackFetch('data/sharp_money.json',[]),
+    // Named fetch config — add/remove/reorder entries without breaking parallel arrays
+    const _fetchCfg=[
+      {k:'picks',            url:'data/todays_picks.json',     fb:[]},
+      {k:'accuracy',         url:'data/accuracy_history.json', fb:[]},
+      {k:'valueBets',        url:'data/value_bets.json',       fb:[]},
+      {k:'meta',             url:'data/meta.json',             fb:{}},
+      {k:'explainers',       url:'data/explainers.json',       fb:[]},
+      {k:'contexts',         url:'data/game_context.json',     fb:[]},
+      // player_comparison.json (4MB+) is lazy-loaded on first Players tab open
+      {k:'liveScores',       url:'data/live_scores.json',      fb:[]},
+      {k:'standingsJson',    url:'data/standings.json',        fb:null},
+      {k:'advStats',         url:'data/advanced_stats.json',   fb:null},
+      {k:'matchupJson',      url:'data/matchup_analysis.json', fb:[]},
+      {k:'perfJson',         url:'data/performance.json',      fb:null},
+      {k:'lineMovJson',      url:'data/line_movement.json',    fb:[]},
+      {k:'propsJson',        url:'data/player_props.json',     fb:[]},
+      {k:'clvJson',          url:'data/clv_summary.json',      fb:null},
+      {k:'betTracker',       url:'data/bet_tracker.json',      fb:[]},
+      {k:'sharpMoney',       url:'data/sharp_money.json',      fb:[]},
       // player_detail.json (1.5MB) is lazy-loaded on first player modal open
-      _trackFetch('data/trends.json',{}),
-      _trackFetch('data/totals.json',[]),
-      _trackFetch('data/game_detail.json',{games:[]}),
-      _trackFetch('data/streaks.json',null),
-    ]);
-    // Extract values from allSettled results — rejected promises get their fallback
-    const _fallbacks=[[],[],[],{}, [],[], [],null,null,[],null,[],[],null,[],[],{},[], {games:[]},null];
-    const [picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson,gameDetailJson,streaksJson]=_settled.map(function(r,i){return r.status==='fulfilled'?r.value:_fallbacks[i];});
+      {k:'teamTrendsJson',   url:'data/trends.json',           fb:{}},
+      {k:'totalsJson',       url:'data/totals.json',           fb:[]},
+      {k:'gameDetailJson',   url:'data/game_detail.json',      fb:{games:[]}},
+      {k:'streaksJson',      url:'data/streaks.json',          fb:null},
+    ];
+    const _settled=await Promise.allSettled(_fetchCfg.map(c=>_trackFetch(c.url,c.fb)));
+    const _d={};_fetchCfg.forEach(function(c,i){_d[c.k]=_settled[i].status==='fulfilled'?_settled[i].value:c.fb;});
+    const {picks,accuracy,valueBets,meta,explainers,contexts,liveScores,standingsJson,advStats,matchupJson,perfJson,lineMovJson,propsJson,clvJson,betTracker,sharpMoney,teamTrendsJson,totalsJson,gameDetailJson,streaksJson}=_d;
     if(_skelPicks)_skelPicks.style.display='none';
     // player_comparison.json is lazy-loaded on first Players tab open (see _loadPlayerComparison)
     // Start with LEGENDS only so the page is never empty

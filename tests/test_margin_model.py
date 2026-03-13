@@ -428,14 +428,17 @@ def test_predict_margin_refreshes_elo(tmp_path):
     )
 
     with patch("src.models.margin_model.get_current_elos") as mock_elos:
-        mock_elos.return_value = {"LAL": 1550.0, "GSW": 1450.0}
+        mock_elos.return_value = {
+            "LAL": {"elo": 1550.0, "elo_fast": 1560.0, "momentum": 10.0},
+            "GSW": {"elo": 1450.0, "elo_fast": 1440.0, "momentum": -10.0},
+        }
         result = predict_margin(
             home_team="LAL",
             away_team="GSW",
             matchup_path=matchup_path,
             artifacts_dir=artifacts_dir,
         )
-        mock_elos.assert_called_once()
+        mock_elos.assert_called_once_with(extended=True)
         assert isinstance(result, float)
 
 
