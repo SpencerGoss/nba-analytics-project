@@ -19,6 +19,9 @@ from sklearn.model_selection import cross_val_score
 
 STAT_TARGETS = ["pts", "reb", "ast", "fg3m"]
 
+QUANTILES = [0.25, 0.50, 0.75]
+QUANTILE_LABELS = {0.25: "p25", 0.50: "p50", 0.75: "p75"}
+
 STAT_FEATURES = [
     "minutes_ewma",
     "usage_rate_ewma",
@@ -121,3 +124,99 @@ def predict_player_stat(
     per36_rate = max(per36_rate, 0.0)  # No negative stats
 
     return per36_rate * (predicted_minutes / 36.0)
+
+
+def train_quantile_models(
+    features_df: pd.DataFrame,
+    artifacts_dir: str = "models/artifacts",
+) -> dict:
+    """Train quantile regression models (p25/p50/p75) for each stat.
+
+    Uses GradientBoostingRegressor with loss="quantile".
+
+    Args:
+        features_df: DataFrame with STAT_FEATURES columns + per-36 target columns.
+        artifacts_dir: Where to save model artifacts.
+
+    Returns:
+        Dict of {stat: {p25: {alpha}, p50: {alpha}, p75: {alpha}}}.
+    """
+    artifacts = Path(artifacts_dir)
+    artifacts.mkdir(parents=True, exist_ok=True)
+
+    results = {}
+
+    for stat in STAT_TARGETS:
+        target_col = f"{stat}_per36"
+        df = features_df.dropna(subset=STAT_FEATURES + [target_col]).copy()
+        X = df[STAT_FEATURES]
+        y = df[target_col]
+
+        stat_results = {}
+        for q in QUANTILES:
+            model = GradientBoostingRegressor(
+                n_estimators=200,
+                max_depth=3,
+                min_samples_leaf=30,
+                learning_rate=0.05,
+                loss="quantile",
+                alpha=q,
+                random_state=42,
+            )
+            model.fit(X, y)
+
+            label = QUANTILE_LABELS[q]
+            # Pickle required for scikit-learn models (trusted local artifacts only)
+            with open(artifacts / f"player_{stat}_q{label}.pkl", "wb") as f:
+                pickle.dump(model, f)
+            stat_results[label] = {"alpha": q}
+
+        results[stat] = stat_results
+
+    return results
+
+
+def predict_player_stat_quantiles(
+    stat: str,
+    features: pd.DataFrame,
+    predicted_minutes: float,
+    artifacts_dir: str = "models/artifacts",
+) -> dict:
+    """Predict p25/p50/p75 for a stat, scaled by predicted minutes.
+
+    Args:
+        stat: One of STAT_TARGETS (pts, reb, ast, fg3m).
+        features: Single-row DataFrame with STAT_FEATURES columns.
+        predicted_minutes: Output from Stage 1 minutes model.
+        artifacts_dir: Where model artifacts are stored.
+
+    Returns:
+        {"p25": float, "p50": float, "p75": float}
+    """
+    if stat not in STAT_TARGETS:
+        raise ValueError(f"Unknown stat: {stat}. Must be one of {STAT_TARGETS}")
+
+    artifacts = Path(artifacts_dir)
+
+    # Pickle required for scikit-learn feature list (trusted local artifacts only)
+    with open(artifacts / "player_stat_features.pkl", "rb") as f:
+        feat_cols = pickle.load(f)  # noqa: S301
+
+    X = features[feat_cols].iloc[:1]
+    result = {}
+
+    for q in QUANTILES:
+        label = QUANTILE_LABELS[q]
+        # Pickle required for scikit-learn models (trusted local artifacts only)
+        with open(artifacts / f"player_{stat}_q{label}.pkl", "rb") as f:
+            model = pickle.load(f)  # noqa: S301
+        per36_rate = max(float(model.predict(X)[0]), 0.0)
+        result[label] = round(per36_rate * (predicted_minutes / 36.0), 1)
+
+    # Enforce ordering (quantile crossing can happen with small data)
+    if result["p25"] > result["p50"]:
+        result["p25"] = result["p50"]
+    if result["p50"] > result["p75"]:
+        result["p75"] = result["p50"]
+
+    return result

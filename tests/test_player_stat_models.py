@@ -126,3 +126,57 @@ def test_metadata_saved():
             assert stat in meta
             assert "cv_mae" in meta[stat]
             assert "n_samples" in meta[stat]
+
+
+def test_quantile_predict_callable():
+    from src.models.player_stat_models import predict_player_stat_quantiles
+    assert callable(predict_player_stat_quantiles)
+
+
+def test_quantile_ordering():
+    """p25 <= p50 <= p75 for each stat."""
+    from src.models.player_stat_models import (
+        train_stat_models,
+        train_quantile_models,
+        predict_player_stat_quantiles,
+    )
+    import tempfile
+
+    df = _make_synthetic_df()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        train_stat_models(df, artifacts_dir=tmpdir)
+        train_quantile_models(df, artifacts_dir=tmpdir)
+
+        features = df.iloc[0:1]
+        q = predict_player_stat_quantiles(
+            "pts", features, predicted_minutes=30.0, artifacts_dir=tmpdir
+        )
+        assert "p25" in q
+        assert "p50" in q
+        assert "p75" in q
+        assert q["p25"] <= q["p50"] <= q["p75"]
+
+
+def test_quantile_all_stats():
+    """Quantile models should work for all stat targets."""
+    from src.models.player_stat_models import (
+        STAT_TARGETS,
+        train_stat_models,
+        train_quantile_models,
+        predict_player_stat_quantiles,
+    )
+    import tempfile
+
+    df = _make_synthetic_df()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        train_stat_models(df, artifacts_dir=tmpdir)
+        train_quantile_models(df, artifacts_dir=tmpdir)
+        features = df.iloc[0:1]
+        for stat in STAT_TARGETS:
+            q = predict_player_stat_quantiles(
+                stat, features, predicted_minutes=30.0, artifacts_dir=tmpdir
+            )
+            assert q["p25"] >= 0
+            assert q["p75"] >= q["p25"]
