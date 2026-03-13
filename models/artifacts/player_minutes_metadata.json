@@ -1,0 +1,12 @@
+{
+  "cv_mae": 5.027,
+  "n_samples": 125421,
+  "features": [
+    "minutes_ewma",
+    "usage_rate_ewma",
+    "pts_ewma",
+    "is_home",
+    "is_b2b",
+    "season_game_num"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "pts": {
+    "cv_mae": 6.903,
+    "n_samples": 125421
+  },
+  "reb": {
+    "cv_mae": 3.152,
+    "n_samples": 125421
+  },
+  "ast": {
+    "cv_mae": 2.133,
+    "n_samples": 125421
+  },
+  "fg3m": {
+    "cv_mae": 1.36,
+    "n_samples": 125421
+  }
+}
