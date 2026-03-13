@@ -1,62 +1,48 @@
-# Handoff -- NBA Analytics Project
+# Handoff — NBA Analytics Project
 
-_Last updated: 2026-03-11 Session 11 (model retrain + dashboard review pass)_
+_Last updated: 2026-03-13 Session 12 (critical fixes + player prop system)_
 
 ## What Was Done This Session
 
-### Model Retraining (all 3 models)
-- **Game Outcome**: GradientBoosting retained (beat XGBoost), AUC 0.7436 (+0.0014), 100 features
-- **ATS**: Logistic L1, AUC 0.5571 (stays weight=0 in ensemble)
-- **Margin**: Ridge, MAE 10.51 (-0.01), Four Factors now in top 15 features
-- Calibration applied, all artifacts saved
-- All 27 dashboard builders regenerated with updated models
+### Plan A: Critical Bug Fixes + Betting Architecture (COMPLETE)
+- Fixed stale Elo in margin predictions (37.3% feature importance was using CSV values)
+- Removed fillna(0) from all prediction paths (training uses mean imputation)
+- Fixed string to integer season code comparisons
+- Created BettingRouter with confidence tiers and odds_utils.py
+- Kelly cap at 5%, ATS weight zeroed, value bet threshold lowered to 3%
 
-### Dashboard UI Overhaul (Home tab)
-1. **Background**: Aurora blobs restored with static rendering (no jitter), light mode toned down (#E8ECF4)
-2. **Logo**: Bold "B" lettermark (green-to-blue gradient) + "aselineAnalytics" text, tight spacing
-3. **Ticker**: Slowed from 45s to 600s (barely perceptible scroll)
-4. **Live dot**: Made static (no more pulsing animation)
-5. **Standings + Rankings merged** into one tab with subtabs (Standings | Rankings | Today's Games)
-6. **Featured Comparison**: LeBron vs Jordan with headshots (80px), stat bars, accolade badges
-7. **Scoring Leaders**: Now loads from player_detail.json (current season only), clickable rows -> Players tab
-8. **Pick of the Day**: Single card, highest value bet (edge > kelly > confidence), factor badges always visible
-9. **Removed from Home tab**: betting summary strip, steam alert, model win rate chart, duplicate Today's Games cards
-10. **Home tab renamed** from "Today" to "Home"
+### Plan C: Player Prop System (COMPLETE)
+- Two-stage architecture: minutes model (GBM Huber, MAE 5.03) then per-stat models (PTS/REB/AST/3PM)
+- Quantile regression (p25/p50/p75) + conformal prediction intervals (90% coverage)
+- Integrated into build_props.py (graceful fallback when artifacts missing)
+- Weekly retrain in update.py (Monday)
+- Wired into BettingRouter.props()
 
-### Mobile Responsiveness
-- 375px breakpoint added (tighter padding, 10px font, hide-xs class)
-- Rankings table min-width 1100px -> 700px
-- Scroll fade indicator on table wrappers with MutationObserver
+### Source Control Cleanup
+- Cherry-picked 8 dashboard commits from stale branch, deleted 3 stale branches
+- Dashboard: gold tokens, glassmorphic nav, accessibility, skeleton loading
 
-### Shooting Zone Colors
-- Shot zone chart uses team colors from TEAM_COLORS lookup via _hexToRgba()
+## What's Next
 
-### Data Verified
-- Hustle stats + Four Factors already in matchup CSV (379 columns)
-- Streaks.json wired into Promise.all loader for home tab hot/cold cards
+### Plan B: Model Improvements (not started)
+8 tasks: SHAP analysis, statistical significance testing, Huber loss for margin model, temperature scaling calibration, ensemble weight optimization via grid search, walk-forward backtest, orthogonal feature discovery, full retrain pipeline. Spec at `docs/superpowers/plans/2026-03-13-model-improvements.md`.
 
-## What's NOT Done (dashboard review continues next session)
-1. **Players tab** -- not yet reviewed (Stats, Compare, Points subtabs)
-2. **Teams tab** -- not yet reviewed
-3. **H2H tab** -- not yet reviewed
-4. **Standings & Rankings tab** -- not yet reviewed (just merged, needs visual check)
-5. **Injuries tab** -- not yet reviewed
-6. **History tab** -- not yet reviewed
-7. **Betting section** -- not yet reviewed (Picks, Value Bets, Props, Market, Performance, Bet Tracker)
-8. **Light mode** -- toned down but needs full visual check across all tabs
-9. **Mobile** -- added breakpoints but not tested on actual device
-10. **about.html** -- needs stats update to reflect new model numbers
+### Plan D: Pipeline + Dashboard + Cleanup (not started, depends on A-C)
+8 tasks: pipeline runner with retry, config module, dashboard performance, betting UX improvements, dead code removal. Spec at `docs/superpowers/plans/2026-03-13-pipeline-dashboard-cleanup.md`.
 
-## Next Session Priorities
-1. **Continue dashboard review tab by tab** -- user wants to walk through every feature
-2. Start from **Players tab** and work through remaining tabs
-3. Check light mode across all tabs
-4. Update about.html with current model stats
+### Known Issues
+- CLV closing_spread always NULL (update_closing_line never called)
+- Lineup features missing for 2025-26 season
+- ATS features stop at 2024-25
+- Stale worktree directory `.claude/worktrees/mystifying-mirzakhani` (file lock)
 
 ## Key Files Changed
-- `dashboard/index.html` -- major UI overhaul (logo, background, merged tabs, POTD, leaders, mobile CSS)
-- `dashboard/data/*.json` -- 9 data files regenerated with updated models
-- `models/artifacts/*.pkl` -- all model artifacts retrained and calibrated
+- `src/models/betting_router.py`, `odds_utils.py`, `player_minutes_model.py`, `player_stat_models.py`, `conformal.py` (NEW)
+- `src/features/player_features.py` (modified — build_player_prop_features)
+- `src/models/margin_model.py`, `game_outcome_model.py`, `ensemble.py`, `value_bet_detector.py`, `clv_tracker.py` (bug fixes)
+- `scripts/build_props.py`, `update.py` (pipeline integration)
+- `dashboard/index.html` (visual redesign)
+- 6 new test files, 120 new tests
 
 ## Test Baseline
-- 1432 tests passing (0 failures)
+- 1552 tests passing (0 failures)

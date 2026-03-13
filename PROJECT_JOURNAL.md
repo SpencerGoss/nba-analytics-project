@@ -4,6 +4,40 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-13 (Session 12) — Critical Bug Fixes + Player Prop System + Source Control Cleanup
+
+**Done:**
+- **Plan A (Critical Fixes + Betting Architecture) — 9 tasks completed:**
+  - Fixed stale Elo in margin_model.py (diff_elo is 37.3% feature importance — was using stale CSV values)
+  - Removed fillna(0) from all prediction paths (8 occurrences — was masking NaN with 0 while training used mean imputation)
+  - Fixed string season comparisons to integer (.astype(str) >= → .astype(int) >=)
+  - Added predict_game() current-season filter (spec 1.1)
+  - Skipped ATS model load when ATS_WEIGHT=0 (dead code elimination)
+  - Fixed Kelly formula cap (5% max), ATS weight default to 0.0, threshold to 0.03
+  - Fixed CLV tracker conn.total_changes → cursor.rowcount
+  - Created `odds_utils.py` — centralized devigging, American-to-decimal, EV calc
+  - Created `betting_router.py` — confidence tiers (Best Bet/Solid Pick/Lean/Skip), market-specific routing
+- **Plan C (Player Prop System) — 8 tasks completed:**
+  - Stage 1: `player_minutes_model.py` — GBM with Huber loss, blowout adjustment (logistic curve), CV MAE 5.03
+  - Stage 2: `player_stat_models.py` — per-stat GBMs (PTS/REB/AST/3PM) on per-36 rates
+  - Quantile regression (p25/p50/p75) with monotonicity enforcement
+  - `conformal.py` — distribution-free coverage intervals (PTS ±7.93, REB ±2.96, AST ±2.14)
+  - `player_features.py` — build_player_prop_features() with EWMA, B2B, per-36 rates
+  - Wired into `build_props.py` with graceful ML fallback
+  - Added weekly retrain step (Monday) to update.py
+  - Wired prop models into BettingRouter.props()
+- **Source control cleanup:** Deleted 3 stale branches, cherry-picked 8 dashboard commits from mystifying-mirzakhani
+- **Dashboard redesign:** Gold tokens, glassmorphic nav, accessibility improvements, skeleton loading
+- **Tests:** 1432 → 1552 (120 new tests across 6 new test files)
+
+**Files created:** `src/models/betting_router.py`, `src/models/odds_utils.py`, `src/models/player_minutes_model.py`, `src/models/player_stat_models.py`, `src/models/conformal.py`, `src/features/player_features.py` (modified), `tests/test_player_prop_features.py`, `tests/test_player_minutes_model.py`, `tests/test_player_stat_models.py`, `tests/test_conformal.py`
+
+**Files modified:** `src/models/margin_model.py`, `src/models/game_outcome_model.py`, `src/models/ensemble.py`, `src/models/value_bet_detector.py`, `src/models/clv_tracker.py`, `scripts/build_props.py`, `update.py`, `dashboard/index.html`, `.gitignore`
+
+**Next:** Plan B (Model Improvements — SHAP, Huber loss, temperature scaling, ensemble optimization, walk-forward backtest) then Plan D (Pipeline + Dashboard + Cleanup).
+
+---
+
 ## 2026-03-11 (Session 10) — Dashboard Table Fix + UX Polish
 
 **Done:**

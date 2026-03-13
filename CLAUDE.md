@@ -8,7 +8,7 @@ Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js das
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1432 passing, current baseline as of 2026-03-11)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1552 passing, current baseline as of 2026-03-13)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
@@ -17,6 +17,10 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `src/data/` — fetchers | `src/features/` — engineering | `src/models/` — models+calibration | `src/processing/` — preprocessing | `src/validation/` — integrity
 - `src/features/elo.py` — Elo rating system (K=20 standard + K=40 fast Elo, MOV multiplier, season regression, elo_momentum feature)
 - `src/models/value_bet_detector.py` — kelly_fraction | `src/models/clv_tracker.py` — CLV | `src/models/ensemble.py` — NBAEnsemble (dynamic weights: high-conf 0.75/0/0.25, default 0.65/0/0.35, uncertain 0.55/0/0.45)
+- `src/models/betting_router.py` — BettingRouter: confidence tiers (Best Bet/Solid Pick/Lean/Skip), market-specific routing (moneyline/spread/props)
+- `src/models/odds_utils.py` — centralized devigging, American-to-decimal, EV calc
+- `src/models/player_minutes_model.py` — Stage 1 prop model: GBM Huber loss, blowout adjustment | `src/models/player_stat_models.py` — Stage 2: per-stat GBMs (PTS/REB/AST/3PM) + quantile regression
+- `src/models/conformal.py` — conformal prediction intervals (90% coverage) | `src/features/player_features.py` — build_player_prop_features()
 - `scripts/sync_to_sqlserver.py` — syncs CSV+SQLite data to SQL Server `nba_analytics` DB | `scripts/optimize_dashboard.js` — Node.js dashboard minifier
 - `scripts/build_value_bets.py` — reads `data/odds/game_lines.csv` (NOT data/processed/); columns: game_date, home_market_prob
 - `dashboard/data/*.json` — COMMITTED to git (GitHub Pages has no build step); push after update.py

@@ -93,6 +93,25 @@
 [2026-03-08] [skills] INSIGHT: New skills added — `context-budget-checkpoint` (proactive at 70%), `decision-log` (architecture choices → DECISIONS.md), `regression-test-automation` (post-retrain validation), `batch-data-processing` (large ETL jobs), `alert-configuration` (pipeline monitoring), `session-intent-setter` (goal-locking), `skill-extractor` (capture workarounds), `prompt-autopsy` (diagnose wrong output), `rule-freshness-audit` (prune CLAUDE.md), `weekly-review` (meta-maintenance).
 [2026-03-08] [skills] WHY: These fill gaps in previous workflow: context-rescue was reactive only; no decision persistence existed (DECISIONS.md now created); regression validation was manual after retrains; large NBA backfill jobs had no chunking/retry pattern.
 
+### [props]
+
+[2026-03-13] [props] INSIGHT: Two-stage player prop architecture (minutes -> per-stat rates) outperforms direct stat prediction because minutes explains ~65% of stat variance. Stage 1 GBM with Huber loss (robust to DNPs) achieves MAE 5.03. Stage 2 uses per-36 rates scaled by predicted minutes.
+[2026-03-13] [props] WHY: Direct stat models conflate playing time with skill; a player scoring 10 PTS in 15 min vs 40 min are very different. Predicting minutes first isolates the playing-time signal.
+
+[2026-03-13] [props] INSIGHT: Conformal prediction intervals provide distribution-free coverage guarantees (90%: PTS +/-7.93, REB +/-2.96, AST +/-2.14, 3PM +/-2.30). Use ceil((n+1)*coverage)/n quantile of absolute residuals.
+[2026-03-13] [props] WHY: Parametric intervals assume Gaussian errors which player stats violate (heavy tails, zero-inflation in 3PM). Conformal makes no distributional assumptions.
+
+[2026-03-13] [props] INSIGHT: Quantile regression (p25/p50/p75) must enforce monotonicity — GBM with loss="quantile" can produce crossing quantiles where p75 < p50. Guard: `p75 = max(p75, p50); p25 = min(p25, p50)`.
+[2026-03-13] [props] WHY: Separate models trained per quantile have no monotonicity constraint; without post-hoc enforcement, ~2-5% of predictions cross.
+
+### [bugfix]
+
+[2026-03-13] [bugfix] INSIGHT: fillna(0) in prediction paths causes train/inference skew — training pipeline uses SimpleImputer(strategy="mean") but inference was replacing NaN with 0. diff_elo at 37.3% importance means a 0-filled Elo diff massively distorts predictions.
+[2026-03-13] [bugfix] WHY: 8 occurrences in game_outcome_model.py and margin_model.py. Fix: remove fillna(0), let the pipeline imputer handle NaN consistently.
+
+[2026-03-13] [bugfix] INSIGHT: Season code comparisons using .astype(str) >= "202122" produce wrong results — "9" > "2" so season 9xxxx would pass. Must use .astype(int) for numeric comparison.
+[2026-03-13] [bugfix] WHY: String comparison is lexicographic; integer comparison is numeric. Season codes are 6-digit integers (e.g., 202425).
+
 ### [clv]
 
 [2026-03-06] [clv] INSIGHT: CLV formula is `opening_spread - closing_spread` (positive = we got a better/easier line than market settled). Do NOT invert.

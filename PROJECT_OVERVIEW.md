@@ -1,37 +1,38 @@
 # NBA Analytics Project — Overview
 
-End-to-end NBA analytics system: data ingestion → feature engineering → game outcome prediction (67.1%, AUC 0.7406) → ATS betting model (54.9%, Brier-optimized) → prediction store → web dashboard (fully live data) + CLV tracking.
+End-to-end NBA analytics system: data ingestion → feature engineering (Elo ratings, EWMA, streaks, cross-matchup interactions, 352+ features) → game outcome prediction (67.5%, AUC 0.7422) → margin regression (Ridge, MAE 10.52) → NBAEnsemble (confidence-dependent weights) → **player prop predictions** (two-stage: minutes model → per-stat models with quantile regression + conformal intervals) → BettingRouter (confidence tiers: Best Bet/Solid Pick/Lean/Skip) → prediction store → dashboard v3 (9 tabs) + CLV tracking + SQL Server warehouse.
 
-## v2.2 Results (March 2026)
-- Game outcome model: **67.1% accuracy, AUC 0.7406** — LightGBM added as candidate (guarded import); gradient_boosting still selected; 11 injury features active
-- ATS model: **54.9% accuracy** — Brier-optimized; 2021-22 held-out calibration split; logistic_l1 selected
-- Feature matrix: **296-column** matchup CSV; includes `diff_pythagorean_win_pct_roll10` (Morey exponent 14.3, 10-game rolling)
-- Value bet output: now includes `kelly_fraction` (fractional Kelly, 0.5x scale) per bet
-- CLV tracking: `clv_tracking` table in `predictions_history.db`; opening lines logged automatically from `fetch_odds.py`; `CLVTracker.get_clv_summary()` reports mean CLV and edge flag
-- `player_absences.csv`: 1,098,538 rows, 75 seasons, 12.6% absence rate — fully wired into injury pipeline
-- Tests: 573 passing (29 new in build_line_movement; NULL guard fix)
-- Pipeline: fully operational; daily `update.py` refreshes data + features + predictions in one command
-- **Odds source:** Pinnacle guest API (free, keyless, no quota) — game_lines.csv populates live with NBA moneylines + spreads
-- **Dashboard v3 (Sessions 5+6 polish):** full Linear/Coinbase redesign; live at https://spencergoss.github.io/nba-analytics-project/; 9 tabs fully operational: Today, Players (883 all-time + clickable modal with career stats/FT%/logos), Teams, H2H, Standings (L10 col, full names), Injuries, Rankings, History (5 seasons, winner coloring, margin col), Betting Tools (Picks/Value Bets/Props/Sharp Money/Performance/Bet Tracker); CSP + SRI; no hardcoded data (23 JSON files from `update.py` Step 7); GitHub Actions daily deploy wired
-- **HPO result:** Optuna 100 trials — LightGBM 0.7116, XGBoost 0.7115 — both lose to gradient_boosting (0.7406); production model unchanged
+## v3.0 Results (March 2026)
+- Game outcome model: **67.5% accuracy, AUC 0.7422** — gradient_boosting, auto feature pruning (importance < 0.001)
+- Margin model: **Ridge, CV MAE 10.52** — with live Elo refresh (diff_elo = 37.3% feature importance)
+- ATS model: **55.0% accuracy** — weight set to 0.0 in ensemble (near-random, disabled)
+- Ensemble: confidence-dependent weights (high: 0.75/0/0.25, default: 0.65/0/0.35, uncertain: 0.55/0/0.45)
+- Player props: **two-stage pipeline** — minutes model (GBM, Huber loss, MAE 5.03) → per-stat models (PTS/REB/AST/3PM) with quantile regression (p25/p50/p75) and conformal prediction intervals (90% coverage)
+- BettingRouter: market-specific outputs with confidence tiers (edge ≥8% = Best Bet, ≥4% = Solid Pick, ≥2% = Lean, <2% or models disagree = Skip)
+- Feature matrix: **352+ columns** including Elo (standard + fast + momentum), EWMA, streaks, cross-matchup interactions
+- Odds: Pinnacle guest API (free, keyless) — centralized devigging in odds_utils.py
+- Tests: **1552 passing** across 20+ test files
+- Pipeline: `python update.py` runs full daily refresh; weekly prop model retrain (Monday)
+- Dashboard: live at GitHub Pages; 9 tabs (Today, Players, Teams, H2H, Standings, Injuries, Rankings, Season History, Betting Tools)
 
 ## Key Links
 - **Architecture & full description:** [`docs/project_overview.md`](docs/project_overview.md)
 - **Pipeline stage reference:** [`docs/PIPELINE.md`](docs/PIPELINE.md)
-- **Current progress / session state:** [`.planning/STATE.md`](.planning/STATE.md)
 - **Known bugs & tech debt:** [`.planning/codebase/CONCERNS.md`](.planning/codebase/CONCERNS.md)
 - **Session log:** [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md)
+- **Architectural decisions:** [`DECISIONS.md`](DECISIONS.md)
 
 ## Quick Commands
 ```bash
 pytest -v                                           # run tests
-python update.py                                    # daily data refresh (Stages 1+2)
-python src/features/team_game_features.py           # build features (Stage 3)
-python src/models/train_all_models.py               # train models (Stage 4)
-python src/models/calibration.py                    # calibrate (Stage 5)
-python src/models/predict_cli.py game --home BOS --away LAL   # predict
+python update.py                                    # daily data refresh
+python backfill.py                                  # full historical rebuild
 python -m http.server 8080 --directory dashboard    # serve dashboard
 ```
 
 ## Stack
-Python 3.12+, pandas, scikit-learn, SQLite, Chart.js. No npm/Node.
+Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js dashboard, Node.js (dashboard optimizer). Windows 11.
+
+## What's Next
+- Plan B: Model improvements (SHAP analysis, Huber loss margin model, temperature scaling, ensemble weight optimization, walk-forward backtest)
+- Plan D: Pipeline runner, config module, dashboard performance, betting UX, dead code removal
