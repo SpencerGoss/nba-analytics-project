@@ -245,12 +245,22 @@ def _confidence_tier(
     """
     from src.models.betting_router import confidence_tier, model_agreement
 
-    if edge is None or edge <= 0:
-        return "Skip"
     agree = True
     if projected_margin is not None:
         agree = model_agreement(home_prob, projected_margin)
-    return confidence_tier(edge, agree)
+
+    if edge is not None and edge > 0:
+        return confidence_tier(edge, agree)
+
+    # No odds available — fall back to model probability
+    max_prob = max(home_prob, 1.0 - home_prob)
+    if max_prob >= 0.70:
+        return "Best Bet" if agree else "Lean"
+    if max_prob >= 0.62:
+        return "Solid Pick" if agree else "Lean"
+    if max_prob >= 0.55:
+        return "Lean"
+    return "Skip"
 
 
 def _build_pick_row(

@@ -267,6 +267,7 @@ def main() -> None:
             else:
                 print(f"Injury report saved: {len(injury_df)} entries.")
         except Exception as injury_err:
+            log_pipeline_error("update.py:injury_report", injury_err)
             print(f"Injury report fetch failed (non-fatal): {injury_err}")
 
         print("\n=== Step 6: Generating today's game predictions ===")

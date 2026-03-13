@@ -24,7 +24,7 @@ def expanding_season_splits(
     """
     seasons = sorted(train_df[season_col].astype(int).unique())
     splits = []
-    for i in range(max(1, min_train_seasons - 1), len(seasons)):
+    for i in range(max(1, min_train_seasons), len(seasons)):
         train_seasons = seasons[:i]
         valid_season = seasons[i]
         tr = train_df[train_df[season_col].astype(int).isin(train_seasons)].copy()
