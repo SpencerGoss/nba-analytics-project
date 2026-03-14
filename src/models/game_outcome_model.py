@@ -12,7 +12,6 @@ Key behavior:
   5. Save model artifacts + feature importances
 """
 
-import io
 import json
 import os
 import pickle
