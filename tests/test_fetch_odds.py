@@ -190,7 +190,8 @@ def test_fetch_game_lines_basic(mock_api):
     assert bos_row["home_moneyline"] == -180
     assert bos_row["spread"] == -4.5
     assert bos_row["total"] == 220.5
-    assert bos_row["date"] == "2026-03-15"
+    # UTC 2026-03-15T00:30:00Z = 7:30 PM ET on 2026-03-14
+    assert bos_row["date"] == "2026-03-14"
 
 
 @patch("scripts.fetch_odds.get_pinnacle")

@@ -26,7 +26,12 @@ import os
 import sys
 import logging
 import datetime as dt
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+# US Eastern offset: UTC-5 (EST) or UTC-4 (EDT).  NBA regular season spans
+# both; Python 3.9+ zoneinfo handles this, but a fixed -5 h offset is good
+# enough for date-boundary purposes (a game at 12:30 AM ET is extremely rare).
+_ET_OFFSET = timezone(timedelta(hours=-5))
 from pathlib import Path
 
 import requests
@@ -143,6 +148,26 @@ def team_name_to_abb(name: str) -> str:
     return result
 
 
+def _utc_to_et_date(iso_str: str) -> str:
+    """Convert a UTC ISO-8601 timestamp to an Eastern-time date string.
+
+    Pinnacle returns startTime in UTC (e.g. '2026-03-15T01:30:00Z').
+    A 10:30 PM ET game on March 14 appears as March 15 in UTC.
+    NBA schedules use Eastern time, so we convert before extracting the date.
+    """
+    if not iso_str or len(iso_str) < 10:
+        return iso_str[:10] if iso_str else ""
+    # Date-only strings (no time component) don't need conversion
+    if len(iso_str) == 10:
+        return iso_str
+    try:
+        utc_dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        et_dt = utc_dt.astimezone(_ET_OFFSET)
+        return et_dt.strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        return iso_str[:10]
+
+
 # -- Game lines ----------------------------------------------------------------
 
 
@@ -178,7 +203,7 @@ def fetch_game_lines() -> pd.DataFrame:
         matchups[m["id"]] = {
             "home_team": alignments["home"],
             "away_team": alignments["away"],
-            "date":      m.get("startTime", "")[:10],
+            "date":      _utc_to_et_date(m.get("startTime", "")),
         }
 
     # Index markets by matchupId, keeping only period 0 moneyline, spread, and total.
@@ -305,7 +330,7 @@ def fetch_player_props(event_ids: list[str], game_dates: dict[str, str]) -> pd.D
             special = matchup.get("special") or {}
             description = special.get("description", "")
             start_time = matchup.get("startTime", "")
-            game_date = start_time[:10] if start_time else today_str
+            game_date = _utc_to_et_date(start_time) if start_time else today_str
 
             m = _PROP_DESC_RE.match(description)
             if not m:
