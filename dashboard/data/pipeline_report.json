@@ -1,21 +1,166 @@
 {
-  "timestamp": "2026-03-13T17:13:26.122660",
+  "timestamp": "2026-03-14T05:30:57.170735",
   "mode": "full",
-  "dry_run": true,
-  "duration_seconds": 0.0,
+  "dry_run": false,
+  "duration_seconds": 56.1,
   "summary": {
-    "succeeded": 0,
+    "succeeded": 30,
     "failed": 0,
     "timed_out": 0,
     "missing": 0,
-    "skipped": 1,
-    "total": 1
+    "skipped": 0,
+    "total": 30
   },
   "results": [
     {
+      "name": "backfill_outcomes",
+      "status": "success",
+      "duration": 1.6
+    },
+    {
+      "name": "fetch_odds",
+      "status": "success",
+      "duration": 10.9
+    },
+    {
+      "name": "build_picks",
+      "status": "success",
+      "duration": 3.4
+    },
+    {
+      "name": "build_value_bets",
+      "status": "success",
+      "duration": 0.4
+    },
+    {
       "name": "build_standings",
-      "status": "dry_run",
-      "duration": 0
+      "status": "success",
+      "duration": 0.5
+    },
+    {
+      "name": "build_injuries",
+      "status": "success",
+      "duration": 0.8
+    },
+    {
+      "name": "build_power_rankings",
+      "status": "success",
+      "duration": 0.9
+    },
+    {
+      "name": "build_h2h",
+      "status": "success",
+      "duration": 0.8
+    },
+    {
+      "name": "build_streaks",
+      "status": "success",
+      "duration": 1.6
+    },
+    {
+      "name": "build_advanced_stats",
+      "status": "success",
+      "duration": 0.4
+    },
+    {
+      "name": "build_live_scores",
+      "status": "success",
+      "duration": 1.7
+    },
+    {
+      "name": "build_playoff_odds",
+      "status": "success",
+      "duration": 0.5
+    },
+    {
+      "name": "build_trends",
+      "status": "success",
+      "duration": 1.1
+    },
+    {
+      "name": "build_totals",
+      "status": "success",
+      "duration": 1.8
+    },
+    {
+      "name": "build_game_context",
+      "status": "success",
+      "duration": 0.7
+    },
+    {
+      "name": "build_explainers",
+      "status": "success",
+      "duration": 1.9
+    },
+    {
+      "name": "build_matchup_analysis",
+      "status": "success",
+      "duration": 0.9
+    },
+    {
+      "name": "build_game_detail",
+      "status": "success",
+      "duration": 0.4
+    },
+    {
+      "name": "build_elo_timeline",
+      "status": "success",
+      "duration": 0.5
+    },
+    {
+      "name": "build_performance",
+      "status": "success",
+      "duration": 0.1
+    },
+    {
+      "name": "build_accuracy_history",
+      "status": "success",
+      "duration": 0.4
+    },
+    {
+      "name": "build_line_movement",
+      "status": "success",
+      "duration": 0.4
+    },
+    {
+      "name": "build_sharp_money",
+      "status": "success",
+      "duration": 0.1
+    },
+    {
+      "name": "build_bet_tracker",
+      "status": "success",
+      "duration": 0.4
+    },
+    {
+      "name": "build_props",
+      "status": "success",
+      "duration": 12.3
+    },
+    {
+      "name": "build_clv",
+      "status": "success",
+      "duration": 0.1
+    },
+    {
+      "name": "build_player_comparison",
+      "status": "success",
+      "duration": 8.8
+    },
+    {
+      "name": "build_player_detail",
+      "status": "success",
+      "duration": 2.2
+    },
+    {
+      "name": "build_season_history",
+      "status": "success",
+      "duration": 0.8
+    },
+    {
+      "name": "build_meta",
+      "status": "success",
+      "duration": 0.1
     }
   ]
 }
