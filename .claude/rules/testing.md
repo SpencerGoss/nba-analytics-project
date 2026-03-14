@@ -4,7 +4,7 @@
 
 ## Framework
 pytest. Run with: `pytest -v` or `python -m pytest tests/ -q`
-Current baseline: 1675 tests passing (as of 2026-03-13).
+Current baseline: 1739 tests passing (as of 2026-03-13).
 
 ## Coverage Target
 80%+ for any new module added in v2.0.
@@ -23,6 +23,9 @@ Current baseline: 1675 tests passing (as of 2026-03-13).
 - `tests/test_build_line_movement.py` — spread movement, sharp classification
 - `tests/test_build_player_comparison.py` — player comparison JSON
 - `tests/test_power_rankings.py` — power rankings algorithm
+- `tests/test_calibration.py` — calibration wrappers, ECE, bin stats
+- `tests/test_prediction_store.py` — prediction store CRUD, duplicate prevention
+- `tests/test_ats_model.py` — ATS feature selection, null validation, predict_ats
 - New tests go in `tests/` with `test_<module_name>.py` naming
 
 ## What to Test
