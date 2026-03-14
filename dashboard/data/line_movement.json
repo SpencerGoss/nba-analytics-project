@@ -1,5 +1,69 @@
 [
   {
+    "home_team": "POR",
+    "away_team": "UTA",
+    "game_date": "2026-03-14",
+    "opening_spread": -15.5,
+    "current_spread": -15.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "movement_label": "No movement",
+    "opening_moneyline": -1132,
+    "current_moneyline": -1132,
+    "steam_move": false,
+    "reverse_line_move": false,
+    "classification": "stable",
+    "interpretation": "Opening line -15.5 -- game not yet closed"
+  },
+  {
+    "home_team": "LAC",
+    "away_team": "CHI",
+    "game_date": "2026-03-14",
+    "opening_spread": -13.0,
+    "current_spread": -13.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "movement_label": "No movement",
+    "opening_moneyline": -733,
+    "current_moneyline": -733,
+    "steam_move": false,
+    "reverse_line_move": false,
+    "classification": "stable",
+    "interpretation": "Opening line -13.0 -- game not yet closed"
+  },
+  {
+    "home_team": "HOU",
+    "away_team": "NOP",
+    "game_date": "2026-03-14",
+    "opening_spread": -6.0,
+    "current_spread": -6.0,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "movement_label": "No movement",
+    "opening_moneyline": -227,
+    "current_moneyline": -227,
+    "steam_move": false,
+    "reverse_line_move": false,
+    "classification": "stable",
+    "interpretation": "Opening line -6.0 -- game not yet closed"
+  },
+  {
+    "home_team": "GSW",
+    "away_team": "MIN",
+    "game_date": "2026-03-14",
+    "opening_spread": 5.5,
+    "current_spread": 5.5,
+    "movement": 0.0,
+    "direction": "no_movement",
+    "movement_label": "No movement",
+    "opening_moneyline": 185,
+    "current_moneyline": 185,
+    "steam_move": false,
+    "reverse_line_move": false,
+    "classification": "stable",
+    "interpretation": "Opening line +5.5 -- game not yet closed"
+  },
+  {
     "home_team": "SAS",
     "away_team": "DEN",
     "game_date": "2026-03-13",
@@ -109,7 +173,7 @@
     "steam_move": false,
     "reverse_line_move": false,
     "classification": "stable",
-    "interpretation": "Opening line -15.0 -- game not yet closed"
+    "interpretation": "Line stable at -15.0 -- no significant money movement"
   },
   {
     "home_team": "NOP",
@@ -141,7 +205,7 @@
     "steam_move": false,
     "reverse_line_move": false,
     "classification": "stable",
-    "interpretation": "Opening line -6.0 -- game not yet closed"
+    "interpretation": "Line stable at -6.0 -- no significant money movement"
   },
   {
     "home_team": "LAC",
@@ -173,7 +237,7 @@
     "steam_move": false,
     "reverse_line_move": false,
     "classification": "stable",
-    "interpretation": "Opening line +9.0 -- game not yet closed"
+    "interpretation": "Line stable at +9.0 -- no significant money movement"
   },
   {
     "home_team": "DET",
@@ -189,7 +253,7 @@
     "steam_move": false,
     "reverse_line_move": false,
     "classification": "stable",
-    "interpretation": "Opening line -14.5 -- game not yet closed"
+    "interpretation": "Line stable at -14.5 -- no significant money movement"
   },
   {
     "home_team": "DEN",
@@ -221,7 +285,7 @@
     "steam_move": false,
     "reverse_line_move": false,
     "classification": "stable",
-    "interpretation": "Opening line -14.5 -- game not yet closed"
+    "interpretation": "Line stable at -14.5 -- no significant money movement"
   },
   {
     "home_team": "ORL",
