@@ -476,17 +476,17 @@ def main(argv=None):
     best_params = results[best_model_type]["params"]
     best_auc = results[best_model_type]["auc"]
 
-    print("\n" + "=" * 60)
-    print("HPO RESULTS")
+    log.info("\n" + "=" * 60)
+    log.info("HPO RESULTS")
     print("=" * 60)
     for model_type, res in results.items():
         marker = " <-- BEST" if model_type == best_model_type else ""
-        print(f"  {model_type.upper():6s}  AUC={res['auc']:.4f}{marker}")
-    print(f"\nBest params ({best_model_type.upper()}):")
+        log.info(f"  {model_type.upper():6s}  AUC={res['auc']:.4f}{marker}")
+    log.info(f"\nBest params ({best_model_type.upper()}):")
     for k, v in best_params.items():
         if k == "model_type":
             continue
-        print(f"  {k}: {v}")
+        log.info(f"  {k}: {v}")
 
     # ── Save best params JSON ──────────────────────────────────────────────────
     os.makedirs(args.artifacts_dir, exist_ok=True)
@@ -503,7 +503,7 @@ def main(argv=None):
     with open(json_path, "w") as f:
         json.dump(payload, f, indent=2)
     log.info("Best params saved -> %s", json_path)
-    print(f"\nBest params saved -> {json_path}")
+    log.info(f"\nBest params saved -> {json_path}")
 
     # ── Optionally retrain final model ─────────────────────────────────────────
     if not args.no_retrain:
@@ -511,18 +511,14 @@ def main(argv=None):
         retrain_with_best_params(
             train_df, feat_cols, best_params, artifacts_dir=args.artifacts_dir
         )
-        print(
-            "HPO model saved -> "
-            + os.path.join(args.artifacts_dir, "game_outcome_model_hpo.pkl")
-        )
-        print(
-            "\nNOTE: Run src/models/calibration.py if you want a calibrated "
-            "version of the HPO model for probability outputs."
-        )
+        log.info("HPO model saved -> "
+            + os.path.join(args.artifacts_dir, "game_outcome_model_hpo.pkl"))
+        log.info("\nNOTE: Run src/models/calibration.py if you want a calibrated "
+            "version of the HPO model for probability outputs.")
     else:
         log.info("--no-retrain set: skipping final model save")
 
-    print("\nDone.")
+    log.info("\nDone.")
     return payload
 
 

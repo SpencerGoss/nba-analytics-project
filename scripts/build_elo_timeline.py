@@ -32,6 +32,9 @@ ELO_CSV = PROJECT_ROOT / "data" / "features" / "elo_ratings.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "elo_timeline.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 SAMPLE_EVERY_N = 3
@@ -40,38 +43,38 @@ SAMPLE_EVERY_N = 3
 def build_elo_timeline() -> dict:
     """Build Elo timeline JSON for the current season."""
     if not ELO_CSV.exists():
-        print(f"WARN: Elo ratings CSV not found at {ELO_CSV} -> writing empty elo_timeline.json")
+        log.warning(f"WARN: Elo ratings CSV not found at {ELO_CSV} -> writing empty elo_timeline.json")
         result: dict = {"teams": {}}
         _write_output(result)
         return result
 
-    print(f"Loading Elo ratings from {ELO_CSV} ...")
+    log.info(f"Loading Elo ratings from {ELO_CSV} ...")
     df = pd.read_csv(ELO_CSV)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
     # Filter to current season
     season_df = df[df["season"] == CURRENT_SEASON].copy()
     if season_df.empty:
-        print(f"  No data for season {CURRENT_SEASON} -> writing empty elo_timeline.json")
+        log.warning(f"  No data for season {CURRENT_SEASON} -> writing empty elo_timeline.json")
         result = {"teams": {}}
         _write_output(result)
         return result
 
-    print(f"  {len(season_df):,} rows for season {CURRENT_SEASON}")
+    log.info(f"  {len(season_df):,} rows for season {CURRENT_SEASON}")
 
     # Check which columns are available
     has_fast_elo = "elo_pre_fast" in season_df.columns
     has_momentum = "elo_momentum" in season_df.columns
 
     if has_fast_elo:
-        print("  fast_elo column found")
+        log.info("  fast_elo column found")
     else:
-        print("  fast_elo column not found -> will be null in output")
+        log.warning("  fast_elo column not found -> will be null in output")
 
     if has_momentum:
-        print("  elo_momentum column found")
+        log.info("  elo_momentum column found")
     else:
-        print("  elo_momentum column not found -> will be null in output")
+        log.warning("  elo_momentum column not found -> will be null in output")
 
     # Sort by date for correct ordering
     season_df = season_df.sort_values(["team_abbreviation", "game_date"])
@@ -113,7 +116,7 @@ def build_elo_timeline() -> dict:
 
     result = {"teams": teams_data}
     _write_output(result)
-    print(f"Written -> {OUT_JSON} ({len(teams_data)} teams, "
+    log.info(f"Written -> {OUT_JSON} ({len(teams_data)} teams, "
           f"~{sum(len(v) for v in teams_data.values())} data points)")
     return result
 
@@ -125,4 +128,5 @@ def _write_output(data: dict) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_elo_timeline()

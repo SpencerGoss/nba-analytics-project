@@ -21,6 +21,9 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.features.era_labels import label_eras
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -103,16 +106,16 @@ def _compute_player_rolling(group: pd.DataFrame, windows: list) -> pd.DataFrame:
 
 
 def _load_advanced(adv_stats_path: str) -> pd.DataFrame:
-    print("Loading advanced stats...")
+    log.info("Loading advanced stats...")
     adv = pd.read_csv(adv_stats_path)
     return adv[ADV_CONTEXT_COLS].drop_duplicates(subset=["player_id", "season"])
 
 
 def _load_player_bio(bio_path: str = BIO_STATS_PATH) -> pd.DataFrame:
     if not os.path.exists(bio_path):
-        print(f"  Warning: {bio_path} not found. Skipping bio features.")
+        log.warning(f"  Warning: {bio_path} not found. Skipping bio features.")
         return None
-    print("  Loading player bio stats...")
+    log.info("  Loading player bio stats...")
     bio = pd.read_csv(bio_path, usecols=BIO_COLS)
     return bio.drop_duplicates(subset=["player_id", "season"])
 
@@ -120,7 +123,7 @@ def _load_player_bio(bio_path: str = BIO_STATS_PATH) -> pd.DataFrame:
 def _load_optional_priors(path: str, value_cols: list, prefix: str) -> pd.DataFrame:
     """Load optional season-level prior stats when available."""
     if not os.path.exists(path):
-        print(f"  Optional table missing: {path} (skipping {prefix} priors)")
+        log.warning(f"  Optional table missing: {path} (skipping {prefix} priors)")
         return None
 
     raw = pd.read_csv(path)
@@ -141,10 +144,10 @@ def _load_team_context(team_features_path: str = TEAM_FEATURES_PATH) -> tuple:
       (opp_context_df, own_context_df)
     """
     if not os.path.exists(team_features_path):
-        print("  Warning: team_game_features.csv missing; skipping team context joins.")
+        log.warning("  Warning: team_game_features.csv missing; skipping team context joins.")
         return None, None
 
-    print("  Loading opponent and team context from team_game_features...")
+    log.info("  Loading opponent and team context from team_game_features...")
     tdf = pd.read_csv(team_features_path)
 
     base_cols = [
@@ -303,7 +306,7 @@ def build_player_prop_features(
     if output_path is not None:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         df.to_csv(output_path, index=False)
-        print(f"Saved {len(df):,} rows -> {output_path}")
+        log.info(f"Saved {len(df):,} rows -> {output_path}")
 
     return df
 
@@ -321,7 +324,7 @@ def build_player_game_features(
     start_season: str = "199697",
 ) -> pd.DataFrame:
     """Build enriched pre-game features for every player-game."""
-    print("Loading player_game_logs...")
+    log.info("Loading player_game_logs...")
     df = pd.read_csv(
         game_log_path,
         usecols=[
@@ -333,7 +336,7 @@ def build_player_game_features(
 
     df = df[df["season"].astype(int) >= int(start_season)].copy()
     df = df.sort_values(["player_id", "game_date"]).reset_index(drop=True)
-    print(f"  Filtered to {start_season}+: {len(df):,} rows | "
+    log.info(f"  Filtered to {start_season}+: {len(df):,} rows | "
           f"{df.player_id.nunique():,} players | {df.season.nunique()} seasons")
 
     df["is_home"] = _parse_home_away(df["matchup"])
@@ -361,7 +364,7 @@ def build_player_game_features(
 
     opp_context, own_context = _load_team_context(team_features_path)
 
-    print("Computing rolling features per player...")
+    log.info("Computing rolling features per player...")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     player_ids = df["player_id"].unique()
@@ -402,16 +405,16 @@ def build_player_game_features(
                 header=write_header,
                 index=False,
             )
-            print(f"  Processed {i + 1:,}/{total:,} players, flushed {len(chunk):,} rows")
+            log.info(f"  Processed {i + 1:,}/{total:,} players, flushed {len(chunk):,} rows")
             results = []
             del chunk
 
     final = pd.read_csv(output_path, nrows=5)
     total_rows = sum(1 for _ in open(output_path, "r", encoding="utf-8")) - 1
-    print(f"\nSaved {total_rows:,} rows x {len(final.columns)} cols -> {output_path}")
+    log.info(f"\nSaved {total_rows:,} rows x {len(final.columns)} cols -> {output_path}")
     return final
 
 
 if __name__ == "__main__":
     build_player_game_features()
-    print("\nPlayer feature engineering complete.")
+    log.info("\nPlayer feature engineering complete.")

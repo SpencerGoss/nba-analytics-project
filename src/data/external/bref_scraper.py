@@ -56,6 +56,8 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup, Comment
 
+log = logging.getLogger(__name__)
+
 # ---------------------------------------------------------------------------
 # Module constants
 # ---------------------------------------------------------------------------
@@ -431,7 +433,7 @@ def get_referee_crew_assignments(
             game_id = game_info["game_id"]
             total_games += 1
 
-            print(f"Fetching game {total_games} ({game_id}) on {date_str}...")
+            log.info(f"Fetching game {total_games} ({game_id}) on {date_str}...")
 
             url = BOXSCORE_URL.format(game_id=game_id)
             try:
@@ -485,14 +487,12 @@ def get_referee_crew_assignments(
     output_filename = f"referee_crew_{start_date}_{end_date}.csv"
     output_path = os.path.join(output_dir, output_filename)
     df.to_csv(output_path, index=False)
-    print(f"Saved {len(df)} rows to {output_path}")
+    log.info(f"Saved {len(df)} rows to {output_path}")
 
     # Summary
-    print(
-        f"Fetched {total_games} games, "
+    log.warning(f"Fetched {total_games} games, "
         f"{games_with_refs} with referee data, "
-        f"{games_missing_refs} missing"
-    )
+        f"{games_missing_refs} missing")
 
     return df
 
@@ -512,6 +512,6 @@ if __name__ == "__main__":
     start = sys.argv[1] if len(sys.argv) > 1 else "2025-01-01"
     end = sys.argv[2] if len(sys.argv) > 2 else "2025-01-03"
 
-    print(f"Fetching referee crew assignments from {start} to {end}...")
+    log.info(f"Fetching referee crew assignments from {start} to {end}...")
     df = get_referee_crew_assignments(start, end)
-    print(df.to_string(index=False))
+    log.info(df.to_string(index=False))

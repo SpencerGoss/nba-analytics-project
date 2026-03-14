@@ -44,6 +44,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
 
@@ -285,40 +288,40 @@ def run_ats_backtest(
             clv_note: str -- explanation of CLV data limitation
     """
     print("=" * 65)
-    print("ATS BACKTEST HARNESS")
+    log.info("ATS BACKTEST HARNESS")
     print("=" * 65)
 
     # -- Load data ----------------------------------------------------------
-    print(f"\nLoading ATS features from {ats_features_path}...")
+    log.info(f"\nLoading ATS features from {ats_features_path}...")
     df = pd.read_csv(ats_features_path, low_memory=False)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
     n_total = len(df)
-    print(f"  Total games loaded: {n_total:,}")
+    log.info(f"  Total games loaded: {n_total:,}")
 
     # -- Drop push rows (NaN covers_spread) ---------------------------------
     n_before_push = len(df)
     df = df.dropna(subset=[TARGET])
     n_push = n_before_push - len(df)
-    print(f"  Push/unknown games excluded: {n_push:,}")
-    print(f"  Games for backtest: {len(df):,}")
+    log.info(f"  Push/unknown games excluded: {n_push:,}")
+    log.info(f"  Games for backtest: {len(df):,}")
 
     # -- Load ATS model -----------------------------------------------------
-    print("\nLoading ATS model...")
+    log.info("\nLoading ATS model...")
     model, feat_cols, metadata = _load_ats_model(artifacts_dir)
     threshold = metadata.get("threshold", 0.50)
     model_type = metadata.get("model_type", "unknown")
     n_features = metadata.get("n_features", len(feat_cols))
     training_date = metadata.get("training_date", "unknown")
     test_seasons = metadata.get("test_seasons", [])
-    print(f"  Model type: {model_type}")
-    print(f"  Features: {n_features}")
-    print(f"  Decision threshold: {threshold}")
-    print(f"  Training date: {training_date}")
-    print(f"  Holdout test seasons: {test_seasons}")
+    log.info(f"  Model type: {model_type}")
+    log.info(f"  Features: {n_features}")
+    log.info(f"  Decision threshold: {threshold}")
+    log.info(f"  Training date: {training_date}")
+    log.info(f"  Holdout test seasons: {test_seasons}")
 
     # -- Generate predictions for all games ----------------------------------
-    print("\nGenerating ATS predictions...")
+    log.info("\nGenerating ATS predictions...")
     X = df.reindex(columns=feat_cols)
     proba = model.predict_proba(X)[:, 1]
     pred = (proba >= threshold).astype(int)
@@ -346,29 +349,29 @@ def run_ats_backtest(
         axis=1,
     )
 
-    print(f"  Predictions generated for {len(df):,} games")
+    log.info(f"  Predictions generated for {len(df):,} games")
     # bet_correct: 1 if prediction matched actual outcome, 0 otherwise
     # This is what we pass to compute_roi_flat_110 -- we bet on every game
     # and "win" the bet when our prediction is correct.
     df["bet_correct"] = (df["covers_spread"] == df["covers_spread_pred"]).astype(int)
     correct = int(df["bet_correct"].sum())
     overall_hit_rate = float(correct / len(df))
-    print(f"  Overall hit rate (all games): {overall_hit_rate:.4f} ({overall_hit_rate:.1%})")
+    log.info(f"  Overall hit rate (all games): {overall_hit_rate:.4f} ({overall_hit_rate:.1%})")
 
     # -- Baseline backtest (all games) ----------------------------------------
-    print("\n--- Baseline Backtest (all non-push games) ---")
+    log.info("\n--- Baseline Backtest (all non-push games) ---")
     n_backtest = len(df)
     baseline_roi = compute_roi_flat_110(df["bet_correct"])  # raises if < 500
     baseline_by_season = _compute_season_breakdown(df)
     avg_clv_baseline = float(df["clv"].mean())
     avg_edge_baseline = float(df["edge"].dropna().mean())
 
-    print(f"  Games: {baseline_roi['n_bets']:,}")
-    print(f"  Hit rate: {baseline_roi['hit_rate']:.4f} ({baseline_roi['hit_rate']:.1%})")
-    print(f"  Net units: {baseline_roi['net_units']:.2f}")
-    print(f"  ROI: {baseline_roi['roi']:.4f} ({baseline_roi['roi']:.1%})")
-    print(f"  Avg CLV: {avg_clv_baseline:.4f} (NOTE: 0.0 -- no closing line data)")
-    print(f"  Avg edge: {avg_edge_baseline:.4f}")
+    log.info(f"  Games: {baseline_roi['n_bets']:,}")
+    log.info(f"  Hit rate: {baseline_roi['hit_rate']:.4f} ({baseline_roi['hit_rate']:.1%})")
+    log.info(f"  Net units: {baseline_roi['net_units']:.2f}")
+    log.info(f"  ROI: {baseline_roi['roi']:.4f} ({baseline_roi['roi']:.1%})")
+    log.info(f"  Avg CLV: {avg_clv_baseline:.4f} (NOTE: 0.0 -- no closing line data)")
+    log.info(f"  Avg edge: {avg_edge_baseline:.4f}")
 
     baseline_result = {
         **baseline_roi,
@@ -377,10 +380,10 @@ def run_ats_backtest(
     }
 
     # -- Value-bet filtered backtest -----------------------------------------
-    print(f"\n--- Value-Bet Filtered Backtest (edge > {value_bet_threshold:.2%}) ---")
+    log.info(f"\n--- Value-Bet Filtered Backtest (edge > {value_bet_threshold:.2%}) ---")
     value_df = df[df["edge"].abs() > value_bet_threshold].copy()
     n_value_bets = len(value_df)
-    print(f"  Value-bet games: {n_value_bets:,} of {n_backtest:,} "
+    log.info(f"  Value-bet games: {n_value_bets:,} of {n_backtest:,} "
           f"({n_value_bets / n_backtest:.1%})")
 
     value_bet_result = None
@@ -392,11 +395,11 @@ def run_ats_backtest(
         avg_edge_vb = float(value_df["edge"].dropna().mean())
         value_bet_by_season = _compute_season_breakdown(value_df)
 
-        print(f"  Hit rate: {vb_roi['hit_rate']:.4f} ({vb_roi['hit_rate']:.1%})")
-        print(f"  Net units: {vb_roi['net_units']:.2f}")
-        print(f"  ROI: {vb_roi['roi']:.4f} ({vb_roi['roi']:.1%})")
-        print(f"  Avg CLV: {avg_clv_vb:.4f}")
-        print(f"  Avg edge: {avg_edge_vb:.4f}")
+        log.info(f"  Hit rate: {vb_roi['hit_rate']:.4f} ({vb_roi['hit_rate']:.1%})")
+        log.info(f"  Net units: {vb_roi['net_units']:.2f}")
+        log.info(f"  ROI: {vb_roi['roi']:.4f} ({vb_roi['roi']:.1%})")
+        log.info(f"  Avg CLV: {avg_clv_vb:.4f}")
+        log.info(f"  Avg edge: {avg_edge_vb:.4f}")
 
         value_bet_result = {
             **vb_roi,
@@ -404,14 +407,14 @@ def run_ats_backtest(
             "avg_edge": round(avg_edge_vb, 6),
         }
     else:
-        print(f"  NOTE: Only {n_value_bets} value-bet games -- below {MIN_BACKTEST_GAMES} "
+        log.warning(f"  NOTE: Only {n_value_bets} value-bet games -- below {MIN_BACKTEST_GAMES} "
               f"game minimum. Value-bet backtest skipped for primary report.")
-        print(f"  Reporting limited metrics (no ROI guard applied to subset).")
+        log.info(f"  Reporting limited metrics (no ROI guard applied to subset).")
         if n_value_bets > 0:
             vb_correct = int(value_df["bet_correct"].sum())
             vb_hit_rate = float(vb_correct / n_value_bets)
             avg_edge_vb = float(value_df["edge"].dropna().mean())
-            print(f"  Hit rate (unreported, small sample): {vb_hit_rate:.4f}")
+            log.info(f"  Hit rate (unreported, small sample): {vb_hit_rate:.4f}")
             value_bet_result = {
                 "n_bets": int(n_value_bets),
                 "wins": int(vb_correct),
@@ -425,23 +428,23 @@ def run_ats_backtest(
             }
 
     # -- Holdout-only metrics (honest out-of-sample) -------------------------
-    print(f"\n--- Holdout Seasons Only ({test_seasons}) ---")
+    log.info(f"\n--- Holdout Seasons Only ({test_seasons}) ---")
     holdout_df = df[df["season"].astype(int).isin(test_seasons)].copy()
     if len(holdout_df) > 0:
         h_correct = int(holdout_df["bet_correct"].sum())
         h_hit_rate = float(h_correct / len(holdout_df))
-        print(f"  Holdout games: {len(holdout_df):,}")
-        print(f"  Holdout hit rate: {h_hit_rate:.4f} ({h_hit_rate:.1%})")
+        log.info(f"  Holdout games: {len(holdout_df):,}")
+        log.info(f"  Holdout hit rate: {h_hit_rate:.4f} ({h_hit_rate:.1%})")
         if len(holdout_df) >= MIN_BACKTEST_GAMES:
             holdout_roi = compute_roi_flat_110(holdout_df["bet_correct"])
-            print(f"  Holdout ROI: {holdout_roi['roi']:.4f} ({holdout_roi['roi']:.1%})")
+            log.info(f"  Holdout ROI: {holdout_roi['roi']:.4f} ({holdout_roi['roi']:.1%})")
         else:
             holdout_roi = {"roi": float("nan"), "hit_rate": h_hit_rate, "n_bets": len(holdout_df)}
-            print(f"  NOTE: {len(holdout_df)} holdout games -- ROI guard requires {MIN_BACKTEST_GAMES}.")
+            log.info(f"  NOTE: {len(holdout_df)} holdout games -- ROI guard requires {MIN_BACKTEST_GAMES}.")
     else:
         holdout_roi = {}
         h_hit_rate = float("nan")
-        print("  No holdout games found.")
+        log.info("  No holdout games found.")
 
     clv_note = (
         "CLV is 0.0 for all games. The game_ats_features.csv dataset stores only an "
@@ -488,7 +491,7 @@ def write_backtest_reports(results: dict, reports_dir: str = REPORTS_DIR) -> Non
     csv_path = os.path.join(reports_dir, "ats_backtest.csv")
     baseline_by_season = results["baseline_by_season"]
     baseline_by_season.to_csv(csv_path, index=False)
-    print(f"\nPer-season CSV saved -> {csv_path}")
+    log.info(f"\nPer-season CSV saved -> {csv_path}")
 
     # -- Human-readable summary -----------------------------------------------
     txt_path = os.path.join(reports_dir, "ats_backtest_summary.txt")
@@ -616,7 +619,7 @@ def write_backtest_reports(results: dict, reports_dir: str = REPORTS_DIR) -> Non
 
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-    print(f"Summary report saved  -> {txt_path}")
+    log.info(f"Summary report saved  -> {txt_path}")
 
 
 # -- Entry point --------------------------------------------------------------
@@ -627,19 +630,19 @@ if __name__ == "__main__":
 
     # Print key metrics to console
     baseline = results["baseline"]
-    print("\n" + "=" * 65)
-    print("KEY METRICS")
+    log.info("\n" + "=" * 65)
+    log.info("KEY METRICS")
     print("=" * 65)
-    print(f"  Total games backtested:  {results['n_backtest_games']:,}")
-    print(f"  Overall hit rate:        {baseline['hit_rate']:.4f} ({baseline['hit_rate']:.2%})")
-    print(f"  Overall ROI (-110 flat): {baseline['roi']:.4f} ({baseline['roi']:.2%})")
-    print(f"  Value-bet games flagged: {results['n_value_bet_games']:,}")
+    log.info(f"  Total games backtested:  {results['n_backtest_games']:,}")
+    log.info(f"  Overall hit rate:        {baseline['hit_rate']:.4f} ({baseline['hit_rate']:.2%})")
+    log.info(f"  Overall ROI (-110 flat): {baseline['roi']:.4f} ({baseline['roi']:.2%})")
+    log.info(f"  Value-bet games flagged: {results['n_value_bet_games']:,}")
     vb = results.get("value_bet") or {}
     if vb and "roi" in vb and not pd.isna(vb.get("roi", float("nan"))):
-        print(f"  Value-bet hit rate:      {vb['hit_rate']:.4f} ({vb['hit_rate']:.2%})")
-        print(f"  Value-bet ROI:           {vb['roi']:.4f} ({vb['roi']:.2%})")
+        log.info(f"  Value-bet hit rate:      {vb['hit_rate']:.4f} ({vb['hit_rate']:.2%})")
+        log.info(f"  Value-bet ROI:           {vb['roi']:.4f} ({vb['roi']:.2%})")
     elif vb and "hit_rate" in vb:
-        print(f"  Value-bet hit rate:      {vb['hit_rate']:.4f} (small sample -- ROI not reported)")
+        log.info(f"  Value-bet hit rate:      {vb['hit_rate']:.4f} (small sample -- ROI not reported)")
     holdout_hr = results.get("holdout_hit_rate", float("nan"))
     if not pd.isna(holdout_hr):
-        print(f"  Holdout hit rate (OOS):  {holdout_hr:.4f} ({holdout_hr:.2%})")
+        log.info(f"  Holdout hit rate (OOS):  {holdout_hr:.4f} ({holdout_hr:.2%})")

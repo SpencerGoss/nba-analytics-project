@@ -38,6 +38,9 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -372,11 +375,11 @@ def build_referee_features(
         DataFrame with referee crew features. Empty DataFrame if no referee
         data exists yet (returns correct empty schema for graceful degradation).
     """
-    print(f"Loading referee assignments from {referee_data_dir}...")
+    log.info(f"Loading referee assignments from {referee_data_dir}...")
     crew_df = _load_referee_assignments(referee_data_dir)
 
     if crew_df.empty:
-        print("  No referee CSV files found (no scrape data yet). Returning empty DataFrame.")
+        log.warning("  No referee CSV files found (no scrape data yet). Returning empty DataFrame.")
         return pd.DataFrame(columns=[
             "game_date", "game_id_bref", "home_team", "away_team",
             "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
@@ -384,7 +387,7 @@ def build_referee_features(
         ])
 
     n_games = len(crew_df)
-    print(f"  Loaded {n_games:,} game assignments from referee CSV files.")
+    log.info(f"  Loaded {n_games:,} game assignments from referee CSV files.")
 
     # Load team game logs (needed for FTA and pace per game)
     if not os.path.exists(team_game_log_path):
@@ -399,45 +402,45 @@ def build_referee_features(
         result["ref_crew_pace_impact_roll10"] = np.nan
         return result
 
-    print(f"Loading team game logs from {team_game_log_path}...")
+    log.info(f"Loading team game logs from {team_game_log_path}...")
     game_logs = pd.read_csv(team_game_log_path)
     game_logs["game_date"] = pd.to_datetime(game_logs["game_date"], format="mixed").dt.strftime("%Y-%m-%d")
 
     # Step 1: Melt referee assignments to long format (one row per game x referee)
-    print("Building long-format referee assignments...")
+    log.info("Building long-format referee assignments...")
     long_df = _melt_to_long_format(crew_df)
 
     if long_df.empty:
-        print("  No valid referee names found in CSV files. Returning empty DataFrame.")
+        log.warning("  No valid referee names found in CSV files. Returning empty DataFrame.")
         return pd.DataFrame(columns=[
             "game_date", "game_id_bref", "home_team", "away_team",
             "ref_crew_fta_rate_roll10", "ref_crew_fta_rate_roll20",
             "ref_crew_pace_impact_roll10",
         ])
 
-    print(f"  Long format: {len(long_df):,} rows ({len(long_df['referee'].unique()):,} unique referees)")
+    log.info(f"  Long format: {len(long_df):,} rows ({len(long_df['referee'].unique()):,} unique referees)")
 
     # Step 2: Join FTA and pace from team game logs
-    print("Joining game FTA and pace from team_game_logs...")
+    log.info("Joining game FTA and pace from team_game_logs...")
     long_df = _join_game_fta(long_df, game_logs)
     n_fta_matched = long_df["fta_per_game"].notna().sum()
-    print(f"  FTA join: {n_fta_matched:,} / {len(long_df):,} referee-game rows matched")
+    log.info(f"  FTA join: {n_fta_matched:,} / {len(long_df):,} referee-game rows matched")
 
     # Step 3: Compute per-referee rolling stats (shift-1 for no lookahead)
-    print("Computing per-referee rolling FTA stats...")
+    log.info("Computing per-referee rolling FTA stats...")
     long_df = _compute_referee_rolling_stats(long_df)
 
     # Step 4: Aggregate to crew level (average across 3 referees per game)
-    print("Aggregating to crew-level features...")
+    log.info("Aggregating to crew-level features...")
     result = _aggregate_crew_stats(long_df, game_logs)
 
     n_with_features = result["ref_crew_fta_rate_roll10"].notna().sum()
-    print(f"  Crew features: {n_with_features:,} / {len(result):,} games have non-NaN ref_crew_fta_rate_roll10")
+    log.info(f"  Crew features: {n_with_features:,} / {len(result):,} games have non-NaN ref_crew_fta_rate_roll10")
 
     # Save output
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     result.to_csv(output_path, index=False)
-    print(f"Saved {len(result):,} rows -> {output_path}")
+    log.info(f"Saved {len(result):,} rows -> {output_path}")
 
     return result
 
@@ -449,8 +452,8 @@ def build_referee_features(
 if __name__ == "__main__":
     df = build_referee_features()
     if df.empty:
-        print("No referee data available yet. Run bref_scraper.py to scrape historical data.")
+        log.info("No referee data available yet. Run bref_scraper.py to scrape historical data.")
     else:
-        print(df.head(10).to_string(index=False))
-        print(f"\nShape: {df.shape}")
-        print(f"NaN rates:\n{df.isna().mean()}")
+        log.debug(df.head(10).to_string(index=False))
+        log.info(f"\nShape: {df.shape}")
+        log.info(f"NaN rates:\n{df.isna().mean()}")

@@ -32,6 +32,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+log = logging.getLogger(__name__)
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -1058,21 +1060,21 @@ def _print_summary(results: List[ValidationResult]) -> None:
     n_fail = sum(1 for r in results if r.status == "FAIL")
     total = len(results)
 
-    print("\n" + "=" * 70)
-    print(f"  VALIDATION SUMMARY: {n_pass} PASS | {n_warn} WARN | {n_fail} FAIL | {total} total")
+    log.info("\n" + "=" * 70)
+    log.warning(f"  VALIDATION SUMMARY: {n_pass} PASS | {n_warn} WARN | {n_fail} FAIL | {total} total")
     print("=" * 70)
 
     if n_fail > 0:
-        print("\n  FAILURES:")
+        log.error("\n  FAILURES:")
         for r in results:
             if r.status == "FAIL":
-                print(f"    [{r.stage}] {r.check}: {r.message}")
+                log.info(f"    [{r.stage}] {r.check}: {r.message}")
 
     if n_warn > 0:
-        print("\n  WARNINGS:")
+        log.warning("\n  WARNINGS:")
         for r in results:
             if r.status == "WARN":
-                print(f"    [{r.stage}] {r.check}: {r.message}")
+                log.info(f"    [{r.stage}] {r.check}: {r.message}")
 
     print()
 
@@ -1118,10 +1120,10 @@ def main() -> None:
     if args.season is not None:
         kwargs["season"] = args.season
 
-    print(f"NBA Data Integrity Validator")
-    print(f"Stage: {args.stage} | Strict: {args.strict}")
+    log.info(f"NBA Data Integrity Validator")
+    log.info(f"Stage: {args.stage} | Strict: {args.strict}")
     if args.season:
-        print(f"Season: {args.season}")
+        log.info(f"Season: {args.season}")
     print("-" * 70)
 
     try:
@@ -1132,7 +1134,7 @@ def main() -> None:
         sys.exit(1 if n_fail > 0 else 0)
 
     except ValidationError as exc:
-        print(f"\nValidationError: {exc}")
+        log.error(f"\nValidationError: {exc}")
         sys.exit(1)
 
 

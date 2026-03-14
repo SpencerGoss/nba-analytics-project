@@ -31,6 +31,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -149,21 +152,22 @@ def build_history() -> list[dict]:
 
 
 def main() -> None:
-    print("Building accuracy history...")
+    log.info("Building accuracy history...")
     history = build_history()
-    print(f"  {len(history)} entries ({sum(1 for r in history if r.get('backtest'))} synthetic backtest, "
+    log.info(f"  {len(history)} entries ({sum(1 for r in history if r.get('backtest'))} synthetic backtest, "
           f"{sum(1 for r in history if not r.get('backtest'))} live)")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
         json.dump(history, fh, indent=2, ensure_ascii=False)
-    print(f"  Written -> {OUT_JSON}")
+    log.info(f"  Written -> {OUT_JSON}")
 
     if history:
         last = history[-1]
-        print(f"  Latest: {last['date']}  rolling={last['rolling_accuracy']:.1%}  "
+        log.info(f"  Latest: {last['date']}  rolling={last['rolling_accuracy']:.1%}  "
               f"cumulative={last['cumulative_games']} games")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

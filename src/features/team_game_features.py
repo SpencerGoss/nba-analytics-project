@@ -39,6 +39,9 @@ from src.features.era_labels import label_eras
 from src.features.lineup_features import build_lineup_features
 from src.features.elo import build_elo_ratings
 from src.features.hustle_features import build_hustle_features
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -387,7 +390,7 @@ def build_team_game_features(
     Returns:
         pd.DataFrame with one row per team-game.
     """
-    print("Loading team_game_logs...")
+    log.info("Loading team_game_logs...")
     df = pd.read_csv(data_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values(["team_id", "game_date"]).reset_index(drop=True)
@@ -397,7 +400,7 @@ def build_team_game_features(
     df["opponent_abbr"] = _extract_opponent_abbr(df["matchup"])
 
     # -- Travel distance and timezone-change features (Phase 4, FR-3.2/FR-3.3) --
-    print("Computing travel distance features...")
+    log.info("Computing travel distance features...")
     _arena_lat = {k: v[0] for k, v in ARENA_COORDS.items()}
     _arena_lon = {k: v[1] for k, v in ARENA_COORDS.items()}
 
@@ -439,8 +442,8 @@ def build_team_game_features(
                            "_prev_lat", "_prev_lon", "_prev_tz"])
 
     n_cross = df["cross_country_travel"].sum()
-    print(f"  travel_miles: min={df['travel_miles'].min():.0f}mi max={df['travel_miles'].max():.0f}mi")
-    print(f"  cross_country_travel: {n_cross:,} games flagged ({n_cross/len(df):.1%})")
+    log.info(f"  travel_miles: min={df['travel_miles'].min():.0f}mi max={df['travel_miles'].max():.0f}mi")
+    log.info(f"  cross_country_travel: {n_cross:,} games flagged ({n_cross/len(df):.1%})")
 
     df["win"]           = (df["wl"] == "W").astype(int)
 
@@ -460,7 +463,7 @@ def build_team_game_features(
             df["fg3a"] / df["fga"].replace(0, np.nan)
         ).fillna(0)
     else:
-        print("  Warning: fg3a or fga not in data - three_rate features will be NaN")
+        log.warning("  Warning: fg3a or fga not in data - three_rate features will be NaN")
         df["three_rate_raw"] = np.nan
 
     # ── Days rest (days since last game for this team) ────────────────────────
@@ -475,7 +478,7 @@ def build_team_game_features(
     df["is_back_to_back"] = (df["days_rest"] <= 1).astype(int)
 
     # ── Games in last 5 / 7 calendar days (fatigue load) ─────────────────────
-    print("Computing fatigue load features...")
+    log.info("Computing fatigue load features...")
     for window_days in [5, 7]:
         col = f"games_last_{window_days}_days"
         df[col] = (
@@ -489,7 +492,7 @@ def build_team_game_features(
     df["season_game_num"] = df.groupby(["team_id", "season"]).cumcount()
 
     # ── Rolling stats per team ────────────────────────────────────────────────
-    print("Computing rolling features...")
+    log.info("Computing rolling features...")
 
     for window in roll_windows:
         group = df.groupby("team_id", group_keys=False)
@@ -535,14 +538,18 @@ def build_team_game_features(
 
     # ── Strength of schedule ──────────────────────────────────────────────────
     # For each game, look up the opponent's cumulative win% entering that game.
-    print("Computing strength of schedule...")
+    log.info("Computing strength of schedule...")
     opp_strength = df[["team_abbreviation", "game_id", "cum_win_pct"]].copy()
     opp_strength.columns = ["opponent_abbr", "game_id", "opp_pre_game_win_pct"]
 
     _n_before_sos = len(df)
     df = df.merge(opp_strength, on=["opponent_abbr", "game_id"], how="left")
     _n_after_sos = len(df)
-    print(f"  SOS join: {_n_before_sos:,} rows -> {_n_after_sos:,} rows (dropped {_n_before_sos - _n_after_sos:,})")
+    log.info(f"  SOS join: {_n_before_sos:,} rows -> {_n_after_sos:,} rows (dropped {_n_before_sos - _n_after_sos:,})")
+    if _n_after_sos < _n_before_sos * 0.9:
+        log.warning(f"SOS merge dropped {_n_before_sos - _n_after_sos} rows ({_n_before_sos} -> {_n_after_sos})")
+    if _n_after_sos > _n_before_sos:
+        log.warning(f"SOS merge duplicated rows ({_n_before_sos} -> {_n_after_sos}) -- possible many-to-many join")
 
     sos_group = df.groupby("team_id", group_keys=False)
     for window in [10, 20]:
@@ -555,7 +562,7 @@ def build_team_game_features(
     # Use a single expanded self-join keyed on (opponent_abbr, game_id) to get
     # the opposing team's full box score columns for both style mismatch features
     # and pace-normalized advanced metric computation.
-    print("Computing style mismatch features...")
+    log.info("Computing style mismatch features...")
     opp_box = df[[
         "team_abbreviation", "game_id",
         "pts", "fga", "fg3m", "fgm", "oreb", "tov", "fta", "dreb",
@@ -570,7 +577,11 @@ def build_team_game_features(
     _n_before_opp = len(df)
     df = df.merge(opp_box, on=["opponent_abbr", "game_id"], how="left")
     _n_after_opp = len(df)
-    print(f"  Opponent box join: {_n_before_opp:,} rows -> {_n_after_opp:,} rows (dropped {_n_before_opp - _n_after_opp:,})")
+    log.info(f"  Opponent box join: {_n_before_opp:,} rows -> {_n_after_opp:,} rows (dropped {_n_before_opp - _n_after_opp:,})")
+    if _n_after_opp < _n_before_opp * 0.9:
+        log.warning(f"Opponent box merge dropped {_n_before_opp - _n_after_opp} rows ({_n_before_opp} -> {_n_after_opp})")
+    if _n_after_opp > _n_before_opp:
+        log.warning(f"Opponent box merge duplicated rows ({_n_before_opp} -> {_n_after_opp}) -- possible many-to-many join")
 
     if df["opp_fga"].notna().sum() == 0:
         raise ValueError(
@@ -622,7 +633,7 @@ def build_team_game_features(
     df["rebounding_edge"]      = df["oreb_roll20"] - df["opp_dreb_roll20"]
 
     # ── Advanced metric rolling features ──────────────────────────────────────
-    print("Computing advanced metric rolling features...")
+    log.info("Computing advanced metric rolling features...")
     adv_group = df.groupby("team_id", group_keys=False)
     for window in roll_windows:
         # For window=3, only compute key advanced stats
@@ -641,13 +652,13 @@ def build_team_game_features(
     for stat in ADV_ROLL_STATS:
         col = f"{stat}_roll20"
         nn = df[col].notna().mean()
-        print(f"  {col}: {nn:.1%} non-null")
+        log.info(f"  {col}: {nn:.1%} non-null")
 
     # ── Four Factors composite (Dean Oliver weights, per-team rolling) ─────
     # Combines efg, tov_pct, oreb_pct, ft_rate into a single efficiency score.
     # Computed from per-game raw metrics, then shift(1) + rolling to avoid leakage.
     # Uses _roll suffix so diff_ columns are auto-captured by build_matchup_dataset.
-    print("Computing Four Factors composite rolling features...")
+    log.info("Computing Four Factors composite rolling features...")
     df["four_factors_game"] = (
         0.40 * df["efg_game"].fillna(0)
         + 0.25 * (1 - df["tov_pct_game"].fillna(0))
@@ -665,10 +676,10 @@ def build_team_game_features(
             include_groups=False,
         ).values
     nn_ff = df["four_factors_roll20"].notna().mean()
-    print(f"  four_factors_roll20: {nn_ff:.1%} non-null")
+    log.info(f"  four_factors_roll20: {nn_ff:.1%} non-null")
 
     # ── EWMA features (key stats only) ─────────────────────────────────────
-    print("Computing EWMA features...")
+    log.info("Computing EWMA features...")
     ewma_group = df.groupby("team_id", group_keys=False)
     for span in EWMA_SPANS:
         for src_col, out_prefix in EWMA_STATS.items():
@@ -680,7 +691,7 @@ def build_team_game_features(
                 ).values
 
     # ── Win/loss streak (per team, per season, shift-1) ────────────────────
-    print("Computing streak feature...")
+    log.info("Computing streak feature...")
     df["streak"] = (
         df.groupby(["team_id", "season"], group_keys=False)
         .apply(lambda g: _compute_streak(g), include_groups=False)
@@ -688,7 +699,7 @@ def build_team_game_features(
     )
 
     # ── Trend features (rolling linear regression slope) ──────────────────────
-    print("Computing trend & volatility features...")
+    log.info("Computing trend & volatility features...")
 
     for stat_col, feat_name in [
         ("plus_minus", "net_rating_trend_5"),
@@ -721,7 +732,7 @@ def build_team_game_features(
     df["net_rating_std_10"] = df["net_rating_std_10"].fillna(0)
 
     # ── Home/away split net rating (season-to-date) ───────────────────────────
-    print("Computing home/away net rating splits...")
+    log.info("Computing home/away net rating splits...")
     home_ratings = []
     away_ratings = []
 
@@ -738,7 +749,7 @@ def build_team_game_features(
     df = df.copy()
 
     # ── Motivation / Psychological features ───────────────────────────────────
-    print("Computing motivation & psychological features...")
+    log.info("Computing motivation & psychological features...")
 
     # Revenge game: 1 if team lost their most recent prior matchup vs this opponent
     # Sort by (team_id, opponent_abbr, game_date) then shift within matchup pairs
@@ -767,7 +778,7 @@ def build_team_game_features(
 
     # Close playoff race: 1 if within 2 seeds of 6th or 10th in conference
     if os.path.exists(standings_path):
-        print("Computing close playoff race flags...")
+        log.info("Computing close playoff race flags...")
         try:
             conf_df  = pd.read_csv(standings_path, usecols=["team_id", "conference"])
             conf_map = (
@@ -777,10 +788,10 @@ def build_team_game_features(
             )
             df["close_playoff_race"] = _compute_close_playoff_race(df, conf_map)
         except Exception as e:
-            print(f"  Warning: could not compute close_playoff_race ({e}). Defaulting to 0.")
+            log.error(f"  Warning: could not compute close_playoff_race ({e}). Defaulting to 0.")
             df["close_playoff_race"] = 0
     else:
-        print(f"  Warning: {standings_path} not found - close_playoff_race defaulted to 0")
+        log.warning(f"  Warning: {standings_path} not found - close_playoff_race defaulted to 0")
         df["close_playoff_race"] = 0
 
     # ── Drop raw game stats (they'd leak the result) ──────────────────────────
@@ -828,13 +839,13 @@ def build_team_game_features(
     output = df[id_cols + context_cols + roll_cols].copy()
 
     # ── Add era labels ────────────────────────────────────────────────────────
-    print("Labeling eras...")
+    log.info("Labeling eras...")
     output = label_eras(output, season_col="season")
 
     # ── Join injury proxy features ────────────────────────────────────────────
     try:
         from src.features.injury_proxy import build_injury_proxy_features
-        print("Building injury proxy features...")
+        log.info("Building injury proxy features...")
         injury_df = build_injury_proxy_features()
 
         # Normalize join keys on BOTH sides before merging to prevent silent
@@ -844,12 +855,15 @@ def build_team_game_features(
         injury_df["game_id"] = injury_df["game_id"].astype(str).str.strip()
         injury_df["team_id"] = injury_df["team_id"].astype(int)
 
+        _n_before_injury = len(output)
         output = output.merge(injury_df, on=["team_id", "game_id"], how="left")
+        if len(output) > _n_before_injury:
+            log.warning(f"Injury proxy merge duplicated rows ({_n_before_injury} -> {len(output)}) -- possible many-to-many join")
 
         # Assert the join actually matched rows — zero matches means a key format
         # mismatch slipped through normalization (NFR-1 guard).
         n_matched = output["missing_minutes"].notna().sum()
-        print(f"  Injury join: {n_matched:,} rows matched out of {len(output):,}")
+        log.info(f"  Injury join: {n_matched:,} rows matched out of {len(output):,}")
         if not injury_df.empty:
             assert n_matched > 0, (
                 "Injury proxy join matched zero rows — game_id or team_id type mismatch. "
@@ -861,9 +875,9 @@ def build_team_game_features(
         output["rotation_availability"] = output["rotation_availability"].fillna(1.0)
         output["star_player_out"]       = output["star_player_out"].fillna(0)
         output["n_missing_rotation"]    = output["n_missing_rotation"].fillna(0)
-        print(f"  Injury features joined: {injury_df.columns.tolist()}")
+        log.info(f"  Injury features joined: {injury_df.columns.tolist()}")
     except Exception as e:
-        print(f"  Warning: could not build injury proxy features ({e}). Skipping.")
+        log.error(f"  Warning: could not build injury proxy features ({e}). Skipping.")
 
     # ── Join referee features ─────────────────────────────────────────────────
     # Referee features are per-game (same crew officiates both home and away).
@@ -873,7 +887,7 @@ def build_team_game_features(
     # zero would inject false signal for pre-scrape seasons; Pitfall 6, RESEARCH.md).
     try:
         from src.features.referee_features import build_referee_features
-        print("Building referee features...")
+        log.info("Building referee features...")
         ref_df = build_referee_features()
 
         if not ref_df.empty:
@@ -905,26 +919,29 @@ def build_team_game_features(
                 output["opponent_abbr"],
             )
 
+            _n_before_ref = len(output)
             output = output.merge(
                 ref_home_merge.rename(columns={"join_team": "home_abbr_for_join"}),
                 on=["game_date_str", "home_abbr_for_join"],
                 how="left",
                 suffixes=("", "_ref"),
             )
+            if len(output) > _n_before_ref:
+                log.warning(f"Referee merge duplicated rows ({_n_before_ref} -> {len(output)}) -- possible many-to-many join")
             # Drop the temporary join key columns
             output = output.drop(columns=["home_abbr_for_join", "game_date_str"])
 
             n_matched = output["ref_crew_fta_rate_roll10"].notna().sum()
-            print(f"  Referee feature join: {n_matched:,} rows matched out of {len(output):,}")
+            log.info(f"  Referee feature join: {n_matched:,} rows matched out of {len(output):,}")
         else:
-            print("  Referee features: no scrape data yet (empty DataFrame). Columns will be absent.")
+            log.warning("  Referee features: no scrape data yet (empty DataFrame). Columns will be absent.")
     except Exception as e:
-        print(f"  Warning: could not build referee features ({e}). Skipping.")
+        log.error(f"  Warning: could not build referee features ({e}). Skipping.")
 
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     output.to_csv(output_path, index=False)
-    print(f"Saved {len(output):,} rows x {len(output.columns)} cols -> {output_path}")
+    log.info(f"Saved {len(output):,} rows x {len(output.columns)} cols -> {output_path}")
     return output
 
 
@@ -971,7 +988,7 @@ def build_matchup_dataset(
     The differential features give the model the direct gap between teams
     rather than requiring it to infer the gap from two separate columns.
     """
-    print("Loading team game features...")
+    log.info("Loading team game features...")
     df = pd.read_csv(features_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
 
@@ -1043,15 +1060,17 @@ def build_matchup_dataset(
         .merge(home_feat, on="game_id", how="inner")
         .merge(away_feat, on="game_id", how="inner")
     )
-    print(f"  Home/away matchup join: {_n_meta:,} games -> {len(matchup):,} rows (dropped {_n_meta - len(matchup):,})")
+    log.info(f"  Home/away matchup join: {_n_meta:,} games -> {len(matchup):,} rows (dropped {_n_meta - len(matchup):,})")
+    if len(matchup) < _n_meta * 0.9:
+        log.warning(f"Matchup merge dropped {_n_meta - len(matchup)} rows ({_n_meta} -> {len(matchup)})")
 
     # -- Season-segment context (Phase 4, FR-3.4) --
     matchup["season_month"] = pd.to_datetime(matchup["game_date"], format="mixed").dt.month
-    print(f"  season_month: {matchup['season_month'].nunique()} unique months, "
+    log.info(f"  season_month: {matchup['season_month'].nunique()} unique months, "
           f"range {int(matchup['season_month'].min())}-{int(matchup['season_month'].max())}")
 
     # ── Cross-matchup offensive/defensive interaction ─────────────────────────
-    print("Computing cross-matchup interaction features...")
+    log.info("Computing cross-matchup interaction features...")
     if "home_off_rtg_game_roll20" in matchup.columns and "away_def_rtg_game_roll20" in matchup.columns:
         matchup["home_off_vs_away_def_20"] = (
             matchup["home_off_rtg_game_roll20"] - matchup["away_def_rtg_game_roll20"]
@@ -1064,7 +1083,7 @@ def build_matchup_dataset(
         )
 
     # ── Rest x Travel fatigue interaction ──────────────────────────────────
-    print("Computing fatigue compound features...")
+    log.info("Computing fatigue compound features...")
     if "home_is_back_to_back" in matchup.columns and "home_travel_miles" in matchup.columns:
         matchup["home_fatigue_compound"] = (
             matchup["home_is_back_to_back"] * matchup["home_travel_miles"]
@@ -1079,7 +1098,7 @@ def build_matchup_dataset(
     # ── Lineup efficiency features (Phase 8, FEAT-02) ─────────────────────────
     # Lineup data exists for 2023-24 and 2024-25 only. Left join so earlier
     # seasons simply receive 0.0 (neutral / unknown) values.
-    print("Joining lineup efficiency features...")
+    log.info("Joining lineup efficiency features...")
     lineup_cols = [
         "top1_lineup_net_rtg", "top3_lineup_net_rtg", "avg_lineup_net_rtg",
         "lineup_net_rtg_std", "best_off_rating", "best_def_rating", "n_lineups",
@@ -1098,8 +1117,11 @@ def build_matchup_dataset(
             home_ids.columns = ["game_id", "home_team_id_for_join"]
             away_ids = away[["game_id", "team_id"]].copy()
             away_ids.columns = ["game_id", "away_team_id_for_join"]
+            _n_before_lineup_ids = len(matchup)
             matchup = matchup.merge(home_ids, on="game_id", how="left")
             matchup = matchup.merge(away_ids, on="game_id", how="left")
+            if len(matchup) > _n_before_lineup_ids:
+                log.warning(f"Lineup team_id merge duplicated rows ({_n_before_lineup_ids} -> {len(matchup)}) -- possible many-to-many join")
 
             # Join home lineup features
             home_lineup = lineup_feat[["season", "team_id"] + lineup_cols].copy()
@@ -1107,9 +1129,12 @@ def build_matchup_dataset(
                 ["season", "home_team_id_for_join"]
                 + [f"home_{c}" for c in lineup_cols]
             )
+            _n_before_home_lineup = len(matchup)
             matchup = matchup.merge(
                 home_lineup, on=["season", "home_team_id_for_join"], how="left"
             )
+            if len(matchup) > _n_before_home_lineup:
+                log.warning(f"Home lineup merge duplicated rows ({_n_before_home_lineup} -> {len(matchup)}) -- possible many-to-many join")
 
             # Join away lineup features
             away_lineup = lineup_feat[["season", "team_id"] + lineup_cols].copy()
@@ -1117,9 +1142,12 @@ def build_matchup_dataset(
                 ["season", "away_team_id_for_join"]
                 + [f"away_{c}" for c in lineup_cols]
             )
+            _n_before_away_lineup = len(matchup)
             matchup = matchup.merge(
                 away_lineup, on=["season", "away_team_id_for_join"], how="left"
             )
+            if len(matchup) > _n_before_away_lineup:
+                log.warning(f"Away lineup merge duplicated rows ({_n_before_away_lineup} -> {len(matchup)}) -- possible many-to-many join")
 
             # Drop the temporary join key columns
             matchup = matchup.drop(
@@ -1140,26 +1168,24 @@ def build_matchup_dataset(
             n_recent = recent_mask.sum()
             if n_recent > 0:
                 nn_rate = matchup.loc[recent_mask, "home_avg_lineup_net_rtg"].notna().mean()
-                print(
-                    f"  Lineup features: {len(lineup_cols)*2} new columns added. "
+                log.info(f"  Lineup features: {len(lineup_cols)*2} new columns added. "
                     f"Non-null rate for recent seasons: {nn_rate:.1%} "
-                    f"({n_recent:,} rows)"
-                )
+                    f"({n_recent:,} rows)")
         else:
-            print("  Lineup features: empty DataFrame — skipping join.")
+            log.warning("  Lineup features: empty DataFrame — skipping join.")
             for side in ["home", "away"]:
                 for col in lineup_cols:
                     matchup[f"{side}_{col}"] = 0.0
 
     except Exception as e:
-        print(f"  Warning: could not build lineup features ({e}). Defaulting to 0.0.")
+        log.error(f"  Warning: could not build lineup features ({e}). Defaulting to 0.0.")
         for side in ["home", "away"]:
             for col in lineup_cols:
                 matchup[f"{side}_{col}"] = 0.0
 
 
     # ── Elo ratings (pre-game) ──────────────────────────────────────────────────
-    print("Joining Elo ratings...")
+    log.info("Joining Elo ratings...")
     try:
         elo_df = build_elo_ratings()
         elo_df["game_id"] = elo_df["game_id"].astype(str)
@@ -1174,31 +1200,41 @@ def build_matchup_dataset(
         # Merge home Elo
         home_elo = elo_df[["game_id", "team_id", "elo_pre", "elo_expected_win_prob"]].copy()
         home_elo.columns = ["game_id", "team_id", "home_elo", "elo_expected_win_prob"]
+        _n_before_home_elo_filter = len(home_elo)
         home_elo = home_elo.merge(home_ids_elo, on=["game_id", "team_id"], how="inner")
+        if len(home_elo) < _n_before_home_elo_filter * 0.9:
+            log.warning(f"Home Elo filter merge dropped {_n_before_home_elo_filter - len(home_elo)} rows ({_n_before_home_elo_filter} -> {len(home_elo)})")
+        _n_before_home_elo = len(matchup)
         matchup = matchup.merge(
             home_elo[["game_id", "home_elo", "elo_expected_win_prob"]],
             on="game_id", how="left",
         )
+        if len(matchup) > _n_before_home_elo:
+            log.warning(f"Home Elo merge duplicated rows ({_n_before_home_elo} -> {len(matchup)}) -- possible many-to-many join")
 
         # Merge away Elo
         away_elo = elo_df[["game_id", "team_id", "elo_pre"]].copy()
         away_elo.columns = ["game_id", "team_id", "away_elo"]
+        _n_before_away_elo_filter = len(away_elo)
         away_elo = away_elo.merge(away_ids_elo, on=["game_id", "team_id"], how="inner")
+        if len(away_elo) < _n_before_away_elo_filter * 0.9:
+            log.warning(f"Away Elo filter merge dropped {_n_before_away_elo_filter - len(away_elo)} rows ({_n_before_away_elo_filter} -> {len(away_elo)})")
+        _n_before_away_elo = len(matchup)
         matchup = matchup.merge(
             away_elo[["game_id", "away_elo"]], on="game_id", how="left",
         )
+        if len(matchup) > _n_before_away_elo:
+            log.warning(f"Away Elo merge duplicated rows ({_n_before_away_elo} -> {len(matchup)}) -- possible many-to-many join")
 
         matchup["diff_elo"] = matchup["home_elo"] - matchup["away_elo"]
         matchup["home_elo"] = matchup["home_elo"].fillna(1500.0)
         matchup["away_elo"] = matchup["away_elo"].fillna(1500.0)
         matchup["diff_elo"] = matchup["diff_elo"].fillna(0.0)
         matchup["elo_expected_win_prob"] = matchup["elo_expected_win_prob"].fillna(0.5)
-        print(
-            f"  Elo features: home_elo, away_elo, diff_elo, elo_expected_win_prob added. "
-            f"Non-null rate: {matchup['home_elo'].notna().mean():.1%}"
-        )
+        log.info(f"  Elo features: home_elo, away_elo, diff_elo, elo_expected_win_prob added. "
+            f"Non-null rate: {matchup['home_elo'].notna().mean():.1%}")
     except Exception as e:
-        print(f"  Warning: could not build Elo ratings ({e}). Defaulting to 1500.")
+        log.error(f"  Warning: could not build Elo ratings ({e}). Defaulting to 1500.")
         matchup["home_elo"] = 1500.0
         matchup["away_elo"] = 1500.0
         matchup["diff_elo"] = 0.0
@@ -1208,7 +1244,7 @@ def build_matchup_dataset(
     # Hustle data available from 2015-16 onward. Left join so earlier seasons
     # receive 0.0 (neutral / unknown). These are season-level aggregates, not
     # game-level, so no shift(1) is needed.
-    print("Joining hustle stats features...")
+    log.info("Joining hustle stats features...")
     hustle_cols = [
         "contested_shots", "deflections", "screen_assists",
         "loose_balls_recovered", "charges_drawn", "box_outs", "hustle_index",
@@ -1229,8 +1265,11 @@ def build_matchup_dataset(
             away_ids_h["game_id"] = away_ids_h["game_id"].astype(str)
             away_ids_h.columns = ["game_id", "away_team_id_hustle"]
             matchup["game_id"] = matchup["game_id"].astype(str)
+            _n_before_hustle_ids = len(matchup)
             matchup = matchup.merge(home_ids_h, on="game_id", how="left")
             matchup = matchup.merge(away_ids_h, on="game_id", how="left")
+            if len(matchup) > _n_before_hustle_ids:
+                log.warning(f"Hustle team_id merge duplicated rows ({_n_before_hustle_ids} -> {len(matchup)}) -- possible many-to-many join")
 
             # Join home hustle features
             home_hustle = hustle_df[["season", "team_id"] + hustle_cols].copy()
@@ -1238,9 +1277,12 @@ def build_matchup_dataset(
                 ["season", "home_team_id_hustle"]
                 + [f"home_{c}" for c in hustle_cols]
             )
+            _n_before_home_hustle = len(matchup)
             matchup = matchup.merge(
                 home_hustle, on=["season", "home_team_id_hustle"], how="left"
             )
+            if len(matchup) > _n_before_home_hustle:
+                log.warning(f"Home hustle merge duplicated rows ({_n_before_home_hustle} -> {len(matchup)}) -- possible many-to-many join")
 
             # Join away hustle features
             away_hustle = hustle_df[["season", "team_id"] + hustle_cols].copy()
@@ -1248,9 +1290,12 @@ def build_matchup_dataset(
                 ["season", "away_team_id_hustle"]
                 + [f"away_{c}" for c in hustle_cols]
             )
+            _n_before_away_hustle = len(matchup)
             matchup = matchup.merge(
                 away_hustle, on=["season", "away_team_id_hustle"], how="left"
             )
+            if len(matchup) > _n_before_away_hustle:
+                log.warning(f"Away hustle merge duplicated rows ({_n_before_away_hustle} -> {len(matchup)}) -- possible many-to-many join")
 
             # Drop temporary join keys
             matchup = matchup.drop(
@@ -1265,25 +1310,23 @@ def build_matchup_dataset(
                         matchup[full] = matchup[full].fillna(0.0)
 
             nn_rate = matchup["home_hustle_index"].ne(0).mean()
-            print(
-                f"  Hustle features: {len(hustle_cols)*2} new columns added. "
-                f"Non-zero rate: {nn_rate:.1%}"
-            )
+            log.info(f"  Hustle features: {len(hustle_cols)*2} new columns added. "
+                f"Non-zero rate: {nn_rate:.1%}")
         else:
-            print("  Hustle features: empty DataFrame -- skipping join.")
+            log.warning("  Hustle features: empty DataFrame -- skipping join.")
             for side in ["home", "away"]:
                 for col in hustle_cols:
                     matchup[f"{side}_{col}"] = 0.0
 
     except Exception as e:
-        print(f"  Warning: could not build hustle features ({e}). Defaulting to 0.0.")
+        log.error(f"  Warning: could not build hustle features ({e}). Defaulting to 0.0.")
         for side in ["home", "away"]:
             for col in hustle_cols:
                 matchup[f"{side}_{col}"] = 0.0
 
     # ── Differential features ─────────────────────────────────────────────────
     # Explicit home-minus-away gaps for the most predictive stats.
-    print("Computing matchup differential features...")
+    log.info("Computing matchup differential features...")
 
     diff_stats = [
         # Core rolling performance
@@ -1350,7 +1393,7 @@ def build_matchup_dataset(
     # ── Elo x Context interaction features ────────────────────────────────────
     # Elo advantages are amplified/diminished by rest, fatigue, and momentum.
     # These capture non-linear synergies between rating gap and situational factors.
-    print("Computing Elo x context interaction features...")
+    log.info("Computing Elo x context interaction features...")
     if "diff_elo" in matchup.columns:
         if "diff_days_rest" in matchup.columns:
             matchup["elo_x_rest"] = matchup["diff_elo"] * matchup["diff_days_rest"]
@@ -1362,18 +1405,18 @@ def build_matchup_dataset(
             1 for c in ["elo_x_rest", "elo_x_b2b", "elo_x_streak"]
             if c in matchup.columns
         )
-        print(f"  Added {n_elo_interactions} Elo x context interaction features")
+        log.info(f"  Added {n_elo_interactions} Elo x context interaction features")
 
     # Four Factors differential composite (FR-2.4)
     matchup["diff_four_factors_composite"] = _four_factors_composite(
         matchup, FOUR_FACTORS_WEIGHTS
     )
-    print(f"  Four Factors composite: {matchup['diff_four_factors_composite'].notna().sum():,} non-null values")
+    log.info(f"  Four Factors composite: {matchup['diff_four_factors_composite'].notna().sum():,} non-null values")
 
     matchup = matchup.dropna(subset=["home_win"])
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     matchup.to_csv(output_path, index=False)
-    print(f"Saved {len(matchup):,} matchup rows x {len(matchup.columns)} cols -> {output_path}")
+    log.info(f"Saved {len(matchup):,} matchup rows x {len(matchup.columns)} cols -> {output_path}")
     return matchup
 
 
@@ -1382,4 +1425,4 @@ def build_matchup_dataset(
 if __name__ == "__main__":
     build_team_game_features()
     build_matchup_dataset()
-    print("\nTeam game feature engineering complete.")
+    log.info("\nTeam game feature engineering complete.")

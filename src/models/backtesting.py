@@ -49,6 +49,9 @@ from sklearn.metrics import (
     mean_absolute_error, root_mean_squared_error,
     brier_score_loss,
 )
+import logging
+
+log = logging.getLogger(__name__)
 
 # -- Config ---------------------------------------------------------------------
 
@@ -155,7 +158,7 @@ def run_game_outcome_backtest(
     Returns a DataFrame indexed by test season.
     """
     print("=" * 65)
-    print("WALK-FORWARD BACKTEST -- Game Outcome Model")
+    log.info("WALK-FORWARD BACKTEST -- Game Outcome Model")
     print("=" * 65)
 
     df = pd.read_csv(matchup_path)
@@ -169,12 +172,12 @@ def run_game_outcome_backtest(
     feat_cols   = _get_feature_cols_game(df)
     results     = []
 
-    print(f"\nTotal seasons available : {len(seasons)}  ({seasons[0]} -> {seasons[-1]})")
-    print(f"Minimum training window : {min_train} seasons")
-    print(f"Test seasons            : {len(seasons) - min_train}")
-    print(f"Features                : {len(feat_cols)}")
+    log.info(f"\nTotal seasons available : {len(seasons)}  ({seasons[0]} -> {seasons[-1]})")
+    log.info(f"Minimum training window : {min_train} seasons")
+    log.info(f"Test seasons            : {len(seasons) - min_train}")
+    log.info(f"Features                : {len(feat_cols)}")
     print()
-    print(f"{'Season':<10} {'Train Games':>12} {'Test Games':>11} "
+    log.info(f"{'Season':<10} {'Train Games':>12} {'Test Games':>11} "
           f"{'Accuracy':>10} {'ROC-AUC':>9} {'Brier':>8}")
     print("-" * 65)
 
@@ -214,22 +217,22 @@ def run_game_outcome_backtest(
             "brier_score":  round(brier, 4),
         })
 
-        print(f"{test_season:<10} {len(train):>12,} {len(test):>11,} "
+        log.info(f"{test_season:<10} {len(train):>12,} {len(test):>11,} "
               f"{acc:>10.3%} {auc:>9.4f} {brier:>8.4f}")
 
     results_df = pd.DataFrame(results)
 
     # -- Summary stats ----------------------------------------------------------
-    print("\n-- Summary -----------------------------------------------------")
-    print(f"  Mean accuracy  : {results_df['accuracy'].mean():.3%}  "
+    log.info("\n-- Summary -----------------------------------------------------")
+    log.info(f"  Mean accuracy  : {results_df['accuracy'].mean():.3%}  "
           f"(std = {results_df['accuracy'].std():.4f})")
-    print(f"  Mean ROC-AUC   : {results_df['roc_auc'].mean():.4f}  "
+    log.info(f"  Mean ROC-AUC   : {results_df['roc_auc'].mean():.4f}  "
           f"(std = {results_df['roc_auc'].std():.4f})")
-    print(f"  Mean Brier     : {results_df['brier_score'].mean():.4f}  "
+    log.info(f"  Mean Brier     : {results_df['brier_score'].mean():.4f}  "
           f"(std = {results_df['brier_score'].std():.4f})")
-    print(f"  Best season    : {results_df.loc[results_df['accuracy'].idxmax(), 'test_season']}  "
+    log.info(f"  Best season    : {results_df.loc[results_df['accuracy'].idxmax(), 'test_season']}  "
           f"({results_df['accuracy'].max():.3%})")
-    print(f"  Worst season   : {results_df.loc[results_df['accuracy'].idxmin(), 'test_season']}  "
+    log.info(f"  Worst season   : {results_df.loc[results_df['accuracy'].idxmin(), 'test_season']}  "
           f"({results_df['accuracy'].min():.3%})")
 
     # -- Era-level breakdown ----------------------------------------------------
@@ -243,14 +246,14 @@ def run_game_outcome_backtest(
             results_df.at[idx, "era_num"]  = era["era_num"]
             results_df.at[idx, "era_name"] = era["era_name"]
 
-        print("\n-- Accuracy by Era ---------------------------------------------")
+        log.info("\n-- Accuracy by Era ---------------------------------------------")
         era_summary = (
             results_df.groupby(["era_num", "era_name"])["accuracy"]
             .agg(["mean", "std", "count"])
             .rename(columns={"mean": "avg_acc", "std": "std_acc", "count": "n_seasons"})
         )
         for (era_num, era_name), row in era_summary.iterrows():
-            print(f"  Era {era_num} -- {era_name:<25}: "
+            log.info(f"  Era {era_num} -- {era_name:<25}: "
                   f"{row['avg_acc']:.3%}  (std={row['std_acc']:.4f}, n={int(row['n_seasons'])})")
     except Exception:
         pass
@@ -259,7 +262,7 @@ def run_game_outcome_backtest(
     os.makedirs(reports_dir, exist_ok=True)
     out_path = os.path.join(reports_dir, "backtest_game_outcome.csv")
     results_df.to_csv(out_path, index=False)
-    print(f"\nResults saved -> {out_path}")
+    log.info(f"\nResults saved -> {out_path}")
 
     return results_df
 
@@ -284,8 +287,8 @@ def run_player_model_backtest(
     Returns:
         dict of {target: results_DataFrame}
     """
-    print("\n" + "=" * 65)
-    print("WALK-FORWARD BACKTEST -- Player Performance Models")
+    log.info("\n" + "=" * 65)
+    log.info("WALK-FORWARD BACKTEST -- Player Performance Models")
     print("=" * 65)
 
     df = pd.read_csv(player_path)
@@ -297,15 +300,15 @@ def run_player_model_backtest(
     # Only backtest from start_season forward
     backtest_seasons = [s for s in all_seasons if s >= start_season]
 
-    print(f"\nBacktest seasons: {backtest_seasons[0]} -> {backtest_seasons[-1]}  "
+    log.info(f"\nBacktest seasons: {backtest_seasons[0]} -> {backtest_seasons[-1]}  "
           f"({len(backtest_seasons)} seasons)")
 
     all_results = {}
 
     for target in targets:
-        print(f"\n{'-'*65}")
-        print(f"Target: {target.upper()}")
-        print(f"{'Season':<10} {'Train Rows':>12} {'Test Rows':>10} "
+        log.info(f"\n{'-'*65}")
+        log.info(f"Target: {target.upper()}")
+        log.info(f"{'Season':<10} {'Train Rows':>12} {'Test Rows':>10} "
               f"{'MAE':>8} {'RMSE':>8} {'Baseline MAE':>14}")
         print("-" * 65)
 
@@ -354,23 +357,23 @@ def run_player_model_backtest(
                 "mae_vs_baseline": round(baseline - mae, 4),
             })
 
-            print(f"{test_season:<10} {len(train):>12,} {len(test):>10,} "
+            log.info(f"{test_season:<10} {len(train):>12,} {len(test):>10,} "
                   f"{mae:>8.3f} {rmse:>8.3f} {baseline:>14.3f}")
 
         results_df = pd.DataFrame(results)
         all_results[target] = results_df
 
         if len(results_df) > 0:
-            print(f"\n  Mean MAE       : {results_df['mae'].mean():.3f}  "
+            log.info(f"\n  Mean MAE       : {results_df['mae'].mean():.3f}  "
                   f"(std = {results_df['mae'].std():.4f})")
-            print(f"  Mean RMSE      : {results_df['rmse'].mean():.3f}")
-            print(f"  Avg vs baseline: +{results_df['mae_vs_baseline'].mean():.3f} MAE improvement")
+            log.info(f"  Mean RMSE      : {results_df['rmse'].mean():.3f}")
+            log.info(f"  Avg vs baseline: +{results_df['mae_vs_baseline'].mean():.3f} MAE improvement")
 
         # -- Save --------------------------------------------------------------
         os.makedirs(reports_dir, exist_ok=True)
         out_path = os.path.join(reports_dir, f"backtest_player_{target}.csv")
         results_df.to_csv(out_path, index=False)
-        print(f"  Saved -> {out_path}")
+        log.info(f"  Saved -> {out_path}")
 
     return all_results
 
@@ -424,7 +427,7 @@ def write_summary_report(
     with open(path, "w") as f:
         f.write("\n".join(lines))
 
-    print(f"\nSummary report saved -> {path}")
+    log.info(f"\nSummary report saved -> {path}")
 
 
 # -- Entry point ----------------------------------------------------------------
@@ -436,7 +439,7 @@ if __name__ == "__main__":
     # and is not critical for the game outcome / ATS pipeline.
     player_file_mb = os.path.getsize(PLAYER_PATH) / 1e6 if os.path.exists(PLAYER_PATH) else 0
     if player_file_mb > 200:
-        print(f"\nSkipping player model backtest: {PLAYER_PATH} is {player_file_mb:.0f} MB "
+        log.warning(f"\nSkipping player model backtest: {PLAYER_PATH} is {player_file_mb:.0f} MB "
               f"(too large for interactive run). Run separately if needed.")
         player_results = {t: pd.DataFrame() for t in PLAYER_TARGETS}
     else:

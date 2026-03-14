@@ -35,6 +35,9 @@ import time
 import os
 
 from src.data.api_client import fetch_with_retry, HEADERS
+import logging
+
+log = logging.getLogger(__name__)
 
 REQUEST_DELAY = 1          # seconds between season calls (be polite to the API)
 OUTPUT_PATH   = "data/processed/player_positions.csv"
@@ -101,7 +104,7 @@ def _parse_response(raw: pd.DataFrame) -> pd.DataFrame | None:
         None,
     )
     if id_col is None:
-        print(f"    Could not find player ID column. Available: {list(raw.columns)}")
+        log.error(f"    Could not find player ID column. Available: {list(raw.columns)}")
         return None
     raw = raw.rename(columns={id_col: "player_id"})
 
@@ -161,10 +164,10 @@ def get_player_positions(
     os.makedirs("data/processed", exist_ok=True)
     all_frames = []
 
-    print(f"Fetching player positions via PlayerIndex "
-          f"({start_year}-{str(start_year+1)[-2:]} → "
+    log.info(f"Fetching player positions via PlayerIndex "
+          f"({start_year}-{str(start_year+1)[-2:]} -> "
           f"{end_year}-{str(end_year+1)[-2:]})...")
-    print(f"  {end_year - start_year + 1} seasons to fetch.\n")
+    log.info(f"  {end_year - start_year + 1} seasons to fetch.\n")
 
     for year in range(start_year, end_year + 1):
         season = f"{year}-{str(year + 1)[-2:]}"
@@ -181,23 +184,23 @@ def get_player_positions(
         )
 
         if not result["success"]:
-            print(f"  Skipping {season} (all retries failed).")
+            log.error(f"  Skipping {season} (all retries failed).")
             continue
 
         parsed = _parse_response(result["data"])
         if parsed is None or len(parsed) == 0:
-            print(f"  {season}: no usable rows, skipping.")
+            log.warning(f"  {season}: no usable rows, skipping.")
             continue
 
         parsed["season_year"] = year   # used for deduplication ordering
         all_frames.append(parsed)
 
         filled = (parsed["position"] != "").sum()
-        print(f"  {season}: {len(parsed):,} players | "
+        log.info(f"  {season}: {len(parsed):,} players | "
               f"{filled:,} with position ({filled/len(parsed)*100:.0f}%)")
 
     if not all_frames:
-        print("\nNo data collected. Check your network connection and nba_api version.")
+        log.warning("\nNo data collected. Check your network connection and nba_api version.")
         return None
 
     # ── Deduplicate ────────────────────────────────────────────────────────────
@@ -221,20 +224,20 @@ def get_player_positions(
     bucket_counts = final["position_bucket"].value_counts()
     top_positions = final["position"].value_counts().head(10)
 
-    print(f"\n{'='*50}")
-    print(f"  Total unique players : {len(final):,}")
-    print(f"  Position fill rate   : {pct_filled:.1f}%")
-    print(f"  Bucket distribution  :")
+    log.info(f"\n{'='*50}")
+    log.info(f"  Total unique players : {len(final):,}")
+    log.info(f"  Position fill rate   : {pct_filled:.1f}%")
+    log.info(f"  Bucket distribution  :")
     for bucket, count in bucket_counts.items():
-        print(f"    {bucket} : {count:,}")
-    print(f"  Top 10 raw positions :")
+        log.info(f"    {bucket} : {count:,}")
+    log.info(f"  Top 10 raw positions :")
     for pos, count in top_positions.items():
         label = pos if pos else "(empty)"
-        print(f"    {label:<15} {count:,}")
-    print(f"{'='*50}")
+        log.info(f"    {label:<15} {count:,}")
+    log.info(f"{'='*50}")
 
     final.to_csv(OUTPUT_PATH, index=False)
-    print(f"\nSaved {len(final):,} players -> {OUTPUT_PATH}")
+    log.info(f"\nSaved {len(final):,} players -> {OUTPUT_PATH}")
 
     return final
 
@@ -244,5 +247,5 @@ def get_player_positions(
 if __name__ == "__main__":
     df = get_player_positions()
     if df is not None:
-        print(f"\nSample output:")
-        print(df[["player_id", "player_name", "position", "position_bucket"]].head(10).to_string(index=False))
+        log.info(f"\nSample output:")
+        log.debug(df[["player_id", "player_name", "position", "position_bucket"]].head(10).to_string(index=False))

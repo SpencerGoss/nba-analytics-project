@@ -46,6 +46,9 @@ import numpy as np
 import pandas as pd
 
 from src.models.odds_utils import no_vig_odds_ratio as _no_vig_core
+import logging
+
+log = logging.getLogger(__name__)
 
 # -- Config ---------------------------------------------------------------------
 
@@ -143,10 +146,8 @@ def detect_value_bets(games_df, threshold=VALUE_BET_THRESHOLD):
     else:
         avg_edge_str = "N/A"
 
-    print(
-        f"  Value bets found: {n_value_bets} of {n_games} games "
-        f"(threshold={threshold:.2%}, avg edge={avg_edge_str})"
-    )
+    log.info(f"  Value bets found: {n_value_bets} of {n_games} games "
+        f"(threshold={threshold:.2%}, avg edge={avg_edge_str})")
 
     return df
 
@@ -221,17 +222,17 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
             - edge, edge_magnitude, is_value_bet, bet_side
     """
     print("=" * 60)
-    print("VALUE-BET SCAN")
+    log.info("VALUE-BET SCAN")
     print("=" * 60)
 
     # -- Load calibrated model --------------------------------------------------
-    print("\nLoading calibrated model...")
+    log.info("\nLoading calibrated model...")
     model, feature_cols = _load_calibrated_model()
-    print(f"  Model loaded ({len(feature_cols)} features)")
+    log.info(f"  Model loaded ({len(feature_cols)} features)")
 
     # -- Choose odds source ------------------------------------------------------
     if use_live_odds:
-        print("\nFetching live game lines from Pinnacle guest API...")
+        log.info("\nFetching live game lines from Pinnacle guest API...")
         # Import here to avoid hard dependency when running in historical mode
         sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
         try:
@@ -247,7 +248,7 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
 
     if not use_live_odds:
         # Historical mode: load from game_ats_features.csv
-        print(f"\nLoading historical odds from {ATS_FEATURES_PATH}...")
+        log.info(f"\nLoading historical odds from {ATS_FEATURES_PATH}...")
         if not os.path.exists(ATS_FEATURES_PATH):
             raise FileNotFoundError(
                 f"ATS features file not found at {ATS_FEATURES_PATH}. "
@@ -258,9 +259,9 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
         if "season" in ats_df.columns:
             recent_seasons = sorted(ats_df["season"].dropna().unique())[-4:]
             ats_df = ats_df[ats_df["season"].isin(recent_seasons)].copy()
-            print(f"  Loaded {len(ats_df):,} games (seasons: {recent_seasons})")
+            log.info(f"  Loaded {len(ats_df):,} games (seasons: {recent_seasons})")
         else:
-            print(f"  Loaded {len(ats_df):,} games")
+            log.info(f"  Loaded {len(ats_df):,} games")
 
         # Determine market implied probability source:
         # game_ats_features.csv has home_implied_prob (already no-vig, from ats_features.py)
@@ -269,27 +270,27 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
             # No-vig probs already computed during ATS feature build
             ml_mask = ats_df["home_implied_prob"].notna()
             ats_df = ats_df[ml_mask].copy()
-            print(f"  Games with implied prob data: {len(ats_df):,}")
+            log.info(f"  Games with implied prob data: {len(ats_df):,}")
             market_implied_source = "home_implied_prob"
         elif "home_moneyline" in ats_df.columns and "away_moneyline" in ats_df.columns:
             # Fallback: compute no-vig from raw moneylines
             ml_mask = ats_df["home_moneyline"].notna() & ats_df["away_moneyline"].notna()
             ats_df = ats_df[ml_mask].copy()
-            print(f"  Games with moneyline data: {len(ats_df):,}")
+            log.info(f"  Games with moneyline data: {len(ats_df):,}")
             market_implied_source = None  # will compute below
         else:
-            print("  WARNING: No moneyline or implied probability columns found.")
+            log.warning("  WARNING: No moneyline or implied probability columns found.")
             return []
 
         if ats_df.empty:
-            print("  WARNING: No games with odds data found.")
+            log.warning("  WARNING: No games with odds data found.")
             return []
 
         # -- Compute model win probabilities -------------------------------------
-        print("\nComputing model win probabilities...")
+        log.info("\nComputing model win probabilities...")
         missing_features = [c for c in feature_cols if c not in ats_df.columns]
         if missing_features:
-            print(f"  NOTE: {len(missing_features)} features missing from data (will be imputed as 0)")
+            log.warning(f"  NOTE: {len(missing_features)} features missing from data (will be imputed as 0)")
 
         X = ats_df.reindex(columns=feature_cols)
         probs = model.predict_proba(X)[:, 1]
@@ -300,10 +301,10 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
         if market_implied_source == "home_implied_prob":
             # Already no-vig from ats_features.py -- use directly
             ats_df["market_implied_prob"] = ats_df["home_implied_prob"]
-            print("Using pre-computed no-vig implied probabilities from game_ats_features.csv")
+            log.info("Using pre-computed no-vig implied probabilities from game_ats_features.csv")
         else:
             # Compute no-vig from raw moneylines
-            print("Computing no-vig market implied probabilities from raw moneylines...")
+            log.info("Computing no-vig market implied probabilities from raw moneylines...")
             vig_results = [
                 no_vig_prob(row["home_moneyline"], row["away_moneyline"])
                 for _, row in ats_df.iterrows()
@@ -317,7 +318,7 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
 
     else:
         # Live mode: lines_df from fetch_game_lines()
-        print(f"\nProcessing {len(lines_df)} upcoming games...")
+        log.info(f"\nProcessing {len(lines_df)} upcoming games...")
 
         # Load matchup features for model predictions
         if not os.path.exists(MATCHUP_FEATURES_PATH):
@@ -383,20 +384,20 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
             })
 
         if not rows:
-            print("  WARNING: No processable games with model features found.")
+            log.warning("  WARNING: No processable games with model features found.")
             return []
 
         games_df = pd.DataFrame(rows)
 
     # -- Detect value bets -------------------------------------------------------
-    print(f"\nDetecting value bets (threshold={threshold:.2%})...")
+    log.info(f"\nDetecting value bets (threshold={threshold:.2%})...")
     result_df = detect_value_bets(games_df, threshold=threshold)
 
     # -- Print summary -----------------------------------------------------------
     value_bets = result_df[result_df["is_value_bet"]].copy()
-    print(f"\nValue-bet scan complete.")
+    log.info(f"\nValue-bet scan complete.")
     if not value_bets.empty:
-        print(f"\nTop value bets (by edge magnitude):")
+        log.info(f"\nTop value bets (by edge magnitude):")
         display_cols = ["home_team", "away_team", "model_win_prob",
                        "market_implied_prob", "edge", "bet_side"]
         display_cols = [c for c in display_cols if c in value_bets.columns]
@@ -408,12 +409,10 @@ def run_value_bet_scan(use_live_odds=True, threshold=VALUE_BET_THRESHOLD):
             market_p = row.get("market_implied_prob", float("nan"))
             edge = row.get("edge", float("nan"))
             side = row.get("bet_side", "?")
-            print(
-                f"  {home} vs {away}: model={model_p:.1%} market={market_p:.1%} "
-                f"edge={edge:+.1%} -> bet {side}"
-            )
+            log.info(f"  {home} vs {away}: model={model_p:.1%} market={market_p:.1%} "
+                f"edge={edge:+.1%} -> bet {side}")
     else:
-        print("  No value bets found above threshold.")
+        log.info("  No value bets found above threshold.")
 
     # -- Return JSON-serializable list -------------------------------------------
     output_cols = [
@@ -689,21 +688,17 @@ def get_strong_value_bets(
         ]
         strong_sorted = sorted(strong, key=lambda b: b.get("composite_score") or 0, reverse=True)
         n_ats_filtered_out = sum(1 for b in scored if not b.get("ats_filtered", True))
-        print(
-            f"Strong value bets (composite > {composite_threshold:.2f}, "
+        log.info(f"Strong value bets (composite > {composite_threshold:.2f}, "
             f"ats_prob >= {ATS_PROB_THRESHOLD:.2f}, "
             f"edge_weight={COMPOSITE_EDGE_WEIGHT}, ats_weight={COMPOSITE_ATS_WEIGHT}): "
             f"{len(strong_sorted)} of {len(all_bets)} games "
-            f"({n_ats_filtered_out} removed by ATS filter)"
-        )
+            f"({n_ats_filtered_out} removed by ATS filter)")
     else:
         # ATS model unavailable: edge-only fallback; ats_filtered is True for all
         strong = [b for b in scored if (b.get("edge_magnitude") or 0) > strong_threshold]
         strong_sorted = sorted(strong, key=lambda b: b.get("edge_magnitude") or 0, reverse=True)
-        print(
-            f"Strong value bets (edge-only fallback, edge > {strong_threshold:.0%}): "
-            f"{len(strong_sorted)} of {len(all_bets)} games"
-        )
+        log.warning(f"Strong value bets (edge-only fallback, edge > {strong_threshold:.0%}): "
+            f"{len(strong_sorted)} of {len(all_bets)} games")
 
     # Add fractional Kelly sizing to each strong bet
     for bet in strong_sorted:
@@ -718,6 +713,6 @@ if __name__ == "__main__":
     results = run_value_bet_scan(use_live_odds=False)
 
     n_value_bets = sum(1 for r in results if r.get("is_value_bet"))
-    print(f"\nTotal games scanned: {len(results)}")
-    print(f"Value bets flagged: {n_value_bets}")
-    print(f"Non-value bets: {len(results) - n_value_bets}")
+    log.info(f"\nTotal games scanned: {len(results)}")
+    log.info(f"Value bets flagged: {n_value_bets}")
+    log.info(f"Non-value bets: {len(results) - n_value_bets}")

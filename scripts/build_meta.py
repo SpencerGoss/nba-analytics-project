@@ -28,6 +28,9 @@ METADATA_PATH = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_metadata.j
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "meta.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 _s = str(get_current_season())
 CURRENT_SEASON = f"{_s[:4]}-{_s[4:]}"
@@ -59,8 +62,9 @@ def main() -> None:
     meta = build_meta()
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(meta, indent=2))
-    print(f"meta.json written -> {meta['exported_at']}")
+    log.info(f"meta.json written -> {meta['exported_at']}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

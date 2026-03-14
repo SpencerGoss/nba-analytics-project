@@ -29,6 +29,9 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -197,16 +200,16 @@ def build_hustle_features(
         "box_outs", "hustle_index",
     ]
 
-    print(f"Loading team hustle stats from {data_dir}...")
+    log.info(f"Loading team hustle stats from {data_dir}...")
     raw_df = _load_all_seasons(data_dir)
 
     if raw_df.empty:
-        print("  No hustle stats CSV files found. Returning empty DataFrame.")
+        log.warning("  No hustle stats CSV files found. Returning empty DataFrame.")
         return pd.DataFrame(columns=output_columns)
 
     n_seasons = raw_df["season"].nunique()
     n_rows = len(raw_df)
-    print(f"  Loaded {n_rows:,} team-season rows across {n_seasons} seasons.")
+    log.info(f"  Loaded {n_rows:,} team-season rows across {n_seasons} seasons.")
 
     # Rename raw uppercase columns to snake_case
     raw_df = raw_df.rename(columns=RAW_TO_SNAKE)
@@ -221,10 +224,10 @@ def build_hustle_features(
     raw_df = raw_df.drop_duplicates(subset=["season", "team_id"])
     dupes_dropped = before - len(raw_df)
     if dupes_dropped > 0:
-        print(f"  Dropped {dupes_dropped} duplicate (season, team_id) rows.")
+        log.info(f"  Dropped {dupes_dropped} duplicate (season, team_id) rows.")
 
     # Compute composite hustle_index
-    print("Computing hustle_index (weighted z-score composite)...")
+    log.info("Computing hustle_index (weighted z-score composite)...")
     result = _compute_hustle_index(raw_df)
 
     # Ensure column order
@@ -234,13 +237,13 @@ def build_hustle_features(
     for season in sorted(result["season"].unique()):
         n_teams = len(result[result["season"] == season])
         idx_mean = result.loc[result["season"] == season, "hustle_index"].mean()
-        print(f"  Season {season}: {n_teams} teams, hustle_index mean={idx_mean:.4f}")
+        log.info(f"  Season {season}: {n_teams} teams, hustle_index mean={idx_mean:.4f}")
 
     # Save output
     if output_path is not None:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         result.to_csv(output_path, index=False)
-        print(f"Saved {len(result):,} rows -> {output_path}")
+        log.info(f"Saved {len(result):,} rows -> {output_path}")
 
     return result
 
@@ -252,8 +255,8 @@ def build_hustle_features(
 if __name__ == "__main__":
     df = build_hustle_features()
     if df.empty:
-        print("No hustle stats data found.")
+        log.info("No hustle stats data found.")
     else:
-        print(f"\nShape: {df.shape}")
-        print(df.head(10).to_string(index=False))
-        print(f"\nNaN rates:\n{df.isna().mean()}")
+        log.info(f"\nShape: {df.shape}")
+        log.debug(df.head(10).to_string(index=False))
+        log.info(f"\nNaN rates:\n{df.isna().mean()}")

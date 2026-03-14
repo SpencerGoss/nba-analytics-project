@@ -23,6 +23,9 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 import requests
+import logging
+
+log = logging.getLogger(__name__)
 
 # Allow running as a script from project root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -100,7 +103,7 @@ def _fetch_via_nba_api() -> pd.DataFrame:
         ).get_data_frames()[0]
 
         if report.empty:
-            print("  [injury_report] nba_api returned empty report (off-season or no games).")
+            log.warning("  [injury_report] nba_api returned empty report (off-season or no games).")
             return pd.DataFrame()
 
         # Normalize column names to lowercase
@@ -108,12 +111,12 @@ def _fetch_via_nba_api() -> pd.DataFrame:
 
         # Filter to actionable statuses
         filtered = report[report["player_status"].isin(RELEVANT_STATUSES)].copy()
-        print(f"  [injury_report] nba_api: fetched {len(filtered)} entries "
+        log.info(f"  [injury_report] nba_api: fetched {len(filtered)} entries "
               f"(Out/Questionable/Probable).")
         return filtered
 
     except Exception as exc:
-        print(f"  [injury_report] nba_api fetch failed: {exc}")
+        log.error(f"  [injury_report] nba_api fetch failed: {exc}")
         return pd.DataFrame()
 
 
@@ -137,8 +140,8 @@ def _fetch_via_pdf(date_str: str) -> pd.DataFrame:
     try:
         import pdfplumber
     except ImportError:
-        print("  [injury_report] pdfplumber not installed; PDF fallback unavailable.")
-        print("  Install with: pip install pdfplumber>=0.10.0")
+        log.warning("  [injury_report] pdfplumber not installed; PDF fallback unavailable.")
+        log.info("  Install with: pip install pdfplumber>=0.10.0")
         return pd.DataFrame()
 
     for time_slot in PDF_TIME_SLOTS:
@@ -157,7 +160,7 @@ def _fetch_via_pdf(date_str: str) -> pd.DataFrame:
                         rows.extend(table[1:])
 
             if not rows:
-                print(f"  [injury_report] PDF at {time_slot} had no extractable rows.")
+                log.info(f"  [injury_report] PDF at {time_slot} had no extractable rows.")
                 continue
 
             df = pd.DataFrame(rows, columns=INJURY_COLUMNS)
@@ -168,7 +171,7 @@ def _fetch_via_pdf(date_str: str) -> pd.DataFrame:
             # Rename current_status -> player_status for API consistency
             filtered = filtered.rename(columns={"current_status": "player_status"})
 
-            print(f"  [injury_report] PDF ({time_slot}): fetched {len(filtered)} entries.")
+            log.info(f"  [injury_report] PDF ({time_slot}): fetched {len(filtered)} entries.")
             return filtered
 
         except requests.exceptions.HTTPError as http_err:
@@ -176,13 +179,13 @@ def _fetch_via_pdf(date_str: str) -> pd.DataFrame:
             if status_code in (403, 404):
                 # Expected when this time slot hasn't been published yet
                 continue
-            print(f"  [injury_report] PDF HTTP error at {time_slot}: {http_err}")
+            log.error(f"  [injury_report] PDF HTTP error at {time_slot}: {http_err}")
             continue
         except Exception as exc:
-            print(f"  [injury_report] PDF parse error at {time_slot}: {exc}")
+            log.error(f"  [injury_report] PDF parse error at {time_slot}: {exc}")
             continue
 
-    print(f"  [injury_report] All PDF time slots failed for {date_str}. "
+    log.error(f"  [injury_report] All PDF time slots failed for {date_str}. "
           f"May be off-season or report not yet published.")
     return pd.DataFrame()
 
@@ -215,14 +218,14 @@ def get_todays_nba_injury_report(
         Returns empty DataFrame if both sources fail.
     """
     today_str = datetime.now().strftime("%Y-%m-%d")
-    print(f"[injury_report] Fetching NBA injury report for {today_str}...")
+    log.info(f"[injury_report] Fetching NBA injury report for {today_str}...")
 
     # Try primary source: nba_api endpoint
     df = _fetch_via_nba_api()
 
     # Fallback: PDF parsing
     if df.empty:
-        print("[injury_report] Falling back to PDF source...")
+        log.info("[injury_report] Falling back to PDF source...")
         df = _fetch_via_pdf(today_str)
 
     if df.empty:
@@ -245,7 +248,7 @@ def get_todays_nba_injury_report(
         os.makedirs(output_dir, exist_ok=True)
         snapshot_path = os.path.join(output_dir, snapshot_name)
         df.to_csv(snapshot_path, index=False)
-        print(f"[injury_report] Snapshot saved -> {snapshot_path}")
+        log.info(f"[injury_report] Snapshot saved -> {snapshot_path}")
 
     return df
 
@@ -255,7 +258,7 @@ def get_todays_nba_injury_report(
 if __name__ == "__main__":
     df = get_todays_nba_injury_report()
     if df.empty:
-        print("No injury report data available (may be off-season or no games today)")
+        log.info("No injury report data available (may be off-season or no games today)")
     else:
-        print(f"Fetched {len(df)} injury report entries:")
-        print(df.to_string(index=False))
+        log.info(f"Fetched {len(df)} injury report entries:")
+        log.info(df.to_string(index=False))

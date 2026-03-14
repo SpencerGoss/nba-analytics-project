@@ -2,6 +2,9 @@
 from nba_api.stats.static import teams
 import pandas as pd
 import os
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # Fetch the static teams lookup table.
@@ -13,13 +16,13 @@ import os
 def get_teams():
     os.makedirs("data/raw/teams", exist_ok=True)
 
-    print("Fetching teams static lookup...")
+    log.info("Fetching teams static lookup...")
     all_teams = teams.get_teams()
 
     df = pd.DataFrame(all_teams)
 
     df.to_csv("data/raw/teams/teams.csv", index=False)
-    print(f"  Saved teams ({len(df)} rows)")
+    log.info(f"  Saved teams ({len(df)} rows)")
 
 
 if __name__ == "__main__":

@@ -25,6 +25,9 @@ from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "database" / "predictions_history.db"
@@ -153,16 +156,16 @@ def backfill_outcomes(
     if today is None:
         today = date.today()
 
-    print(f"Loading team game logs from {logs_path} ...")
+    log.info(f"Loading team game logs from {logs_path} ...")
     logs = load_team_game_logs(logs_path)
     home_index = build_home_game_index(logs)
-    print(f"  {len(home_index):,} home game entries indexed")
+    log.info(f"  {len(home_index):,} home game entries indexed")
 
     conn = open_db(db_path)
     try:
         pending = fetch_pending_predictions(conn)
         total_pending = len(pending)
-        print(f"\nFound {total_pending} prediction(s) with no outcome recorded")
+        log.info(f"\nFound {total_pending} prediction(s) with no outcome recorded")
 
         filled = 0
         still_pending = 0
@@ -172,7 +175,7 @@ def backfill_outcomes(
         for row in pending:
             game_date = parse_game_date(row["game_date"])
             if game_date is None:
-                print(f"  WARN: id={row['id']} has unparseable game_date={row['game_date']!r} -- skipping")
+                log.warning(f"  WARN: id={row['id']} has unparseable game_date={row['game_date']!r} -- skipping")
                 still_pending += 1
                 continue
 
@@ -189,10 +192,8 @@ def backfill_outcomes(
             if key not in home_index:
                 no_log_match += 1
                 still_pending += 1
-                print(
-                    f"  WARN: No log entry for home={home_team} away={away_team} "
-                    f"date={date_str} (id={row['id']}) -- game may not be in CSV yet"
-                )
+                log.warning(f"  WARN: No log entry for home={home_team} away={away_team} "
+                    f"date={date_str} (id={row['id']}) -- game may not be in CSV yet")
                 continue
 
             entry = home_index[key]
@@ -204,10 +205,8 @@ def backfill_outcomes(
 
             predicted_home_wins = (row["home_win_prob"] or 0.0) >= (row["away_win_prob"] or 0.0)
             correct_marker = "OK" if predicted_home_wins == bool(actual_home_win) else "WRONG"
-            print(
-                f"  id={row['id']} {home_team} vs {away_team} {date_str}: "
-                f"home_win={actual_home_win} margin={actual_margin} [{correct_marker}]"
-            )
+            log.info(f"  id={row['id']} {home_team} vs {away_team} {date_str}: "
+                f"home_win={actual_home_win} margin={actual_margin} [{correct_marker}]")
 
         conn.commit()
 
@@ -222,10 +221,8 @@ def backfill_outcomes(
         "no_log_match": no_log_match,
     }
 
-    print(
-        f"\nSummary: {total_pending} pending -> "
-        f"{filled} filled, {skipped_future} future games, {no_log_match} not yet in CSV"
-    )
+    log.warning(f"\nSummary: {total_pending} pending -> "
+        f"{filled} filled, {skipped_future} future games, {no_log_match} not yet in CSV")
     return summary
 
 
@@ -239,13 +236,13 @@ def run_build_performance() -> None:
 
     spec = importlib.util.spec_from_file_location("build_performance", BUILD_PERFORMANCE_SCRIPT)
     if spec is None or spec.loader is None:
-        print("WARNING: Could not load build_performance.py -- skipping performance rebuild")
+        log.error("WARNING: Could not load build_performance.py -- skipping performance rebuild")
         return
     module = importlib.util.load_from_spec(spec)  # type: ignore[attr-defined]
     try:
         module.build_performance()
     except Exception as exc:
-        print(f"WARNING: build_performance() raised {exc!r} -- dashboard data may be stale")
+        log.error(f"WARNING: build_performance() raised {exc!r} -- dashboard data may be stale")
 
 
 def _load_build_performance_module():
@@ -260,7 +257,7 @@ def _load_build_performance_module():
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
         return mod
     except Exception as exc:
-        print(f"WARNING: Could not exec build_performance.py: {exc!r}")
+        log.error(f"WARNING: Could not exec build_performance.py: {exc!r}")
         return None
 
 
@@ -272,18 +269,19 @@ def main() -> None:
     summary = backfill_outcomes()
 
     if summary["filled"] > 0:
-        print("\nRegenerating performance.json ...")
+        log.info("\nRegenerating performance.json ...")
         mod = _load_build_performance_module()
         if mod is not None:
             try:
                 mod.build_performance()
             except Exception as exc:
-                print(f"WARNING: build_performance() raised {exc!r} -- dashboard data may be stale")
+                log.error(f"WARNING: build_performance() raised {exc!r} -- dashboard data may be stale")
         else:
-            print("WARNING: Could not load build_performance.py -- skipping performance rebuild")
+            log.error("WARNING: Could not load build_performance.py -- skipping performance rebuild")
     else:
-        print("\nNo new outcomes filled -- skipping performance rebuild")
+        log.warning("\nNo new outcomes filled -- skipping performance rebuild")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

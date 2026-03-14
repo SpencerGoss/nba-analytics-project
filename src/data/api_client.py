@@ -14,13 +14,15 @@ Usage:
     if result["success"]:
         df = result["data"]
     else:
-        print(result["error"])
+        log.error(result["error"])
 """
 
 import logging
 import time
 
 import pandas as pd
+
+log = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 

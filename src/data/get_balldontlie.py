@@ -33,6 +33,8 @@ import time
 import pandas as pd
 import requests
 
+log = logging.getLogger(__name__)
+
 logger = logging.getLogger(__name__)
 
 # ── Configuration ─────────────────────────────────────────────────────────────
@@ -297,29 +299,27 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    print("Testing BallDontLie API client...")
+    log.info("Testing BallDontLie API client...")
     print()
 
     # Check API key
     key = _get_api_key()
     if key:
-        print(f"API key found: ...{key[-4:]}")
+        log.info(f"API key found: ...{key[-4:]}")
         teams_df = get_balldontlie_teams()
         if not teams_df.empty:
-            print(f"Teams: {len(teams_df)} records")
-            print(teams_df.head(3).to_string(index=False))
+            log.info(f"Teams: {len(teams_df)} records")
+            log.debug(teams_df.head(3).to_string(index=False))
         print()
         stats_df = get_balldontlie_stats(season=2024)
         if not stats_df.empty:
-            print(f"Games (2024-25): {len(stats_df)} records")
-            print(stats_df.head(3).to_string(index=False))
+            log.info(f"Games (2024-25): {len(stats_df)} records")
+            log.debug(stats_df.head(3).to_string(index=False))
     else:
-        print(
-            f"No API key found ({BALLDONTLIE_API_KEY_ENV} not set).\n"
+        log.info(f"No API key found ({BALLDONTLIE_API_KEY_ENV} not set).\n"
             "Get a free key at https://www.balldontlie.io and add to .env:\n"
-            f"  {BALLDONTLIE_API_KEY_ENV}=your_key_here"
-        )
+            f"  {BALLDONTLIE_API_KEY_ENV}=your_key_here")
 
     print()
     injuries_df = get_balldontlie_injuries()
-    print(f"Injuries endpoint: {len(injuries_df)} rows (not available — expected)")
+    log.info(f"Injuries endpoint: {len(injuries_df)} rows (not available — expected)")

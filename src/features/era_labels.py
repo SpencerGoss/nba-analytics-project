@@ -28,6 +28,9 @@ Usage:
 """
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # ── Era definitions ─────────────────────────────────────────────────────────────
@@ -213,19 +216,19 @@ def get_era(season_val) -> dict:
 # ── Preview / entry point ───────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("NBA Era Definitions")
+    log.info("NBA Era Definitions")
     print("=" * 70)
     for _, row in ERA_DEFINITIONS.iterrows():
         end_label = "present" if row["era_end"] == 999999 else str(row["era_end"])
-        print(f"\nEra {row['era_num']}: {row['era_name']}")
-        print(f"  Seasons : {row['era_start']} -> {end_label}")
-        print(f"  Anchor  : {row['rule_anchor']}")
-        print(f"  Summary : {row['description'][:100]}...")
+        log.info(f"\nEra {row['era_num']}: {row['era_name']}")
+        log.info(f"  Seasons : {row['era_start']} -> {end_label}")
+        log.info(f"  Anchor  : {row['rule_anchor']}")
+        log.info(f"  Summary : {row['description'][:100]}...")
 
-    print("\n" + "=" * 70)
-    print("Sample label_eras() output on test seasons:")
+    log.info("\n" + "=" * 70)
+    log.info("Sample label_eras() output on test seasons:")
     test = pd.DataFrame({"season": [
         "194647", "195455", "197980", "199495", "200405", "201516", "202425"
     ]})
     test = label_eras(test)
-    print(test[["season", "era_num", "era_name"]].to_string(index=False))
+    log.info(test[["season", "era_num", "era_name"]].to_string(index=False))

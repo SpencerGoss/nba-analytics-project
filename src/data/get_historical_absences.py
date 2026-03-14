@@ -51,6 +51,9 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+import logging
+
+log = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -89,11 +92,11 @@ def build_player_absences(
         min_roll5, usg_pct, was_absent
     """
     print("=" * 60)
-    print("HISTORICAL ABSENCE DATASET BUILDER")
+    log.info("HISTORICAL ABSENCE DATASET BUILDER")
     print("=" * 60)
 
     # ── Load player game logs ─────────────────────────────────────────────────
-    print("\nLoading player_game_logs...")
+    log.info("\nLoading player_game_logs...")
     cols = [
         "season", "player_id", "player_name", "team_id",
         "team_abbreviation", "game_id", "game_date", "min",
@@ -111,10 +114,10 @@ def build_player_absences(
 
     # Sort chronologically within each player for correct rolling computation
     df = df.sort_values(["player_id", "game_date"]).reset_index(drop=True)
-    print(f"  Loaded {len(df):,} player-game rows")
+    log.info(f"  Loaded {len(df):,} player-game rows")
 
     # ── Load season-level usage rates ─────────────────────────────────────────
-    print("Loading advanced stats for usage rates...")
+    log.info("Loading advanced stats for usage rates...")
     try:
         adv = pd.read_csv(adv_stats_path, usecols=["player_id", "season", "usg_pct"])
         adv = adv.drop_duplicates(subset=["player_id", "season"])
@@ -122,7 +125,7 @@ def build_player_absences(
         adv["season"] = adv["season"].astype(int)
         df = df.merge(adv, on=["player_id", "season"], how="left")
     except Exception as e:
-        print(f"  Warning: could not load advanced stats ({e}). Using default usg_pct=0.18")
+        log.error(f"  Warning: could not load advanced stats ({e}). Using default usg_pct=0.18")
         df["usg_pct"] = 0.18
 
     df["usg_pct"] = df["usg_pct"].fillna(0.18)
@@ -130,7 +133,7 @@ def build_player_absences(
     # ── Compute rolling baseline minutes per player ───────────────────────────
     # CRITICAL: shift(1) BEFORE rolling so row N only uses rows 0..N-1.
     # Do NOT use .rolling().shift() — the shift must come first.
-    print("Computing rolling baseline minutes per player (shift-1 before rolling)...")
+    log.info("Computing rolling baseline minutes per player (shift-1 before rolling)...")
 
     df["min_roll5"] = (
         df.groupby("player_id")["min"]
@@ -152,7 +155,7 @@ def build_player_absences(
         & (df["games_in_roll5"] >= MIN_ROTATION_GAMES)
     )
 
-    print(f"  Rotation player-games identified: {df['in_rotation'].sum():,}")
+    log.info(f"  Rotation player-games identified: {df['in_rotation'].sum():,}")
 
     # ── Build all (team_id, game_id, game_date) pairs ─────────────────────────
     team_games = (
@@ -179,7 +182,7 @@ def build_player_absences(
     # ── Vectorized expected-rotation builder using merge_asof ─────────────────
     # For each (team, player), project last known rotation status onto all
     # team-game dates. This is the same approach as injury_proxy.py.
-    print("Projecting rotation status onto all team-game dates...")
+    log.info("Projecting rotation status onto all team-game dates...")
     expected_parts = []
 
     for team_id_val, tg_grp in team_games.groupby("team_id"):
@@ -259,7 +262,7 @@ def build_player_absences(
     _OUTPUT_COLS = _PLAYED_COLS  # same schema
 
     if not expected_parts:
-        print("  No absent rotation appearances found — only played rows in output.")
+        log.info("  No absent rotation appearances found — only played rows in output.")
         result = played_rotation_slim.copy()
         result["player_id"] = result["player_id"].astype(int)
         result["team_id"] = result["team_id"].astype(int)
@@ -275,11 +278,11 @@ def build_player_absences(
         ).reset_index(drop=True)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         result.to_csv(output_path, index=False)
-        print(f"\nSaved {len(result):,} rows -> {output_path}")
+        log.info(f"\nSaved {len(result):,} rows -> {output_path}")
         return result
 
     expected_df = pd.concat(expected_parts, ignore_index=True)
-    print(f"  Expected rotation appearances: {len(expected_df):,}")
+    log.info(f"  Expected rotation appearances: {len(expected_df):,}")
 
     # ── Anti-join: expected players who did NOT appear in the actual log ───────
     merged_check = expected_df.merge(
@@ -292,10 +295,8 @@ def build_player_absences(
     merged_check["was_absent"] = merged_check["played"].isna().astype(int)
     merged_check = merged_check.drop(columns=["played"])
 
-    print(
-        f"  Absent rotation instances (was_absent=1): "
-        f"{(merged_check['was_absent'] == 1).sum():,}"
-    )
+    log.info(f"  Absent rotation instances (was_absent=1): "
+        f"{(merged_check['was_absent'] == 1).sum():,}")
 
     # ── Attach season and format game_date on absent rows ─────────────────────
     merged_check = merged_check.merge(
@@ -348,18 +349,18 @@ def build_player_absences(
 
     # ── Summary stats ─────────────────────────────────────────────────────────
     absent_rate = (result["was_absent"] == 1).mean()
-    print(f"\n-- Summary -------------------------------------------------")
-    print(f"  Total rows            : {len(result):,}")
-    print(f"  Unique players        : {result['player_id'].nunique():,}")
-    print(f"  Unique games          : {result['game_id'].nunique():,}")
-    print(f"  was_absent=1 (absent) : {(result['was_absent'] == 1).sum():,} ({absent_rate:.1%})")
-    print(f"  was_absent=0 (played) : {(result['was_absent'] == 0).sum():,}")
-    print(f"  Seasons covered       : {sorted(result['season'].unique().tolist())}")
+    log.info(f"\n-- Summary -------------------------------------------------")
+    log.info(f"  Total rows            : {len(result):,}")
+    log.info(f"  Unique players        : {result['player_id'].nunique():,}")
+    log.info(f"  Unique games          : {result['game_id'].nunique():,}")
+    log.info(f"  was_absent=1 (absent) : {(result['was_absent'] == 1).sum():,} ({absent_rate:.1%})")
+    log.info(f"  was_absent=0 (played) : {(result['was_absent'] == 0).sum():,}")
+    log.info(f"  Seasons covered       : {sorted(result['season'].unique().tolist())}")
 
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     result.to_csv(output_path, index=False)
-    print(f"\nSaved {len(result):,} rows -> {output_path}")
+    log.info(f"\nSaved {len(result):,} rows -> {output_path}")
 
     return result
 
@@ -368,6 +369,6 @@ def build_player_absences(
 
 if __name__ == "__main__":
     result = build_player_absences()
-    print("\nSample absent rows:")
+    log.info("\nSample absent rows:")
     absent_sample = result[result["was_absent"] == 1].head(5)
-    print(absent_sample.to_string(index=False))
+    log.info(absent_sample.to_string(index=False))

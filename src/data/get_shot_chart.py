@@ -6,6 +6,9 @@ import time
 import os
 
 from src.data.api_client import fetch_with_retry, HEADERS
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # Download shot chart data for every player in every season
@@ -26,18 +29,18 @@ def get_shot_chart(start_year=2000, end_year=2024):
         # Get player IDs for this season from the raw player_stats file
         raw_path = f"data/raw/player_stats/player_stats_{season_code}.csv"
         if not os.path.exists(raw_path):
-            print(f"No player stats file for {season}. Run get_player_stats.py first. Skipping.")
+            log.warning(f"No player stats file for {season}. Run get_player_stats.py first. Skipping.")
             continue
 
         output_path = f"data/raw/shot_chart/shot_chart_{season_code}.csv"
         if os.path.exists(output_path):
-            print(f"  SKIP: {season} already fetched -> {output_path}")
+            log.warning(f"  SKIP: {season} already fetched -> {output_path}")
             continue
 
         players_df = pd.read_csv(raw_path)
         player_ids = players_df["PLAYER_ID"].unique()
 
-        print(f"Fetching shot charts for {season} ({len(player_ids)} players)...")
+        log.info(f"Fetching shot charts for {season} ({len(player_ids)} players)...")
         season_shots = []
 
         for i, player_id in enumerate(player_ids):
@@ -62,14 +65,14 @@ def get_shot_chart(start_year=2000, end_year=2024):
 
             # Print progress every 50 players
             if (i + 1) % 50 == 0:
-                print(f"  {i + 1}/{len(player_ids)} players processed...")
+                log.info(f"  {i + 1}/{len(player_ids)} players processed...")
 
         if season_shots:
             combined = pd.concat(season_shots, ignore_index=True)
             combined.to_csv(output_path, index=False)
-            print(f"  Saved {season} ({len(combined)} shots)")
+            log.info(f"  Saved {season} ({len(combined)} shots)")
         else:
-            print(f"  No shots found for {season}.")
+            log.info(f"  No shots found for {season}.")
 
 
 if __name__ == "__main__":

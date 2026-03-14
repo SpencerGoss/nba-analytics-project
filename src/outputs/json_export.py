@@ -14,6 +14,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from src.outputs.prediction_store import STORE_PATH
+import logging
+
+log = logging.getLogger(__name__)
 
 OUTPUT_DIR = "data/outputs"
 
@@ -55,5 +58,5 @@ def export_daily_snapshot(
             indent=2,
         )
 
-    print(f"  JSON snapshot -> {out_path}  ({len(records)} records)")
+    log.info(f"  JSON snapshot -> {out_path}  ({len(records)} records)")
     return str(out_path)

@@ -9,12 +9,15 @@ from pathlib import Path
 try:
     import pyodbc
 except ImportError:
-    print("ERROR: pyodbc is not installed.")
-    print("Install it with: pip install pyodbc")
-    print("You also need ODBC Driver 17 for SQL Server installed.")
+    log.error("ERROR: pyodbc is not installed.")
+    log.info("Install it with: pip install pyodbc")
+    log.info("You also need ODBC Driver 17 for SQL Server installed.")
     sys.exit(1)
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Config
@@ -64,7 +67,7 @@ def _ensure_database(cursor):
         (DB_NAME,),
     )
     cursor.commit()
-    print(f"[OK] Database '{DB_NAME}' ensured.")
+    log.info(f"[OK] Database '{DB_NAME}' ensured.")
 
 
 def _sql_type(dtype_str):
@@ -157,24 +160,24 @@ def _truncate_table(cursor, table_name):
 def sync_csv_dir(cursor, dir_path, prefix, full_reload):
     """Load all CSVs from a directory into SQL Server tables."""
     if not dir_path.exists():
-        print(f"  [SKIP] Directory not found: {dir_path}")
+        log.warning(f"  [SKIP] Directory not found: {dir_path}")
         return
     csv_files = sorted(dir_path.glob("*.csv"))
     if not csv_files:
-        print(f"  [SKIP] No CSVs in {dir_path}")
+        log.warning(f"  [SKIP] No CSVs in {dir_path}")
         return
 
     for csv_path in csv_files:
         table_name = _table_name_from_path(csv_path, prefix)
-        print(f"  Loading {csv_path.name} -> [{table_name}] ... ", end="", flush=True)
+        log.info(f"  Loading {csv_path.name} -> [{table_name}] ... ", end="", flush=True)
         try:
             df = pd.read_csv(csv_path, low_memory=False)
         except Exception as exc:
-            print(f"READ ERROR: {exc}")
+            log.error(f"READ ERROR: {exc}")
             continue
 
         if df.empty:
-            print("empty file, skipped.")
+            log.warning("empty file, skipped.")
             continue
 
         df = _coerce_dates(df)
@@ -192,28 +195,28 @@ def sync_csv_dir(cursor, dir_path, prefix, full_reload):
         _truncate_table(cursor, table_name)
         count = _insert_dataframe(cursor, table_name, df)
         cursor.commit()
-        print(f"{count:,} rows.")
+        log.info(f"{count:,} rows.")
 
 
 def sync_sqlite_tables(cursor, full_reload):
     """Sync SQLite tables into SQL Server."""
     if not SQLITE_DB_PATH.exists():
-        print(f"  [SKIP] SQLite DB not found: {SQLITE_DB_PATH}")
+        log.warning(f"  [SKIP] SQLite DB not found: {SQLITE_DB_PATH}")
         return
 
     sqlite_conn = sqlite3.connect(str(SQLITE_DB_PATH))
     try:
         for src_table in SQLITE_TABLES:
             table_name = f"predictions_{src_table}"
-            print(f"  Loading SQLite {src_table} -> [{table_name}] ... ", end="", flush=True)
+            log.info(f"  Loading SQLite {src_table} -> [{table_name}] ... ", end="", flush=True)
             try:
                 df = pd.read_sql_query(f"SELECT * FROM {src_table}", sqlite_conn)
             except Exception as exc:
-                print(f"READ ERROR: {exc}")
+                log.error(f"READ ERROR: {exc}")
                 continue
 
             if df.empty:
-                print("empty table, skipped.")
+                log.warning("empty table, skipped.")
                 continue
 
             df = _coerce_dates(df)
@@ -225,7 +228,7 @@ def sync_sqlite_tables(cursor, full_reload):
             _truncate_table(cursor, table_name)
             count = _insert_dataframe(cursor, table_name, df)
             cursor.commit()
-            print(f"{count:,} rows.")
+            log.info(f"{count:,} rows.")
     finally:
         sqlite_conn.close()
 
@@ -303,10 +306,10 @@ def _create_views(cursor):
         try:
             cursor.execute(ddl)
             cursor.commit()
-            print(f"  [OK] View {name}")
+            log.info(f"  [OK] View {name}")
         except pyodbc.ProgrammingError as exc:
             # View may reference a table that doesn't exist yet
-            print(f"  [WARN] View {name}: {exc.args[-1][:80]}")
+            log.warning(f"  [WARN] View {name}: {exc.args[-1][:80]}")
 
 
 def main():
@@ -321,10 +324,10 @@ def main():
     args = parser.parse_args()
 
     mode = "FULL RELOAD" if args.full else "INCREMENTAL"
-    print(f"=== NBA Analytics -> SQL Server sync ({mode}) ===\n")
+    log.info(f"=== NBA Analytics -> SQL Server sync ({mode}) ===\n")
 
     # Step 1: Connect to master and ensure database exists
-    print("[1/5] Ensuring database exists ...")
+    log.info("[1/5] Ensuring database exists ...")
     master_conn = pyodbc.connect(_conn_string("master"), autocommit=True)
     _ensure_database(master_conn.cursor())
     master_conn.close()
@@ -334,24 +337,25 @@ def main():
     cursor = conn.cursor()
 
     # Step 3: Sync CSV directories
-    print("\n[2/5] Syncing CSV data ...")
+    log.info("\n[2/5] Syncing CSV data ...")
     for prefix, dir_path in CSV_DIRS.items():
-        print(f"\n  --- {prefix}/ ---")
+        log.info(f"\n  --- {prefix}/ ---")
         sync_csv_dir(cursor, dir_path, prefix, args.full)
 
     # Step 4: Sync SQLite tables
-    print("\n[3/5] Syncing SQLite predictions ...")
+    log.info("\n[3/5] Syncing SQLite predictions ...")
     sync_sqlite_tables(cursor, args.full)
 
     # Step 5: Create views
-    print("\n[4/5] Creating views ...")
+    log.info("\n[4/5] Creating views ...")
     _create_views(cursor)
 
     # Done
-    print("\n[5/5] Sync complete.")
+    log.info("\n[5/5] Sync complete.")
     cursor.close()
     conn.close()
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

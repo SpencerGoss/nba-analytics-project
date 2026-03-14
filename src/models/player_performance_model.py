@@ -32,6 +32,9 @@ FEATURES_PATH = "data/features/player_game_features.csv"
 ARTIFACTS_DIR = "models/artifacts"
 TARGETS = ["pts", "reb", "ast"]
 from src.models.game_outcome_model import TEST_SEASONS
+import logging
+
+log = logging.getLogger(__name__)
 MIN_TRAIN_GAMES = 20
 VALIDATION_SEASON = 202223
 
@@ -141,29 +144,29 @@ def train_player_models(
 ) -> tuple:
     """Train one selected regression pipeline per stat target."""
     print("=" * 60)
-    print("PLAYER PERFORMANCE PREDICTION MODELS")
+    log.info("PLAYER PERFORMANCE PREDICTION MODELS")
     print("=" * 60)
 
-    print("\nLoading player game features...")
+    log.info("\nLoading player game features...")
     df = pd.read_csv(features_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
-    print(f"  Total rows: {len(df):,} | Players: {df.player_id.nunique():,} | Seasons: {df.season.nunique()}")
+    log.info(f"  Total rows: {len(df):,} | Players: {df.player_id.nunique():,} | Seasons: {df.season.nunique()}")
 
     train_df = df[~df["season"].astype(int).isin(test_seasons)].copy()
     test_df = df[df["season"].astype(int).isin(test_seasons)].copy()
-    print(f"  Train: {len(train_df):,} | Test: {len(test_df):,}")
+    log.info(f"  Train: {len(train_df):,} | Test: {len(test_df):,}")
 
     train_counts = train_df.groupby("player_id")["game_id"].transform("count")
     train_df = train_df[train_counts >= MIN_TRAIN_GAMES]
-    print(f"  Train after min-games filter ({MIN_TRAIN_GAMES}): {len(train_df):,}")
+    log.info(f"  Train after min-games filter ({MIN_TRAIN_GAMES}): {len(train_df):,}")
 
     models, metrics = {}, {}
     os.makedirs(artifacts_dir, exist_ok=True)
 
     for target in targets:
-        print(f"\n{'-' * 46}")
-        print(f"Target: {target.upper()}")
+        log.info(f"\n{'-' * 46}")
+        log.info(f"Target: {target.upper()}")
 
         feat_cols = get_feature_cols(df, target)
 
@@ -187,7 +190,7 @@ def train_player_models(
             val_mae = mean_absolute_error(y_val, val_pred)
             val_rmse = root_mean_squared_error(y_val, val_pred)
             selection_rows.append((name, val_mae, val_rmse))
-            print(f"  {name:>16} | val_MAE={val_mae:.3f} | val_RMSE={val_rmse:.3f}")
+            log.info(f"  {name:>16} | val_MAE={val_mae:.3f} | val_RMSE={val_rmse:.3f}")
             if val_mae < best_val_mae:
                 best_val_mae = val_mae
                 best_name = name
@@ -195,15 +198,15 @@ def train_player_models(
         best_model = candidates[best_name]
         best_model.fit(X_train, y_train)
 
-        print(f"  Selected      | {best_name}")
+        log.info(f"  Selected      | {best_name}")
         if len(X_test) > 0:
             test_pred = best_model.predict(X_test)
             test_mae = mean_absolute_error(y_test, test_pred)
             test_rmse = root_mean_squared_error(y_test, test_pred)
-            print(f"  Test          | MAE={test_mae:.3f} | RMSE={test_rmse:.3f}")
+            log.info(f"  Test          | MAE={test_mae:.3f} | RMSE={test_rmse:.3f}")
         else:
             test_mae, test_rmse = float("nan"), float("nan")
-            print(f"  Test          | No test data (test seasons not in features file)")
+            log.info(f"  Test          | No test data (test seasons not in features file)")
 
         models[target] = best_model
         metrics[target] = {
@@ -216,8 +219,8 @@ def train_player_models(
         }
 
         imp = _extract_importance(best_model, feat_cols)
-        print(f"\n  Top 10 features for {target}:")
-        print(imp.head(10).to_string())
+        log.info(f"\n  Top 10 features for {target}:")
+        log.debug(imp.head(10).to_string())
 
         with open(os.path.join(artifacts_dir, f"player_{target}_model.pkl"), "wb") as f:
             pickle.dump(best_model, f)
@@ -227,13 +230,11 @@ def train_player_models(
             os.path.join(artifacts_dir, f"player_{target}_importances.csv"), index=False
         )
 
-    print(f"\n{'=' * 60}")
-    print("SUMMARY")
+    log.info(f"\n{'=' * 60}")
+    log.info("SUMMARY")
     for target, m in metrics.items():
-        print(
-            f"  {target.upper():>4}: model={m['selected_model']:<16} "
-            f"MAE={m['mae']:.3f} | RMSE={m['rmse']:.3f} | val_MAE={m['validation_mae']:.3f}"
-        )
+        log.info(f"  {target.upper():>4}: model={m['selected_model']:<16} "
+            f"MAE={m['mae']:.3f} | RMSE={m['rmse']:.3f} | val_MAE={m['validation_mae']:.3f}")
 
     return models, metrics
 

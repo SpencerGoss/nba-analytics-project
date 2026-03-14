@@ -33,6 +33,9 @@ TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "power_rankings.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 LAST_N = 20   # primary recency window (last 20 games)
@@ -243,31 +246,30 @@ def build_power_rankings(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    print("Loading features...")
+    log.info("Loading features...")
     features = load_features()
-    print(f"  {len(features)} rows for season {CURRENT_SEASON}")
+    log.info(f"  {len(features)} rows for season {CURRENT_SEASON}")
 
     team_names = load_team_names()
 
     output = build_power_rankings(features, team_names)
     rankings = output["rankings"]
-    print(f"  Ranked {len(rankings)} teams")
+    log.info(f"  Ranked {len(rankings)} teams")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
         json.dump(output, fh, separators=(",", ":"), ensure_ascii=False)
 
-    print(f"  Written -> {OUT_JSON}")
+    log.info(f"  Written -> {OUT_JSON}")
     for entry in rankings[:10]:
         delta_str = f"{entry['rank_delta']:+d}" if entry["rank_delta"] != 0 else " ="
-        print(
-            f"  #{entry['rank']:2d}  {entry['team']:<4s}  {entry['team_name']:<32s}  "
+        log.info(f"  #{entry['rank']:2d}  {entry['team']:<4s}  {entry['team_name']:<32s}  "
             f"score={entry['composite_score']:5.1f}  net20={entry['net_rating']:+.1f}  "
             f"net10={entry['net_rating_l10']:+.1f}  "
             f"win%={entry['win_pct_season']:.3f}  "
-            f"L10={entry['last10_record']}  trend={entry['trend']}  delta={delta_str}"
-        )
+            f"L10={entry['last10_record']}  trend={entry['trend']}  delta={delta_str}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

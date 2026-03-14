@@ -48,6 +48,9 @@ PREDICTIONS_DB = PROJECT_ROOT / "database" / "predictions_history.db"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "live_scores.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 
@@ -71,7 +74,7 @@ def _build_season_records() -> dict[str, str]:
             records[team] = f"{w}-{lo}"
         return records
     except Exception as exc:
-        print(f"  WARN: could not build season records: {exc}")
+        log.error(f"  WARN: could not build season records: {exc}")
         return {}
 
 
@@ -102,7 +105,7 @@ def _build_spread_lookup() -> dict[str, str]:
                     pass
         return lookup
     except Exception as exc:
-        print(f"  WARN: could not build spread lookup: {exc}")
+        log.error(f"  WARN: could not build spread lookup: {exc}")
         return {}
 
 
@@ -158,7 +161,7 @@ def _fetch_live_scoreboard() -> list[dict]:
 
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    print("  Fetching live scoreboard from nba_api ...")
+    log.info("  Fetching live scoreboard from nba_api ...")
     time.sleep(0.6)
     board = ScoreBoard()
     games_raw = board.games.get_dict()
@@ -219,7 +222,7 @@ def _fetch_live_scoreboard() -> list[dict]:
             "game_date": game_date,
         })
 
-    print(f"  Found {len(results)} games from live scoreboard")
+    log.info(f"  Found {len(results)} games from live scoreboard")
     return results
 
 
@@ -236,7 +239,7 @@ def _fallback_from_db() -> list[dict]:
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     if not PREDICTIONS_DB.exists():
-        print("  WARN: predictions_history.db not found -- returning empty game list")
+        log.warning("  WARN: predictions_history.db not found -- returning empty game list")
         return []
 
     conn = sqlite3.connect(str(PREDICTIONS_DB))
@@ -259,7 +262,7 @@ def _fallback_from_db() -> list[dict]:
                     "WHERE game_date = ? ORDER BY id",
                     (latest[0],),
                 ).fetchall()
-                print(f"  Fallback: using predictions from {latest[0]}")
+                log.warning(f"  Fallback: using predictions from {latest[0]}")
     finally:
         conn.close()
 
@@ -279,7 +282,7 @@ def _fallback_from_db() -> list[dict]:
             "game_date": gdate or today_str,
         })
 
-    print(f"  Fallback: {len(results)} games from predictions DB")
+    log.warning(f"  Fallback: {len(results)} games from predictions DB")
     return results
 
 
@@ -292,8 +295,8 @@ def build_live_scores(out_path: Path = OUT_JSON) -> dict:
     try:
         games = _fetch_live_scoreboard()
     except Exception as exc:
-        print(f"  ERROR fetching live scoreboard: {exc}")
-        print("  Falling back to predictions_history.db ...")
+        log.error(f"  ERROR fetching live scoreboard: {exc}")
+        log.info("  Falling back to predictions_history.db ...")
         games = _fallback_from_db()
 
     exported_at = datetime.now(timezone.utc).isoformat()
@@ -306,10 +309,11 @@ def build_live_scores(out_path: Path = OUT_JSON) -> dict:
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(output, fh, indent=2, default=str)
 
-    print(f"  Written -> {out_path}  ({len(games)} games)")
+    log.info(f"  Written -> {out_path}  ({len(games)} games)")
     return output
 
 
 if __name__ == "__main__":
-    print("=== build_live_scores ===")
+    logging.basicConfig(level=logging.INFO)
+    log.info("=== build_live_scores ===")
     build_live_scores()

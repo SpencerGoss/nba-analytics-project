@@ -39,6 +39,9 @@ ADV_CSV = PROJECT_ROOT / "data" / "processed" / "player_stats_advanced.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "advanced_stats.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 MIN_GP = 5  # minimum games played to include
@@ -46,24 +49,24 @@ MIN_GP = 5  # minimum games played to include
 
 def build_advanced_stats() -> dict:
     if not ADV_CSV.exists():
-        print(f"  advanced stats CSV not found: {ADV_CSV}")
+        log.warning(f"  advanced stats CSV not found: {ADV_CSV}")
         return {}
 
     df = pd.read_csv(ADV_CSV)
 
     # Filter to current season
     cur = df[df["season"] == CURRENT_SEASON].copy()
-    print(f"  {len(cur)} player-rows in season {CURRENT_SEASON}")
+    log.info(f"  {len(cur)} player-rows in season {CURRENT_SEASON}")
 
     # When a player appears on multiple teams, keep the row with most games
     cur = cur.sort_values("gp", ascending=False).drop_duplicates(
         subset=["player_name"], keep="first"
     )
-    print(f"  {len(cur)} unique players after dedup")
+    log.info(f"  {len(cur)} unique players after dedup")
 
     # Filter out low-sample players
     cur = cur[cur["gp"] >= MIN_GP]
-    print(f"  {len(cur)} players with >= {MIN_GP} GP")
+    log.info(f"  {len(cur)} players with >= {MIN_GP} GP")
 
     result: dict[str, dict] = {}
     for _, row in cur.iterrows():
@@ -95,9 +98,9 @@ def build_advanced_stats() -> dict:
 
 
 def main() -> None:
-    print("Building advanced stats...")
+    log.info("Building advanced stats...")
     data = build_advanced_stats()
-    print(f"  Built {len(data)} player entries")
+    log.info(f"  Built {len(data)} player entries")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
@@ -106,17 +109,18 @@ def main() -> None:
              "exported_at": datetime.now(timezone.utc).isoformat()},
             fh, separators=(",", ":"), ensure_ascii=False
         )
-    print(f"  Written -> {OUT_JSON}")
+    log.info(f"  Written -> {OUT_JSON}")
 
     # Preview a few players
     for name in ["Shai Gilgeous-Alexander", "Nikola Jokic", "Giannis Antetokounmpo",
                  "LeBron James", "Stephen Curry"]:
         if name in data:
             d = data[name]
-            print(f"  {name}: ts={d['ts']}% usg={d['usg']}% net={d['net_rtg']}")
+            log.info(f"  {name}: ts={d['ts']}% usg={d['usg']}% net={d['net_rtg']}")
         else:
-            print(f"  {name}: not found in {CURRENT_SEASON}")
+            log.warning(f"  {name}: not found in {CURRENT_SEASON}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

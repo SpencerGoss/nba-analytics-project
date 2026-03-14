@@ -17,6 +17,9 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -426,48 +429,47 @@ def build_game_context(
 ) -> list[dict]:
     """Main entry point. Returns the list of context dicts (also writes JSON)."""
     if not picks_path.exists():
-        print(f"WARN: picks file not found: {picks_path} -- skipping game context build")
+        log.warning(f"WARN: picks file not found: {picks_path} -- skipping game context build")
         return []
     if not logs_path.exists():
-        print(f"WARN: team_game_logs not found: {logs_path} -- skipping game context build")
+        log.warning(f"WARN: team_game_logs not found: {logs_path} -- skipping game context build")
         return []
 
     with open(picks_path, encoding="utf-8") as f:
         picks = json.load(f)
 
     if not picks:
-        print("No picks found in todays_picks.json -- writing empty game_context.json")
+        log.warning("No picks found in todays_picks.json -- writing empty game_context.json")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text("[]", encoding="utf-8")
         return []
 
-    print(f"Loading team game logs from {logs_path} ...")
+    log.info(f"Loading team game logs from {logs_path} ...")
     all_logs = load_game_logs()
     season_logs = current_season_logs(all_logs)
-    print(f"  All-time rows: {len(all_logs):,}  |  current season rows: {len(season_logs):,}")
+    log.info(f"  All-time rows: {len(all_logs):,}  |  current season rows: {len(season_logs):,}")
 
     injuries_index = _load_injuries_index(INJURIES_JSON)
     if injuries_index:
-        print(f"  Loaded injury data for {len(injuries_index)} games")
+        log.info(f"  Loaded injury data for {len(injuries_index)} games")
     else:
-        print("  No injuries.json data available -- INJ_IMPACT flags will be skipped")
+        log.warning("  No injuries.json data available -- INJ_IMPACT flags will be skipped")
 
     results = []
     for pick in picks:
         ctx = build_context_for_game(pick, all_logs, season_logs, injuries_index)
         results.append(ctx)
-        print(
-            f"  {ctx['away_team']} @ {ctx['home_team']} ({ctx['game_date']}) -> "
-            f"flags={ctx['situational_flags']}"
-        )
+        log.info(f"  {ctx['away_team']} @ {ctx['home_team']} ({ctx['game_date']}) -> "
+            f"flags={ctx['situational_flags']}")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(results, f, separators=(",", ":"), default=str)
 
-    print(f"Wrote {len(results)} game contexts to {out_path}")
+    log.info(f"Wrote {len(results)} game contexts to {out_path}")
     return results
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_game_context()

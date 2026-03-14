@@ -5,6 +5,9 @@ import time
 import os
 
 from src.data.api_client import fetch_with_retry, HEADERS
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # Download league standings for every season in a range
@@ -13,7 +16,7 @@ def get_standings(start_year=2000, end_year=2024):
 
     for year in range(start_year, end_year + 1):
         season = f"{year}-{str(year+1)[-2:]}"
-        print(f"Fetching {season}...")
+        log.info(f"Fetching {season}...")
         time.sleep(1)
 
         result = fetch_with_retry(
@@ -31,7 +34,7 @@ def get_standings(start_year=2000, end_year=2024):
         data = result["data"]
         output_path = f"data/raw/standings/standings_{season.replace('-', '')}.csv"
         data.to_csv(output_path, index=False)
-        print(f"  Saved {season} ({len(data)} rows)")
+        log.info(f"  Saved {season} ({len(data)} rows)")
 
 
 # Run script

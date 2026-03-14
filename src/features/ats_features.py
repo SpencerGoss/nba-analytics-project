@@ -28,6 +28,9 @@ import pandas as pd
 from pathlib import Path
 
 from src.data.get_historical_odds import load_and_normalize_odds
+import logging
+
+log = logging.getLogger(__name__)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 
@@ -78,7 +81,7 @@ def _add_ats_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
     out = out.sort_values("game_date").reset_index(drop=True)
 
     # -- Rolling ATS records (per-team, shifted to avoid leakage) ---------------
-    print("  Computing rolling ATS records...")
+    log.info("  Computing rolling ATS records...")
     for window in [5, 10]:
         home_col = f"home_ats_record_{window}g"
         away_col = f"away_ats_record_{window}g"
@@ -132,7 +135,7 @@ def _add_ats_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
         "record_vs_spread_expectation", "spread_x_home_dog", "implied_prob_gap",
     ]
     n_new = sum(1 for c in new_cols if c in out.columns)
-    print(f"  Added {n_new} ATS-specific engineered features")
+    log.info(f"  Added {n_new} ATS-specific engineered features")
 
     return out
 
@@ -185,7 +188,7 @@ def build_ats_features(
         else str(PROJECT_ROOT / output_path)
     )
 
-    print("Loading matchup features...")
+    log.info("Loading matchup features...")
     matchup_header = pd.read_csv(_check_matchup_path, nrows=1)
     forbidden_cols = {"spread", "covers_spread", "home_implied_prob", "away_implied_prob"}
     found_forbidden = forbidden_cols.intersection(set(matchup_header.columns))
@@ -194,21 +197,21 @@ def build_ats_features(
         f"forbidden columns: {found_forbidden}. "
         f"The win-probability model must never see spread data."
     )
-    print("  Data separation guard PASSED: no spread/odds columns in matchup features")
+    log.info("  Data separation guard PASSED: no spread/odds columns in matchup features")
 
     # ── Load matchup features ─────────────────────────────────────────────────
     matchup = pd.read_csv(_check_matchup_path)
-    print(f"  Matchup features: {matchup.shape[0]} rows, {matchup.shape[1]} columns")
+    log.info(f"  Matchup features: {matchup.shape[0]} rows, {matchup.shape[1]} columns")
 
     # ── Load and normalize odds ───────────────────────────────────────────────
-    print("Loading historical odds...")
+    log.info("Loading historical odds...")
     odds = load_and_normalize_odds(odds_path=_check_odds_path)
     if odds.shape[0] == 0:
         raise RuntimeError(
             "No odds data loaded. Download the Kaggle NBA betting dataset first. "
             "See src/data/get_historical_odds.py for instructions."
         )
-    print(f"  Odds data: {odds.shape[0]} rows")
+    log.info(f"  Odds data: {odds.shape[0]} rows")
 
     # ── Keep only the columns needed from odds for the join ───────────────────
     odds_join = odds[[
@@ -220,7 +223,7 @@ def build_ats_features(
     # Inner join intentionally drops pre-2007 games (no odds data available).
     # Team abbreviations must match -- get_historical_odds.py normalizes to
     # the same 3-letter format as game_matchup_features.csv.
-    print("Joining matchup features with odds...")
+    log.info("Joining matchup features with odds...")
     merged = matchup.merge(
         odds_join,
         on=["game_date", "home_team", "away_team"],
@@ -230,17 +233,17 @@ def build_ats_features(
         "Zero rows after merge -- check team name mapping. "
         "home_team/away_team values in matchup and odds files must match."
     )
-    print(f"  Joined result: {merged.shape[0]} rows (pre-2007 rows dropped -- expected)")
+    log.info(f"  Joined result: {merged.shape[0]} rows (pre-2007 rows dropped -- expected)")
 
     # ── Exclude anomalous seasons ─────────────────────────────────────────────
     pre_exclusion = merged.shape[0]
     merged = merged[~merged["season"].isin(EXCLUDED_SEASONS)].copy()
     excluded_count = pre_exclusion - merged.shape[0]
     if excluded_count > 0:
-        print(f"  Excluded {excluded_count} rows from seasons {EXCLUDED_SEASONS}")
+        log.info(f"  Excluded {excluded_count} rows from seasons {EXCLUDED_SEASONS}")
 
     # ── Engineer ATS-specific features ────────────────────────────────────────
-    print("Engineering ATS-specific features...")
+    log.info("Engineering ATS-specific features...")
     merged = _add_ats_engineered_features(merged)
 
     # ── Summary ───────────────────────────────────────────────────────────────
@@ -251,20 +254,20 @@ def build_ats_features(
     season_min = merged["season"].min()
     season_max = merged["season"].max()
 
-    print(f"")
-    print(f"ATS Feature Table Summary:")
-    print(f"  Total rows:        {total_rows}")
-    print(f"  Valid covers:      {valid_covers} (non-push)")
-    print(f"  Pushes (NaN):      {push_count}")
-    print(f"  Valid impl. probs: {valid_probs}")
-    print(f"  Season range:      {season_min} - {season_max}")
-    print(f"  Columns:           {merged.shape[1]}")
+    log.info(f"")
+    log.info(f"ATS Feature Table Summary:")
+    log.info(f"  Total rows:        {total_rows}")
+    log.info(f"  Valid covers:      {valid_covers} (non-push)")
+    log.info(f"  Pushes (NaN):      {push_count}")
+    log.info(f"  Valid impl. probs: {valid_probs}")
+    log.info(f"  Season range:      {season_min} - {season_max}")
+    log.debug(f"  Columns:           {merged.shape[1]}")
 
     # ── Save output ───────────────────────────────────────────────────────────
     output_dir = Path(_check_output_path).parent
     output_dir.mkdir(parents=True, exist_ok=True)
     merged.to_csv(_check_output_path, index=False)
-    print(f"  Saved to: {_check_output_path}")
+    log.info(f"  Saved to: {_check_output_path}")
 
     return merged
 
@@ -274,23 +277,23 @@ def build_ats_features(
 if __name__ == "__main__":
     df = build_ats_features()
     print("")
-    print("=== Final Verification ===")
-    print(f"game_ats_features.csv: {df.shape[0]} rows, {df.shape[1]} columns")
+    log.debug("=== Final Verification ===")
+    log.info(f"game_ats_features.csv: {df.shape[0]} rows, {df.shape[1]} columns")
     ats_cols = ["spread", "home_implied_prob", "away_implied_prob", "covers_spread"]
     for col in ats_cols:
         assert col in df.columns, f"Missing required column: {col}"
-    print(f"Required ATS columns present: {ats_cols}")
+    log.info(f"Required ATS columns present: {ats_cols}")
 
     # Verify no-vig probs sum to ~1.0
     valid_p = df[df["home_implied_prob"].notna()].copy()
     if len(valid_p) > 0:
         prob_sum = (valid_p["home_implied_prob"] + valid_p["away_implied_prob"]).mean()
-        print(f"Mean implied prob sum (no-vig check, should be ~1.0): {prob_sum:.4f}")
+        log.debug(f"Mean implied prob sum (no-vig check, should be ~1.0): {prob_sum:.4f}")
 
     # Spot-check covers_spread encoding
     home_covers = (df["covers_spread"] == 1.0).sum()
     away_covers = (df["covers_spread"] == 0.0).sum()
     pushes = df["covers_spread"].isna().sum()
-    print(f"Covers spread: home={home_covers}, away={away_covers}, push/NaN={pushes}")
+    log.info(f"Covers spread: home={home_covers}, away={away_covers}, push/NaN={pushes}")
     print("")
-    print("DONE")
+    log.info("DONE")

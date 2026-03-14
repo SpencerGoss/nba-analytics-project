@@ -46,7 +46,7 @@ def refresh_odds_data() -> bool:
         # Echo the script's output so it appears in update.py logs
         if result.stdout.strip():
             for line in result.stdout.strip().splitlines():
-                print(f"  [odds] {line}")
+                log.info(f"  [odds] {line}")
         return True
     else:
         stderr = result.stderr.strip()

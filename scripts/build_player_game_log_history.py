@@ -45,6 +45,9 @@ import time
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = PROJECT_ROOT / "dashboard" / "data" / "game_logs"
@@ -102,14 +105,14 @@ def fetch_game_log(player_id: int, season_str: str) -> pd.DataFrame | None:
         time.sleep(THROTTLE_SEC)
         return df
     except Exception as exc:
-        print(f"  WARNING: first attempt failed (player={player_id}, season={season_str}): {exc}")
+        log.error(f"  WARNING: first attempt failed (player={player_id}, season={season_str}): {exc}")
         time.sleep(2.0)
         try:
             df = PlayerGameLog(**kwargs).get_data_frames()[0]
             time.sleep(THROTTLE_SEC)
             return df
         except Exception as exc2:
-            print(f"  ERROR: skipping after retry: {exc2}")
+            log.error(f"  ERROR: skipping after retry: {exc2}")
             return None
 
 
@@ -170,14 +173,14 @@ def build_season_log(player_id: int, season_str: str) -> dict | None:
     out_path = OUT_DIR / f"player_{player_id}_{season_int}.json"
 
     if out_path.exists():
-        print(f"  {season_str}: already exists, skipping.")
+        log.warning(f"  {season_str}: already exists, skipping.")
         return None
 
-    print(f"  Fetching game log: player_id={player_id} season={season_str}...", end=" ", flush=True)
+    log.info(f"  Fetching game log: player_id={player_id} season={season_str}...", end=" ", flush=True)
     df = fetch_game_log(player_id, season_str)
 
     if df is None or df.empty:
-        print("no data")
+        log.warning("no data")
         return None
 
     # Normalise column names for lookup
@@ -197,7 +200,7 @@ def build_season_log(player_id: int, season_str: str) -> dict | None:
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(output, f, separators=(",", ":"))
 
-    print(f"done ({len(games)} games) -> {out_path.name}")
+    log.info(f"done ({len(games)} games) -> {out_path.name}")
     return output
 
 
@@ -224,9 +227,9 @@ def main(argv: list[str] | None = None) -> None:
         seasons = [args.season]
     else:
         seasons = available_seasons()
-        print(f"build_player_game_log_history: fetching all {len(seasons)} seasons "
+        log.info(f"build_player_game_log_history: fetching all {len(seasons)} seasons "
               f"for player_id={player_id}")
-        print("  NOTE: this will take several minutes due to API rate limits.")
+        log.info("  NOTE: this will take several minutes due to API rate limits.")
 
     if args.overwrite:
         # Remove existing files so build_season_log won't skip them
@@ -242,9 +245,10 @@ def main(argv: list[str] | None = None) -> None:
         if len(seasons) > 1 and i < len(seasons) - 1:
             time.sleep(BETWEEN_SEASON_SEC)
 
-    print(f"build_player_game_log_history: done. {fetched} seasons processed.")
-    print(f"  Output directory: {OUT_DIR}")
+    log.info(f"build_player_game_log_history: done. {fetched} seasons processed.")
+    log.info(f"  Output directory: {OUT_DIR}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

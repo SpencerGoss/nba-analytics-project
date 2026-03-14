@@ -34,6 +34,9 @@ TEAMS_CSV = PROJECT_ROOT / "data" / "processed" / "teams.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "standings.json"
 
 from src.config import get_current_season, EAST_DIVISIONS, WEST_DIVISIONS
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 LAST_N = 10
@@ -279,23 +282,23 @@ def build_standings(
 ) -> dict:
     """Main entry point. Returns the standings dict (also writes JSON)."""
     if not logs_path.exists():
-        print(f"WARN: team_game_logs not found: {logs_path} -- skipping standings build")
+        log.warning(f"WARN: team_game_logs not found: {logs_path} -- skipping standings build")
         return {}
 
-    print(f"Loading game logs from {logs_path} ...")
+    log.info(f"Loading game logs from {logs_path} ...")
     logs = load_season_logs(season)
-    print(f"  {len(logs)} rows for season {season}")
+    log.info(f"  {len(logs)} rows for season {season}")
 
     team_names: dict[str, str] = {}
     if teams_path.exists():
         team_names = _load_team_names()
     else:
-        print(f"  WARN: teams.csv not found at {teams_path} -- using abbreviations only")
+        log.warning(f"  WARN: teams.csv not found at {teams_path} -- using abbreviations only")
 
-    print("Computing East standings ...")
+    log.info("Computing East standings ...")
     east = build_conference_standings(logs, team_names, "East", EAST)
 
-    print("Computing West standings ...")
+    log.info("Computing West standings ...")
     west = build_conference_standings(logs, team_names, "West", WEST)
 
     result = {
@@ -308,9 +311,10 @@ def build_standings(
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(result, fh, separators=(",", ":"), default=str)
 
-    print(f"Written -> {out_path}  (East: {len(east)} teams, West: {len(west)} teams)")
+    log.info(f"Written -> {out_path}  (East: {len(east)} teams, West: {len(west)} teams)")
     return result
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_standings()

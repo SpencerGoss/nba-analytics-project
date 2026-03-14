@@ -33,6 +33,9 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -283,7 +286,7 @@ def build_game_detail() -> dict:
     """Build game detail JSON for all of today's games."""
     picks = _load_json(PICKS_JSON)
     if not picks:
-        print("No picks found in todays_picks.json -> writing empty game_detail.json")
+        log.warning("No picks found in todays_picks.json -> writing empty game_detail.json")
         result = {"games": []}
         _write_output(result)
         return result
@@ -301,7 +304,7 @@ def build_game_detail() -> dict:
     h2h_raw = _load_json(H2H_JSON)
     h2h_idx = _load_h2h_index(h2h_raw) if isinstance(h2h_raw, list) else {}
 
-    print(f"Loaded: {len(picks)} picks, {len(standings_idx)} standings, "
+    log.info(f"Loaded: {len(picks)} picks, {len(standings_idx)} standings, "
           f"{len(context_idx)} contexts, {len(injuries_idx)} injury reports, "
           f"{len(h2h_idx)} h2h records")
 
@@ -399,11 +402,11 @@ def build_game_detail() -> dict:
             "injuries": injuries_block,
         })
 
-        print(f"  {away} @ {home} ({game_date}) -> {len(factors)} factors")
+        log.info(f"  {away} @ {home} ({game_date}) -> {len(factors)} factors")
 
     result = {"games": games}
     _write_output(result)
-    print(f"Written -> {OUT_JSON} ({len(games)} games)")
+    log.info(f"Written -> {OUT_JSON} ({len(games)} games)")
     return result
 
 
@@ -414,4 +417,5 @@ def _write_output(data: dict) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_game_detail()

@@ -15,6 +15,9 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
@@ -78,7 +81,7 @@ def _timestamp() -> str:
 
 
 def _log(msg: str) -> None:
-    print(f"[{_timestamp()}] {msg}")
+    log.info(f"[{_timestamp()}] {msg}")
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         for entry in BUILDERS:
             path = _resolve_builder_path(entry)
             status = "EXISTS" if path.exists() else "MISSING"
-            print(f"  [{status}] {_builder_name(entry)}")
+            log.info(f"  [{status}] {_builder_name(entry)}")
         return 0
 
     if args.builder:
@@ -229,4 +232,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     sys.exit(main())

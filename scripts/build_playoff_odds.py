@@ -42,6 +42,9 @@ from src.config import (
     get_current_season, EAST_DIVISIONS, WEST_DIVISIONS,
     EAST_TEAMS, WEST_TEAMS,
 )
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 
@@ -161,20 +164,20 @@ def build_playoff_odds(
     season: int = CURRENT_SEASON,
 ) -> dict:
     if not logs_path.exists():
-        print(f"WARN: team_game_logs not found: {logs_path} -- skipping playoff odds build")
+        log.warning(f"WARN: team_game_logs not found: {logs_path} -- skipping playoff odds build")
         return {}
 
-    print(f"Loading game logs from {logs_path} ...")
+    log.info(f"Loading game logs from {logs_path} ...")
     df = pd.read_csv(logs_path)
     df = df[df["season"] == season].copy()
-    print(f"  {len(df)} rows for season {season}")
+    log.info(f"  {len(df)} rows for season {season}")
 
     team_names = _load_team_names()
 
-    print("Computing East standings ...")
+    log.info("Computing East standings ...")
     east_rows = _compute_conference_standings(df, EAST_TEAMS)
 
-    print("Computing West standings ...")
+    log.info("Computing West standings ...")
     west_rows = _compute_conference_standings(df, WEST_TEAMS)
 
     title_map = _title_odds_map([east_rows, west_rows])
@@ -207,18 +210,19 @@ def build_playoff_odds(
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(result, fh, separators=(",", ":"), default=str)
 
-    print(f"Written -> {out_path}  (East: {len(east_out)} teams, West: {len(west_out)} teams)")
+    log.info(f"Written -> {out_path}  (East: {len(east_out)} teams, West: {len(west_out)} teams)")
 
-    print("  Top 5 East:")
+    log.info("  Top 5 East:")
     for row in east_out[:5]:
-        print(f"    #{row['rank']} {row['abbr']:<4s}  pct={row['pct']:.0f}%  title={row['title']:.1f}%")
-    print("  Top 5 West:")
+        log.info(f"    #{row['rank']} {row['abbr']:<4s}  pct={row['pct']:.0f}%  title={row['title']:.1f}%")
+    log.info("  Top 5 West:")
     for row in west_out[:5]:
-        print(f"    #{row['rank']} {row['abbr']:<4s}  pct={row['pct']:.0f}%  title={row['title']:.1f}%")
+        log.info(f"    #{row['rank']} {row['abbr']:<4s}  pct={row['pct']:.0f}%  title={row['title']:.1f}%")
 
     return result
 
 
 if __name__ == "__main__":
-    print("=== build_playoff_odds ===")
+    logging.basicConfig(level=logging.INFO)
+    log.info("=== build_playoff_odds ===")
     build_playoff_odds()

@@ -38,6 +38,9 @@ FEATURES_CSV = PROJECT_ROOT / "data" / "features" / "team_game_features.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "trends.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 LAST_N = 10
@@ -201,24 +204,25 @@ def compute_team_trends(
 # ---------------------------------------------------------------------------
 
 def build_trends() -> dict[str, dict]:
-    print(f"Loading game logs from {LOGS_CSV} ...")
+    log.info(f"Loading game logs from {LOGS_CSV} ...")
     logs = load_logs()
-    print(f"  {len(logs)} rows for season {CURRENT_SEASON}")
+    log.info(f"  {len(logs)} rows for season {CURRENT_SEASON}")
 
-    print(f"Loading team features from {FEATURES_CSV} ...")
+    log.info(f"Loading team features from {FEATURES_CSV} ...")
     features = load_features()
-    print(f"  {len(features)} rows for season {CURRENT_SEASON}")
+    log.info(f"  {len(features)} rows for season {CURRENT_SEASON}")
 
-    print("Computing team trends ...")
+    log.info("Computing team trends ...")
     trends = compute_team_trends(logs, features)
-    print(f"  {len(trends)} teams processed")
+    log.info(f"  {len(trends)} teams processed")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_JSON, "w", encoding="utf-8") as fh:
         json.dump(trends, fh, separators=(",", ":"))
-    print(f"Written -> {OUT_JSON}")
+    log.info(f"Written -> {OUT_JSON}")
     return trends
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_trends()

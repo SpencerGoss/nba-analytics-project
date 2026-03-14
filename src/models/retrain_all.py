@@ -20,6 +20,9 @@ After retraining, verify with:
 import subprocess
 import sys
 import os
+import logging
+
+log = logging.getLogger(__name__)
 
 # Ensure we run from project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -29,21 +32,21 @@ sys.path.insert(0, PROJECT_ROOT)
 
 def run_step(description: str, cmd: list) -> bool:
     """Run a subprocess step and return True on success."""
-    print(f"\n{'='*60}")
-    print(f"STEP: {description}")
-    print(f"{'='*60}")
+    log.info(f"\n{'='*60}")
+    log.info(f"STEP: {description}")
+    log.info(f"{'='*60}")
     # Ensure project root is on PYTHONPATH so 'from src...' imports work
     env = os.environ.copy()
     env["PYTHONPATH"] = PROJECT_ROOT + os.pathsep + env.get("PYTHONPATH", "")
     result = subprocess.run(cmd, capture_output=False, text=True, env=env)
     if result.returncode != 0:
-        print(f"ERROR: Step failed with return code {result.returncode}")
+        log.error(f"ERROR: Step failed with return code {result.returncode}")
         return False
     return True
 
 
 def main():
-    print("NBA Analytics — Full Model Retraining Pipeline")
+    log.info("NBA Analytics — Full Model Retraining Pipeline")
     print("=" * 60)
 
     # Step 1: Rebuild lineup features
@@ -57,7 +60,7 @@ def main():
          "print(f'Seasons covered: {sorted(df[\"season\"].unique())}')"],
     )
     if not ok:
-        print("Lineup feature rebuild failed. Check data/raw/lineups/ directory.")
+        log.error("Lineup feature rebuild failed. Check data/raw/lineups/ directory.")
         sys.exit(1)
 
     # Step 2: Rebuild game matchup features
@@ -66,7 +69,7 @@ def main():
         [sys.executable, "src/features/team_game_features.py"],
     )
     if not ok:
-        print("Matchup feature rebuild failed.")
+        log.error("Matchup feature rebuild failed.")
         sys.exit(1)
 
     # Step 3: Retrain game outcome model
@@ -75,7 +78,7 @@ def main():
         [sys.executable, "src/models/game_outcome_model.py"],
     )
     if not ok:
-        print("Game outcome model training failed.")
+        log.error("Game outcome model training failed.")
         sys.exit(1)
 
     # Step 4: Re-calibrate
@@ -84,7 +87,7 @@ def main():
         [sys.executable, "src/models/calibration.py"],
     )
     if not ok:
-        print("Calibration failed.")
+        log.error("Calibration failed.")
         sys.exit(1)
 
     # Step 5: Retrain margin model
@@ -93,7 +96,7 @@ def main():
         [sys.executable, "src/models/margin_model.py"],
     )
     if not ok:
-        print("Margin model training failed.")
+        log.error("Margin model training failed.")
         sys.exit(1)
 
     # Step 6: Retrain ATS model
@@ -102,12 +105,12 @@ def main():
         [sys.executable, "src/models/ats_model.py"],
     )
     if not ok:
-        print("ATS model training failed.")
+        log.error("ATS model training failed.")
         sys.exit(1)
 
-    print("\n" + "=" * 60)
-    print("ALL STEPS COMPLETE")
-    print("Run tests: python -m pytest tests/ -q")
+    log.info("\n" + "=" * 60)
+    log.info("ALL STEPS COMPLETE")
+    log.info("Run tests: python -m pytest tests/ -q")
     print("=" * 60)
 
 

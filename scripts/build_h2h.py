@@ -32,6 +32,9 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -168,27 +171,28 @@ def compute_h2h(picks: list[dict], games: pd.DataFrame) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def build_h2h() -> list[dict]:
-    print(f"Loading game logs from {LOGS_CSV} ...")
+    log.info(f"Loading game logs from {LOGS_CSV} ...")
     logs = load_logs()
-    print(f"  {len(logs)} total rows across all seasons")
+    log.info(f"  {len(logs)} total rows across all seasons")
 
-    print("Building per-game index ...")
+    log.info("Building per-game index ...")
     games = _build_game_index(logs)
-    print(f"  {len(games)} games indexed")
+    log.info(f"  {len(games)} games indexed")
 
-    print(f"Loading today's picks from {PICKS_JSON} ...")
+    log.info(f"Loading today's picks from {PICKS_JSON} ...")
     picks = load_picks()
-    print(f"  {len(picks)} matchups")
+    log.info(f"  {len(picks)} matchups")
 
-    print("Computing H2H records ...")
+    log.info("Computing H2H records ...")
     results = compute_h2h(picks, games)
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_JSON, "w", encoding="utf-8") as fh:
         json.dump(results, fh, separators=(",", ":"))
-    print(f"Written -> {OUT_JSON}")
+    log.info(f"Written -> {OUT_JSON}")
     return results
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_h2h()

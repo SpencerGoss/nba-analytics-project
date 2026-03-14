@@ -80,6 +80,9 @@ POS_CSV       = PROJECT_ROOT / "data" / "processed" / "player_positions.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "player_detail.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 MIN_GP = 5           # minimum games played to include
@@ -399,7 +402,7 @@ def build_player_detail() -> dict:
     df_logs    = pd.read_csv(LOGS_CSV)    if LOGS_CSV.exists()    else pd.DataFrame()
     pos_by_pid = _load_positions()
 
-    print(f"  Loaded stats:{len(df_stats)} adv:{len(df_adv)} "
+    log.info(f"  Loaded stats:{len(df_stats)} adv:{len(df_adv)} "
           f"scoring:{len(df_scoring)} clutch:{len(df_clutch)} "
           f"hustle:{len(df_hustle)} logs:{len(df_logs)}")
 
@@ -411,7 +414,7 @@ def build_player_detail() -> dict:
     hustle_by_pid  = _load_hustle(df_hustle)        if not df_hustle.empty  else {}
     logs_by_pid    = _load_game_logs(df_logs)       if not df_logs.empty    else {}
 
-    print(f"  Current-season players: stats={len(season_by_pid)} "
+    log.info(f"  Current-season players: stats={len(season_by_pid)} "
           f"adv={len(adv_by_pid)} scoring={len(scoring_by_pid)} "
           f"clutch={len(clutch_by_pid)} hustle={len(hustle_by_pid)}")
 
@@ -466,9 +469,9 @@ def build_player_detail() -> dict:
 
 
 def main() -> None:
-    print("Building player detail JSON...")
+    log.info("Building player detail JSON...")
     data = build_player_detail()
-    print(f"  Built {len(data)} player records")
+    log.info(f"  Built {len(data)} player records")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
@@ -483,7 +486,7 @@ def main() -> None:
             ensure_ascii=False,
         )
     size_kb = OUT_JSON.stat().st_size // 1024
-    print(f"  Written -> {OUT_JSON} ({size_kb} KB)")
+    log.info(f"  Written -> {OUT_JSON} ({size_kb} KB)")
 
     # Spot-check a few notable players
     for name in [
@@ -495,14 +498,13 @@ def main() -> None:
             ss = rec["season_stats"]
             cl = rec.get("clutch_stats") or {}
             trend = rec.get("prop_trends") or {}
-            print(
-                f"  {name}: {ss.get('ppg')} ppg/{ss.get('rpg')} rpg/"
+            log.info(f"  {name}: {ss.get('ppg')} ppg/{ss.get('rpg')} rpg/"
                 f"{ss.get('apg')} apg | clutch_gp={cl.get('gp')} | "
-                f"pts_trend={trend.get('pts_trend')}"
-            )
+                f"pts_trend={trend.get('pts_trend')}")
         else:
-            print(f"  {name}: not in {CURRENT_SEASON}")
+            log.info(f"  {name}: not in {CURRENT_SEASON}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

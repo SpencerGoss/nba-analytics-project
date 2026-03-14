@@ -376,15 +376,13 @@ def backfill_closing_lines(
         )
         if clv is not None:
             n_updated += 1
-            print(
-                f"  CLV backfill: {home_team} vs {away_team} {game_date_str[:10]} "
-                f"-> closing={closing_spread:+.1f} CLV={clv:+.2f}"
-            )
+            log.info(f"  CLV backfill: {home_team} vs {away_team} {game_date_str[:10]} "
+                f"-> closing={closing_spread:+.1f} CLV={clv:+.2f}")
 
     log.info("CLV backfill: updated %d closing line(s)", n_updated)
     if n_updated > 0:
-        print(f"  CLV backfill: {n_updated} closing line(s) updated")
+        log.info(f"  CLV backfill: {n_updated} closing line(s) updated")
     else:
-        print("  CLV backfill: no new closing lines to update")
+        log.info("  CLV backfill: no new closing lines to update")
 
     return n_updated

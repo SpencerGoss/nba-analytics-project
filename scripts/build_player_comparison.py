@@ -29,6 +29,9 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
@@ -1077,7 +1080,7 @@ def _build_single_game_records(top_n: int = 15) -> dict[str, list[dict]]:
     records: dict[str, list[dict]] = {s: list(recs) for s, recs in _PRE_1996_RECORDS.items()}
 
     if not GAME_LOGS_DIR.exists():
-        print("  WARN: game logs directory not found, using pre-1996 records only")
+        log.warning("  WARN: game logs directory not found, using pre-1996 records only")
         for stat in records:
             records[stat].sort(key=lambda r: r["val"], reverse=True)
             records[stat] = records[stat][:top_n]
@@ -1086,7 +1089,7 @@ def _build_single_game_records(top_n: int = 15) -> dict[str, list[dict]]:
     # Load all game log CSVs
     csv_files = sorted(GAME_LOGS_DIR.glob("*.csv"))
     if not csv_files:
-        print("  WARN: no game log CSVs found")
+        log.warning("  WARN: no game log CSVs found")
         for stat in records:
             records[stat].sort(key=lambda r: r["val"], reverse=True)
             records[stat] = records[stat][:top_n]
@@ -1159,19 +1162,19 @@ def _build_single_game_records(top_n: int = 15) -> dict[str, list[dict]]:
 def run(min_seasons: int = DEFAULT_MIN_SEASONS,
         min_career_games: int = DEFAULT_MIN_CAREER_GAMES) -> dict:
     """Execute the full build. Returns summary dict for logging."""
-    print("build_player_comparison: loading player data...")
+    log.info("build_player_comparison: loading player data...")
     try:
         players = _load_players(PLAYERS_CSV)
     except FileNotFoundError as exc:
-        print(f"WARN: {exc} -- skipping player_comparison.json write")
+        log.warning(f"WARN: {exc} -- skipping player_comparison.json write")
         return {"players": 0, "seasons": 0}
-    print(f"  {len(players):,} player-season rows across "
+    log.info(f"  {len(players):,} player-season rows across "
           f"{players['season_str'].nunique()} seasons")
 
-    print("build_player_comparison: loading team data (for pace)...")
+    log.info("build_player_comparison: loading team data (for pace)...")
     teams = _load_teams(TEAMS_CSV)
 
-    print("build_player_comparison: computing league averages...")
+    log.info("build_player_comparison: computing league averages...")
     league = compute_league_averages(players, teams)
 
     # Historical averages across all seasons
@@ -1183,41 +1186,41 @@ def run(min_seasons: int = DEFAULT_MIN_SEASONS,
         "blk": _global_avg(league.get("avg_blk", pd.Series()), HIST_AVG_BLK),
         "pace": _global_avg(league.get("avg_pace", pd.Series()), HIST_AVG_PACE),
     }
-    print(f"  Historical averages: pts={hist_avgs['pts']:.2f} reb={hist_avgs['reb']:.2f} "
+    log.info(f"  Historical averages: pts={hist_avgs['pts']:.2f} reb={hist_avgs['reb']:.2f} "
           f"ast={hist_avgs['ast']:.2f} pace={hist_avgs['pace']:.1f}")
 
-    print("build_player_comparison: enriching player seasons...")
+    log.info("build_player_comparison: enriching player seasons...")
     enriched = enrich_player_seasons(players, league, hist_avgs)
 
-    print("build_player_comparison: computing advanced stats (USG%, AST%, etc.)...")
+    log.info("build_player_comparison: computing advanced stats (USG%, AST%, etc.)...")
     enriched = compute_advanced_stats(enriched, teams)
     adv_count = enriched["usg_pct"].notna().sum()
-    print(f"  {adv_count:,} player-seasons with advanced stats")
+    log.info(f"  {adv_count:,} player-seasons with advanced stats")
 
-    print("build_player_comparison: loading position data...")
+    log.info("build_player_comparison: loading position data...")
     pos_lookup = _load_position_lookup()
-    print(f"  {len(pos_lookup)} players with roster positions")
+    log.info(f"  {len(pos_lookup)} players with roster positions")
 
-    print(f"build_player_comparison: building player records "
+    log.info(f"build_player_comparison: building player records "
           f"(min_seasons={min_seasons}, min_career_games={min_career_games})...")
     player_records = build_player_records(enriched, min_seasons, min_career_games, pos_lookup)
     league_rows = build_league_by_season(league)
 
-    print(f"  {len(player_records):,} eligible players")
+    log.info(f"  {len(player_records):,} eligible players")
 
     # Inject curated legend overrides for pre-1996 players missing from NBA API.
     # Stats sourced from Basketball Reference career regular-season averages.
     # Must happen BEFORE building the player index so legends appear in search.
     player_records = _inject_legends(player_records, enriched=enriched)
-    print(f"  {len(player_records):,} players after legend injection")
+    log.info(f"  {len(player_records):,} players after legend injection")
 
     player_index = build_player_index(player_records)
 
     # Build single-game records from game logs + historical floor
-    print("build_player_comparison: computing single-game records...")
+    log.info("build_player_comparison: computing single-game records...")
     single_game_records = _build_single_game_records(top_n=15)
     for stat_key, recs in single_game_records.items():
-        print(f"  {stat_key}: top={recs[0]['name']} ({recs[0]['val']})" if recs else f"  {stat_key}: empty")
+        log.warning(f"  {stat_key}: top={recs[0]['name']} ({recs[0]['val']})" if recs else f"  {stat_key}: empty")
 
     # Write comparison JSON
     comparison = {
@@ -1237,14 +1240,14 @@ def run(min_seasons: int = DEFAULT_MIN_SEASONS,
     with open(OUT_COMPARISON, "w", encoding="utf-8") as f:
         json.dump(comparison, f, separators=(",", ":"))
 
-    print(f"build_player_comparison: written -> {OUT_COMPARISON} "
+    log.info(f"build_player_comparison: written -> {OUT_COMPARISON} "
           f"({OUT_COMPARISON.stat().st_size / 1024:.0f} KB)")
 
     # Write player index
     with open(OUT_INDEX, "w", encoding="utf-8") as f:
         json.dump(player_index, f, separators=(",", ":"))
 
-    print(f"build_player_comparison: written -> {OUT_INDEX} "
+    log.info(f"build_player_comparison: written -> {OUT_INDEX} "
           f"({OUT_INDEX.stat().st_size / 1024:.0f} KB)")
 
     return {
@@ -1264,9 +1267,10 @@ def main(argv: list[str] | None = None) -> None:
                    help=f"Minimum career games to include player (default: {DEFAULT_MIN_CAREER_GAMES})")
     args = p.parse_args(argv)
     summary = run(min_seasons=args.min_seasons, min_career_games=args.min_games)
-    print(f"build_player_comparison: done. "
+    log.info(f"build_player_comparison: done. "
           f"{summary['players']} players, {summary['seasons']} seasons.")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

@@ -220,25 +220,25 @@ def compute_matchup_analysis(
 # ---------------------------------------------------------------------------
 
 def build_matchup_analysis() -> list[dict]:
-    print(f"Loading team features from {FEATURES_CSV} ...")
+    log.info(f"Loading team features from {FEATURES_CSV} ...")
     features = load_features()
-    print(f"  {len(features)} rows for season {CURRENT_SEASON}")
-    print(f"  Teams with data: {sorted(features['team_abbreviation'].unique())}")
+    log.info(f"  {len(features)} rows for season {CURRENT_SEASON}")
+    log.info(f"  Teams with data: {sorted(features['team_abbreviation'].unique())}")
 
-    print(f"Loading today's picks from {PICKS_JSON} ...")
+    log.info(f"Loading today's picks from {PICKS_JSON} ...")
     picks = load_picks()
     if not picks:
-        print("No picks found -- skipping matchup analysis.")
+        log.warning("No picks found -- skipping matchup analysis.")
         return []
-    print(f"  {len(picks)} matchups")
+    log.info(f"  {len(picks)} matchups")
 
-    print("Computing matchup analysis ...")
+    log.info("Computing matchup analysis ...")
     results = compute_matchup_analysis(picks, features)
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_JSON, "w", encoding="utf-8") as fh:
         json.dump(results, fh, separators=(",", ":"))
-    print(f"Written -> {OUT_JSON}")
+    log.info(f"Written -> {OUT_JSON}")
     return results
 
 

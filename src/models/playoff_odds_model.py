@@ -48,6 +48,9 @@ import pandas as pd
 import numpy as np
 import pickle
 import warnings
+import logging
+
+log = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
 
 
@@ -103,7 +106,7 @@ def _load_game_model(artifacts_dir: str = ARTIFACTS_DIR):
             feat_cols = pickle.load(f)
         return model, feat_cols
     except Exception as e:
-        print(f"  Warning: could not load game outcome model: {e}")
+        log.error(f"  Warning: could not load game outcome model: {e}")
         return None, None
 
 
@@ -286,7 +289,7 @@ def simulate_playoff_odds(
           sim_wins_p5, sim_wins_p50, sim_wins_p95
     """
     print("=" * 60)
-    print("PLAYOFF ODDS SIMULATION  (v2 — improved)")
+    log.info("PLAYOFF ODDS SIMULATION  (v2 — improved)")
     print("=" * 60)
 
     # ── Load standings ────────────────────────────────────────────────────────
@@ -298,7 +301,7 @@ def simulate_playoff_odds(
     if standings.empty:
         raise ValueError(f"No standings found for season {season}")
 
-    print(f"\nSeason: {season} | Teams: {len(standings)}")
+    log.info(f"\nSeason: {season} | Teams: {len(standings)}")
 
     if "w_pct" not in standings.columns:
         standings["w_pct"] = standings["w"] / (standings["w"] + standings["l"])
@@ -310,10 +313,10 @@ def simulate_playoff_odds(
     team_features    = _load_team_current_features()
 
     if model is not None:
-        print(f"  Using ML model for win probabilities ({len(feat_cols)} features)")
+        log.info(f"  Using ML model for win probabilities ({len(feat_cols)} features)")
     else:
-        print("  ML model not found — using Bradley-Terry win probabilities")
-        print("  (run game_outcome_model.py first for ML-based odds)")
+        log.warning("  ML model not found — using Bradley-Terry win probabilities")
+        log.info("  (run game_outcome_model.py first for ML-based odds)")
 
     # ── Load game logs for games-played count ─────────────────────────────────
     game_logs = pd.read_csv(game_log_path)
@@ -332,7 +335,7 @@ def simulate_playoff_odds(
     # ── Pre-compute matchup win-probability cache ──────────────────────────────
     # Call the ML model (or BT) once per ordered pair (home, away) so the
     # inner simulation loop only does a dict lookup, not a predict_proba call.
-    print("\nPre-computing matchup win probabilities...")
+    log.info("\nPre-computing matchup win probabilities...")
     wp_cache = {}   # (home_id, away_id) -> float P(home wins)
     for h_id in team_ids:
         for a_id in team_ids:
@@ -342,10 +345,10 @@ def simulate_playoff_odds(
                 h_id, a_id, team_wp, team_features, model,
                 feat_cols if feat_cols else [], home=True,
             )
-    print(f"  Cached {len(wp_cache)} matchup probabilities.")
+    log.info(f"  Cached {len(wp_cache)} matchup probabilities.")
 
     # ── Simulation ────────────────────────────────────────────────────────────
-    print(f"\nRunning {n_sims:,} simulations...")
+    log.info(f"\nRunning {n_sims:,} simulations...")
 
     playoff_count    = {t: 0 for t in team_ids}
     playin_count     = {t: 0 for t in team_ids}
@@ -431,7 +434,7 @@ def simulate_playoff_odds(
             title_count[champion] += 1
 
         if (sim + 1) % 2000 == 0:
-            print(f"  Completed {sim + 1:,} / {n_sims:,} simulations...")
+            log.info(f"  Completed {sim + 1:,} / {n_sims:,} simulations...")
 
     # ── Build results ─────────────────────────────────────────────────────────
     results = teams.copy()
@@ -448,24 +451,22 @@ def simulate_playoff_odds(
     results = results.sort_values(["conference", "playoff_prob"], ascending=[True, False])
 
     # ── Print results ─────────────────────────────────────────────────────────
-    print("\n── PLAYOFF ODDS ──────────────────────────────────────────────────")
-    print(f"{'Team':<25} {'Conf':<5} {'W':>3} {'L':>3} {'W%':>6} "
+    log.info("\n── PLAYOFF ODDS ──────────────────────────────────────────────────")
+    log.info(f"{'Team':<25} {'Conf':<5} {'W':>3} {'L':>3} {'W%':>6} "
           f"{'Playoff':>9} {'Play-In':>8} {'ConfTitle':>10} {'Title':>7} "
           f"{'WinRange':>12}")
-    print("─" * 95)
+    log.info("-" * 95)
     for _, row in results.iterrows():
-        print(
-            f"{row['team_name']:<25} {row['conference']:<5} "
+        log.info(f"{row['team_name']:<25} {row['conference']:<5} "
             f"{int(row['w']):>3} {int(row['l']):>3} {row['w_pct']:>6.3f} "
             f"{row['playoff_prob']:>8.1%}  {row['playin_prob']:>7.1%}  "
             f"{row['conf_title_prob']:>9.1%}  {row['title_prob']:>6.1%}  "
-            f"{int(row['sim_wins_p5'])}-{int(row['sim_wins_p50'])}-{int(row['sim_wins_p95'])}"
-        )
+            f"{int(row['sim_wins_p5'])}-{int(row['sim_wins_p50'])}-{int(row['sim_wins_p95'])}")
 
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     results.to_csv(output_path, index=False)
-    print(f"\nSaved -> {output_path}")
+    log.info(f"\nSaved -> {output_path}")
 
     return results
 

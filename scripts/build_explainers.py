@@ -20,6 +20,9 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -538,39 +541,40 @@ def build_explainers(
 
 
 def main() -> None:
-    print("Loading picks...")
+    log.info("Loading picks...")
     picks = load_json(PICKS_PATH)
-    print(f"  {len(picks)} games loaded from todays_picks.json")
+    log.info(f"  {len(picks)} games loaded from todays_picks.json")
 
-    print("Loading value bets...")
+    log.info("Loading value bets...")
     value_bets = load_json(VALUE_BETS_PATH)
-    print(f"  {len(value_bets)} value bet records loaded")
+    log.info(f"  {len(value_bets)} value bet records loaded")
 
-    print("Loading matchup features...")
+    log.info("Loading matchup features...")
     matchup_df = load_matchup_features(MATCHUP_CSV)
-    print(f"  {len(matchup_df):,} matchup rows, {len(matchup_df.columns)} columns")
+    log.info(f"  {len(matchup_df):,} matchup rows, {len(matchup_df.columns)} columns")
 
-    print("Loading game context (optional)...")
+    log.info("Loading game context (optional)...")
     game_context = load_game_context(GAME_CONTEXT_PATH)
-    print(f"  {len(game_context)} context records loaded")
+    log.info(f"  {len(game_context)} context records loaded")
 
-    print("Generating explainers...")
+    log.info("Generating explainers...")
     explainers = build_explainers(picks, value_bets, matchup_df, game_context)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as fh:
         json.dump(explainers, fh, separators=(",", ":"))
 
-    print(f"Wrote {len(explainers)} explainers -> {OUTPUT_PATH}")
+    log.info(f"Wrote {len(explainers)} explainers -> {OUTPUT_PATH}")
 
     # Print a sample to stdout for verification
     for ex in explainers[:2]:
-        print(f"\n  {ex['home_team']} vs {ex['away_team']} ({ex['game_date']})")
+        log.info(f"\n  {ex['home_team']} vs {ex['away_team']} ({ex['game_date']})")
         for b in ex["bullets"]:
-            print(f"    - {b}")
-        print(f"    -> {ex['one_liner']}")
-        print(f"    confidence: {ex['confidence_explanation']}")
+            log.info(f"    - {b}")
+        log.info(f"    -> {ex['one_liner']}")
+        log.info(f"    confidence: {ex['confidence_explanation']}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

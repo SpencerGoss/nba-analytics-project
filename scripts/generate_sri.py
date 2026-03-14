@@ -15,12 +15,15 @@ Output:
 import hashlib
 import base64
 import urllib.request
+import logging
+
+log = logging.getLogger(__name__)
 
 URL = "https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"
 
 
 def compute_sri(url: str) -> str:
-    print(f"Fetching {url} ...")
+    log.info(f"Fetching {url} ...")
     with urllib.request.urlopen(url) as response:
         data = response.read()
     digest = hashlib.sha384(data).digest()
@@ -29,8 +32,9 @@ def compute_sri(url: str) -> str:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     result = compute_sri(URL)
-    print(result)
+    log.info(result)
     print()
-    print("Add that attribute to the Plotly <script> tag in dashboard/index.html:")
-    print(f'  <script src="{URL}" crossorigin="anonymous" {result}></script>')
+    log.info("Add that attribute to the Plotly <script> tag in dashboard/index.html:")
+    log.info(f'  <script src="{URL}" crossorigin="anonymous" {result}></script>')

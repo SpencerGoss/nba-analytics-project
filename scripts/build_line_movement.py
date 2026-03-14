@@ -30,6 +30,9 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -332,26 +335,26 @@ def build_line_movement(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    print("Loading DB data...")
+    log.info("Loading DB data...")
     db_df = load_from_db()
-    print(f"  {len(db_df)} rows from predictions_history.db")
+    log.info(f"  {len(db_df)} rows from predictions_history.db")
 
     csv_df = load_from_csv()
     if not csv_df.empty:
-        print(f"  {len(csv_df)} rows from game_lines.csv")
+        log.info(f"  {len(csv_df)} rows from game_lines.csv")
     else:
-        print("  game_lines.csv not found -- using DB only")
+        log.warning("  game_lines.csv not found -- using DB only")
 
     results = build_line_movement(db_df, csv_df)
-    print(f"  Built {len(results)} line movement entries")
+    log.info(f"  Built {len(results)} line movement entries")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
         json.dump(results, fh, indent=2, ensure_ascii=False)
 
-    print(f"  Written -> {OUT_JSON}")
+    log.info(f"  Written -> {OUT_JSON}")
     for entry in results[:5]:
-        print(f"  {entry['away_team']} @ {entry['home_team']}  "
+        log.info(f"  {entry['away_team']} @ {entry['home_team']}  "
               f"{entry['game_date']}  "
               f"open={entry['opening_spread']:+.1f}  "
               f"close={entry['current_spread']:+.1f}  "
@@ -360,4 +363,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

@@ -47,6 +47,9 @@ ATS_FEATURES_PATH = "data/features/game_ats_features.csv"
 ARTIFACTS_DIR = "models/artifacts"
 TARGET = "covers_spread"
 from src.models.game_outcome_model import TEST_SEASONS, _best_threshold
+import logging
+
+log = logging.getLogger(__name__)
 EXCLUDED_SEASONS = [201920, 202021]
 # Held-out calibration season: excluded from train CV, used to fit isotonic calibrator
 # University of Bath research: calibration-optimized = +34.69% ROI vs accuracy -35.17%
@@ -151,9 +154,9 @@ def _validate_null_rates(df: pd.DataFrame, feat_cols: list, threshold: float = 0
         )
     partial = null_rates[(null_rates > 0) & (null_rates < threshold)]
     if not partial.empty:
-        print("  [null audit] Columns with partial nulls (will be imputed):")
+        log.info("  [null audit] Columns with partial nulls (will be imputed):")
         for col, rate in partial.items():
-            print(f"    {col}: {rate:.1%}")
+            log.info(f"    {col}: {rate:.1%}")
 
 
 # -- Train / evaluate ---------------------------------------------------------
@@ -182,28 +185,28 @@ def train_ats_model(
          (also saves ats_calibration_split.pkl for calibration.py)
     """
     print("=" * 60)
-    print("ATS PREDICTION MODEL")
+    log.info("ATS PREDICTION MODEL")
     print("=" * 60)
 
-    print("\nLoading ATS features...")
+    log.info("\nLoading ATS features...")
     df = pd.read_csv(ats_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
-    print(f"  Total games: {len(df):,} | Seasons: {df.season.nunique()}")
+    log.info(f"  Total games: {len(df):,} | Seasons: {df.season.nunique()}")
 
     # Drop push rows (NaN covers_spread = no winner vs spread)
     n_before = len(df)
     df = df.dropna(subset=[TARGET])
     n_dropped = n_before - len(df)
     if n_dropped > 0:
-        print(f"  Dropped {n_dropped:,} push rows (NaN covers_spread)")
+        log.info(f"  Dropped {n_dropped:,} push rows (NaN covers_spread)")
 
     # Exclude anomalous seasons
     if excluded_seasons:
         before = len(df)
         df = df[~df["season"].astype(int).isin(excluded_seasons)].copy()
         n_excluded = before - len(df)
-        print(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
+        log.info(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
 
     # Train / calibration / test split
     # calibration_season is held out from CV -- used by calibration.py for isotonic fit
@@ -211,17 +214,17 @@ def train_ats_model(
     test = df[df["season"].astype(int).isin(test_seasons)].copy()
     calib = train[train["season"].astype(int) == calibration_season].copy()
     train_cv = train[train["season"].astype(int) != calibration_season].copy()
-    print(f"  Train (all): {len(train):,} games | Test: {len(test):,} games")
-    print(f"  Calibration season ({calibration_season}): {len(calib):,} games (held out from CV)")
-    print(f"  Train for CV: {len(train_cv):,} games")
-    print(f"  Test seasons: {test_seasons}")
+    log.info(f"  Train (all): {len(train):,} games | Test: {len(test):,} games")
+    log.info(f"  Calibration season ({calibration_season}): {len(calib):,} games (held out from CV)")
+    log.info(f"  Train for CV: {len(train_cv):,} games")
+    log.info(f"  Test seasons: {test_seasons}")
 
     feat_cols = get_ats_feature_cols(df)
-    print(f"\n  Features: {len(feat_cols)} columns")
+    log.info(f"\n  Features: {len(feat_cols)} columns")
     ats_specific = [c for c in feat_cols if c in ("spread", "home_implied_prob", "away_implied_prob")]
-    print(f"  ATS-specific signals: {ats_specific}")
+    log.info(f"  ATS-specific signals: {ats_specific}")
 
-    print("\nValidating feature null rates...")
+    log.info("\nValidating feature null rates...")
     _validate_null_rates(df, feat_cols)
 
     X_train = train[feat_cols]
@@ -308,8 +311,8 @@ def train_ats_model(
         ])
 
     splits = _ats_season_splits(train_cv)
-    print(f"\n--- Model selection across {len(splits)} validation split(s) ---")
-    print("    (selecting on Brier score -- lower = better calibration = higher ROI)")
+    log.info(f"\n--- Model selection across {len(splits)} validation split(s) ---")
+    log.info("    (selecting on Brier score -- lower = better calibration = higher ROI)")
 
     model_scores = {}
     for name, pipe in candidates.items():
@@ -331,10 +334,8 @@ def train_ats_model(
             split_aucs.append(val_auc)
             split_briers.append(val_brier)
             split_thresholds.append(best_t)
-            print(
-                f"  {name:>17} | split={split_name} | "
-                f"brier={val_brier:.4f} | acc={val_acc:.4f} | auc={val_auc:.4f} | th={best_t:.2f}"
-            )
+            log.info(f"  {name:>17} | split={split_name} | "
+                f"brier={val_brier:.4f} | acc={val_acc:.4f} | auc={val_auc:.4f} | th={best_t:.2f}")
 
         model_scores[name] = {
             "mean_val_brier": float(np.mean(split_briers)),
@@ -347,13 +348,11 @@ def train_ats_model(
     # Research: accuracy-optimized = -35.17% ROI; calibration-optimized = +34.69% ROI
     best_name = min(model_scores, key=lambda k: model_scores[k]["mean_val_brier"])
     best_threshold = model_scores[best_name]["threshold"]
-    print(
-        f"\nSelected model: {best_name} "
+    log.info(f"\nSelected model: {best_name} "
         f"(mean val brier={model_scores[best_name]['mean_val_brier']:.4f}, "
         f"mean val acc={model_scores[best_name]['mean_val_acc']:.4f}, "
         f"mean val auc={model_scores[best_name]['mean_val_auc']:.4f}, "
-        f"threshold={best_threshold:.2f})"
-    )
+        f"threshold={best_threshold:.2f})")
 
     # Retrain winner on full training set
     best_pipe = candidates[best_name]
@@ -364,11 +363,11 @@ def train_ats_model(
     test_acc = accuracy_score(y_test, test_pred)
     test_auc = roc_auc_score(y_test, test_proba)
 
-    print(f"\n  Test Accuracy : {test_acc:.4f}")
-    print(f"  Test ROC-AUC  : {test_auc:.4f}")
+    log.info(f"\n  Test Accuracy : {test_acc:.4f}")
+    log.info(f"  Test ROC-AUC  : {test_auc:.4f}")
 
-    print("\nClassification Report:")
-    print(classification_report(y_test, test_pred, target_names=["Away Covers", "Home Covers"]))
+    log.info("\nClassification Report:")
+    log.info(classification_report(y_test, test_pred, target_names=["Away Covers", "Home Covers"]))
 
     # Feature importances
     clf = best_pipe.named_steps["clf"]
@@ -377,24 +376,24 @@ def train_ats_model(
     else:
         importances = pd.Series(np.abs(clf.coef_[0]), index=feat_cols).sort_values(ascending=False)
 
-    print("\nTop 15 Most Important Features:")
-    print(importances.head(15).to_string())
+    log.info("\nTop 15 Most Important Features:")
+    log.debug(importances.head(15).to_string())
 
     # -- Permutation importance on test set -----------------------------------
-    print("\n--- Permutation Importance (test set) ---")
+    log.info("\n--- Permutation Importance (test set) ---")
     perm_result = permutation_importance(
         best_pipe, X_test, y_test, n_repeats=10, random_state=42, scoring="accuracy"
     )
     perm_imp = pd.Series(perm_result.importances_mean, index=feat_cols).sort_values(ascending=False)
-    print("Top 15 by permutation importance:")
-    print(perm_imp.head(15).to_string())
+    log.info("Top 15 by permutation importance:")
+    log.debug(perm_imp.head(15).to_string())
 
     # -- Feature selection experiment: drop bottom 30% -----------------------
-    print("\n--- Feature Selection Experiment ---")
+    log.info("\n--- Feature Selection Experiment ---")
     n_to_drop = int(len(feat_cols) * 0.30)
     bottom_features = perm_imp.tail(n_to_drop).index.tolist()
     reduced_cols = [c for c in feat_cols if c not in bottom_features]
-    print(f"  Dropping {n_to_drop} lowest-importance features ({len(reduced_cols)} remaining)")
+    log.info(f"  Dropping {n_to_drop} lowest-importance features ({len(reduced_cols)} remaining)")
 
     # Retrain best model type with reduced features
     reduced_pipe = _clone_pipeline(candidates[best_name])
@@ -403,12 +402,12 @@ def train_ats_model(
     reduced_pred = (reduced_proba >= best_threshold).astype(int)
     reduced_acc = accuracy_score(y_test, reduced_pred)
     reduced_auc = roc_auc_score(y_test, reduced_proba)
-    print(f"  Full features:    acc={test_acc:.4f}, auc={test_auc:.4f}")
-    print(f"  Reduced features: acc={reduced_acc:.4f}, auc={reduced_auc:.4f}")
+    log.info(f"  Full features:    acc={test_acc:.4f}, auc={test_auc:.4f}")
+    log.info(f"  Reduced features: acc={reduced_acc:.4f}, auc={reduced_auc:.4f}")
 
     # Use reduced features if they improve accuracy
     if reduced_acc > test_acc:
-        print("  -> Reduced features IMPROVE accuracy. Using reduced set.")
+        log.info("  -> Reduced features IMPROVE accuracy. Using reduced set.")
         feat_cols = reduced_cols
         best_pipe = reduced_pipe
         test_acc = reduced_acc
@@ -422,7 +421,7 @@ def train_ats_model(
         else:
             importances = pd.Series(np.abs(clf.coef_[0]), index=feat_cols).sort_values(ascending=False)
     else:
-        print("  -> Reduced features did NOT improve accuracy. Keeping full set.")
+        log.info("  -> Reduced features did NOT improve accuracy. Keeping full set.")
 
     # -- Save artifacts -------------------------------------------------------
     os.makedirs(artifacts_dir, exist_ok=True)
@@ -452,9 +451,9 @@ def train_ats_model(
                 "y_true": calib_data["y_true"].tolist(),
                 "y_proba": calib_data["y_proba"].tolist(),
             }, f)
-        print(f"  Calibration split saved -> {calib_json_path} ({len(calib):,} rows)")
+        log.info(f"  Calibration split saved -> {calib_json_path} ({len(calib):,} rows)")
 
-    print(f"\nModel saved -> {model_path}")
+    log.info(f"\nModel saved -> {model_path}")
 
     # Metadata JSON (only Python builtins -- no numpy types)
     top_importances = {}
@@ -489,7 +488,7 @@ def train_ats_model(
     }
     with open(meta_path, "w") as f:
         json.dump(metadata, f, indent=2)
-    print(f"  Metadata saved -> {meta_path}")
+    log.info(f"  Metadata saved -> {meta_path}")
 
     metrics = {
         "model_type": best_name,
@@ -563,8 +562,8 @@ def predict_ats(game_features_df: pd.DataFrame, artifacts_dir: str = ARTIFACTS_D
 
 if __name__ == "__main__":
     pipe, metrics = train_ats_model()
-    print(f"\nFinal ATS model accuracy: {metrics['test_accuracy']:.1%}")
-    print(f"Final ATS model ROC-AUC:  {metrics['test_auc']:.4f}")
-    print(f"Model type: {metrics['model_type']}")
-    print(f"Features: {metrics['n_features']}")
-    print(f"Train rows: {metrics['n_train_rows']:,} | Test rows: {metrics['n_test_rows']:,}")
+    log.info(f"\nFinal ATS model accuracy: {metrics['test_accuracy']:.1%}")
+    log.info(f"Final ATS model ROC-AUC:  {metrics['test_auc']:.4f}")
+    log.info(f"Model type: {metrics['model_type']}")
+    log.info(f"Features: {metrics['n_features']}")
+    log.info(f"Train rows: {metrics['n_train_rows']:,} | Test rows: {metrics['n_test_rows']:,}")

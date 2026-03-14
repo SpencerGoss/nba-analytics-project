@@ -30,6 +30,9 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+import logging
+
+log = logging.getLogger(__name__)
 
 # ── Config ──────────────────────────────────────────────────────────────────────
 
@@ -140,21 +143,19 @@ def build_lineup_features(lineup_csv_path: str = None) -> pd.DataFrame:
     result = pd.DataFrame(records)
 
     if result.empty:
-        print("  Warning: No qualifying lineups found (gp >= 5). Returning empty DataFrame.")
+        log.warning("  Warning: No qualifying lineups found (gp >= 5). Returning empty DataFrame.")
         return result
 
     # Save
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     result.to_csv(OUTPUT_PATH, index=False)
-    print(
-        f"  Lineup features: {len(result)} team-seasons "
+    log.info(f"  Lineup features: {len(result)} team-seasons "
         f"({result['season'].nunique()} seasons, {result['team_id'].nunique()} teams) "
-        f"-> {OUTPUT_PATH}"
-    )
+        f"-> {OUTPUT_PATH}")
 
     return result
 
 
 if __name__ == "__main__":
     df = build_lineup_features()
-    print(df.to_string())
+    log.debug(df.to_string())

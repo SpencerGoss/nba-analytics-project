@@ -26,6 +26,9 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = PROJECT_ROOT / "data" / "processed" / "team_game_logs.csv"
@@ -102,7 +105,7 @@ def season_label(code: int) -> str:
 
 def load_logs() -> pd.DataFrame:
     if not DATA_PATH.exists():
-        print(f"WARN: Data file not found: {DATA_PATH} -- skipping season history build")
+        log.warning(f"WARN: Data file not found: {DATA_PATH} -- skipping season history build")
         return pd.DataFrame()
 
     df = pd.read_csv(DATA_PATH, dtype={"season": int, "season_id": str})
@@ -202,26 +205,26 @@ def build_output(df: pd.DataFrame) -> dict:
         label = season_label(code)
         season_df = df[df["season"] == code]
         if season_df.empty:
-            print(f"  WARNING: No rows found for season {code} ({label})")
+            log.warning(f"  WARNING: No rows found for season {code} ({label})")
             continue
         standings = build_standings(season_df)
         games = build_games(season_df)
         data[label] = {"standings": standings, "games": games}
-        print(f"  {label}: {len(standings)} teams, {len(games)} games")
+        log.info(f"  {label}: {len(standings)} teams, {len(games)} games")
 
     return {"seasons": seasons_ordered, "data": data}
 
 
 def main() -> None:
-    print("Building season_history.json ...")
+    log.info("Building season_history.json ...")
     df = load_logs()
     if df.empty:
-        print("WARN: No data loaded -- skipping season_history.json write")
+        log.warning("WARN: No data loaded -- skipping season_history.json write")
         return
-    print(f"Loaded {len(df):,} rows from team_game_logs.csv")
+    log.info(f"Loaded {len(df):,} rows from team_game_logs.csv")
 
     filtered = filter_seasons(df)
-    print(f"Filtered to {len(filtered):,} rows across {len(SEASON_CODES)} seasons")
+    log.info(f"Filtered to {len(filtered):,} rows across {len(SEASON_CODES)} seasons")
 
     output = build_output(filtered)
 
@@ -231,10 +234,11 @@ def main() -> None:
 
     size_kb = OUTPUT_PATH.stat().st_size / 1024
     total_games = sum(len(v["games"]) for v in output["data"].values())
-    print(f"Wrote {OUTPUT_PATH} ({size_kb:.1f} KB)")
-    print(f"Seasons included: {len(output['data'])}")
-    print(f"Total game records: {total_games:,}")
+    log.info(f"Wrote {OUTPUT_PATH} ({size_kb:.1f} KB)")
+    log.info(f"Seasons included: {len(output['data'])}")
+    log.info(f"Total game records: {total_games:,}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

@@ -29,6 +29,9 @@ PICKS_JSON = PROJECT_ROOT / "dashboard" / "data" / "todays_picks.json"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "injuries.json"
 
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON = get_current_season()
 # How many most-recent game dates to look back for absences
@@ -210,31 +213,32 @@ def build_injuries(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    print("Loading absences...")
+    log.info("Loading absences...")
     absences = load_absences()
-    print(f"  {len(absences)} recent absent player-game rows")
+    log.info(f"  {len(absences)} recent absent player-game rows")
 
     player_stats = load_player_stats()
-    print(f"  {len(player_stats)} player stat rows (season {CURRENT_SEASON})")
+    log.info(f"  {len(player_stats)} player stat rows (season {CURRENT_SEASON})")
 
     team_id_map = load_team_id_map()
     picks = load_picks()
-    print(f"  {len(picks)} picks in todays_picks.json")
+    log.info(f"  {len(picks)} picks in todays_picks.json")
 
     results = build_injuries(absences, player_stats, team_id_map, picks)
-    print(f"  Built injury report for {len(results)} games")
+    log.info(f"  Built injury report for {len(results)} games")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
         json.dump(results, fh, separators=(",", ":"), ensure_ascii=False)
 
-    print(f"  Written -> {OUT_JSON}")
+    log.info(f"  Written -> {OUT_JSON}")
     for game in results[:3]:
         h_count = len(game["home_injuries"])
         a_count = len(game["away_injuries"])
-        print(f"  {game['away_team']} @ {game['home_team']}  "
+        log.info(f"  {game['away_team']} @ {game['home_team']}  "
               f"home_inj={h_count}  away_inj={a_count}  note={game['spread_impact_note'][:60]}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

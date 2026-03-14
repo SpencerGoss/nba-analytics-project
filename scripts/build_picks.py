@@ -21,6 +21,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -78,7 +81,7 @@ def _load_game_lines(target_date: str) -> dict[tuple[str, str], dict]:
     try:
         df = pd.read_csv(GAME_LINES_CSV)
     except Exception as exc:
-        print(f"  WARN: could not read game_lines.csv: {exc}")
+        log.error(f"  WARN: could not read game_lines.csv: {exc}")
         return {}
 
     # fetch_odds.py writes the column as "date"; normalize to "game_date"
@@ -114,12 +117,12 @@ def _build_margin_lookup(
     }
 
     if not MATCHUP_CSV.exists():
-        print("  WARN: matchup features CSV not found -- projected_margin will be null")
+        log.warning("  WARN: matchup features CSV not found -- projected_margin will be null")
         return result
 
     margin_pkl = ARTIFACTS_DIR / "margin_model.pkl"
     if not margin_pkl.exists():
-        print("  INFO: margin_model.pkl not found -- projected_margin will be null")
+        log.warning("  INFO: margin_model.pkl not found -- projected_margin will be null")
         return result
 
     try:
@@ -133,7 +136,7 @@ def _build_margin_lookup(
             ensemble = NBAEnsemble.load(ARTIFACTS_DIR)
 
         if ensemble.margin_model is None:
-            print("  INFO: ensemble margin model not available -- projected_margin will be null")
+            log.info("  INFO: ensemble margin model not available -- projected_margin will be null")
             return result
 
         matchup_df = pd.read_csv(MATCHUP_CSV, low_memory=False)
@@ -191,10 +194,10 @@ def _build_margin_lookup(
             result[key] = round(margin_val, 2)
 
         n_filled = sum(1 for v in result.values() if v is not None)
-        print(f"  Projected margins computed for {n_filled}/{len(preds)} games")
+        log.info(f"  Projected margins computed for {n_filled}/{len(preds)} games")
 
     except Exception as exc:
-        print(f"  WARN: margin model inference failed ({exc}) -- projected_margin will be null")
+        log.error(f"  WARN: margin model inference failed ({exc}) -- projected_margin will be null")
 
     return result
 
@@ -351,13 +354,13 @@ def build_picks(
         target_date = date.today().isoformat()
 
     if not db_path.exists():
-        print(f"  WARN: predictions DB not found at {db_path}")
+        log.warning(f"  WARN: predictions DB not found at {db_path}")
         return _passthrough(out_path)
 
     try:
         conn = sqlite3.connect(str(db_path))
     except Exception as exc:
-        print(f"  ERROR: could not connect to DB: {exc}")
+        log.error(f"  ERROR: could not connect to DB: {exc}")
         return _passthrough(out_path)
 
     try:
@@ -367,28 +370,28 @@ def build_picks(
             # Fall back to the most recent date with predictions
             latest_date = _latest_prediction_date(conn)
             if latest_date:
-                print(f"  No predictions for {target_date}, falling back to {latest_date}")
+                log.info(f"  No predictions for {target_date}, falling back to {latest_date}")
                 preds = _load_predictions(conn, latest_date)
                 target_date = latest_date
             else:
-                print("  No predictions in DB at all -- passing through existing JSON")
+                log.info("  No predictions in DB at all -- passing through existing JSON")
                 conn.close()
                 return _passthrough(out_path)
     finally:
         conn.close()
 
     if not preds:
-        print("  Predictions query returned empty -- passing through existing JSON")
+        log.warning("  Predictions query returned empty -- passing through existing JSON")
         return _passthrough(out_path)
 
-    print(f"  Found {len(preds)} predictions for {target_date}")
+    log.info(f"  Found {len(preds)} predictions for {target_date}")
 
     team_names = _load_team_names()
     lines = _load_game_lines(target_date)
     if lines:
-        print(f"  Loaded {len(lines)} lines from game_lines.csv for {target_date}")
+        log.info(f"  Loaded {len(lines)} lines from game_lines.csv for {target_date}")
     else:
-        print("  No game_lines.csv data -- odds fields will be null")
+        log.info("  No game_lines.csv data -- odds fields will be null")
 
     margin_lookup = _build_margin_lookup(preds)
 
@@ -398,7 +401,7 @@ def build_picks(
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(picks, fh, separators=(",", ":"), default=str)
 
-    print(f"Written -> {out_path}  ({len(picks)} picks)")
+    log.info(f"Written -> {out_path}  ({len(picks)} picks)")
     return picks
 
 
@@ -408,12 +411,13 @@ def _passthrough(out_path: Path) -> list[dict]:
         try:
             with open(out_path, encoding="utf-8") as fh:
                 data = json.load(fh)
-            print(f"  Pass-through: returning existing {out_path.name} unchanged")
+            log.info(f"  Pass-through: returning existing {out_path.name} unchanged")
             return data if isinstance(data, list) else []
         except (json.JSONDecodeError, OSError) as exc:
-            print(f"  WARN: could not read existing JSON: {exc}")
+            log.error(f"  WARN: could not read existing JSON: {exc}")
     return []
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_picks()

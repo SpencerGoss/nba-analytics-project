@@ -5,12 +5,15 @@ import time
 import os
 
 from src.data.api_client import fetch_with_retry, HEADERS
+import logging
+
+log = logging.getLogger(__name__)
 
 
 # Download player master table
 def get_player_master():
     os.makedirs("data/raw/players", exist_ok=True)
-    print("Fetching player master...")
+    log.info("Fetching player master...")
 
     result = fetch_with_retry(
         lambda: commonallplayers.CommonAllPlayers(
@@ -24,7 +27,7 @@ def get_player_master():
 
     data = result["data"]
     data.to_csv("data/raw/players/player_master.csv", index=False)
-    print(f"  Saved player_master ({len(data)} rows)")
+    log.info(f"  Saved player_master ({len(data)} rows)")
 
 
 # Run script

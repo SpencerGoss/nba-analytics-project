@@ -22,6 +22,8 @@ from typing import Callable
 
 import pandas as pd
 
+log = logging.getLogger(__name__)
+
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
 
@@ -42,7 +44,7 @@ def _coerce_int_col(df: pd.DataFrame, col: str) -> None:
     df[col] = pd.to_numeric(df[col], errors="coerce")
     lost = df[col].isna().sum()
     if lost:
-        print(f"  WARN: {lost}/{before} rows have non-numeric {col}")
+        log.warning(f"  WARN: {lost}/{before} rows have non-numeric {col}")
     df.dropna(subset=[col], inplace=True)
     df[col] = df[col].astype(int)
 

@@ -14,6 +14,9 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PYTHON_EXE = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
@@ -25,24 +28,24 @@ DEFAULT_TASK_NAME = "NBAAnalyticsHourlyRefresh"
 def _schtasks(*args: str) -> subprocess.CompletedProcess:
     """Run schtasks.exe with the given arguments; print output."""
     cmd = ["schtasks"] + list(args)
-    print("Running:", " ".join(cmd))
+    log.info("Running:", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.stdout:
-        print(result.stdout.strip())
+        log.info(result.stdout.strip())
     if result.stderr:
-        print(result.stderr.strip(), file=sys.stderr)
+        log.info(result.stderr.strip(), file=sys.stderr)
     return result
 
 
 def create_task(task_name: str, interval_hours: int) -> int:
     """Create (or replace) a scheduled task."""
     if not PYTHON_EXE.exists():
-        print(f"ERROR: Python executable not found: {PYTHON_EXE}")
-        print("Activate the venv and retry, or create the venv first.")
+        log.error(f"ERROR: Python executable not found: {PYTHON_EXE}")
+        log.info("Activate the venv and retry, or create the venv first.")
         return 1
 
     if not SCHEDULER_SCRIPT.exists():
-        print(f"ERROR: Scheduler script not found: {SCHEDULER_SCRIPT}")
+        log.error(f"ERROR: Scheduler script not found: {SCHEDULER_SCRIPT}")
         return 1
 
     # Build the task action: "<venv_python>" "<scheduler.py>"
@@ -61,13 +64,13 @@ def create_task(task_name: str, interval_hours: int) -> int:
     )
 
     if result.returncode == 0:
-        print(f"\nTask '{task_name}' created successfully.")
-        print(f"  Runs every {interval_hours} hour(s).")
-        print(f"  Command: {run_cmd}")
-        print("\nVerify with:  schtasks /Query /TN", task_name, "/FO LIST")
+        log.info(f"\nTask '{task_name}' created successfully.")
+        log.info(f"  Runs every {interval_hours} hour(s).")
+        log.info(f"  Command: {run_cmd}")
+        log.info("\nVerify with:  schtasks /Query /TN", task_name, "/FO LIST")
         return 0
 
-    print(f"\nERROR: schtasks exited with code {result.returncode}")
+    log.error(f"\nERROR: schtasks exited with code {result.returncode}")
     return result.returncode
 
 
@@ -75,9 +78,9 @@ def remove_task(task_name: str) -> int:
     """Delete an existing scheduled task by name."""
     result = _schtasks("/Delete", "/TN", task_name, "/F")
     if result.returncode == 0:
-        print(f"Task '{task_name}' removed.")
+        log.info(f"Task '{task_name}' removed.")
         return 0
-    print(f"ERROR: Could not remove task '{task_name}' (exit {result.returncode})")
+    log.error(f"ERROR: Could not remove task '{task_name}' (exit {result.returncode})")
     return result.returncode
 
 
@@ -115,4 +118,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     sys.exit(main())

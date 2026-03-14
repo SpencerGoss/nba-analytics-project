@@ -31,6 +31,9 @@ TEAMS_CSV = RAW_DIR / "historical_team_seasons.csv"
 FIRST_SEASON_YEAR = 1946
 sys.path.insert(0, str(PROJECT_ROOT))
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 LAST_SEASON_YEAR = get_current_season() // 100  # e.g. 202526 -> 2025
 
 THROTTLE_SEC = 0.7  # slightly above the 0.6 floor for safety
@@ -103,7 +106,7 @@ def _fetch_player_season(season_str: str) -> pd.DataFrame | None:
         time.sleep(THROTTLE_SEC)
         return df
     except Exception as exc:
-        print(f"  WARNING: first attempt failed for {season_str}: {exc}")
+        log.error(f"  WARNING: first attempt failed for {season_str}: {exc}")
         time.sleep(RETRY_SLEEP_SEC)
         try:
             df = LeagueDashPlayerStats(
@@ -114,7 +117,7 @@ def _fetch_player_season(season_str: str) -> pd.DataFrame | None:
             time.sleep(THROTTLE_SEC)
             return df
         except Exception as exc2:
-            print(f"  ERROR: skipping {season_str} after retry: {exc2}")
+            log.error(f"  ERROR: skipping {season_str} after retry: {exc2}")
             return None
 
 
@@ -131,7 +134,7 @@ def _fetch_team_season(season_str: str) -> pd.DataFrame | None:
         time.sleep(THROTTLE_SEC)
         return df
     except Exception as exc:
-        print(f"  WARNING: first attempt failed for {season_str}: {exc}")
+        log.error(f"  WARNING: first attempt failed for {season_str}: {exc}")
         time.sleep(RETRY_SLEEP_SEC)
         try:
             df = LeagueDashTeamStats(
@@ -142,7 +145,7 @@ def _fetch_team_season(season_str: str) -> pd.DataFrame | None:
             time.sleep(THROTTLE_SEC)
             return df
         except Exception as exc2:
-            print(f"  ERROR: skipping {season_str} after retry: {exc2}")
+            log.error(f"  ERROR: skipping {season_str} after retry: {exc2}")
             return None
 
 
@@ -169,25 +172,25 @@ def fetch_players(seasons: list[str]) -> None:
     to_fetch = [s for s in seasons if s not in existing]
 
     if not to_fetch:
-        print("fetch_historical_players: player data already up to date, nothing to fetch.")
+        log.info("fetch_historical_players: player data already up to date, nothing to fetch.")
         return
 
-    print(f"fetch_historical_players: fetching {len(to_fetch)} player seasons "
+    log.info(f"fetch_historical_players: fetching {len(to_fetch)} player seasons "
           f"({to_fetch[0]} -> {to_fetch[-1]})")
 
     first_write = not PLAYERS_CSV.exists()
     frames: list[pd.DataFrame] = []
 
     for i, season_str in enumerate(to_fetch, 1):
-        print(f"  [{i}/{len(to_fetch)}] Fetching players {season_str}...", end=" ", flush=True)
+        log.info(f"  [{i}/{len(to_fetch)}] Fetching players {season_str}...", end=" ", flush=True)
         df = _fetch_player_season(season_str)
         if df is None or df.empty:
-            print("skipped (no data)")
+            log.warning("skipped (no data)")
             continue
         df = _normalize_columns(df)
         df = _add_season_cols(df, season_str)
         frames.append(df)
-        print(f"done ({len(df)} players)")
+        log.info(f"done ({len(df)} players)")
 
         # Flush every 10 seasons to avoid losing progress on network error
         if len(frames) >= 10:
@@ -198,7 +201,7 @@ def fetch_players(seasons: list[str]) -> None:
     if frames:
         _append_frames(frames, PLAYERS_CSV, first_write)
 
-    print(f"fetch_historical_players: player data saved -> {PLAYERS_CSV}")
+    log.info(f"fetch_historical_players: player data saved -> {PLAYERS_CSV}")
 
 
 def fetch_teams(seasons: list[str]) -> None:
@@ -207,25 +210,25 @@ def fetch_teams(seasons: list[str]) -> None:
     to_fetch = [s for s in seasons if s not in existing]
 
     if not to_fetch:
-        print("fetch_historical_players: team data already up to date, nothing to fetch.")
+        log.info("fetch_historical_players: team data already up to date, nothing to fetch.")
         return
 
-    print(f"fetch_historical_players: fetching {len(to_fetch)} team seasons "
+    log.info(f"fetch_historical_players: fetching {len(to_fetch)} team seasons "
           f"({to_fetch[0]} -> {to_fetch[-1]})")
 
     first_write = not TEAMS_CSV.exists()
     frames: list[pd.DataFrame] = []
 
     for i, season_str in enumerate(to_fetch, 1):
-        print(f"  [{i}/{len(to_fetch)}] Fetching teams  {season_str}...", end=" ", flush=True)
+        log.info(f"  [{i}/{len(to_fetch)}] Fetching teams  {season_str}...", end=" ", flush=True)
         df = _fetch_team_season(season_str)
         if df is None or df.empty:
-            print("skipped (no data)")
+            log.warning("skipped (no data)")
             continue
         df = _normalize_columns(df)
         df = _add_season_cols(df, season_str)
         frames.append(df)
-        print(f"done ({len(df)} teams)")
+        log.info(f"done ({len(df)} teams)")
 
         if len(frames) >= 10:
             _append_frames(frames, TEAMS_CSV, first_write and i <= len(frames))
@@ -235,7 +238,7 @@ def fetch_teams(seasons: list[str]) -> None:
     if frames:
         _append_frames(frames, TEAMS_CSV, first_write)
 
-    print(f"fetch_historical_players: team data saved -> {TEAMS_CSV}")
+    log.info(f"fetch_historical_players: team data saved -> {TEAMS_CSV}")
 
 
 def _append_frames(frames: list[pd.DataFrame], csv_path: Path, write_header: bool) -> None:
@@ -276,8 +279,9 @@ def main(argv: list[str] | None = None) -> None:
     if not args.players_only:
         fetch_teams(seasons)
 
-    print("fetch_historical_players: done.")
+    log.info("fetch_historical_players: done.")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

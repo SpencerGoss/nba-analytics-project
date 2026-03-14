@@ -25,6 +25,9 @@ import math
 import os
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 BASE_ELO = 1500
@@ -199,7 +202,7 @@ def build_elo_ratings(
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     result.to_csv(output_path, index=False)
-    print(f"Saved {len(result):,} Elo rows -> {output_path}")
+    log.info(f"Saved {len(result):,} Elo rows -> {output_path}")
     return result
 
 
@@ -246,8 +249,8 @@ def get_current_elos(
 
 if __name__ == "__main__":
     ratings = build_elo_ratings()
-    print(f"\nElo ratings: {len(ratings)} rows, cols: {list(ratings.columns)}")
-    print(f"\nTop 10 current Elo ratings:")
+    log.info(f"\nElo ratings: {len(ratings)} rows, cols: {list(ratings.columns)}")
+    log.info(f"\nTop 10 current Elo ratings:")
     current = get_current_elos()
     for team, elo in sorted(current.items(), key=lambda x: -x[1])[:10]:
-        print(f"  {team}: {elo:.1f}")
+        log.info(f"  {team}: {elo:.1f}")

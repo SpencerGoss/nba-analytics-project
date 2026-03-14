@@ -26,6 +26,9 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -124,10 +127,10 @@ def fetch_live_scores() -> list[dict]:
         games = [_parse_live_game(g) for g in games_raw]
         return games
     except ImportError:
-        print("  WARN: nba_api not installed -- returning empty live scores")
+        log.warning("  WARN: nba_api not installed -- returning empty live scores")
         return []
     except Exception as exc:
-        print(f"  Live scores unavailable: {exc}")
+        log.info(f"  Live scores unavailable: {exc}")
         return []
 
 
@@ -137,14 +140,14 @@ def fetch_live_scores() -> list[dict]:
 
 def build_live_scores(out_path: Path = OUT_JSON) -> list[dict]:
     """Fetch live scores and write to JSON. Always writes (even empty list)."""
-    print("Fetching live scores from NBA API ...")
+    log.info("Fetching live scores from NBA API ...")
     games = fetch_live_scores()
 
     if games:
         live = [g for g in games if g["status_code"] == 2]
-        print(f"  {len(games)} game(s) today, {len(live)} currently live")
+        log.info(f"  {len(games)} game(s) today, {len(live)} currently live")
     else:
-        print("  No games found or API unavailable")
+        log.info("  No games found or API unavailable")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -154,9 +157,10 @@ def build_live_scores(out_path: Path = OUT_JSON) -> list[dict]:
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2)
 
-    print(f"Written -> {out_path}  ({len(games)} games)")
+    log.info(f"Written -> {out_path}  ({len(games)} games)")
     return games
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_live_scores()

@@ -27,6 +27,9 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -47,7 +50,7 @@ MIN_POS_RATE = 50.0
 def _load_clv_rows(db_path: Path) -> list[dict]:
     """Return all rows from clv_tracking as a list of dicts."""
     if not db_path.exists():
-        print(f"  WARN: DB not found at {db_path}")
+        log.warning(f"  WARN: DB not found at {db_path}")
         return []
 
     try:
@@ -59,7 +62,7 @@ def _load_clv_rows(db_path: Path) -> list[dict]:
         conn.close()
         return rows
     except sqlite3.OperationalError as exc:
-        print(f"  WARN: could not query clv_tracking: {exc}")
+        log.error(f"  WARN: could not query clv_tracking: {exc}")
         return []
 
 
@@ -122,25 +125,26 @@ def build_clv(
     """
     Main entry point. Returns the summary dict (also writes JSON).
     """
-    print(f"build_clv: reading clv_tracking from {db_path}")
+    log.info(f"build_clv: reading clv_tracking from {db_path}")
     rows = _load_clv_rows(db_path)
-    print(f"  {len(rows)} total rows loaded")
+    log.info(f"  {len(rows)} total rows loaded")
 
     summary = _compute_summary(rows)
 
-    print(f"  games_tracked  : {summary['games_tracked']}")
-    print(f"  games_with_clv : {summary['games_with_clv']}")
-    print(f"  mean_clv       : {summary['mean_clv']}")
-    print(f"  pos_rate       : {summary['pos_rate']}%")
-    print(f"  edge_confirmed : {summary['edge_confirmed']}")
+    log.info(f"  games_tracked  : {summary['games_tracked']}")
+    log.info(f"  games_with_clv : {summary['games_with_clv']}")
+    log.info(f"  mean_clv       : {summary['mean_clv']}")
+    log.info(f"  pos_rate       : {summary['pos_rate']}%")
+    log.info(f"  edge_confirmed : {summary['edge_confirmed']}")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
 
-    print(f"Written -> {out_path}")
+    log.info(f"Written -> {out_path}")
     return summary
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_clv()

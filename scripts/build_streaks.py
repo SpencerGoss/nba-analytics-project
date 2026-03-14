@@ -44,6 +44,9 @@ TEAM_LOGS = PROJECT_ROOT / "data" / "processed" / "team_game_logs.csv"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "streaks.json"
 
 from src.config import get_current_season, get_current_season_id
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON_ID = get_current_season_id()  # player_game_logs uses season_id column
 CURRENT_SEASON = get_current_season()  # team_game_logs uses season column
@@ -246,31 +249,31 @@ def build_streaks(
 ) -> dict:
     # ---- Team logs ----
     if not team_logs_path.exists():
-        print(f"WARN: team_game_logs not found: {team_logs_path} -- skipping streaks build")
+        log.warning(f"WARN: team_game_logs not found: {team_logs_path} -- skipping streaks build")
         return {}
 
-    print(f"Loading team game logs from {team_logs_path} ...")
+    log.info(f"Loading team game logs from {team_logs_path} ...")
     tdf = pd.read_csv(team_logs_path)
     tdf["game_date"] = pd.to_datetime(tdf["game_date"], format="mixed")
     tdf_season = tdf[tdf["season"] == CURRENT_SEASON].copy()
-    print(f"  {len(tdf_season)} rows for season {CURRENT_SEASON}")
+    log.info(f"  {len(tdf_season)} rows for season {CURRENT_SEASON}")
 
-    print("Computing team streaks ...")
+    log.info("Computing team streaks ...")
     team_streaks = _compute_team_streaks(tdf_season)
-    print(f"  {len(team_streaks)} team streaks computed")
+    log.info(f"  {len(team_streaks)} team streaks computed")
 
-    print("Computing home/away splits ...")
+    log.info("Computing home/away splits ...")
     home_away = _compute_home_away(tdf_season)
-    print(f"  {len(home_away)} teams in home/away output")
+    log.info(f"  {len(home_away)} teams in home/away output")
 
     # ---- Player logs ----
     hot: list[dict] = []
     cold: list[dict] = []
 
     if not player_logs_path.exists():
-        print(f"WARN: player_game_logs not found: {player_logs_path} -- skipping hot/cold players")
+        log.warning(f"WARN: player_game_logs not found: {player_logs_path} -- skipping hot/cold players")
     else:
-        print(f"Loading player game logs from {player_logs_path} ...")
+        log.info(f"Loading player game logs from {player_logs_path} ...")
         pdf = pd.read_csv(
             player_logs_path,
             usecols=[
@@ -281,15 +284,15 @@ def build_streaks(
         )
         pdf["game_date"] = pd.to_datetime(pdf["game_date"], format="mixed")
         pdf = pdf[pdf["season_id"] == CURRENT_SEASON_ID].copy()
-        print(f"  {len(pdf)} rows for season_id {CURRENT_SEASON_ID}")
+        log.info(f"  {len(pdf)} rows for season_id {CURRENT_SEASON_ID}")
 
-        print("Computing hot players ...")
+        log.info("Computing hot players ...")
         hot = _compute_hot_players(pdf)
-        print(f"  {len(hot)} hot players found")
+        log.info(f"  {len(hot)} hot players found")
 
-        print("Computing cold players ...")
+        log.info("Computing cold players ...")
         cold = _compute_cold_players(pdf)
-        print(f"  {len(cold)} cold players found")
+        log.info(f"  {len(cold)} cold players found")
 
     result = {
         "hot": hot,
@@ -303,23 +306,24 @@ def build_streaks(
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(result, fh, separators=(",", ":"), default=str)
 
-    print(f"Written -> {out_path}")
+    log.info(f"Written -> {out_path}")
     if hot:
-        print("  Hot players:")
+        log.info("  Hot players:")
         for p in hot:
-            print(f"    {p['name']} ({p['team']}) -- {p['stat']}")
+            log.info(f"    {p['name']} ({p['team']}) -- {p['stat']}")
     else:
-        print("  No hot players meeting threshold")
+        log.info("  No hot players meeting threshold")
     if cold:
-        print("  Cold players:")
+        log.info("  Cold players:")
         for p in cold:
-            print(f"    {p['name']} ({p['team']}) -- {p['stat']}")
+            log.info(f"    {p['name']} ({p['team']}) -- {p['stat']}")
     else:
-        print("  No cold players meeting threshold")
+        log.info("  No cold players meeting threshold")
 
     return result
 
 
 if __name__ == "__main__":
-    print("=== build_streaks ===")
+    logging.basicConfig(level=logging.INFO)
+    log.info("=== build_streaks ===")
     build_streaks()

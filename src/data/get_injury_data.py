@@ -47,6 +47,9 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+import logging
+
+log = logging.getLogger(__name__)
 
 # Allow running as a script from project root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -138,10 +141,8 @@ def _fetch_pdf(date_str: str) -> pd.DataFrame:
     try:
         import pdfplumber
     except ImportError:
-        print(
-            "  [get_injury_data] pdfplumber not installed. "
-            "Install with: pip install pdfplumber>=0.10.0"
-        )
+        log.info("  [get_injury_data] pdfplumber not installed. "
+            "Install with: pip install pdfplumber>=0.10.0")
         return pd.DataFrame()
 
     for time_slot in PDF_TIME_SLOTS:
@@ -159,30 +160,26 @@ def _fetch_pdf(date_str: str) -> pd.DataFrame:
                         rows.extend(table[1:])  # skip header row per page
 
             if not rows:
-                print(f"  [get_injury_data] PDF at {time_slot} had no extractable rows.")
+                log.info(f"  [get_injury_data] PDF at {time_slot} had no extractable rows.")
                 continue
 
             df = pd.DataFrame(rows, columns=PDF_COLUMNS)
-            print(
-                f"  [get_injury_data] PDF ({time_slot}): "
-                f"parsed {len(df)} rows for {date_str}"
-            )
+            log.info(f"  [get_injury_data] PDF ({time_slot}): "
+                f"parsed {len(df)} rows for {date_str}")
             return df
 
         except requests.exceptions.HTTPError as http_err:
             code = http_err.response.status_code if http_err.response else "unknown"
             if code in (403, 404):
                 continue  # this time slot not published yet
-            print(f"  [get_injury_data] HTTP error at {time_slot}: {http_err}")
+            log.error(f"  [get_injury_data] HTTP error at {time_slot}: {http_err}")
             continue
         except Exception as exc:
-            print(f"  [get_injury_data] Parse error at {time_slot}: {exc}")
+            log.error(f"  [get_injury_data] Parse error at {time_slot}: {exc}")
             continue
 
-    print(
-        f"  [get_injury_data] All PDF time slots failed for {date_str}. "
-        "May be off-season or report not yet published."
-    )
+    log.error(f"  [get_injury_data] All PDF time slots failed for {date_str}. "
+        "May be off-season or report not yet published.")
     return pd.DataFrame()
 
 
@@ -208,15 +205,13 @@ def _fetch_nba_api() -> pd.DataFrame:
             return pd.DataFrame()
 
         report.columns = [c.lower() for c in report.columns]
-        print(
-            f"  [get_injury_data] nba_api: fetched {len(report)} injury entries."
-        )
+        log.info(f"  [get_injury_data] nba_api: fetched {len(report)} injury entries.")
         return report
 
     except ImportError:
         return pd.DataFrame()
     except Exception as exc:
-        print(f"  [get_injury_data] nba_api fetch failed: {exc}")
+        log.error(f"  [get_injury_data] nba_api fetch failed: {exc}")
         return pd.DataFrame()
 
 
@@ -254,7 +249,7 @@ def get_injury_report(
     save_dir.mkdir(parents=True, exist_ok=True)
 
     today_str = datetime.now().strftime("%Y-%m-%d")
-    print(f"[get_injury_data] Fetching NBA injury report for {today_str}...")
+    log.info(f"[get_injury_data] Fetching NBA injury report for {today_str}...")
 
     # -- Try nba_api first (may not be available in all versions)
     raw = _fetch_nba_api()
@@ -265,7 +260,7 @@ def get_injury_report(
     else:
         # Fall back to PDF
         if raw.empty:
-            print("[get_injury_data] Falling back to PDF source...")
+            log.info("[get_injury_data] Falling back to PDF source...")
         raw_pdf = _fetch_pdf(today_str)
         if raw_pdf.empty:
             warnings.warn(
@@ -281,13 +276,13 @@ def get_injury_report(
         df = _normalize_pdf_response(raw_pdf, today_str)
 
     if df.empty:
-        print(f"  [get_injury_data] No actionable injury entries for {today_str}.")
+        log.info(f"  [get_injury_data] No actionable injury entries for {today_str}.")
         return df
 
     # -- Save dated snapshot (one file per day, overwrite if re-run same day)
     out_path = save_dir / f"injury_report_{today_str}.csv"
     df.to_csv(out_path, index=False)
-    print(f"  [get_injury_data] Saved {len(df)} rows -> {out_path}")
+    log.info(f"  [get_injury_data] Saved {len(df)} rows -> {out_path}")
 
     return df
 
@@ -352,7 +347,7 @@ def load_historical_injuries(
     csv_files = sorted(search_dir.glob("injury_report_*.csv"))
 
     if not csv_files:
-        print(f"  [get_injury_data] No injury CSVs found in {search_dir}")
+        log.info(f"  [get_injury_data] No injury CSVs found in {search_dir}")
         return pd.DataFrame(
             columns=["date", "player_name", "player_id", "team_abbr",
                      "status", "injury_type"]
@@ -364,7 +359,7 @@ def load_historical_injuries(
             part = pd.read_csv(path, dtype=str)
             parts.append(part)
         except Exception as exc:
-            print(f"  [get_injury_data] Could not read {path}: {exc}")
+            log.error(f"  [get_injury_data] Could not read {path}: {exc}")
 
     if not parts:
         return pd.DataFrame(
@@ -373,10 +368,8 @@ def load_historical_injuries(
         )
 
     combined = pd.concat(parts, ignore_index=True)
-    print(
-        f"  [get_injury_data] Loaded {len(combined)} rows from "
-        f"{len(parts)} injury report CSVs."
-    )
+    log.info(f"  [get_injury_data] Loaded {len(combined)} rows from "
+        f"{len(parts)} injury report CSVs.")
     return combined
 
 
@@ -385,7 +378,7 @@ def load_historical_injuries(
 if __name__ == "__main__":
     df = get_injury_report()
     if df.empty:
-        print("No injury report data available (may be off-season or no games today).")
+        log.info("No injury report data available (may be off-season or no games today).")
     else:
-        print(f"\nFetched {len(df)} injury report entries:")
-        print(df.to_string(index=False))
+        log.info(f"\nFetched {len(df)} injury report entries:")
+        log.info(df.to_string(index=False))

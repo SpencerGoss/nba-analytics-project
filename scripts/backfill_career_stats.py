@@ -26,6 +26,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players
+import logging
+
+log = logging.getLogger(__name__)
 
 PLAYERS_CSV = PROJECT_ROOT / "data" / "raw" / "historical_player_seasons.csv"
 THROTTLE_SEC = 0.65
@@ -167,20 +170,20 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print("Loading existing player IDs...")
+    log.info("Loading existing player IDs...")
     existing = _load_existing_player_ids()
-    print(f"  {len(existing)} players already in CSV")
+    log.info(f"  {len(existing)} players already in CSV")
 
     all_players = players.get_players()
     missing = [p for p in all_players if p["id"] not in existing]
-    print(f"  {len(missing)} players to backfill")
+    log.warning(f"  {len(missing)} players to backfill")
 
     if args.limit > 0:
         missing = missing[:args.limit]
-        print(f"  Limited to {args.limit} players")
+        log.info(f"  Limited to {args.limit} players")
 
     if not missing:
-        print("Nothing to do.")
+        log.info("Nothing to do.")
         return
 
     frames: list[pd.DataFrame] = []
@@ -193,7 +196,7 @@ def main() -> None:
         name = p["full_name"]
 
         if i % 100 == 0 or i == 1:
-            print(f"  [{i}/{len(missing)}] Fetching {name}...")
+            log.warning(f"  [{i}/{len(missing)}] Fetching {name}...")
 
         df = _fetch_career(pid)
         if df is None or df.empty:
@@ -209,21 +212,22 @@ def main() -> None:
         if len(frames) >= FLUSH_EVERY:
             _append_to_csv(frames)
             frames = []
-            print(f"    Flushed at {i}/{len(missing)} "
+            log.warning(f"    Flushed at {i}/{len(missing)} "
                   f"({fetched} fetched, {skipped} skipped, "
                   f"{total_seasons} total seasons)")
 
     # Final flush
     _append_to_csv(frames)
 
-    print(f"\nDone. Fetched {fetched} players ({total_seasons} seasons), "
+    log.warning(f"\nDone. Fetched {fetched} players ({total_seasons} seasons), "
           f"skipped {skipped}.")
 
     # Verify totals
     df_final = pd.read_csv(PLAYERS_CSV, usecols=["player_id"], low_memory=False)
-    print(f"CSV now has {df_final['player_id'].nunique()} unique players, "
+    log.info(f"CSV now has {df_final['player_id'].nunique()} unique players, "
           f"{len(df_final)} total rows.")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

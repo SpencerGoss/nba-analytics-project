@@ -26,6 +26,9 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -180,7 +183,7 @@ def build_sharp_money() -> list[dict]:
     contexts = _load_json(DATA_DIR / "game_context.json")
 
     if not picks:
-        print("  todays_picks.json empty or missing -- outputting []")
+        log.warning("  todays_picks.json empty or missing -- outputting []")
         return []
 
     picks_idx = _index_by_game(picks)
@@ -259,22 +262,21 @@ def build_sharp_money() -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    print("Building sharp money signals...")
+    log.info("Building sharp money signals...")
     records = build_sharp_money()
-    print(f"  {len(records)} game records")
+    log.info(f"  {len(records)} game records")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
         json.dump(records, fh, indent=2, ensure_ascii=False)
 
-    print(f"  Written -> {OUT_JSON}")
+    log.info(f"  Written -> {OUT_JSON}")
     for rec in records[:5]:
-        print(
-            f"  {rec['away_team']} @ {rec['home_team']}  "
+        log.info(f"  {rec['away_team']} @ {rec['home_team']}  "
             f"score={rec['sharp_score']}  side={rec['sharp_side']}  "
-            f"rating={rec['sharp_rating']}"
-        )
+            f"rating={rec['sharp_rating']}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

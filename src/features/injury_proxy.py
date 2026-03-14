@@ -75,6 +75,9 @@ import warnings
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import logging
+
+log = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -149,10 +152,8 @@ def load_real_absences(season: int | None = None) -> pd.DataFrame | None:
         df = pd.read_csv(ABSENCES_PATH, usecols=required_cols)
     except ValueError as exc:
         # Column subset missing — file schema mismatch; treat as unavailable.
-        print(
-            f"  WARNING: player_absences.csv column mismatch ({exc}). "
-            "Falling back to rolling proxy."
-        )
+        log.warning(f"  WARNING: player_absences.csv column mismatch ({exc}). "
+            "Falling back to rolling proxy.")
         return None
 
     if season is not None:
@@ -264,7 +265,7 @@ def build_injury_proxy_features(
         n_missing_rotation      — headcount of absent rotation players
     """
     print("=" * 60)
-    print("INJURY PROXY FEATURE ENGINEERING")
+    log.info("INJURY PROXY FEATURE ENGINEERING")
     print("=" * 60)
 
     # ── Primary path: load player_absences.csv via load_real_absences() ─────────
@@ -288,20 +289,16 @@ def build_injury_proxy_features(
                     usecols=["player_id", "team_id", "game_id",
                              "min_roll5", "usg_pct", "was_absent"],
                 )
-                print(f"\nPrimary source (legacy game_id format): {legacy_path}")
-                print(f"  Loaded {len(absences_legacy):,} rotation player-game rows")
-                print(
-                    f"  Absent rows (was_absent=1): "
-                    f"{(absences_legacy['was_absent'] == 1).sum():,}"
-                )
+                log.info(f"\nPrimary source (legacy game_id format): {legacy_path}")
+                log.info(f"  Loaded {len(absences_legacy):,} rotation player-game rows")
+                log.info(f"  Absent rows (was_absent=1): "
+                    f"{(absences_legacy['was_absent'] == 1).sum():,}")
                 result_intermediate = _aggregate_from_absences_df(absences_legacy)
                 # Jump to final output section
                 _use_intermediate = True
             except (ValueError, KeyError) as exc:
-                print(
-                    f"\n  WARNING: {legacy_path} missing expected columns ({exc}). "
-                    "Falling back to rolling proxy."
-                )
+                log.warning(f"\n  WARNING: {legacy_path} missing expected columns ({exc}). "
+                    "Falling back to rolling proxy.")
                 _use_intermediate = False
         else:
             _use_intermediate = False
@@ -313,15 +310,13 @@ def build_injury_proxy_features(
         # The CSV schema from Phase 10 uses game_date (not game_id).  We join
         # with the game log's (team_id, game_date) → game_id mapping so that
         # _aggregate_from_absences_df() (which groups by game_id) can be reused.
-        print(f"\nPrimary source: {ABSENCES_PATH}")
-        print(f"  Loaded {len(real_absences):,} rotation player-game rows")
-        print(
-            f"  Absent rows (was_absent=1): "
-            f"{(real_absences['was_absent'] == 1).sum():,}"
-        )
+        log.info(f"\nPrimary source: {ABSENCES_PATH}")
+        log.info(f"  Loaded {len(real_absences):,} rotation player-game rows")
+        log.info(f"  Absent rows (was_absent=1): "
+            f"{(real_absences['was_absent'] == 1).sum():,}")
 
         # Build game_date → game_id mapping from the game log
-        print("  Resolving game_id from player_game_logs...")
+        log.info("  Resolving game_id from player_game_logs...")
         log_map_cols = ["team_id", "game_id", "game_date"]
         log_map = pd.read_csv(game_log_path, usecols=log_map_cols)
         log_map["game_date"] = pd.to_datetime(log_map["game_date"], format="mixed")
@@ -337,10 +332,8 @@ def build_injury_proxy_features(
 
         missing_game_id = absences_with_id["game_id"].isna().sum()
         if missing_game_id > 0:
-            print(
-                f"  WARNING: {missing_game_id:,} absence rows could not be matched "
-                "to a game_id and will be dropped."
-            )
+            log.error(f"  WARNING: {missing_game_id:,} absence rows could not be matched "
+                "to a game_id and will be dropped.")
         absences_with_id = absences_with_id.dropna(subset=["game_id"])
 
         result_intermediate = _aggregate_from_absences_df(absences_with_id)
@@ -349,13 +342,11 @@ def build_injury_proxy_features(
     if not _use_intermediate:
         # ── Fallback path: derive from raw game logs ──────────────────────────
         if absences_path:
-            print(
-                f"\n  WARNING: {absences_path} not found — "
+            log.warning(f"\n  WARNING: {absences_path} not found — "
                 "falling back to deriving absence data from game logs. "
-                "Run src/data/get_historical_absences.py to build the primary data source."
-            )
+                "Run src/data/get_historical_absences.py to build the primary data source.")
 
-        print("\nLoading player_game_logs...")
+        log.info("\nLoading player_game_logs...")
         cols = ["season", "player_id", "player_name", "team_id",
                 "team_abbreviation", "game_id", "game_date", "min"]
         df = pd.read_csv(game_log_path, usecols=cols)
@@ -366,10 +357,10 @@ def build_injury_proxy_features(
 
         # Sort chronologically within each player
         df = df.sort_values(["player_id", "game_date"]).reset_index(drop=True)
-        print(f"  Loaded {len(df):,} player-game rows")
+        log.info(f"  Loaded {len(df):,} player-game rows")
 
         # ── Load season-level usage rates ──────────────────────────────────────
-        print("Loading advanced stats for usage rates...")
+        log.info("Loading advanced stats for usage rates...")
         adv = pd.read_csv(adv_stats_path, usecols=["player_id", "season", "usg_pct"])
         adv = adv.drop_duplicates(subset=["player_id", "season"])
         # Fill missing usage with a neutral league-average estimate
@@ -380,7 +371,7 @@ def build_injury_proxy_features(
 
         # ── Compute rolling baseline minutes per player ────────────────────────
         # CRITICAL: shift(1) BEFORE rolling so row N only uses rows 0..N-1.
-        print("Computing rolling baseline minutes per player...")
+        log.info("Computing rolling baseline minutes per player...")
 
         df["min_roll5"] = (
             df.groupby("player_id")["min"]
@@ -407,7 +398,7 @@ def build_injury_proxy_features(
         # A player was "expected" to play game G if their most recent appearance
         # before G shows in_rotation=True and was within MAX_STALE_DAYS days.
         # Then anti-join against actual appearances to find who was absent.
-        print("Identifying absent rotation players per team-game...")
+        log.info("Identifying absent rotation players per team-game...")
 
         MAX_STALE_DAYS = ROLL_WINDOW * 5   # ~25 days; beyond this, don't flag player
 
@@ -478,7 +469,7 @@ def build_injury_proxy_features(
             if expected_parts
             else pd.DataFrame(columns=["game_id", "team_id", "player_id", "min_roll5", "usg_pct"])
         )
-        print(f"  Expected rotation appearances: {len(expected_df):,}")
+        log.info(f"  Expected rotation appearances: {len(expected_df):,}")
 
         # Anti-join: expected players who did NOT appear in the actual game log
         merged_check = expected_df.merge(
@@ -489,9 +480,9 @@ def build_injury_proxy_features(
         # played=NaN → player was expected but did not appear in the game log
         absent = merged_check[merged_check["played"].isna()].copy()
 
-        print(f"  Absent rotation instances: {len(absent):,}")
+        log.info(f"  Absent rotation instances: {len(absent):,}")
         if len(absent) > 0:
-            print(f"  Games with at least one absent rotation player: "
+            log.info(f"  Games with at least one absent rotation player: "
                   f"{absent['game_id'].nunique():,}")
 
         # ── Aggregate absent players per (team_id, game_id) ──────────────────
@@ -569,21 +560,21 @@ def build_injury_proxy_features(
     result["team_id"] = result["team_id"].astype(int)
 
     # ── Summary stats ─────────────────────────────────────────────────────────
-    print(f"\n-- Summary -------------------------------------------------")
-    print(f"  Total team-game rows    : {len(result):,}")
-    print(f"  Games with missing mins : "
+    log.info(f"\n-- Summary -------------------------------------------------")
+    log.info(f"  Total team-game rows    : {len(result):,}")
+    log.warning(f"  Games with missing mins : "
           f"{(result['missing_minutes'] > 0).sum():,}  "
           f"({(result['missing_minutes'] > 0).mean():.1%})")
-    print(f"  Games with star out     : "
+    log.info(f"  Games with star out     : "
           f"{result['star_player_out'].sum():,}  "
           f"({result['star_player_out'].mean():.1%})")
-    print(f"  Avg missing minutes     : {result['missing_minutes'].mean():.1f}")
-    print(f"  Avg rotation availability: {result['rotation_availability'].mean():.3f}")
+    log.warning(f"  Avg missing minutes     : {result['missing_minutes'].mean():.1f}")
+    log.info(f"  Avg rotation availability: {result['rotation_availability'].mean():.3f}")
 
     # ── Save ──────────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     result.to_csv(output_path, index=False)
-    print(f"\nSaved {len(result):,} rows -> {output_path}")
+    log.info(f"\nSaved {len(result):,} rows -> {output_path}")
 
     return result
 
@@ -625,7 +616,7 @@ def get_todays_injury_report() -> pd.DataFrame:
         ).get_data_frames()[0]
 
         if report.empty:
-            print("  NBA injury report returned empty - may be off-season or no games today.")
+            log.warning("  NBA injury report returned empty - may be off-season or no games today.")
             return pd.DataFrame()
 
         # Normalize column names
@@ -633,11 +624,11 @@ def get_todays_injury_report() -> pd.DataFrame:
 
         # Filter to OUT and QUESTIONABLE players — PROBABLE players usually play
         report = report[report["player_status"].isin(["Out", "Questionable"])].copy()
-        print(f"  Fetched {len(report)} OUT/QUESTIONABLE entries from NBA injury report")
+        log.info(f"  Fetched {len(report)} OUT/QUESTIONABLE entries from NBA injury report")
         return report
 
     except Exception as e:
-        print(f"  Could not fetch live injury report: {e}")
+        log.error(f"  Could not fetch live injury report: {e}")
         return pd.DataFrame()
 
 
@@ -720,5 +711,5 @@ def apply_live_injuries(
 
 if __name__ == "__main__":
     result = build_injury_proxy_features()
-    print("\nSample output:")
-    print(result[result["missing_minutes"] > 0].head(10).to_string(index=False))
+    log.info("\nSample output:")
+    log.warning(result[result["missing_minutes"] > 0].head(10).to_string(index=False))

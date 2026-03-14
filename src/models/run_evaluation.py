@@ -28,6 +28,9 @@ import argparse
 import sys
 import os
 from datetime import datetime
+import logging
+
+log = logging.getLogger(__name__)
 
 # Ensure the project root is on sys.path so that `src.*` imports resolve
 # regardless of which directory the script is launched from.
@@ -36,7 +39,7 @@ if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
 start = datetime.now()
-print(f"[{start.strftime('%Y-%m-%d %H:%M:%S')}] Starting model evaluation...")
+log.info(f"[{start.strftime('%Y-%m-%d %H:%M:%S')}] Starting model evaluation...")
 print()
 
 
@@ -54,7 +57,7 @@ def main():
     # -- 1. Walk-forward backtesting -------------------------------------------
     if not args.skip_backtest:
         print("-" * 60)
-        print("STEP 1 OF 3 -- Walk-Forward Backtesting")
+        log.info("STEP 1 OF 3 -- Walk-Forward Backtesting")
         print("-" * 60)
         try:
             from src.models.backtesting import (
@@ -65,38 +68,38 @@ def main():
             game_results   = run_game_outcome_backtest()
             player_results = run_player_model_backtest()
             write_summary_report(game_results, player_results)
-            print("\n[OK] Backtesting complete")
+            log.info("\n[OK] Backtesting complete")
         except Exception as e:
-            print(f"\n[FAIL] Backtesting failed: {e}")
+            log.error(f"\n[FAIL] Backtesting failed: {e}")
             import traceback; traceback.print_exc()
     else:
-        print("Step 1: Backtesting skipped (--skip-backtest)")
+        log.warning("Step 1: Backtesting skipped (--skip-backtest)")
 
     print()
 
     # -- 2. Calibration analysis -----------------------------------------------
     if not args.skip_calibration:
         print("-" * 60)
-        print("STEP 2 OF 3 -- Calibration Analysis")
+        log.info("STEP 2 OF 3 -- Calibration Analysis")
         print("-" * 60)
         try:
             from src.models.calibration import run_calibration_analysis
             metrics = run_calibration_analysis()
-            print("\n[OK] Calibration analysis complete")
+            log.info("\n[OK] Calibration analysis complete")
         except FileNotFoundError as e:
-            print(f"\n[FAIL] Calibration failed: {e}")
+            log.error(f"\n[FAIL] Calibration failed: {e}")
         except Exception as e:
-            print(f"\n[FAIL] Calibration failed: {e}")
+            log.error(f"\n[FAIL] Calibration failed: {e}")
             import traceback; traceback.print_exc()
     else:
-        print("Step 2: Calibration analysis skipped (--skip-calibration)")
+        log.warning("Step 2: Calibration analysis skipped (--skip-calibration)")
 
     print()
 
     # -- 3. Explainability -----------------------------------------------------
     if not args.skip_explain:
         print("-" * 60)
-        print("STEP 3 OF 3 -- Explainability")
+        log.info("STEP 3 OF 3 -- Explainability")
         print("-" * 60)
         try:
             from src.models.model_explainability import (
@@ -105,29 +108,29 @@ def main():
             )
             explain_game_outcome_model()
             explain_player_model()
-            print("\n[OK] Explainability analysis complete")
+            log.info("\n[OK] Explainability analysis complete")
         except FileNotFoundError as e:
-            print(f"\n[FAIL] Explainability failed: {e}")
+            log.error(f"\n[FAIL] Explainability failed: {e}")
         except Exception as e:
-            print(f"\n[FAIL] Explainability failed: {e}")
+            log.error(f"\n[FAIL] Explainability failed: {e}")
             import traceback; traceback.print_exc()
     else:
-        print("Step 3: Explainability skipped (--skip-explain)")
+        log.warning("Step 3: Explainability skipped (--skip-explain)")
 
     # -- Done ------------------------------------------------------------------
     elapsed = datetime.now() - start
     print()
     print("=" * 60)
-    print(f"Evaluation complete -- {elapsed.seconds // 60}m {elapsed.seconds % 60}s")
+    log.info(f"Evaluation complete -- {elapsed.seconds // 60}m {elapsed.seconds % 60}s")
     print()
-    print("Reports written to:")
-    print("  reports/backtest_game_outcome.csv")
-    print("  reports/backtest_player_*.csv")
-    print("  reports/backtest_summary.txt")
-    print("  reports/calibration/calibration_curve.png")
-    print("  reports/calibration/brier_score_by_season.png")
-    print("  reports/calibration/calibration_metrics.csv")
-    print("  reports/explainability/  (charts + CSVs)")
+    log.info("Reports written to:")
+    log.info("  reports/backtest_game_outcome.csv")
+    log.info("  reports/backtest_player_*.csv")
+    log.info("  reports/backtest_summary.txt")
+    log.info("  reports/calibration/calibration_curve.png")
+    log.info("  reports/calibration/brier_score_by_season.png")
+    log.info("  reports/calibration/calibration_metrics.csv")
+    log.info("  reports/explainability/  (charts + CSVs)")
     print("=" * 60)
 
 

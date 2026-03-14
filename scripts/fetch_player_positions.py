@@ -27,6 +27,9 @@ from nba_api.stats.static import teams
 OUT_CSV = PROJECT_ROOT / "data" / "processed" / "player_positions.csv"
 STATS_CSV = PROJECT_ROOT / "data" / "processed" / "player_stats.csv"
 from src.config import get_current_season
+import logging
+
+log = logging.getLogger(__name__)
 
 CURRENT_SEASON_INT = get_current_season()
 # NBA API expects "2025-26" format string
@@ -123,7 +126,7 @@ def fetch_all_positions() -> pd.DataFrame:
     for i, team in enumerate(all_teams):
         team_id = team["id"]
         abbr = team["abbreviation"]
-        print(f"  [{i+1}/30] Fetching {abbr} roster...")
+        log.info(f"  [{i+1}/30] Fetching {abbr} roster...")
 
         try:
             roster = commonteamroster.CommonTeamRoster(
@@ -153,7 +156,7 @@ def fetch_all_positions() -> pd.DataFrame:
                     "team": abbr,
                 })
         except Exception as e:
-            print(f"    WARN: Failed to fetch {abbr}: {e}")
+            log.error(f"    WARN: Failed to fetch {abbr}: {e}")
 
         time.sleep(0.6)
 
@@ -165,20 +168,20 @@ def fetch_all_positions() -> pd.DataFrame:
 
 
 def main() -> None:
-    print("Fetching player positions from NBA rosters...")
+    log.info("Fetching player positions from NBA rosters...")
     df = fetch_all_positions()
-    print(f"  {len(df)} players with positions")
+    log.info(f"  {len(df)} players with positions")
 
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT_CSV, index=False)
-    print(f"  Written -> {OUT_CSV}")
+    log.info(f"  Written -> {OUT_CSV}")
 
     # Show position distribution
-    print("\nPosition distribution (primary):")
-    print(df["position_primary"].value_counts().to_string())
+    log.info("\nPosition distribution (primary):")
+    log.debug(df["position_primary"].value_counts().to_string())
 
     # Spot-check notable players
-    print("\nSpot checks:")
+    log.info("\nSpot checks:")
     checks = [
         "Luka Doncic", "Jayson Tatum", "Shai Gilgeous-Alexander",
         "Stephen Curry", "LeBron James", "Anthony Davis",
@@ -188,9 +191,10 @@ def main() -> None:
         match = df[df["player_name"] == name]
         if not match.empty:
             r = match.iloc[0]
-            print(f"  {name}: {r['position']} {r['height']} "
+            log.info(f"  {name}: {r['position']} {r['height']} "
                   f"APG={r['apg']} -> {r['positions']}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

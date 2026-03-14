@@ -5,6 +5,9 @@ import time
 import os
 
 from src.data.api_client import fetch_with_retry, HEADERS
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def get_player_game_logs_playoffs(start_year=2000, end_year=2024):
@@ -12,7 +15,7 @@ def get_player_game_logs_playoffs(start_year=2000, end_year=2024):
 
     for year in range(start_year, end_year + 1):
         season = f"{year}-{str(year+1)[-2:]}"
-        print(f"Fetching {season}...")
+        log.info(f"Fetching {season}...")
         time.sleep(1)
 
         result = fetch_with_retry(
@@ -27,13 +30,13 @@ def get_player_game_logs_playoffs(start_year=2000, end_year=2024):
         )
 
         if not result["success"] or len(result["data"]) == 0:
-            print(f"  No playoff data for {season}. Skipping.")
+            log.warning(f"  No playoff data for {season}. Skipping.")
             continue
 
         data = result["data"]
         output_path = f"data/raw/player_game_logs_playoffs/player_game_logs_playoffs_{season.replace('-', '')}.csv"
         data.to_csv(output_path, index=False)
-        print(f"  Saved {season} ({len(data)} rows)")
+        log.info(f"  Saved {season} ({len(data)} rows)")
 
 
 if __name__ == "__main__":

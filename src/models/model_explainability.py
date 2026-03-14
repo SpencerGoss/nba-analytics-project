@@ -79,6 +79,9 @@ OUTPUT_DIR      = "reports/explainability"
 # Number of test-set rows to use for SHAP computation (SHAP is slow on large sets)
 SHAP_SAMPLE     = 500
 from src.models.game_outcome_model import TEST_SEASONS
+import logging
+
+log = logging.getLogger(__name__)
 
 PLAYER_TARGETS  = ["pts", "reb", "ast"]
 TARGET_CLASS    = "home_win"
@@ -135,7 +138,7 @@ def _diverging_bar_chart(
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Chart saved -> {output_path}")
+    log.info(f"  Chart saved -> {output_path}")
 
 
 def _permutation_bar_chart(
@@ -164,7 +167,7 @@ def _permutation_bar_chart(
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Chart saved -> {output_path}")
+    log.info(f"  Chart saved -> {output_path}")
 
 
 # -- Game outcome explainability ------------------------------------------------
@@ -183,7 +186,7 @@ def explain_game_outcome_model(
     per feature, sorted by absolute magnitude.
     """
     print("=" * 60)
-    print("EXPLAINABILITY -- Game Outcome Model")
+    log.info("EXPLAINABILITY -- Game Outcome Model")
     print("=" * 60)
 
     # -- Load model and data ---------------------------------------------------
@@ -206,7 +209,7 @@ def explain_game_outcome_model(
     df["season"]    = df["season"].astype(int)
 
     test = df[df["season"].isin(test_seasons)].copy()
-    print(f"\nTest set size: {len(test):,} games  |  Features: {len(feat_cols)}")
+    log.info(f"\nTest set size: {len(test):,} games  |  Features: {len(feat_cols)}")
 
     from sklearn.impute import SimpleImputer
     imp = SimpleImputer(strategy="mean")
@@ -221,7 +224,7 @@ def explain_game_outcome_model(
     os.makedirs(output_dir, exist_ok=True)
 
     if SHAP_AVAILABLE:
-        print("\nComputing SHAP values (this may take a minute)...")
+        log.info("\nComputing SHAP values (this may take a minute)...")
         # SHAP needs the raw tree estimator, not any calibration wrapper.
         # Handle four model artifact shapes:
         #   _CalibratedWrapper  — custom isotonic wrapper (base_model is a Pipeline)
@@ -257,7 +260,7 @@ def explain_game_outcome_model(
         beeswarm_path = os.path.join(output_dir, "shap_summary_game_outcome.png")
         plt.savefig(beeswarm_path, dpi=150, bbox_inches="tight")
         plt.close()
-        print(f"  SHAP beeswarm saved -> {beeswarm_path}")
+        log.info(f"  SHAP beeswarm saved -> {beeswarm_path}")
 
         # -- Mean SHAP per feature ------------------------------------------
         mean_shap = pd.Series(sv.mean(axis=0), index=feat_cols, name="mean_shap")
@@ -277,16 +280,16 @@ def explain_game_outcome_model(
         shap_df = pd.DataFrame(sv, columns=feat_cols)
         shap_df.to_csv(os.path.join(output_dir, "shap_game_outcome.csv"), index=False)
 
-        print("\nTop 15 features by mean |SHAP|:")
+        log.info("\nTop 15 features by mean |SHAP|:")
         for feat, row in direction.head(15).iterrows():
             direction_str = "^" if row["mean_shap"] > 0 else "v"
-            print(f"  {direction_str}  {feat:<45} {row['abs_mean_shap']:>8.5f}")
+            log.info(f"  {direction_str}  {feat:<45} {row['abs_mean_shap']:>8.5f}")
 
     else:
         # -- Fallback: permutation importance ------------------------------
-        print("\nSHAP not installed -- using permutation importance as fallback.")
-        print("Install SHAP with: pip install shap")
-        print("\nComputing permutation importance (this takes ~1 minute)...")
+        log.warning("\nSHAP not installed -- using permutation importance as fallback.")
+        log.info("Install SHAP with: pip install shap")
+        log.info("\nComputing permutation importance (this takes ~1 minute)...")
 
         perm = permutation_importance(
             model, X_sample, test.iloc[sample_idx][TARGET_CLASS].values,
@@ -305,14 +308,14 @@ def explain_game_outcome_model(
             os.path.join(output_dir, "permutation_importance_game_outcome.png"),
         )
 
-        print("\nTop 15 features by permutation importance:")
+        log.info("\nTop 15 features by permutation importance:")
         for feat, row in direction.head(15).iterrows():
-            print(f"  {feat:<45} {row['abs_mean_shap']:>8.5f}")
+            log.info(f"  {feat:<45} {row['abs_mean_shap']:>8.5f}")
 
     # -- Save direction CSV -----------------------------------------------------
     direction_path = os.path.join(output_dir, "feature_direction_game.csv")
     direction.reset_index().rename(columns={"index": "feature"}).to_csv(direction_path, index=False)
-    print(f"\nFeature direction table saved -> {direction_path}")
+    log.info(f"\nFeature direction table saved -> {direction_path}")
 
     return direction
 
@@ -332,8 +335,8 @@ def explain_player_model(
 
     Returns a dict of {target: mean_shap_DataFrame}.
     """
-    print("\n" + "=" * 60)
-    print("EXPLAINABILITY -- Player Performance Models")
+    log.info("\n" + "=" * 60)
+    log.info("EXPLAINABILITY -- Player Performance Models")
     print("=" * 60)
 
     # player_game_features.csv is 700MB+ (700K+ rows).  Loading it whole
@@ -363,26 +366,26 @@ def explain_player_model(
             chunks.append(sub)
     test = pd.concat(chunks, ignore_index=True) if chunks else pd.DataFrame()
     test["game_date"] = pd.to_datetime(test["game_date"], format="mixed")
-    print(f"\nTest set size: {len(test):,} rows")
+    log.info(f"\nTest set size: {len(test):,} rows")
 
     from sklearn.impute import SimpleImputer
 
     all_directions = {}
 
     for target in targets:
-        print(f"\n{'-'*50}")
-        print(f"Target: {target.upper()}")
+        log.info(f"\n{'-'*50}")
+        log.info(f"Target: {target.upper()}")
 
         try:
             model     = _load_artifact(f"player_{target}_model.pkl", artifacts_dir)
             feat_cols = _load_artifact(f"player_{target}_features.pkl", artifacts_dir)
         except FileNotFoundError as e:
-            print(f"  Skipping -- {e}")
+            log.warning(f"  Skipping -- {e}")
             continue
 
         t_test = test.dropna(subset=[target]).copy()
         if len(t_test) < 50:
-            print(f"  Skipping -- insufficient test data ({len(t_test)} rows)")
+            log.warning(f"  Skipping -- insufficient test data ({len(t_test)} rows)")
             continue
 
         # Sample BEFORE imputation — player datasets can be 50K+ rows;
@@ -402,7 +405,7 @@ def explain_player_model(
         X_df = X_sample
 
         if SHAP_AVAILABLE:
-            print(f"  Computing SHAP values for {target}...")
+            log.info(f"  Computing SHAP values for {target}...")
             try:
                 reg = model.named_steps["model"]
             except KeyError:
@@ -425,7 +428,7 @@ def explain_player_model(
             os.makedirs(output_dir, exist_ok=True)
             plt.savefig(beeswarm_path, dpi=150, bbox_inches="tight")
             plt.close()
-            print(f"  SHAP beeswarm saved -> {beeswarm_path}")
+            log.info(f"  SHAP beeswarm saved -> {beeswarm_path}")
 
             mean_shap = pd.Series(shap_values.mean(axis=0), index=feat_cols, name="mean_shap")
             abs_shap  = pd.Series(np.abs(shap_values).mean(axis=0), index=feat_cols, name="abs_mean_shap")
@@ -439,7 +442,7 @@ def explain_player_model(
             )
 
         else:
-            print(f"  Using permutation importance for {target}...")
+            log.info(f"  Using permutation importance for {target}...")
             from sklearn.metrics import make_scorer
             from sklearn.metrics import mean_absolute_error as mae_fn
             neg_mae_scorer = make_scorer(mae_fn, greater_is_better=False)
@@ -463,12 +466,12 @@ def explain_player_model(
         direction_path = os.path.join(output_dir, f"feature_direction_player_{target}.csv")
         os.makedirs(output_dir, exist_ok=True)
         direction.reset_index().rename(columns={"index": "feature"}).to_csv(direction_path, index=False)
-        print(f"  Feature direction saved -> {direction_path}")
+        log.info(f"  Feature direction saved -> {direction_path}")
 
-        print(f"\n  Top 10 features for {target}:")
+        log.info(f"\n  Top 10 features for {target}:")
         for feat, row in direction.head(10).iterrows():
             direction_str = "^" if row["mean_shap"] > 0 else "v"
-            print(f"    {direction_str}  {feat:<40} {row['abs_mean_shap']:>8.5f}")
+            log.info(f"    {direction_str}  {feat:<40} {row['abs_mean_shap']:>8.5f}")
 
         all_directions[target] = direction
 
@@ -499,8 +502,8 @@ def explain_prediction(
         dict with win probabilities and feature explanations.
     """
     if not SHAP_AVAILABLE:
-        print("SHAP is required for single-prediction explanations.")
-        print("Install with: pip install shap")
+        log.info("SHAP is required for single-prediction explanations.")
+        log.info("Install with: pip install shap")
         return {}
 
     # Prefer calibrated model; fall back to uncalibrated with a warning.
@@ -558,16 +561,16 @@ def explain_prediction(
 
     shap_series = pd.Series(sv[0], index=feat_cols).sort_values(key=abs, ascending=False)
 
-    print(f"\n{'='*55}")
-    print(f"PREDICTION EXPLANATION: {home_team_abbr} (home) vs {away_team_abbr}")
-    print(f"{'='*55}")
-    print(f"Predicted home win probability: {win_prob:.1%}")
-    print(f"\nTop {top_n} factors driving this prediction:")
-    print(f"{'Feature':<45} {'SHAP':>8}  {'Direction'}")
+    log.info(f"\n{'='*55}")
+    log.info(f"PREDICTION EXPLANATION: {home_team_abbr} (home) vs {away_team_abbr}")
+    log.info(f"{'='*55}")
+    log.info(f"Predicted home win probability: {win_prob:.1%}")
+    log.info(f"\nTop {top_n} factors driving this prediction:")
+    log.info(f"{'Feature':<45} {'SHAP':>8}  {'Direction'}")
     print("-" * 65)
     for feat, val in shap_series.head(top_n).items():
         arrow = "^ increases" if val > 0 else "v decreases"
-        print(f"  {_friendly_feature_name(feat):<43} {val:>+8.4f}  {arrow} P(home win)")
+        log.info(f"  {_friendly_feature_name(feat):<43} {val:>+8.4f}  {arrow} P(home win)")
 
     # -- Waterfall plot ---------------------------------------------------------
     plt.figure(figsize=(9, 6))
@@ -589,7 +592,7 @@ def explain_prediction(
     out = os.path.join(output_dir, f"explanation_{home_team_abbr}_vs_{away_team_abbr}.png")
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"\nWaterfall plot saved -> {out}")
+    log.info(f"\nWaterfall plot saved -> {out}")
 
     return {
         "home_team": home_team_abbr,
@@ -604,5 +607,5 @@ def explain_prediction(
 if __name__ == "__main__":
     explain_game_outcome_model()
     explain_player_model()
-    print("\nExplainability analysis complete.")
-    print(f"Outputs saved to: {OUTPUT_DIR}/")
+    log.info("\nExplainability analysis complete.")
+    log.info(f"Outputs saved to: {OUTPUT_DIR}/")

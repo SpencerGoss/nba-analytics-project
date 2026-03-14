@@ -14,6 +14,9 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "database" / "predictions_history.db"
@@ -339,7 +342,7 @@ def build_performance(
         finally:
             conn.close()
     else:
-        print(f"WARNING: DB not found at {db_path} -- using null values for DB-derived fields")
+        log.warning(f"WARNING: DB not found at {db_path} -- using null values for DB-derived fields")
         roi_by_market = {
             "ML": {"bets": 0, "wins": 0, "win_pct": None, "roi_pct": None},
             "ATS": {"bets": 0, "wins": 0, "win_pct": None, "roi_pct": None},
@@ -365,14 +368,15 @@ def build_performance(
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, separators=(",", ":"))
 
-    print(f"performance.json written to {out_path}")
-    print(f"  season_accuracy={season_accuracy}  total_games={total_games}")
-    print(f"  rolling_accuracy_7d={rolling_accuracy_7d}")
-    print(f"  current_streak={current_streak}  best_streak={best_streak}")
-    print(f"  calibration buckets={len(calibration)}")
+    log.info(f"performance.json written to {out_path}")
+    log.info(f"  season_accuracy={season_accuracy}  total_games={total_games}")
+    log.info(f"  rolling_accuracy_7d={rolling_accuracy_7d}")
+    log.info(f"  current_streak={current_streak}  best_streak={best_streak}")
+    log.info(f"  calibration buckets={len(calibration)}")
 
     return payload
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_performance()

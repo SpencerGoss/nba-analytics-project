@@ -23,6 +23,9 @@ from src.models.ats_model import predict_ats
 from src.models.game_outcome_model import predict_game
 from src.models.player_performance_model import predict_player_next_game
 from src.models.value_bet_detector import run_value_bet_scan, no_vig_prob
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -132,7 +135,7 @@ def main() -> None:
     else:
         out = _handle_value_bet(args)
 
-    print(json.dumps(out, indent=2, default=str))
+    log.info(json.dumps(out, indent=2, default=str))
 
 
 if __name__ == "__main__":

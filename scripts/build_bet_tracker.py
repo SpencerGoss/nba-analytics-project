@@ -21,6 +21,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -78,7 +81,7 @@ def _load_value_bets() -> dict[tuple[str, str, str], dict]:
 
 def build_bet_tracker() -> list[dict]:
     if not DB_PATH.exists():
-        print("  predictions_history.db not found -- outputting []")
+        log.warning("  predictions_history.db not found -- outputting []")
         return []
 
     cutoff = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%d")
@@ -171,23 +174,22 @@ def build_bet_tracker() -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    print("Building bet tracker...")
+    log.info("Building bet tracker...")
     records = build_bet_tracker()
-    print(f"  {len(records)} records (last {LOOKBACK_DAYS} days)")
+    log.info(f"  {len(records)} records (last {LOOKBACK_DAYS} days)")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with OUT_JSON.open("w", encoding="utf-8") as fh:
         json.dump(records, fh, indent=2, ensure_ascii=False)
 
-    print(f"  Written -> {OUT_JSON}")
+    log.info(f"  Written -> {OUT_JSON}")
     for rec in records[:5]:
         result_str = rec["result"] or "pending"
         vb_str = "VALUE" if rec["value_bet"] else ""
-        print(
-            f"  {rec['away_team']} @ {rec['home_team']}  {rec['game_date']}  "
-            f"pred={rec['predicted_winner']}  {result_str}  {vb_str}"
-        )
+        log.info(f"  {rec['away_team']} @ {rec['home_team']}  {rec['game_date']}  "
+            f"pred={rec['predicted_winner']}  {result_str}  {vb_str}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()
