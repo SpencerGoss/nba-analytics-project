@@ -54,11 +54,11 @@ class TestMain:
         return result
 
     def test_all_steps_succeed(self):
-        """When all 5 steps pass, main completes without sys.exit."""
+        """When all 6 steps pass, main completes without sys.exit."""
         with patch("subprocess.run", return_value=self._mock_run(0)) as mock_run:
             main()
-        # 5 steps should produce 5 subprocess.run calls
-        assert mock_run.call_count == 5
+        # 6 steps should produce 6 subprocess.run calls
+        assert mock_run.call_count == 6
 
     def test_step1_failure_exits(self):
         """When step 1 fails, pipeline exits immediately."""
@@ -86,7 +86,7 @@ class TestMain:
         assert call_count == 3  # stopped at step 3
 
     def test_steps_run_in_order(self):
-        """Verify the 5 steps run in the expected order."""
+        """Verify the 6 steps run in the expected order."""
         calls = []
 
         def capture_call(cmd, **kwargs):
@@ -100,7 +100,7 @@ class TestMain:
         with patch("subprocess.run", side_effect=capture_call):
             main()
 
-        assert len(calls) == 5
+        assert len(calls) == 6
         # Step 1: lineup features
         assert "lineup_features" in calls[0]
         # Step 2: team_game_features
@@ -109,5 +109,7 @@ class TestMain:
         assert "game_outcome_model" in calls[2]
         # Step 4: calibration
         assert "calibration" in calls[3]
-        # Step 5: ats_model
-        assert "ats_model" in calls[4]
+        # Step 5: margin_model
+        assert "margin_model" in calls[4]
+        # Step 6: ats_model
+        assert "ats_model" in calls[5]

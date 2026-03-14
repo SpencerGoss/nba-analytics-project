@@ -12,6 +12,7 @@ Key behavior:
   5. Save model artifacts + feature importances
 """
 
+import io
 import json
 import os
 import pickle
@@ -138,6 +139,16 @@ def get_feature_cols(df: pd.DataFrame) -> list:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+class _CalibrationUnpickler(pickle.Unpickler):
+    """Resolve calibration wrappers pickled under __main__ to their real module."""
+
+    def find_class(self, module, name):
+        if module == "__main__" and name in ("_PlattWrapper", "_CalibratedWrapper"):
+            from src.models.calibration import _PlattWrapper, _CalibratedWrapper
+            return {"_PlattWrapper": _PlattWrapper, "_CalibratedWrapper": _CalibratedWrapper}[name]
+        return super().find_class(module, name)
+
+
 def _load_game_outcome_model(artifacts_dir: str = ARTIFACTS_DIR) -> tuple:
     """Load the game outcome model, preferring the calibrated artifact.
 
@@ -151,7 +162,7 @@ def _load_game_outcome_model(artifacts_dir: str = ARTIFACTS_DIR) -> tuple:
 
     if os.path.exists(cal_path):
         with open(cal_path, "rb") as f:
-            return pickle.load(f), "game_outcome_model_calibrated.pkl"
+            return _CalibrationUnpickler(f).load(), "game_outcome_model_calibrated.pkl"
 
     warnings.warn(
         "Calibrated model artifact not found at "

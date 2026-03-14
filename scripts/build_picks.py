@@ -81,6 +81,9 @@ def _load_game_lines(target_date: str) -> dict[tuple[str, str], dict]:
         print(f"  WARN: could not read game_lines.csv: {exc}")
         return {}
 
+    # fetch_odds.py writes the column as "date"; normalize to "game_date"
+    if "date" in df.columns and "game_date" not in df.columns:
+        df = df.rename(columns={"date": "game_date"})
     if "game_date" in df.columns:
         df["game_date"] = pd.to_datetime(df["game_date"], format="mixed").dt.date.astype(str)
         df = df[df["game_date"] == target_date]

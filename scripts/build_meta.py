@@ -15,10 +15,14 @@ Output: dashboard/data/meta.json
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 DB_PATH = PROJECT_ROOT / "database" / "predictions_history.db"
 METADATA_PATH = PROJECT_ROOT / "models" / "artifacts" / "game_outcome_metadata.json"
 OUT_JSON = PROJECT_ROOT / "dashboard" / "data" / "meta.json"

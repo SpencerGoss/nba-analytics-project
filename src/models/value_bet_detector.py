@@ -45,6 +45,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.models.odds_utils import no_vig_odds_ratio as _no_vig_core
+
 # -- Config ---------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -61,9 +63,8 @@ VALUE_BET_THRESHOLD = float(os.getenv("VALUE_BET_THRESHOLD", "0.03"))
 def no_vig_prob(home_ml, away_ml):
     """Remove bookmaker vig using the multiplicative method.
 
-    Converts raw American moneyline odds to fair (no-vig) implied probabilities.
-    The raw implied probability over-counts (sums > 1.0 due to vig); dividing
-    each side by the total removes the bookmaker's margin.
+    Delegates to odds_utils.no_vig_odds_ratio for the core math, converting
+    None returns to NaN for pandas compatibility.
 
     Args:
         home_ml: Home team American moneyline (int or float). e.g., -110 or +150.
@@ -72,39 +73,16 @@ def no_vig_prob(home_ml, away_ml):
     Returns:
         (home_no_vig, away_no_vig): tuple of float. Both are NaN if either
         input is None or NaN.
-
-    Examples:
-        >>> no_vig_prob(-110, -110)
-        (0.5, 0.5)  # standard spread bet -- 50/50 after vig removal
-        >>> no_vig_prob(-200, +170)
-        (~0.634, ~0.366)
     """
     try:
         if home_ml is None or away_ml is None:
             return (float("nan"), float("nan"))
         if pd.isna(home_ml) or pd.isna(away_ml):
             return (float("nan"), float("nan"))
-
-        home_ml = float(home_ml)
-        away_ml = float(away_ml)
-
-        # Raw implied probabilities (vig-inclusive)
-        if home_ml > 0:
-            raw_home = 100.0 / (home_ml + 100.0)
-        else:
-            raw_home = abs(home_ml) / (abs(home_ml) + 100.0)
-
-        if away_ml > 0:
-            raw_away = 100.0 / (away_ml + 100.0)
-        else:
-            raw_away = abs(away_ml) / (abs(away_ml) + 100.0)
-
-        total = raw_home + raw_away  # overround (e.g., 1.0476 for -110/-110)
-        if total <= 0:
+        result = _no_vig_core(float(home_ml), float(away_ml))
+        if result[0] is None:
             return (float("nan"), float("nan"))
-
-        return (raw_home / total, raw_away / total)
-
+        return result
     except (TypeError, ValueError):
         return (float("nan"), float("nan"))
 

@@ -32,7 +32,6 @@ from pathlib import Path
 import requests
 import pandas as pd
 from dotenv import load_dotenv
-from src.models.odds_utils import american_to_implied_prob as _odds_utils_implied_prob
 
 # -- Setup ---------------------------------------------------------------------
 
@@ -49,6 +48,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 load_dotenv(PROJECT_ROOT / ".env")
+
+from src.models.odds_utils import american_to_implied_prob as _odds_utils_implied_prob
 
 PINNACLE_BASE = "https://guest.api.arcadia.pinnacle.com/0.1"
 LEAGUE_ID     = 487   # NBA
@@ -414,8 +415,9 @@ def load_model_game_projections() -> pd.DataFrame:
     try:
         # Prefer calibrated model; fall back to uncalibrated if not found
         try:
+            from src.models.game_outcome_model import _CalibrationUnpickler
             with open(calibrated_path, "rb") as f:
-                model = pickle.load(f)
+                model = _CalibrationUnpickler(f).load()
             log.info("Loaded calibrated game outcome model")
         except FileNotFoundError:
             log.warning(
@@ -428,7 +430,7 @@ def load_model_game_projections() -> pd.DataFrame:
         with open(feats_path, "rb") as f:
             feature_cols = pickle.load(f)
 
-        X = recent[feature_cols]  # Pipeline imputer handles NaN (mean strategy)
+        X = recent.reindex(columns=feature_cols)  # Pipeline imputer handles NaN (mean strategy)
         probs = model.predict_proba(X)[:, 1]
         recent = recent.copy()
         recent["model_win_prob"] = probs

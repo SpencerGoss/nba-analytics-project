@@ -10,7 +10,8 @@ Steps:
   2. Rebuild game matchup features (includes lineup net rating diff columns)
   3. Retrain game outcome model (saves to models/artifacts/game_outcome_model.pkl)
   4. Re-run calibration (saves game_outcome_model_calibrated.pkl)
-  5. Retrain ATS model (saves to models/artifacts/ats_model.pkl)
+  5. Retrain margin model (saves to models/artifacts/margin_model.pkl)
+  6. Retrain ATS model (saves to models/artifacts/ats_model.pkl)
 
 After retraining, verify with:
     python -m pytest tests/ -q
@@ -86,7 +87,16 @@ def main():
         print("Calibration failed.")
         sys.exit(1)
 
-    # Step 5: Retrain ATS model
+    # Step 5: Retrain margin model
+    ok = run_step(
+        "Retrain margin regression model",
+        [sys.executable, "src/models/margin_model.py"],
+    )
+    if not ok:
+        print("Margin model training failed.")
+        sys.exit(1)
+
+    # Step 6: Retrain ATS model
     ok = run_step(
         "Retrain ATS model",
         [sys.executable, "src/models/ats_model.py"],
