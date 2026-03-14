@@ -311,7 +311,7 @@ def build_game_props(
                 # edge = model_projection - book_line (positive = lean OVER)
                 if book_line is not None:
                     edge = round(projection - book_line, 1)
-                    value = abs(edge) >= 2.0
+                    value = bool(abs(edge) >= 2.0)
                     recommendation = "OVER" if edge > 0 else "UNDER"
                 else:
                     edge = None
@@ -358,7 +358,7 @@ def build_game_props(
                         if book_line is not None and ml_result["ml_median"] is not None:
                             ml_edge = round(ml_result["ml_median"] - book_line, 1)
                             prop_entry["edge"] = ml_edge
-                            prop_entry["value"] = abs(ml_edge) >= 2.0
+                            prop_entry["value"] = bool(abs(ml_edge) >= 2.0)
                             prop_entry["recommendation"] = "OVER" if ml_edge > 0 else "UNDER"
 
                 props.append(prop_entry)
