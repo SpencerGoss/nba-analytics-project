@@ -255,13 +255,12 @@ def _confidence_tier(
     if edge is not None and edge > 0:
         return confidence_tier(edge, agree)
 
-    # No odds available — fall back to model probability
+    # No odds available — use model probability but cap at Solid Pick
+    # (Best Bet requires market confirmation via edge > 0)
     max_prob = max(home_prob, 1.0 - home_prob)
-    if max_prob >= 0.70:
-        return "Best Bet" if agree else "Lean"
-    if max_prob >= 0.62:
+    if max_prob >= 0.72:
         return "Solid Pick" if agree else "Lean"
-    if max_prob >= 0.55:
+    if max_prob >= 0.60:
         return "Lean"
     return "Skip"
 

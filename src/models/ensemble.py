@@ -103,9 +103,14 @@ def _confidence_label(edge):
 
 
 def _load_artifact(path):
-    """Load a serialised sklearn pipeline from path. Project standard format."""
+    """Load a serialised sklearn pipeline from path. Project standard format.
+
+    Uses _CalibrationUnpickler to handle models pickled under __main__
+    (e.g., calibration wrappers saved when calibration.py was run directly).
+    """
+    from src.models.game_outcome_model import _CalibrationUnpickler
     with open(path, "rb") as fh:
-        return pickle.load(fh)
+        return _CalibrationUnpickler(fh).load()
 
 
 class NBAEnsemble:
