@@ -15,12 +15,15 @@ Run: python scripts/build_value_bets.py
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -91,7 +94,7 @@ def _load_game_lines_all() -> pd.DataFrame:
 
         return df
     except Exception as exc:
-        print(f"  WARN: could not read game_lines.csv: {exc}")
+        log.error(f"  WARN: could not read game_lines.csv: {exc}")
         return pd.DataFrame()
 
 
@@ -196,15 +199,15 @@ def build_value_bets(
     Returns the value bets list (also writes JSON).
     """
     if not db_path.exists():
-        print(f"  WARN: predictions DB not found at {db_path}")
+        log.warning(f"  WARN: predictions DB not found at {db_path}")
         return _passthrough(out_path)
 
     lines_df = _load_game_lines_all()
     if lines_df.empty:
-        print("  No game_lines.csv data -- passing through existing value_bets.json")
+        log.info("  No game_lines.csv data -- passing through existing value_bets.json")
         return _passthrough(out_path)
 
-    print(f"  Loaded {len(lines_df)} lines rows from game_lines.csv")
+    log.info(f"  Loaded {len(lines_df)} lines rows from game_lines.csv")
     lines_index = _build_lines_index(lines_df)
 
     try:
@@ -212,24 +215,24 @@ def build_value_bets(
         predictions = _load_all_predictions(conn)
         conn.close()
     except Exception as exc:
-        print(f"  ERROR: could not read predictions DB: {exc}")
+        log.error(f"  ERROR: could not read predictions DB: {exc}")
         return _passthrough(out_path)
 
     if not predictions:
-        print("  No predictions in DB -- passing through existing value_bets.json")
+        log.info("  No predictions in DB -- passing through existing value_bets.json")
         return _passthrough(out_path)
 
-    print(f"  {len(predictions)} predictions loaded from DB")
+    log.info(f"  {len(predictions)} predictions loaded from DB")
     team_names = _load_team_names()
 
     value_bets = _compute_value_bets(predictions, lines_index, team_names, edge_threshold)
-    print(f"  Found {len(value_bets)} value bets (edge >= {edge_threshold:.0%})")
+    log.info(f"  Found {len(value_bets)} value bets (edge >= {edge_threshold:.0%})")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(value_bets, fh, indent=2, default=str)
 
-    print(f"Written -> {out_path}")
+    log.info(f"Written -> {out_path}")
     return value_bets
 
 
@@ -239,12 +242,13 @@ def _passthrough(out_path: Path) -> list[dict]:
         try:
             with open(out_path, encoding="utf-8") as fh:
                 data = json.load(fh)
-            print(f"  Pass-through: returning existing {out_path.name} unchanged")
+            log.info(f"  Pass-through: returning existing {out_path.name} unchanged")
             return data if isinstance(data, list) else []
         except (json.JSONDecodeError, OSError) as exc:
-            print(f"  WARN: could not read existing JSON: {exc}")
+            log.error(f"  WARN: could not read existing JSON: {exc}")
     return []
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     build_value_bets()

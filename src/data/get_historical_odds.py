@@ -23,6 +23,9 @@ import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import logging
+
+log = logging.getLogger(__name__)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 
@@ -255,29 +258,29 @@ def load_and_normalize_odds(
     if not Path(odds_path).exists():
         fallback = ODDS_DIR / "nba_2008-2025.csv"
         if fallback.exists():
-            print(f"Using fallback odds file: {fallback}")
+            log.warning(f"Using fallback odds file: {fallback}")
             odds_path = str(fallback)
 
     if not Path(odds_path).exists():
         print("=" * 70)
-        print("HISTORICAL ODDS DATA NOT FOUND")
+        log.warning("HISTORICAL ODDS DATA NOT FOUND")
         print("=" * 70)
         print("")
-        print("To use historical NBA betting data, download the Kaggle dataset:")
+        log.info("To use historical NBA betting data, download the Kaggle dataset:")
         print("")
-        print("  1. Go to:")
-        print("     https://www.kaggle.com/datasets/cviaxmiwnptr/nba-betting-data-october-2007-to-june-2024")
+        log.info("  1. Go to:")
+        log.info("     https://www.kaggle.com/datasets/cviaxmiwnptr/nba-betting-data-october-2007-to-june-2024")
         print("")
-        print("  2. Click 'Download' (free Kaggle account required)")
+        log.info("  2. Click 'Download' (free Kaggle account required)")
         print("")
-        print("  3. Extract and place the CSV at one of:")
-        print(f"     {DEFAULT_ODDS_PATH}")
-        print(f"     {ODDS_DIR / 'nba_2008-2025.csv'}")
+        log.info("  3. Extract and place the CSV at one of:")
+        log.info(f"     {DEFAULT_ODDS_PATH}")
+        log.info(f"     {ODDS_DIR / 'nba_2008-2025.csv'}")
         print("")
-        print("  The file should have columns: season, date, away, home,")
-        print("  whos_favored, spread, moneyline_away, moneyline_home, id_spread")
+        log.debug("  The file should have columns: season, date, away, home,")
+        log.info("  whos_favored, spread, moneyline_away, moneyline_home, id_spread")
         print("")
-        print("Returning empty DataFrame with expected schema.")
+        log.warning("Returning empty DataFrame with expected schema.")
         return pd.DataFrame(columns=[
             "game_date", "home_team", "away_team", "season",
             "spread", "home_implied_prob", "away_implied_prob", "covers_spread"
@@ -286,7 +289,7 @@ def load_and_normalize_odds(
     raw = pd.read_csv(odds_path, low_memory=False)
     assert raw.shape[0] > 0, f"Loaded file is empty: {odds_path}"
 
-    print(f"Loaded {raw.shape[0]} rows from {odds_path}")
+    log.info(f"Loaded {raw.shape[0]} rows from {odds_path}")
 
     # ── Rename date column ─────────────────────────────────────────────────
     if "date" in raw.columns:
@@ -313,8 +316,8 @@ def load_and_normalize_odds(
     unmapped_away = set(raw["away_team"]) - set(KAGGLE_TEAM_TO_ABB.values())
     unmapped_away = {t for t in unmapped_away if len(t) != 3 or not t.isupper()}
     if unmapped_home or unmapped_away:
-        print(f"  WARNING: Unmapped home teams: {sorted(unmapped_home)}")
-        print(f"  WARNING: Unmapped away teams: {sorted(unmapped_away)}")
+        log.warning(f"  WARNING: Unmapped home teams: {sorted(unmapped_home)}")
+        log.warning(f"  WARNING: Unmapped away teams: {sorted(unmapped_away)}")
 
     # ── Normalize season to project integer format ─────────────────────────
     raw["season"] = raw["season"].apply(_normalize_season)
@@ -346,13 +349,13 @@ def load_and_normalize_odds(
     # Drop rows with missing game_date
     result = result.dropna(subset=["game_date"])
 
-    print(f"Normalized {result.shape[0]} rows")
+    log.info(f"Normalized {result.shape[0]} rows")
     push_count = result["covers_spread"].isna().sum()
     valid_count = result["covers_spread"].notna().sum()
-    print(f"  Covers spread: {valid_count} valid, {push_count} pushes/NaN")
+    log.info(f"  Covers spread: {valid_count} valid, {push_count} pushes/NaN")
     no_ml = (result["home_implied_prob"].isna()).sum()
-    print(f"  Implied prob: {result['home_implied_prob'].notna().sum()} valid, {no_ml} missing")
-    print(f"  Season range: {result['season'].min()} - {result['season'].max()}")
+    log.warning(f"  Implied prob: {result['home_implied_prob'].notna().sum()} valid, {no_ml} missing")
+    log.info(f"  Season range: {result['season'].min()} - {result['season'].max()}")
 
     return result
 
@@ -363,26 +366,26 @@ if __name__ == "__main__":
     df = load_and_normalize_odds()
 
     if df.shape[0] == 0:
-        print("No data loaded -- download the Kaggle dataset first.")
+        log.warning("No data loaded -- download the Kaggle dataset first.")
         sys.exit(0)
 
     print("")
-    print("=== Verification ===")
-    print(f"Total rows: {df.shape[0]}")
-    print(f"Columns: {list(df.columns)}")
-    print(f"Season range: {df['season'].min()} to {df['season'].max()}")
+    log.debug("=== Verification ===")
+    log.info(f"Total rows: {df.shape[0]}")
+    log.debug(f"Columns: {list(df.columns)}")
+    log.info(f"Season range: {df['season'].min()} to {df['season'].max()}")
     print("")
-    print("Unique home teams:", sorted(df["home_team"].unique()))
-    print("Unique away teams:", sorted(df["away_team"].unique()))
+    log.debug("Unique home teams:", sorted(df["home_team"].unique()))
+    log.debug("Unique away teams:", sorted(df["away_team"].unique()))
     print("")
-    print("Sample rows:")
-    print(df.head(3).to_string())
+    log.debug("Sample rows:")
+    log.debug(df.head(3).to_string())
     print("")
-    print(f"Push (NaN covers_spread) count: {df['covers_spread'].isna().sum()}")
-    print(f"Home covered count: {(df['covers_spread'] == 1.0).sum()}")
-    print(f"Away covered count: {(df['covers_spread'] == 0.0).sum()}")
+    log.info(f"Push (NaN covers_spread) count: {df['covers_spread'].isna().sum()}")
+    log.info(f"Home covered count: {(df['covers_spread'] == 1.0).sum()}")
+    log.info(f"Away covered count: {(df['covers_spread'] == 0.0).sum()}")
     print("")
     # Verify no-vig probs sum to ~1.0
     valid_probs = df[df["home_implied_prob"].notna()].copy()
     prob_sum = (valid_probs["home_implied_prob"] + valid_probs["away_implied_prob"]).mean()
-    print(f"Mean implied prob sum (should be ~1.0): {prob_sum:.4f}")
+    log.debug(f"Mean implied prob sum (should be ~1.0): {prob_sum:.4f}")
