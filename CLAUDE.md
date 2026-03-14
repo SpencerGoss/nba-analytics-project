@@ -52,6 +52,8 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - CLV: `backfill_closing_lines()` runs as Step 3b BEFORE `refresh_odds_data()` — captures yesterday's spreads as closing lines; do NOT reorder these steps
 - Dashboard helpers: `_confMeterHtml()`, `_whyThisPickHtml()`, `_factorBadgeHtml()`, `_emptyStateHtml()`, `_sparklineHtml()` — use these for new pick/game UI
 - XGBoost is an optional model candidate (requires xgboost package); `_build_fit_params()` handles eval_set for early stopping
+- Loading calibrated model: ALL code that loads `game_outcome_model_calibrated.pkl` MUST use `_CalibrationUnpickler` (from `src.models.game_outcome_model`); raw deserialization will fail with `__main__._PlattWrapper` error because calibration.py was run as `__main__`
+- Scripts in `scripts/` that import `from src.*` MUST have `sys.path.insert(0, str(PROJECT_ROOT))` BEFORE the import — subprocess.run from update.py does not set PYTHONPATH
 
 ## Skill Routing (auto-trigger — no prompting needed)
 
