@@ -26,6 +26,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+import logging
+
+log = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
 
@@ -90,9 +93,9 @@ def validate_feature_null_rates(
         )
     partial = null_rates[(null_rates > 0) & (null_rates < threshold)]
     if not partial.empty:
-        print("  [null audit] Columns with partial nulls (will be imputed):")
+        log.info("  [null audit] Columns with partial nulls (will be imputed):")
         for col, rate in partial.items():
-            print(f"    {col}: {rate:.1%}")
+            log.info(f"    {col}: {rate:.1%}")
 
 
 # ── Feature selection ──────────────────────────────────────────────────────────
@@ -286,19 +289,19 @@ def _prune_low_importance_features(
     clf = best_pipe.named_steps["clf"]
     low_imp = _get_low_importance_features(clf, feat_cols, threshold)
     if not low_imp:
-        print("\n--- Feature Pruning: no features below threshold ---")
+        log.info("\n--- Feature Pruning: no features below threshold ---")
         test_proba = best_pipe.predict_proba(test[feat_cols])[:, 1]
         test_pred = (test_proba >= best_threshold).astype(int)
         test_acc = accuracy_score(y_test, test_pred)
         test_auc = roc_auc_score(y_test, test_proba)
         return best_pipe, feat_cols, test_acc, test_auc, test_pred, test_proba
 
-    print(f"\n--- Feature Pruning: {len(low_imp)} feature(s) below {threshold} ---")
+    log.info(f"\n--- Feature Pruning: {len(low_imp)} feature(s) below {threshold} ---")
     for feat_name in sorted(low_imp):
-        print(f"    - {feat_name}")
+        log.info(f"    - {feat_name}")
 
     reduced_cols = [c for c in feat_cols if c not in low_imp]
-    print(f"  Pruning {len(low_imp)} -> {len(reduced_cols)} features remaining")
+    log.info(f"  Pruning {len(low_imp)} -> {len(reduced_cols)} features remaining")
 
     reduced_pipe = _clone_pipeline(candidates[best_name])
     reduced_pipe.fit(train[reduced_cols], y_train)
@@ -312,15 +315,15 @@ def _prune_low_importance_features(
     full_acc = accuracy_score(y_test, full_pred)
     full_auc = roc_auc_score(y_test, full_proba)
 
-    print(f"  Full features:   acc={full_acc:.4f}, auc={full_auc:.4f}")
-    print(f"  Pruned features: acc={reduced_acc:.4f}, auc={reduced_auc:.4f}")
+    log.info(f"  Full features:   acc={full_acc:.4f}, auc={full_auc:.4f}")
+    log.info(f"  Pruned features: acc={reduced_acc:.4f}, auc={reduced_auc:.4f}")
 
     if reduced_auc >= full_auc:
-        print("  -> Pruned features maintain/improve AUC. Using pruned set.")
+        log.info("  -> Pruned features maintain/improve AUC. Using pruned set.")
         return (reduced_pipe, reduced_cols, reduced_acc, reduced_auc,
                 reduced_pred, reduced_proba)
     else:
-        print("  -> Pruned features hurt AUC. Keeping full set.")
+        log.info("  -> Pruned features hurt AUC. Keeping full set.")
         return (best_pipe, feat_cols, full_acc, full_auc, full_pred, full_proba)
 
 
@@ -350,39 +353,39 @@ def train_game_outcome_model(
             and shortened 2020-21 seasons). Pass [] to include all modern seasons.
     """
     print("=" * 60)
-    print("GAME OUTCOME PREDICTION MODEL")
+    log.info("GAME OUTCOME PREDICTION MODEL")
     print("=" * 60)
 
-    print("\nLoading matchup features...")
+    log.info("\nLoading matchup features...")
     df = pd.read_csv(matchup_path)
     df["game_date"] = pd.to_datetime(df["game_date"], format="mixed")
     df = df.sort_values("game_date").reset_index(drop=True)
-    print(f"  Total games: {len(df):,} | Seasons: {df.season.nunique()}")
+    log.info(f"  Total games: {len(df):,} | Seasons: {df.season.nunique()}")
 
     n_before = len(df)
     df = df.dropna(subset=[TARGET])
     if len(df) < n_before:
-        print(f"  Dropped {n_before - len(df):,} rows with missing target")
+        log.warning(f"  Dropped {n_before - len(df):,} rows with missing target")
 
     start_season = MODERN_ERA_START if modern_era_only else TRAIN_START_SEASON
     df = df[df["season"].astype(int) >= int(start_season)].copy()
     label = f"modern era only ({MODERN_ERA_START}+)" if modern_era_only else f"from {TRAIN_START_SEASON}"
-    print(f"  Training data {label}: {len(df):,} games")
+    log.info(f"  Training data {label}: {len(df):,} games")
 
     if modern_era_only and excluded_seasons:
         before = len(df)
         df = df[~df["season"].astype(int).isin(excluded_seasons)].copy()
         n_excluded = before - len(df)
-        print(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
+        log.info(f"  Excluded {n_excluded:,} games from anomalous seasons: {excluded_seasons}")
 
     train = df[~df["season"].astype(int).isin(test_seasons)].copy()
     test = df[df["season"].astype(int).isin(test_seasons)].copy()
-    print(f"  Train: {len(train):,} games | Test: {len(test):,} games")
-    print(f"  Test seasons: {test_seasons}")
+    log.info(f"  Train: {len(train):,} games | Test: {len(test):,} games")
+    log.info(f"  Test seasons: {test_seasons}")
 
     feat_cols = get_feature_cols(df)
 
-    print("\nValidating feature null rates...")
+    log.info("\nValidating feature null rates...")
     validate_feature_null_rates(df, feat_cols)
 
     X_train = train[feat_cols]
@@ -458,7 +461,7 @@ def train_game_outcome_model(
         ])
 
     splits = _season_splits(train)
-    print(f"\n--- Model selection across {len(splits)} validation split(s) ---")
+    log.info(f"\n--- Model selection across {len(splits)} validation split(s) ---")
 
     model_scores = {}
     for name, pipe in candidates.items():
@@ -477,7 +480,7 @@ def train_game_outcome_model(
             split_accs.append(val_acc)
             split_aucs.append(val_auc)
             split_thresholds.append(best_t)
-            print(f"  {name:>17} | split={split_name} | acc={val_acc:.4f} | auc={val_auc:.4f} | th={best_t:.2f}")
+            log.info(f"  {name:>17} | split={split_name} | acc={val_acc:.4f} | auc={val_auc:.4f} | th={best_t:.2f}")
 
         model_scores[name] = {
             "mean_val_acc": float(np.mean(split_accs)),
@@ -487,12 +490,10 @@ def train_game_outcome_model(
 
     best_name = max(model_scores, key=lambda k: model_scores[k]["mean_val_auc"])
     best_threshold = model_scores[best_name]["threshold"]
-    print(
-        f"\nSelected model: {best_name} "
+    log.info(f"\nSelected model: {best_name} "
         f"(mean val auc={model_scores[best_name]['mean_val_auc']:.4f}, "
         f"mean val acc={model_scores[best_name]['mean_val_acc']:.4f}, "
-        f"threshold={best_threshold:.2f})"
-    )
+        f"threshold={best_threshold:.2f})")
 
     best_pipe = candidates[best_name]
     # Use a validation split from training data for early stopping (not test set)
@@ -508,11 +509,11 @@ def train_game_outcome_model(
     test_acc = accuracy_score(y_test, test_pred)
     test_auc = roc_auc_score(y_test, test_proba)
 
-    print(f"  Test Accuracy : {test_acc:.4f}")
-    print(f"  Test ROC-AUC  : {test_auc:.4f}")
+    log.info(f"  Test Accuracy : {test_acc:.4f}")
+    log.info(f"  Test ROC-AUC  : {test_auc:.4f}")
 
-    print("\nClassification Report:")
-    print(classification_report(y_test, test_pred, target_names=["Away Win", "Home Win"]))
+    log.info("\nClassification Report:")
+    log.info(classification_report(y_test, test_pred, target_names=["Away Win", "Home Win"]))
 
     # ── Automatic low-importance feature pruning ──────────────────────────────
     # Drop features with importance < 0.001 and retrain if AUC holds.
@@ -527,9 +528,9 @@ def train_game_outcome_model(
     )
     n_pruned = n_before_prune - len(feat_cols)
     if n_pruned > 0:
-        print(f"  Pruned {n_pruned} features ({n_before_prune} -> {len(feat_cols)})")
-        print(f"  Post-prune Test Accuracy: {test_acc:.4f}")
-        print(f"  Post-prune Test ROC-AUC:  {test_auc:.4f}")
+        log.info(f"  Pruned {n_pruned} features ({n_before_prune} -> {len(feat_cols)})")
+        log.info(f"  Post-prune Test Accuracy: {test_acc:.4f}")
+        log.info(f"  Post-prune Test ROC-AUC:  {test_auc:.4f}")
 
     clf = best_pipe.named_steps["clf"]
     if hasattr(clf, "feature_importances_"):
@@ -537,8 +538,8 @@ def train_game_outcome_model(
     else:
         importances = pd.Series(np.abs(clf.coef_[0]), index=feat_cols).sort_values(ascending=False)
 
-    print("\nTop 15 Most Important Features:")
-    print(importances.head(15).to_string())
+    log.info("\nTop 15 Most Important Features:")
+    log.debug(importances.head(15).to_string())
 
     os.makedirs(artifacts_dir, exist_ok=True)
     model_path = os.path.join(artifacts_dir, "game_outcome_model.pkl")
@@ -551,7 +552,7 @@ def train_game_outcome_model(
         pickle.dump(feat_cols, f)
 
     importances.reset_index().rename(columns={"index": "feature", 0: "importance"}).to_csv(imp_path, index=False)
-    print(f"\nModel saved -> {model_path}")
+    log.info(f"\nModel saved -> {model_path}")
 
     # ── Metadata JSON (FR-6.5, NFR-3) ─────────────────────────────────────────
     # Build feature importance dict (top 20) if model supports it
@@ -583,7 +584,7 @@ def train_game_outcome_model(
     meta_path = os.path.join(artifacts_dir, "game_outcome_metadata.json")
     with open(meta_path, "w") as f:
         json.dump(metadata, f, indent=2)
-    print(f"  Metadata saved -> {meta_path}")
+    log.info(f"  Metadata saved -> {meta_path}")
 
     metrics = {
         "selected_model": best_name,
@@ -780,5 +781,5 @@ def predict_game(
 
 if __name__ == "__main__":
     model, metrics = train_game_outcome_model()
-    print(f"\nFinal model accuracy: {metrics['test_accuracy']:.1%}")
-    print(f"Final model ROC-AUC:  {metrics['test_auc']:.4f}")
+    log.info(f"\nFinal model accuracy: {metrics['test_accuracy']:.1%}")
+    log.info(f"Final model ROC-AUC:  {metrics['test_auc']:.4f}")

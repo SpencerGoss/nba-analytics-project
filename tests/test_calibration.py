@@ -25,6 +25,8 @@ from sklearn.ensemble import GradientBoostingClassifier
 from src.models.calibration import (
     _CalibratedWrapper,
     _PlattWrapper,
+    _TemperatureWrapper,
+    _fit_temperature,
     _expected_calibration_error,
     _bin_calibration_stats,
     _load_model,
@@ -268,3 +270,95 @@ class TestLoadFeatures:
             pickle.dump(features, f)
         loaded = _load_features(str(tmp_path))
         assert loaded == features
+
+
+# -- _TemperatureWrapper tests ------------------------------------------------
+
+class TestTemperatureWrapper:
+    def test_predict_proba_shape(self, dummy_model, test_X):
+        wrapper = _TemperatureWrapper(dummy_model, temperature=1.0)
+        proba = wrapper.predict_proba(test_X)
+        assert proba.shape == (50, 2)
+
+    def test_predict_proba_sums_to_one(self, dummy_model, test_X):
+        wrapper = _TemperatureWrapper(dummy_model, temperature=1.5)
+        proba = wrapper.predict_proba(test_X)
+        sums = proba.sum(axis=1)
+        np.testing.assert_allclose(sums, 1.0, atol=1e-6)
+
+    def test_predict_proba_in_range(self, dummy_model, test_X):
+        wrapper = _TemperatureWrapper(dummy_model, temperature=2.0)
+        proba = wrapper.predict_proba(test_X)
+        assert (proba >= 0).all()
+        assert (proba <= 1).all()
+
+    def test_predict_returns_binary(self, dummy_model, test_X):
+        wrapper = _TemperatureWrapper(dummy_model, temperature=1.0)
+        preds = wrapper.predict(test_X)
+        assert set(preds).issubset({0, 1})
+
+    def test_calibration_method_attribute(self, dummy_model):
+        wrapper = _TemperatureWrapper(dummy_model, temperature=1.0)
+        assert wrapper.calibration_method == "temperature"
+
+    def test_identity_at_T1(self, dummy_model, test_X):
+        """Temperature=1.0 should produce identical probabilities to base model."""
+        wrapper = _TemperatureWrapper(dummy_model, temperature=1.0)
+        raw = dummy_model.predict_proba(test_X)[:, 1]
+        cal = wrapper.predict_proba(test_X)[:, 1]
+        np.testing.assert_allclose(cal, raw, atol=1e-5)
+
+    def test_high_T_softens(self, dummy_model, test_X):
+        """Temperature > 1 should push probabilities toward 0.5."""
+        wrapper = _TemperatureWrapper(dummy_model, temperature=3.0)
+        raw = dummy_model.predict_proba(test_X)[:, 1]
+        cal = wrapper.predict_proba(test_X)[:, 1]
+        assert np.mean(np.abs(cal - 0.5)) < np.mean(np.abs(raw - 0.5))
+
+    def test_low_T_sharpens(self, dummy_model, test_X):
+        """Temperature < 1 should push probabilities away from 0.5."""
+        wrapper = _TemperatureWrapper(dummy_model, temperature=0.3)
+        raw = dummy_model.predict_proba(test_X)[:, 1]
+        cal = wrapper.predict_proba(test_X)[:, 1]
+        assert np.mean(np.abs(cal - 0.5)) > np.mean(np.abs(raw - 0.5))
+
+    def test_pickleable(self, dummy_model, test_X):
+        wrapper = _TemperatureWrapper(dummy_model, temperature=1.5)
+        proba_before = wrapper.predict_proba(test_X)
+        data = pickle.dumps(wrapper)
+        restored = pickle.loads(data)
+        proba_after = restored.predict_proba(test_X)
+        np.testing.assert_array_equal(proba_before, proba_after)
+
+
+# -- _fit_temperature tests --------------------------------------------------
+
+class TestFitTemperature:
+    def test_returns_float(self):
+        probs = np.array([0.3, 0.7, 0.4, 0.6, 0.8])
+        labels = np.array([0, 1, 0, 1, 1])
+        T = _fit_temperature(probs, labels)
+        assert isinstance(T, float)
+
+    def test_T_positive(self):
+        probs = np.array([0.2, 0.8, 0.3, 0.9, 0.1])
+        labels = np.array([0, 1, 0, 1, 0])
+        T = _fit_temperature(probs, labels)
+        assert T > 0
+
+    def test_well_calibrated_gives_T_near_1(self):
+        """When predictions are already well-calibrated, T should be near 1."""
+        np.random.seed(42)
+        n = 1000
+        probs = np.random.uniform(0.1, 0.9, n)
+        labels = (np.random.uniform(0, 1, n) < probs).astype(float)
+        T = _fit_temperature(probs, labels)
+        assert 0.7 < T < 1.5
+
+    def test_overconfident_gives_T_gt_1(self):
+        """Overconfident predictions (all near 0 or 1) need T > 1 to soften."""
+        np.random.seed(42)
+        probs = np.array([0.95, 0.05, 0.92, 0.08, 0.90, 0.10] * 50)
+        labels = np.array([1, 0, 0, 1, 1, 0] * 50).astype(float)
+        T = _fit_temperature(probs, labels)
+        assert T > 1.0
