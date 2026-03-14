@@ -1,0 +1,77 @@
+# Version control
+.git/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+
+# Data files (large)
+data/raw/
+data/processed/
+data/features/
+data/outputs/
+data/odds/
+*.csv
+*.parquet
+*.h5
+*.hdf5
+*.pkl
+
+# Model artifacts
+models/artifacts/
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Notebook outputs / checkpoints
+notebooks/.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+logs/
+*.log
+
+# Dashboard build output
+dashboard/dist/
+
+# Reports (generated)
+reports/
+
+# Build / dist
+dist/
+build/
+node_modules/
+.next/
+coverage/
+
+# Lock files
+package-lock.json
+yarn.lock
+poetry.lock
+uv.lock
+
+# Binary / media
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.mp4
+*.webm
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
