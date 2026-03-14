@@ -1,6 +1,6 @@
 metric,value
-brier_score_raw,0.20439
-brier_score_calibrated,0.204726
-ece_raw,0.027183
-ece_calibrated,0.032577
+brier_score_raw,0.204597
+brier_score_calibrated,0.205338
+ece_raw,0.035099
+ece_calibrated,0.035072
 calibration_method,platt
