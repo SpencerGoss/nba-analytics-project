@@ -11,7 +11,7 @@ FR-6.1, FR-6.2, FR-6.4.
 """
 import sqlite3
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 STORE_PATH = "database/predictions_history.db"
@@ -69,11 +69,24 @@ def write_game_prediction(
     Returns the rowid of the inserted record.
     """
     init_store(store_path)
-    now = datetime.utcnow().isoformat()
+    game_date = prediction.get("game_date")
+    home = prediction["home_team"]
+    away = prediction["away_team"]
+
+    # Skip if prediction already exists for this game on this date
+    con = _get_connection(store_path)
+    existing = con.execute(
+        "SELECT id FROM game_predictions WHERE game_date = ? AND home_team = ? AND away_team = ?",
+        (game_date, home, away),
+    ).fetchone()
+    if existing:
+        con.close()
+        return existing[0]
+
+    now = datetime.now(timezone.utc).isoformat()
     notes = prediction.get("notes")
     if notes is not None and not isinstance(notes, str):
         notes = json.dumps(notes)
-    con = _get_connection(store_path)
     cur = con.execute(
         """INSERT INTO game_predictions
            (created_at, game_date, home_team, away_team,
@@ -82,9 +95,9 @@ def write_game_prediction(
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             now,
-            prediction.get("game_date"),
-            prediction["home_team"],
-            prediction["away_team"],
+            game_date,
+            home,
+            away,
             float(prediction["home_win_prob"]),
             float(prediction["away_win_prob"]),
             prediction.get("model_name"),
