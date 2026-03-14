@@ -8,6 +8,7 @@ Usage:
     python scripts/weekly_retrain.py
 """
 
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -15,6 +16,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+# Subprocesses need PYTHONPATH to import from src.*
+_ENV = {**os.environ, "PYTHONPATH": str(PROJECT_ROOT)}
 
 
 def run_step(name, cmd):
@@ -26,6 +30,7 @@ def run_step(name, cmd):
         cwd=str(PROJECT_ROOT),
         capture_output=True,
         text=True,
+        env=_ENV,
     )
     if result.returncode != 0:
         print(f"  FAILED: {result.stderr[:500]}")
@@ -39,35 +44,40 @@ def main():
     print(f"=== Weekly Model Retrain — {datetime.now().strftime('%Y-%m-%d %H:%M')} ===\n")
 
     steps = [
-        ("Step 1: Rebuild team game features",
+        ("Step 1: Rebuild Elo ratings",
          [python, "-c",
-          "import sys; sys.path.insert(0,'.'); "
+          "from src.features.elo import build_elo_ratings; "
+          "build_elo_ratings()"]),
+
+        ("Step 2: Rebuild team game features",
+         [python, "-c",
           "from src.features.team_game_features import build_team_game_features; "
           "build_team_game_features()"]),
 
-        ("Step 2: Rebuild matchup dataset",
+        ("Step 3: Rebuild matchup dataset",
          [python, "-c",
-          "import sys; sys.path.insert(0,'.'); "
-          "from src.features.matchup_builder import build_matchup_dataset; "
+          "from src.features.team_game_features import build_matchup_dataset; "
           "build_matchup_dataset()"]),
 
-        ("Step 3: Retrain game outcome model",
+        ("Step 4: Retrain game outcome model",
          [python, "-c",
-          "import sys; sys.path.insert(0,'.'); "
-          "from src.models.game_outcome_model import train_and_save; "
-          "train_and_save()"]),
+          "from src.models.game_outcome_model import train_game_outcome_model; "
+          "train_game_outcome_model()"]),
 
-        ("Step 4: Run calibration",
+        ("Step 5: Run calibration",
          [python, "-c",
-          "import sys; sys.path.insert(0,'.'); "
-          "from src.models.calibration import calibrate_and_save; "
-          "calibrate_and_save()"]),
+          "from src.models.calibration import run_calibration_analysis; "
+          "run_calibration_analysis()"]),
 
-        ("Step 5: Retrain ATS model",
+        ("Step 6: Retrain ATS model",
          [python, "-c",
-          "import sys; sys.path.insert(0,'.'); "
-          "from src.models.ats_model import train_and_save; "
-          "train_and_save()"]),
+          "from src.models.ats_model import train_ats_model; "
+          "train_ats_model()"]),
+
+        ("Step 7: Retrain margin model",
+         [python, "-c",
+          "from src.models.margin_model import train_margin_model; "
+          "train_margin_model()"]),
     ]
 
     results = {}
