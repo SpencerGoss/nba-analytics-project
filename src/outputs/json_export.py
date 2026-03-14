@@ -10,7 +10,7 @@ FR-6.3, NFR-3.
 """
 import sqlite3
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from src.outputs.prediction_store import STORE_PATH
@@ -46,7 +46,7 @@ def export_daily_snapshot(
     with open(out_path, "w") as f:
         json.dump(
             {
-                "exported_at": datetime.utcnow().isoformat(),
+                "exported_at": datetime.now(timezone.utc).isoformat(),
                 "game_date": game_date,
                 "count": len(records),
                 "predictions": records,
