@@ -1,15 +1,27 @@
 # Handoff -- NBA Analytics Project
 
-_Last updated: 2026-03-13 Session 16 (Bug fixes, extended Elo, test coverage, dashboard refactor)_
+_Last updated: 2026-03-13 Session 17 (Critical pipeline fixes, test coverage expansion)_
 
 ## What Was Done This Session
 
-### Bug Fixes
-- **cv_utils.py off-by-one**: First CV fold was using `min_train_seasons - 1` training seasons, not `min_train_seasons` as documented. Also fixed same off-by-one in `tune_hyperparams.py`
-- **Confidence tier suppression**: All games without market odds were getting "Skip" tier. Added probability-based fallback tiering (>=70% Best Bet, >=62% Solid Pick, >=55% Lean)
-- **Dashboard tierPill CSS mismatch**: CSS class was derived from edge magnitude but label was downgraded by model disagreement. Added `_confLevelFromTier()` to derive class from label
-- **predict_cli.py**: Fixed `.astype(str)` season comparison bug
-- **Eliminated ALL remaining `.astype(str)` season comparisons**: 7 files fixed (ats_model.py, ats_backtest.py, player_performance_model.py, playoff_odds_model.py, build_picks.py, tune_hyperparams.py, predict_cli.py). ATS model constants changed from strings to ints.
+### Critical Pipeline Fixes (Session 17)
+- **CalibrationUnpickler**: Fixed model wrapper deserialization across 6 loading sites (game_outcome_model, fetch_odds, ensemble, model_explainability, value_bet_detector, playoff_odds_model)
+- **sys.path ordering**: Fixed ModuleNotFoundError in fetch_odds.py, build_game_context.py, build_meta.py, builder_helpers.py
+- **Confidence tier inflation**: Capped no-odds tier at "Solid Pick" (was giving "Best Bet" without market data)
+- **Duplicate prediction prevention**: Added SELECT-before-INSERT guard in prediction_store.py
+- **Props edge saturation**: IQR floor raised from 0.1 to 3.0 in betting_router.props()
+- **numpy bool serialization**: Wrapped numpy.bool_ with bool() in build_props.py
+- **datetime.utcnow() deprecation**: Replaced in prediction_store.py and json_export.py
+
+### Test Coverage Expansion (Session 17)
+- **test_calibration.py** (17 tests): CalibratedWrapper, PlattWrapper, ECE, bin stats, model loading
+- **test_prediction_store.py** (15 tests): init, write, duplicate prevention, notes serialization
+- **test_ats_model.py** (21 tests): feature selection, null validation, pipeline cloning, predict_ats
+- Test baseline: 1675 -> 1739
+
+### Previous Session (Session 16)
+- cv_utils.py off-by-one fix, confidence tier suppression, dashboard tierPill CSS fix
+- predict_cli.py season comparison fix, eliminated .astype(str) season comparisons across 7 files
 
 ### Extended Elo API (Phase 3 TODO resolved)
 - `get_current_elos(extended=True)` returns `{team: {elo, elo_fast, momentum}}` per team
@@ -40,7 +52,7 @@ _Last updated: 2026-03-13 Session 16 (Bug fixes, extended Elo, test coverage, da
 - Zero TODOs remaining in src/ and scripts/
 
 ## Test Baseline
-- 1668 tests passing (0 failures)
+- 1739 tests passing (0 failures)
 
 ## Git State
 - Branch: main
