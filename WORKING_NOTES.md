@@ -4,13 +4,13 @@
 
 - [model] `shift(1)` before ALL rolling features; expanding-window CV only; ATS uses `min(brier_score_loss)` NOT accuracy; CALIBRATION_SEASON=202122 (int) permanently held out
 - [model] Season codes are 6-digit INTEGERS (e.g. 202526) -- ALWAYS use `.astype(int)` for comparisons, NEVER `.astype(str)`; config constants are ints; fillna(0) in inference paths is WRONG -- let sklearn Pipeline imputer handle NaN
-- [model] Ensemble: confidence-dependent weights (ATS=0.0, removed as noise); high-conf 0.75/0.25, default 0.65/0.35, uncertain 0.55/0.45; calibration auto-selects Platt vs Isotonic by Brier
+- [model] Ensemble: confidence-dependent weights (ATS=0.0, removed as noise); high-conf 0.75/0.25, default 0.65/0.35, uncertain 0.55/0.45; calibration auto-selects Platt vs Isotonic vs Temperature by Brier
 - [model] Elo: K=20 standard + K=40 fast; `get_current_elos(extended=True)` returns elo, elo_fast, momentum per team; margin model uses all 3; diff_elo is #1 feature (31.9%)
 - [data] NBA API: `format="mixed"` for ALL pd.to_datetime(game_date); no Unicode in print() (cp1252); player_stats.csv stores TOTALS -- divide by gp
 - [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols; `game_lines.csv` at `data/odds/`; `dashboard/data/*.json` COMMITTED to git
 - [pipeline] update.py: Step 3 calls BOTH build_team_game_features() AND build_matchup_dataset(); Step 3b: backfill_closing_lines(); Step 7: all 29 builders; Step 8: SQL Server sync
 - [dashboard] ALL DOM writes use `_setHtml(el,html)` -- for tbody/thead/tfoot it uses `createElement('table')+innerHTML`; data loader uses named `_fetchCfg` objects (not parallel arrays)
-- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1800 tests passing
+- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1835 tests passing
 - [model] Game outcome: 67.9% acc, AUC 0.7455, Brier 0.2038 (67 features); pace+four_factors added 2026-03-13; auto-pruning dropped 33 features from 100 initial
 - [bugfix] All scripts/* that import `from src.*` MUST set sys.path BEFORE the import; calibrated model uses _CalibrationUnpickler for cross-module loading
 
@@ -231,6 +231,9 @@
 [2026-03-11] [calibration] INSIGHT: Platt scaling (2-param sigmoid) is less prone to overfitting than isotonic regression on small calibration sets. Auto-selection by Brier score ensures the best calibrator wins without manual intervention.
 [2026-03-11] [calibration] WHY: Isotonic worsened Brier from 0.205 to 0.212 — too many parameters for the 202122 holdout set size. Platt has only slope+intercept, generalizes better.
 
+[2026-03-14] [calibration] INSIGHT: Temperature scaling added as 3rd calibration option — single parameter T scales logits: `calibrated_prob = sigmoid(logit(raw_prob) / T)`. T optimized by NLL minimization via scipy.optimize.minimize_scalar. All 3 candidates (Platt/isotonic/temperature) sorted by Brier, best wins.
+[2026-03-14] [calibration] WHY: Temperature scaling has only 1 parameter (vs Platt's 2, isotonic's N) — least prone to overfitting on small calibration sets. T=1 is identity, T>1 softens overconfident predictions, T<1 sharpens.
+
 ### [sqlserver]
 
 [2026-03-10] [sqlserver] INSIGHT: pyodbc NaN/NaT values cause "invalid data type float" errors — must convert each value through _clean_value() that checks pd.isna() and converts numpy scalars via .item(). Also object columns with mixed types need astype(str) before INSERT.
@@ -312,3 +315,13 @@
 
 [2026-03-13] [retrain] INSIGHT: calibration.py had 4 latent .astype(str) bugs (BRIER_MIN_SEASON, calibration_season, era_breaks) — calibration SEEMED to work because the str/int mismatch caused zero-row test sets silently. The model was saved correctly but calibration analysis metrics were wrong.
 [2026-03-13] [retrain] WHY: `.isin(test_seasons)` where test_seasons=[202324,202425] (int) but df["season"].astype(str) produced "202324" (str) — pandas returns empty mask. No error, just empty results that get skipped by `len(test) < 50` guards.
+
+### [agents]
+
+[2026-03-14] [agents] INSIGHT: Background logging agent deleted production code (_TemperatureWrapper class + _fit_temperature function) during bulk print-to-logging conversion — detected only via test failure after agent finished. Always run tests after background agent completes.
+[2026-03-14] [agents] WHY: The agent treated the class as "code to convert" rather than preserving it. File modification race conditions prevented fixing while agent was still running. Lesson: never run code-modifying agents on files you just wrote to in the same session.
+
+### [odds]
+
+[2026-03-14] [odds] INSIGHT: Line snapshot capture (capture_line_snapshots.py) integrated as Step 4a in update.py — snapshots Pinnacle spreads to data/odds/line_snapshots.csv, detects reverse line movement (RLM) when spread moves >= 0.5 pts opposite to expected direction.
+[2026-03-14] [odds] WHY: RLM is the strongest sharp money signal — when public money pushes a line one way but the line moves the other way, it means sharp bettors are on the other side. Requires multiple snapshots per day to detect.

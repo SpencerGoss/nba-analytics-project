@@ -4,6 +4,28 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-14 (Session 19) — Project Overhaul Phases 1-4 (Calibration, Models, Odds, Logging)
+
+**Done:**
+- **Temperature scaling calibration** — 3rd method alongside Platt/isotonic; auto-selects lowest Brier; `_TemperatureWrapper` + `_fit_temperature` in calibration.py (13 new tests)
+- **Huber regressor** added as margin model candidate (downweights blowouts); `residual_std` artifact for prediction intervals; ATS guard cleanup in ensemble.py
+- **Odds consolidation** — removed duplicate `_american_to_raw_prob`/`_no_vig_probs` from get_historical_odds.py; build_value_bets.py delegates to centralized odds_utils.py
+- **Line snapshot capture** — `scripts/capture_line_snapshots.py`: snapshot Pinnacle spreads, detect reverse line movement (RLM); integrated as Step 4a in update.py (9 tests)
+- **Integration pipeline test** — synthetic 3-season dataset validates full pipeline (13 tests)
+- **Print-to-logging conversion** — 92 files converted from print() to Python logging module
+- **Background agents delivered:** walk-forward backtest (37 tests), statistical significance (29 tests), SHAP analysis (14 tests), row-count merge assertions (15 validations in team_game_features.py)
+
+**Issues:**
+- Logging agent deleted `_TemperatureWrapper` class + tests during bulk conversion — detected via test failure, restored manually after agent finished
+- File modification race conditions with concurrent background agents — waited for completion before fixing
+
+**Commits:** 857e6bc, 9ff530a, 8635dd1, 7962b9a, e5b07d1, 878a967 (6 commits)
+**Tests:** 1835 passing (up from 1800)
+
+**Next:** Multi-position player data (plan exists), pipeline automation (deferred)
+
+---
+
 ## 2026-03-13 (Session 18) — Model Retrain (Pace + Four Factors) + Test Expansion
 
 **Done:**

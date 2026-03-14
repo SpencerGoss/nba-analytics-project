@@ -11,7 +11,8 @@ End-to-end NBA analytics system: data ingestion → feature engineering (Elo rat
 - BettingRouter: market-specific outputs with confidence tiers (edge ≥8% = Best Bet, ≥4% = Solid Pick, ≥2% = Lean, <2% or models disagree = Skip)
 - Feature matrix: **370+ columns** including Elo (standard + fast + momentum), EWMA, pace, four factors, streaks, cross-matchup interactions
 - Odds: Pinnacle guest API (free, keyless) — centralized devigging in odds_utils.py
-- Tests: **1800 passing** across 25+ test files
+- Calibration: auto-selects best of Platt / isotonic / temperature scaling by Brier score
+- Tests: **1835 passing** across 30+ test files
 - Pipeline: `python update.py` runs full daily refresh; weekly prop model retrain (Monday)
 - Dashboard: live at GitHub Pages; 9 tabs (Today, Players, Teams, H2H, Standings, Injuries, Rankings, Season History, Betting Tools)
 
@@ -34,5 +35,5 @@ python -m http.server 8080 --directory dashboard    # serve dashboard
 Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js dashboard, Node.js (dashboard optimizer). Windows 11.
 
 ## What's Next
-- Plan B: Model improvements (SHAP analysis, Huber loss margin model, temperature scaling, ensemble weight optimization, walk-forward backtest)
-- Plan D: Pipeline runner, config module, dashboard performance, betting UX, dead code removal
+- Multi-position player data (Sleeper-style PG/SG/SF/PF/C labels using NBA roster + height + APG)
+- Pipeline automation (Task Scheduler + PowerShell for daily update.py)

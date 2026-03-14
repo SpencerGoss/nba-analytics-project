@@ -8,7 +8,7 @@ Python 3.14+, pandas, scikit-learn, SQLite, SQL Server 2019 (SSMS), Chart.js das
 Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv: `source .venv/Scripts/activate` (Git Bash) or `.venv\Scripts\Activate.ps1` (PowerShell).
 
 ## Commands
-- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1800 passing, current baseline as of 2026-03-13)
+- `.venv/Scripts/python.exe -m pytest tests/ -q` — run tests (1835 passing, current baseline as of 2026-03-14)
 - `python update.py` — daily pipeline
 - `python backfill.py` — full historical rebuild
 - `python -m http.server 8080 --directory dashboard` — serve dashboard
@@ -32,10 +32,10 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - `shift(1)` before ALL rolling features — no data leakage
 - Expanding-window validation only — never train on future data
 - Never modify `data/raw/` files — source of truth
-- After retraining any model → run `src/models/calibration.py` immediately; `fetch_odds.py` must always load `game_outcome_model_calibrated.pkl`
+- After retraining any model → run `src/models/calibration.py` immediately (auto-selects best of Platt/isotonic/temperature scaling); `fetch_odds.py` must always load `game_outcome_model_calibrated.pkl`
 - NBA API (nba_api): throttle at 1 req/sec minimum; never loop without sleep; shot chart fetch is 3-4h — never run in daily pipeline
 - `pd.to_datetime()` on game_date must use `format="mixed"` — NBA API sends "YYYY-MM-DD 00:00:00" for current season, plain dates for history; `player_game_logs.csv` uses `season_id=22025` for 202526 (all other CSVs use `season=202526`)
-- `update.py` step 3: call both `build_team_game_features()` AND `build_matchup_dataset()`; step 6: `generate_today_predictions()` writes to predictions_history.db
+- `update.py` step 3: call both `build_team_game_features()` AND `build_matchup_dataset()`; step 4a: line snapshot capture; step 6: `generate_today_predictions()` writes to predictions_history.db
 - If injury cols missing from matchup CSV — `player_absences.csv` may be missing; run `get_historical_absences.py` first, then rebuild injury_proxy + matchup
 - ATS model selection uses `min(brier_score_loss)` NOT accuracy — never revert to accuracy; CALIBRATION_SEASON=202122 (int) is permanently held out from CV
 - Season codes are 6-digit INTEGERS — ALWAYS use `.astype(int)` for comparisons, NEVER `.astype(str)`; string comparison is lexicographic (bug found in 10+ files)
@@ -52,7 +52,7 @@ Runs on Windows 11. Shell: Git Bash. Use forward slashes in paths. Activate venv
 - CLV: `backfill_closing_lines()` runs as Step 3b BEFORE `refresh_odds_data()` — captures yesterday's spreads as closing lines; do NOT reorder these steps
 - Dashboard helpers: `_confMeterHtml()`, `_whyThisPickHtml()`, `_factorBadgeHtml()`, `_emptyStateHtml()`, `_sparklineHtml()` — use these for new pick/game UI
 - XGBoost is an optional model candidate (requires xgboost package); `_build_fit_params()` handles eval_set for early stopping
-- Loading calibrated model: ALL code that loads `game_outcome_model_calibrated.pkl` MUST use `_CalibrationUnpickler` (from `src.models.game_outcome_model`); raw deserialization will fail with `__main__._PlattWrapper` error because calibration.py was run as `__main__`
+- Loading calibrated model: ALL code that loads `game_outcome_model_calibrated.pkl` MUST use `_CalibrationUnpickler` (from `src.models.game_outcome_model`); raw deserialization will fail with `__main__._PlattWrapper` or `__main__._TemperatureWrapper` error because calibration.py was run as `__main__`
 - Scripts in `scripts/` that import `from src.*` MUST have `sys.path.insert(0, str(PROJECT_ROOT))` BEFORE the import — subprocess.run from update.py does not set PYTHONPATH
 
 ## Skill Routing (auto-trigger — no prompting needed)
