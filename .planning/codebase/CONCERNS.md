@@ -64,11 +64,9 @@
 - Impact: Negligible for current scale (~25MB processed data) but will bottleneck if schema expands or raw ingestion speeds increase
 - Improvement path: Cache cleaned column names per prefix; vectorize string operations if adding >50 more raw data sources
 
-**Game Outcome Model Backtest Accuracy Degrades Post-2014:**
-- Problem: Model achieves 67-69% accuracy on 2005-2015 data but only 64-66% on 2016-2026 data
-- Files: `src/models/game_outcome_model.py`, `reports/backtest_game_outcome.csv`
-- Cause: Modern 3-point era introduces higher variance (more outlier games); model trained on mixed eras
-- Improvement path: (a) Filter training to modern era only (2014+) per Proposal 5 in `docs/model_advisor_notes.md`, (b) add pace and 3-point efficiency rolling averages, (c) verify injury features are active
+**Game Outcome Model Backtest Accuracy Degrades Post-2014: PARTIALLY RESOLVED**
+- **RESOLVED (2026-03-13):** (a) Modern era filter active (2013-14+, excludes bubble seasons), (b) diff_pace_game_roll20 + diff_four_factors_roll20 added — improved accuracy 67.5->67.9%, AUC 0.7422->0.7455, (c) injury features confirmed active (rank #5-12).
+- Remaining: Post-2014 gap is partially explained by declining home court advantage (60.3% pre-2014 -> 55.3% post-2022). Modern NBA games are inherently harder to predict — this is a data characteristic, not a model flaw.
 
 ## Fragile Areas
 
@@ -155,9 +153,10 @@
 
 ## Test Coverage Gaps
 
-**No Unit Tests for Data Fetchers: PARTIALLY RESOLVED**
+**No Unit Tests for Data Fetchers: MOSTLY RESOLVED**
 - **RESOLVED (2026-03-05):** `tests/test_get_balldontlie.py`, `tests/test_get_injury_data.py`, `tests/test_get_lineup_data.py` added (31 tests covering retry logic, pagination, schema contracts, and error paths).
-- Remaining gap: `src/data/get_player_stats.py`, `get_team_stats.py`, `get_standings.py` nba_api callers still lack unit tests (they require nba_api mocking or live network).
+- **RESOLVED (2026-03-13):** `tests/test_get_player_stats.py` (6 tests), `tests/test_get_team_stats.py` (6 tests), `tests/test_fetch_player_positions.py` (41 tests) added — mocked API boundary tests.
+- Remaining gap: `get_standings.py` nba_api caller still lacks unit tests.
 
 **No Unit Tests for Preprocessing: RESOLVED**
 - **RESOLVED (2026-03-05):** `tests/test_preprocessing.py` has 35 tests covering `clean_columns`, `load_season_folder`, `load_season_files`, `get_stale_seasons`, `merge_incremental`, `_season_label`, type coercion patterns, and duplicate removal.

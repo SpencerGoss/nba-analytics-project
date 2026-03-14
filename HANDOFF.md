@@ -1,10 +1,23 @@
 # Handoff -- NBA Analytics Project
 
-_Last updated: 2026-03-13 Session 17 (Critical pipeline fixes, test coverage expansion)_
+_Last updated: 2026-03-13 Session 18 (Model retrain with pace/four_factors, test expansion)_
 
 ## What Was Done This Session
 
-### Critical Pipeline Fixes (Session 17)
+### Model Retrain (Session 18)
+- **Pace + Four Factors features**: Added diff_pace_game_roll20 (#16 importance) and diff_four_factors_roll20 (#55) to production model
+- **Accuracy: 67.5% -> 67.9%**, AUC: 0.7422 -> 0.7455, Brier: 0.2052 -> 0.2038
+- Model auto-pruned from 100 to 67 features (was 71 before — leaner AND better)
+- Calibration re-run: Platt scaling selected, base Brier 0.2038
+- Dashboard JSON rebuilt with new model, about.html updated
+
+### Test Coverage Expansion (Session 18)
+- **test_get_player_stats.py** (6 tests): season loop, failure skipping, output directory
+- **test_get_team_stats.py** (6 tests): fetch/save, multi-season, format, directory
+- **test_fetch_player_positions.py** (41 tests): height parsing, position mapping for all NBA labels, edge cases
+- Test baseline: 1739 -> 1792
+
+### Previous Session: Critical Pipeline Fixes (Session 17)
 - **CalibrationUnpickler**: Fixed model wrapper deserialization across 6 loading sites (game_outcome_model, fetch_odds, ensemble, model_explainability, value_bet_detector, playoff_odds_model)
 - **sys.path ordering**: Fixed ModuleNotFoundError in fetch_odds.py, build_game_context.py, build_meta.py, builder_helpers.py
 - **Confidence tier inflation**: Capped no-odds tier at "Solid Pick" (was giving "Best Bet" without market data)
@@ -41,9 +54,8 @@ _Last updated: 2026-03-13 Session 17 (Critical pipeline fixes, test coverage exp
 ## What's Next
 
 ### Remaining Work
-- **Full model retrain**: Huber GBM candidate + ensemble optimizer ready but not yet executed
 - **Dashboard tiered loading** (Plan D Task 4): deferred -- high-risk for 9K-line file
-- **Additional test coverage**: nba_api data fetchers (`get_player_stats.py`, `get_team_stats.py`) still lack unit tests
+- **Daily pipeline automation**: Task Scheduler + PowerShell — deferred until dashboard changes finalize
 
 ### Known Issues
 - CLV closing_spread always NULL (data-over-time issue -- pipeline needs daily runs to accumulate)
@@ -52,7 +64,7 @@ _Last updated: 2026-03-13 Session 17 (Critical pipeline fixes, test coverage exp
 - Zero TODOs remaining in src/ and scripts/
 
 ## Test Baseline
-- 1739 tests passing (0 failures)
+- 1792 tests passing (0 failures)
 
 ## Git State
 - Branch: main
