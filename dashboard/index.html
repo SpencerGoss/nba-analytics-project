@@ -1793,7 +1793,7 @@ body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,
     <button class="pf" data-pf="away" onclick="picksSetFilter('away',this)">Away</button>
   </div>
   <div class="g3" id="picks-grid"></div>
-  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="picks-footer-meta">Model v2.3 &#183; 67.1% game outcome &#183; 54.9% ATS</span></p>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="picks-footer-meta">Model v2.3 &#183; 67.9% game outcome &#183; 54.9% ATS</span></p>
 </section>
 
 <!-- VALUE BETS (betting tab) -->
@@ -1882,7 +1882,7 @@ body.light .tw::after{background:linear-gradient(90deg,transparent,rgba(232,236,
     <div class="card"><div class="sh"><div><div class="st">Best Pick Categories</div><div class="ss">ATS cover rate by spread size</div></div></div><div id="bt-type-chart" style="height:210px"></div></div>
     <div class="card"><div class="sh"><div><div class="st">Does Confidence Predict Wins?</div><div class="ss">Market implied prob vs. actual home cover rate</div></div></div><div id="bt-conf-chart" style="height:210px"></div></div>
   </div>
-  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Model v2.2 &#183; 67.1% game outcome &#183; 54.9% ATS</p>
+  <p class="lu"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Model v2.2 &#183; 67.9% game outcome &#183; 54.9% ATS</p>
 </section>
 
 <!-- BET TRACKER (betting tab) -->
@@ -2735,7 +2735,7 @@ function buildHeroSection(picks, valueBets, explainers, contexts){
     const streak=pd.current_streak;
     if(streak)setT('picks-last10',(streak.type==='W'?'W':'L')+streak.length+' streak');
     const meta=window.META||{};
-    setT('picks-footer-meta','Model '+(meta.model_version||'v2.3')+' \u00b7 '+(pd.season_accuracy?(pd.season_accuracy*100).toFixed(1)+'% accuracy':'67.1%')+' \u00b7 '+pct+'% ATS');
+    setT('picks-footer-meta','Model '+(meta.model_version||'v2.3')+' \u00b7 '+(pd.season_accuracy?(pd.season_accuracy*100).toFixed(1)+'% accuracy':'67.9%')+' \u00b7 '+pct+'% ATS');
   }
 }
 

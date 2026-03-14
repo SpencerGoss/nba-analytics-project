@@ -4,7 +4,7 @@
 
 ## Framework
 pytest. Run with: `pytest -v` or `python -m pytest tests/ -q`
-Current baseline: 1792 tests passing (as of 2026-03-13).
+Current baseline: 1800 tests passing (as of 2026-03-13).
 
 ## Coverage Target
 80%+ for any new module added in v2.0.
@@ -29,6 +29,7 @@ Current baseline: 1792 tests passing (as of 2026-03-13).
 - `tests/test_get_player_stats.py` — player stats fetcher (mocked API)
 - `tests/test_get_team_stats.py` — team stats fetcher (mocked API)
 - `tests/test_fetch_player_positions.py` — position mapping logic (height, APG, labels)
+- `tests/test_get_standings.py` — standings fetcher (mocked API)
 - New tests go in `tests/` with `test_<module_name>.py` naming
 
 ## What to Test

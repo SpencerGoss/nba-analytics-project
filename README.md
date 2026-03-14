@@ -8,7 +8,7 @@ End-to-end NBA analytics pipeline: historical data ingestion, feature engineerin
 
 ## What It Does
 
-- **Game Outcome Prediction** — 67.1% accuracy, AUC 0.7406 (GradientBoosting, calibrated)
+- **Game Outcome Prediction** — 67.9% accuracy, AUC 0.7455 (GradientBoosting, calibrated)
 - **ATS Betting Model** — 54.9% accuracy, Brier-score optimized, logistic L1 selected
 - **Value Bet Detection** — Identifies spread-covering opportunities where model edge exceeds vig
 - **Fractional Kelly Sizing** — Conservative (0.5x) bet sizing based on confirmed edge
@@ -44,7 +44,7 @@ Dashboard is rebuilt hourly by `scripts/scheduler.py` and served as static JSON 
 
 | Model | Accuracy | AUC | Notes |
 |-------|----------|-----|-------|
-| Game Outcome | 67.1% | 0.7406 | GradientBoosting; calibrated with isotonic regression |
+| Game Outcome | 67.9% | 0.7455 | GradientBoosting; Platt-calibrated; 67 features incl. pace + four factors |
 | ATS | 54.9% | 0.5571 | Logistic L1; Brier-score optimized; CALIBRATION_SEASON=202122 held out |
 
 - Expanding-window cross-validation only — no look-ahead bias

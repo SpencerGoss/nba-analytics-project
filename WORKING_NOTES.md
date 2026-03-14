@@ -10,7 +10,7 @@
 - [pipeline] Any col with `_roll` auto-captured by roll_cols; never add to context_cols; `game_lines.csv` at `data/odds/`; `dashboard/data/*.json` COMMITTED to git
 - [pipeline] update.py: Step 3 calls BOTH build_team_game_features() AND build_matchup_dataset(); Step 3b: backfill_closing_lines(); Step 7: all 29 builders; Step 8: SQL Server sync
 - [dashboard] ALL DOM writes use `_setHtml(el,html)` -- for tbody/thead/tfoot it uses `createElement('table')+innerHTML`; data loader uses named `_fetchCfg` objects (not parallel arrays)
-- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1792 tests passing
+- [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1800 tests passing
 - [model] Game outcome: 67.9% acc, AUC 0.7455, Brier 0.2038 (67 features); pace+four_factors added 2026-03-13; auto-pruning dropped 33 features from 100 initial
 - [bugfix] All scripts/* that import `from src.*` MUST set sys.path BEFORE the import; calibrated model uses _CalibrationUnpickler for cross-module loading
 

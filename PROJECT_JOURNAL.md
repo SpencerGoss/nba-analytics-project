@@ -4,6 +4,25 @@ Append a dated entry at the start of each session. Keep entries brief — just w
 
 ---
 
+## 2026-03-13 (Session 18) — Model Retrain (Pace + Four Factors) + Test Expansion
+
+**Done:**
+- **Game outcome model retrained with 2 new features:**
+  - diff_pace_game_roll20 (rank #16, importance 0.0081) — pace differential signal
+  - diff_four_factors_roll20 (rank #55, importance 0.0013) — Dean Oliver's composite
+  - Accuracy: 67.5% -> 67.9%, AUC: 0.7422 -> 0.7455, Brier: 0.2052 -> 0.2038
+  - Model auto-pruned from 100 to 67 features (leaner AND better)
+  - Kitchen-sink approach (all 83 diff_ cols) tested and rejected — degraded performance
+- **Calibration re-run:** Platt scaling selected, base Brier 0.2038
+- **Dashboard updated:** about.html (stats), index.html (footer accuracy), JSON rebuilt
+- **53 new tests:** test_get_player_stats (6), test_get_team_stats (6), test_fetch_player_positions (41)
+- **Documentation sweep:** Updated README.md, PROJECT_OVERVIEW.md, DECISIONS.md, CONCERNS.md with new model metrics
+- **Dead code audit:** All previously identified dead files already deleted
+
+**Next:** ATS model retrain, daily pipeline automation (deferred)
+
+---
+
 ## 2026-03-13 (Session 13) — Plan B Model Improvements + Code Review + Analysis
 
 **Done:**

@@ -73,7 +73,7 @@ Status: Active
 NBAEnsemble blends three models with fixed weights: win_prob=0.5, ats_prob=0.3, margin_signal=0.2.
 
 ### Rationale
-Win probability model is most reliable (67.1% acc, AUC 0.7406). ATS model adds calibrated spread edge. Margin model (Ridge, MAE 10.574) is the weakest signal. Weights reflect relative confidence, not equal blending.
+Win probability model is most reliable (67.9% acc, AUC 0.7455). ATS model adds calibrated spread edge. Margin model (Ridge, MAE 10.574) is the weakest signal. Weights reflect relative confidence, not equal blending.
 
 ### Revisit If
 ATS model accuracy consistently exceeds win model, or margin MAE drops below 9.0.

@@ -153,10 +153,9 @@
 
 ## Test Coverage Gaps
 
-**No Unit Tests for Data Fetchers: MOSTLY RESOLVED**
+**No Unit Tests for Data Fetchers: RESOLVED**
 - **RESOLVED (2026-03-05):** `tests/test_get_balldontlie.py`, `tests/test_get_injury_data.py`, `tests/test_get_lineup_data.py` added (31 tests covering retry logic, pagination, schema contracts, and error paths).
-- **RESOLVED (2026-03-13):** `tests/test_get_player_stats.py` (6 tests), `tests/test_get_team_stats.py` (6 tests), `tests/test_fetch_player_positions.py` (41 tests) added — mocked API boundary tests.
-- Remaining gap: `get_standings.py` nba_api caller still lacks unit tests.
+- **RESOLVED (2026-03-13):** `tests/test_get_player_stats.py` (6), `tests/test_get_team_stats.py` (6), `tests/test_fetch_player_positions.py` (41), `tests/test_get_standings.py` (8) added — all data fetchers now have unit tests.
 
 **No Unit Tests for Preprocessing: RESOLVED**
 - **RESOLVED (2026-03-05):** `tests/test_preprocessing.py` has 35 tests covering `clean_columns`, `load_season_folder`, `load_season_files`, `get_stale_seasons`, `merge_incremental`, `_season_label`, type coercion patterns, and duplicate removal.
