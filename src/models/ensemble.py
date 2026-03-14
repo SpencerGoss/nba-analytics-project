@@ -33,6 +33,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+log = logging.getLogger(__name__)
+
 warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
@@ -366,7 +368,7 @@ class NBAEnsemble:
         with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
 
-        print(f"Ensemble config saved -> {config_path}")
+        log.info(f"Ensemble config saved -> {config_path}")
         return config_path
 
 
@@ -424,10 +426,10 @@ def run_ensemble_on_predictions(predictions_df, artifacts_dir=ARTIFACTS_DIR):
 
 
 if __name__ == "__main__":
-    print("Loading NBAEnsemble...")
+    log.info("Loading NBAEnsemble...")
     ens = NBAEnsemble.load()
     config_path = ens.save_config()
-    print(f"  Margin model present: {ens.margin_model is not None}")
-    print(f"  Outcome features: {len(ens.outcome_feats)}")
-    print(f"  ATS features: {len(ens.ats_feats)}")
-    print(f"  Config saved -> {config_path}")
+    log.info(f"  Margin model present: {ens.margin_model is not None}")
+    log.info(f"  Outcome features: {len(ens.outcome_feats)}")
+    log.info(f"  ATS features: {len(ens.ats_feats)}")
+    log.info(f"  Config saved -> {config_path}")

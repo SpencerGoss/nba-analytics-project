@@ -9,6 +9,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from src.features.elo import get_current_elos
+import logging
+
+log = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
 
@@ -41,9 +44,9 @@ def _validate_null_rates(df, feat_cols, threshold=0.95):
         )
     partial = null_rates[(null_rates > 0) & (null_rates < threshold)]
     if not partial.empty:
-        print("  [null audit] Columns with partial nulls (will be imputed):")
+        log.info("  [null audit] Columns with partial nulls (will be imputed):")
         for col, rate in partial.items():
-            print(f"    {col}: {rate:.1%}")
+            log.info(f"    {col}: {rate:.1%}")
 
 
 def _get_feature_cols(df, outcome_features=None):
@@ -107,12 +110,12 @@ def _derive_point_diff(matchup, game_logs_path=GAME_LOGS_PATH):
     merged = matchup.merge(home_logs, on="game_id", how="inner")
     n_dropped = n_before - len(merged)
     if n_dropped:
-        print(f"  Target derivation: dropped {n_dropped:,} rows with no log entry")
-    print(
-        f"  point_diff range: {merged[TARGET].min():.0f}"
+        log.info(f"  Target derivation: dropped {n_dropped:,} rows with no log entry")
+    if len(merged) < n_before * 0.9:
+        log.warning(f"Margin target merge dropped {n_dropped} rows ({n_before} -> {len(merged)})")
+    log.info(f"  point_diff range: {merged[TARGET].min():.0f}"
         f" to {merged[TARGET].max():.0f}"
-        f" (mean={merged[TARGET].mean():.2f})"
-    )
+        f" (mean={merged[TARGET].mean():.2f})")
     return merged
 
 
@@ -142,45 +145,41 @@ def train_margin_model(
         (best_pipeline, metrics_dict)
     """
     print("=" * 60)
-    print("MARGIN REGRESSION MODEL (point differential)")
+    log.info("MARGIN REGRESSION MODEL (point differential)")
     print("=" * 60)
 
-    print("\nLoading matchup features...")
+    log.info("\nLoading matchup features...")
     matchup = pd.read_csv(matchup_path)
     matchup["game_date"] = pd.to_datetime(matchup["game_date"], format="mixed")
     matchup = matchup.sort_values("game_date").reset_index(drop=True)
-    print(
-        f"  Total matchup rows: {len(matchup):,}"
-        f" | Seasons: {matchup.season.nunique()}"
-    )
+    log.info(f"  Total matchup rows: {len(matchup):,}"
+        f" | Seasons: {matchup.season.nunique()}")
 
-    print("\nDeriving point_diff target from team_game_logs...")
+    log.info("\nDeriving point_diff target from team_game_logs...")
     df = _derive_point_diff(matchup, game_logs_path)
 
     df = df[df["season"].astype(int) >= int(MODERN_ERA_START)].copy()
     df = df[~df["season"].astype(int).isin(EXCLUDED_SEASONS)].copy()
-    print(f"  After era/exclusion filter: {len(df):,} games")
+    log.info(f"  After era/exclusion filter: {len(df):,} games")
 
     train = df[~df["season"].astype(int).isin(test_seasons)].copy()
     test = df[df["season"].astype(int).isin(test_seasons)].copy()
-    print(f"  Train: {len(train):,} | Test: {len(test):,}")
-    print(f"  Test seasons: {test_seasons}")
+    log.info(f"  Train: {len(train):,} | Test: {len(test):,}")
+    log.info(f"  Test seasons: {test_seasons}")
 
     outcome_features = None
     if os.path.exists(OUTCOME_FEATURES_PKL):
         with open(OUTCOME_FEATURES_PKL, "rb") as fh:
             outcome_features = pickle.load(fh)
-        print(f"  Using game_outcome_features.pkl ({len(outcome_features)} cols)")
+        log.info(f"  Using game_outcome_features.pkl ({len(outcome_features)} cols)")
     else:
-        print(
-            "  game_outcome_features.pkl not found;"
-            " deriving features from DataFrame"
-        )
+        log.warning("  game_outcome_features.pkl not found;"
+            " deriving features from DataFrame")
 
     feat_cols = _get_feature_cols(df, outcome_features)
-    print(f"  Feature columns: {len(feat_cols)}")
+    log.debug(f"  Feature columns: {len(feat_cols)}")
 
-    print("\nValidating feature null rates...")
+    log.info("\nValidating feature null rates...")
     _validate_null_rates(df, feat_cols)
 
     X_train = train[feat_cols]
@@ -229,7 +228,7 @@ def train_margin_model(
     }
 
     splits = _season_splits(train)
-    print(f"\n--- Model selection across {len(splits)} validation split(s) ---")
+    log.info(f"\n--- Model selection across {len(splits)} validation split(s) ---")
     model_scores = {name: [] for name in candidates}
 
     for name, pipe in candidates.items():
@@ -240,41 +239,39 @@ def train_margin_model(
             val_pred = pipe.predict(X_val)
             val_mae = mean_absolute_error(y_val, val_pred)
             model_scores[name].append(val_mae)
-            print(
-                f"  {name:>20} | split={split_label} | val_MAE={val_mae:.3f}"
-            )
+            log.info(f"  {name:>20} | split={split_label} | val_MAE={val_mae:.3f}")
 
     mean_maes = {n: float(np.mean(s)) for n, s in model_scores.items()}
     best_name = min(mean_maes, key=mean_maes.__getitem__)
     cv_mae = mean_maes[best_name]
-    print(f"\nSelected model: {best_name} (mean CV MAE = {cv_mae:.3f})")
+    log.info(f"\nSelected model: {best_name} (mean CV MAE = {cv_mae:.3f})")
     for name, mae in sorted(mean_maes.items(), key=lambda x: x[1]):
         marker = " <-- selected" if name == best_name else ""
-        print(f"  {name:>20}: {mae:.3f}{marker}")
+        log.info(f"  {name:>20}: {mae:.3f}{marker}")
 
     best_pipe = candidates[best_name]
     best_pipe.fit(X_train, y_train)
 
     if len(X_test) == 0:
-        print("\nNo test-set rows (test_seasons not present in data); skipping holdout eval.")
+        log.warning("\nNo test-set rows (test_seasons not present in data); skipping holdout eval.")
         test_mae = float("nan")
         test_rmse = float("nan")
     else:
         test_pred = best_pipe.predict(X_test)
         test_mae = mean_absolute_error(y_test, test_pred)
         test_rmse = float(np.sqrt(np.mean((y_test.values - test_pred) ** 2)))
-        print(f"\nTest MAE  : {test_mae:.3f}")
-        print(f"Test RMSE : {test_rmse:.3f}")
+        log.info(f"\nTest MAE  : {test_mae:.3f}")
+        log.info(f"Test RMSE : {test_rmse:.3f}")
 
     reg_step = best_pipe.named_steps.get("reg")
     if reg_step is not None and hasattr(reg_step, "feature_importances_"):
         importances = pd.Series(reg_step.feature_importances_, index=feat_cols)
-        print("\nTop 15 Most Important Features:")
-        print(importances.sort_values(ascending=False).head(15).to_string())
+        log.info("\nTop 15 Most Important Features:")
+        log.debug(importances.sort_values(ascending=False).head(15).to_string())
     elif reg_step is not None and hasattr(reg_step, "coef_"):
         importances = pd.Series(np.abs(reg_step.coef_), index=feat_cols)
-        print("\nTop 15 Features by |coefficient|:")
-        print(importances.sort_values(ascending=False).head(15).to_string())
+        log.info("\nTop 15 Features by |coefficient|:")
+        log.debug(importances.sort_values(ascending=False).head(15).to_string())
 
     os.makedirs(artifacts_dir, exist_ok=True)
     model_path = os.path.join(artifacts_dir, "margin_model.pkl")
@@ -283,8 +280,8 @@ def train_margin_model(
         pickle.dump(best_pipe, fh)
     with open(feat_path, "wb") as fh:
         pickle.dump(feat_cols, fh)
-    print(f"\nModel saved -> {model_path}")
-    print(f"Features saved -> {feat_path}")
+    log.info(f"\nModel saved -> {model_path}")
+    log.info(f"Features saved -> {feat_path}")
 
     # Compute and save residual_std for BettingRouter spread probability
     y_train_pred = best_pipe.predict(X_train)
@@ -292,7 +289,7 @@ def train_margin_model(
     residual_std_path = os.path.join(artifacts_dir, "margin_residual_std.json")
     with open(residual_std_path, "w") as f:
         json.dump({"residual_std": residual_std}, f)
-    print(f"  Residual std: {residual_std:.2f} (saved to {residual_std_path})")
+    log.info(f"  Residual std: {residual_std:.2f} (saved to {residual_std_path})")
 
     # Segmented MAE by predicted margin bucket
     if len(X_test) > 0:
@@ -311,7 +308,7 @@ def train_margin_model(
         ]:
             if np.sum(mask) > 0:
                 seg_mae = float(np.mean(residuals[mask]))
-                print(f"  MAE [{label}]: {seg_mae:.2f} ({np.sum(mask)} games)")
+                log.info(f"  MAE [{label}]: {seg_mae:.2f} ({np.sum(mask)} games)")
 
     metrics = {
         "selected_model": best_name,
@@ -437,7 +434,7 @@ def predict_margin(
 
 if __name__ == "__main__":
     _pipeline, _metrics = train_margin_model()
-    print(f"\nSelected model : {_metrics['selected_model']}")
-    print(f"CV MAE         : {_metrics['cv_mean_mae']:.3f}")
-    print(f"Test MAE       : {_metrics['test_mae']:.3f}")
-    print(f"Test RMSE      : {_metrics['test_rmse']:.3f}")
+    log.info(f"\nSelected model : {_metrics['selected_model']}")
+    log.info(f"CV MAE         : {_metrics['cv_mean_mae']:.3f}")
+    log.info(f"Test MAE       : {_metrics['test_mae']:.3f}")
+    log.info(f"Test RMSE      : {_metrics['test_rmse']:.3f}")
