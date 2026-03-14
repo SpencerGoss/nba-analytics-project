@@ -190,8 +190,9 @@ class BettingRouter:
             }
 
         # Over probability: anchored on p50 so line==p50 always gives 0.5
-        # Symmetric: (p50 - line) / half_spread maps to [-1, +1], scaled to [0, 1]
-        spread_width = max(quantiles["p75"] - quantiles["p25"], 0.1)
+        # Use IQR with floor of 3.0 to prevent narrow spreads from saturating
+        # to extreme probabilities (edge saturation → false Best Bets)
+        spread_width = max(quantiles["p75"] - quantiles["p25"], 3.0)
         over_prob = 0.5 + (quantiles["p50"] - line) / spread_width
         over_prob = max(0.05, min(0.95, over_prob))
 

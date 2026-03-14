@@ -11,6 +11,7 @@
 - [pipeline] update.py: Step 3 calls BOTH build_team_game_features() AND build_matchup_dataset(); Step 3b: backfill_closing_lines(); Step 7: all 29 builders; Step 8: SQL Server sync
 - [dashboard] ALL DOM writes use `_setHtml(el,html)` -- for tbody/thead/tfoot it uses `createElement('table')+innerHTML`; data loader uses named `_fetchCfg` objects (not parallel arrays)
 - [infra] SQL Server `nba_analytics` DB: 35 tables, 4 views; `--full` after schema changes; Pinnacle guest API (league 487, no auth, free); 1675 tests passing
+- [bugfix] All scripts/* that import `from src.*` MUST set sys.path BEFORE the import; calibrated model uses _CalibrationUnpickler for cross-module loading
 
 ## Domain Notes
 
@@ -110,6 +111,15 @@
 
 [2026-03-13] [bugfix] INSIGHT: Season code comparisons using .astype(str) >= "202122" produce wrong results — "9" > "2" so season 9xxxx would pass. Must use .astype(int) for numeric comparison.
 [2026-03-13] [bugfix] WHY: String comparison is lexicographic; integer comparison is numeric. Season codes are 6-digit integers (e.g., 202425).
+
+[2026-03-13] [bugfix] INSIGHT: Calibrated model fails when loaded from different script — calibration.py saves as __main__ but update.py needs src.models.calibration. Fixed with custom Unpickler.
+[2026-03-13] [bugfix] WHY: This caused 0/8 predictions silently failing in daily pipeline. _CalibrationUnpickler maps __main__ wrapper classes to their real module.
+
+[2026-03-13] [bugfix] INSIGHT: Scripts importing `from src.*` MUST have sys.path.insert(0, PROJECT_ROOT) BEFORE the import — not after. build_game_context.py, build_meta.py, builder_helpers.py were all missing sys.path setup entirely.
+[2026-03-13] [bugfix] WHY: subprocess.run() from update.py sets cwd but not PYTHONPATH; the scripts must set up their own sys.path. fetch_odds.py had the import at line 35 but sys.path at line 49.
+
+[2026-03-13] [bugfix] INSIGHT: game_lines.csv has column "date" but build_picks.py was checking for "game_date" — condition was always false, no date filtering applied.
+[2026-03-13] [bugfix] WHY: fetch_odds.py writes "date"; build_picks.py now renames "date" -> "game_date" before filtering.
 
 ### [clv]
 
