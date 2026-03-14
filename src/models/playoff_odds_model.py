@@ -89,8 +89,9 @@ def _load_game_model(artifacts_dir: str = ARTIFACTS_DIR):
 
     try:
         if os.path.exists(cal_path):
+            from src.models.game_outcome_model import _CalibrationUnpickler
             with open(cal_path, "rb") as f:
-                model = pickle.load(f)
+                model = _CalibrationUnpickler(f).load()
         else:
             warnings.warn(
                 "Calibrated model not found, using uncalibrated game_outcome_model.pkl",

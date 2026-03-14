@@ -176,8 +176,9 @@ def _load_calibrated_model():
         feature_cols = pickle.load(f)
 
     if os.path.exists(cal_path):
+        from src.models.game_outcome_model import _CalibrationUnpickler
         with open(cal_path, "rb") as f:
-            model = pickle.load(f)
+            model = _CalibrationUnpickler(f).load()
         return model, feature_cols
 
     warnings.warn(

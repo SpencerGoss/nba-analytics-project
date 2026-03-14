@@ -93,8 +93,9 @@ def _load_artifact(name: str, artifacts_dir: str = ARTIFACTS_DIR):
             f"Model artifact not found: {path}\n"
             f"Run the relevant model script first to generate it."
         )
+    from src.models.game_outcome_model import _CalibrationUnpickler
     with open(path, "rb") as f:
-        return pickle.load(f)
+        return _CalibrationUnpickler(f).load()
 
 
 def _friendly_feature_name(col: str) -> str:
